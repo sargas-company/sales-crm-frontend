@@ -1,0 +1,255 @@
+@use "sass:list";
+@use "sass:meta";
+@import "./_variables";
+// @import "./styles/modal/Modal.scss";
+
+h1,
+.h1 {
+    font-size: 96px;
+    line-height: 112px;
+    font-weight: 500;
+}
+
+h2,
+.h2 {
+    font-size: 60px;
+    line-height: 72px;
+    font-weight: 500;
+}
+
+h3,
+.h3 {
+    font-size: 48px;
+    line-height: 56px;
+    font-weight: 500;
+}
+
+h4,
+.h4 {
+    font-size: 32px;
+    line-height: 40px;
+    font-weight: 500;
+}
+
+h5,
+.h5 {
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 500;
+}
+
+h6,
+.h6 {
+    font-size: 18px;
+    line-height: 32px;
+    font-weight: 500;
+}
+
+.subtitle1 {
+    font-size: 16px;
+    line-height: 28px;
+    font-weight: 400;
+}
+
+.subtitle2 {
+    font-size: 14px;
+    line-height: 21px;
+    font-weight: 500;
+}
+
+.body1 {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 400;
+}
+
+.body2 {
+    font-size: 14px;
+    line-height: 21px;
+    font-weight: 400;
+}
+
+.caption {
+    font-size: 12px;
+    line-height: 15px;
+    font-weight: 400;
+}
+
+.overline {
+    font-size: 12px;
+    line-height: 15px;
+    font-weight: 400;
+    text-transform: uppercase;
+}
+
+.overflow-hidden {
+    overflow: hidden;
+}
+
+.overflow-x-hidden {
+    overflow-x: hidden;
+}
+
+.overflow-y-hidden {
+    overflow-y: hidden;
+}
+
+.overflow-unset-important {
+    overflow: unset !important;
+}
+
+.zIndex-1 {
+    z-index: 1;
+}
+
+.zIndex-2 {
+    z-index: 2;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.theme-dark-active-fade,
+.theme-dark-active-fade-hover:hover {
+    background: #ffffff14;
+}
+
+.theme-light-active-fade,
+.theme-light-active-fade-hover:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.scroll__horizontal-hidden {
+    overflow-x: auto;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+@each $name,
+$color in $alerts {
+    .alert-#{$name}-bg {
+        background: $color;
+    }
+
+    .alert-#{$name}-text {
+        color: $color;
+    }
+}
+
+@each $name,
+$size in $fontWeights {
+    .text-#{$name} {
+        font-weight: $size !important;
+    }
+}
+
+
+@mixin cols($count, $size, $breakpoint) {
+    @if($breakpoint !='') {
+        .grid-col-#{$breakpoint}-#{$count} {
+            flex-basis: $size;
+            flex-grow: 0;
+            max-width: $size;
+        }
+    }
+
+    @else {
+        .grid-col-#{$count} {
+            flex-basis: $size;
+            flex-grow: 0;
+            max-width: $size;
+        }
+    }
+}
+
+
+@for $i from 1 through $total {
+    @include cols($i, calc($i * $size), '');
+}
+
+@mixin hidden {
+    display: none !important;
+    z-index: -1;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+@mixin visible {
+    display: initial !important;
+    z-index: auto;
+    visibility: visible;
+    pointer-events: all;
+}
+
+@media screen and (min-width: $xs) {
+    @for $i from 1 through $total {
+        @include cols($i, calc($i * $size), 'xs');
+    }
+
+    .xs-hidden {
+        @include hidden();
+    }
+
+    .xs-visible {
+        @include visible();
+    }
+}
+
+@media screen and (min-width: $sm) {
+    @for $i from 1 through $total {
+        @include cols($i, calc($i * $size), 'sm');
+    }
+
+    .sm-hidden {
+        @include hidden();
+    }
+
+    .sm-visible {
+        @include visible();
+    }
+}
+
+@media screen and (min-width: $md) {
+    @for $i from 1 through $total {
+        @include cols($i, calc($i * $size), 'md');
+    }
+
+    .md-hidden {
+        @include hidden();
+    }
+
+    .md-visible {
+        @include visible();
+    }
+}
+
+@media screen and (min-width: $lg) {
+    @for $i from 1 through $total {
+        @include cols($i, calc($i * $size), 'lg');
+    }
+
+    .lg-hidden {
+        @include hidden();
+    }
+
+    .lg-visible {
+        @include visible();
+    }
+}
+
+@media screen and (min-width: $xlg) {
+    @for $i from 1 through $total {
+        @include cols($i, calc($i * $size), 'xlg');
+    }
+
+    .xlg-hidden {
+        @include hidden();
+    }
+
+    .xlg-visible {
+        @include visible();
+    }
+}
