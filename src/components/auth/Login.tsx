@@ -1,20 +1,12 @@
-import React, { FC, ReactNode, useEffect } from "react";
-import { Icon } from "@iconify/react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import useTogglePassword from "../../hooks/useTogglePassword";
-import {
-  Alert,
-  Button,
-  Checkbox,
-  IconButton,
-  Text,
-  TextField,
-} from "../../ui";
-import Box from "../box/Box";
-import Form from "../form/Form";
-import AuthFormContainer from "./AuthFormContainer";
-import FormHeading from "./FormHeading";
+import React, {FC, ReactNode, useEffect, useState} from "react"
+import {Icon} from "@iconify/react"
+import {Link} from "react-router-dom"
+import useTogglePassword from "../../hooks/useTogglePassword"
+import {Alert, Button, IconButton, Text, TextField} from "../../ui"
+import Box from "../box/Box"
+import Form from "../form/Form"
+import AuthFormContainer from "./AuthFormContainer"
+import FormHeading from "./FormHeading"
 
 export interface LoginFormData {
   email: string;

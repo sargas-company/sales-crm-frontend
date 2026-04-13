@@ -1,10 +1,13 @@
 import NavOptions from "./type"
 
-import {ChatBubbleOutlineRounded} from "@mui/icons-material"
-
+import {ChatBubbleOutlineRounded, Dashboard} from "@mui/icons-material"
 
 const navList: NavOptions[] = [
-
+  {
+    label: "Dashboard",
+    path: "/dashboard",
+    icon: <Dashboard />,
+  },
 
   {
     label: "Chat",

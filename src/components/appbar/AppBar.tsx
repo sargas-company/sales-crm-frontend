@@ -5,9 +5,7 @@ import useTheme from "../../theme/useTheme";
 import {  IconButton } from "../../ui";
 import Box from "../box/Box";
 import Card from "../card/Card";
-import MenuSideNav from "./components/MenuSideNav";
 import ProfileDropdown from "./components/ProfileDropdown";
-import SearchIcon from "./components/SearchIcon";
 
 const AppBar = () => {
   const {
@@ -52,15 +50,11 @@ const AppBar = () => {
       <Card className="appbar-content">
         <Box
           display="flex"
-          justify="space-between"
+          justify="flex-end"
           align="center"
           height="100%"
           px={layout === "horizontal" ? 20 : 0}
         >
-          <Box display="flex" align="center">
-            <MenuSideNav />
-            <SearchIcon />
-          </Box>
           <Box display="flex" align="center" space={0.6}>
             <IconButton
               varient="text"

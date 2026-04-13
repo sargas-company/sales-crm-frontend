@@ -5,6 +5,7 @@ import {Flex} from "../components/layout"
 import AppLayout from "../components/layout/AppLayout"
 import PageLoading from "../components/loading/PageLoading"
 import Nav from "../components/nav/Nav"
+const Dashboard = lazy(() => import("./dashboard/Dashboard"));
 
 
 const PageNotFound = lazy(() => import("./404/PageNotFound"));
@@ -27,6 +28,7 @@ const Home = () => {
         >
           <Suspense fallback={<PageLoading />}>
             <Routes>
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/apps/chat/*" element={<Chat />} />
               <Route path="/*" element={<PageNotFound />} />
             </Routes>
