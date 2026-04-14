@@ -28,8 +28,8 @@ const InvoiceList = () => {
   // }, []);
   return (
     <Card>
-      <Box display="flex" justify="flex-end" padding={20}>
-        <GridInnerContainer alignItems="center">
+      <Box display="flex" justify="space-between" padding={20}>
+        <GridInnerContainer alignItems="center" justifyContent="space-between">
           <GridItem xs={12} md={6}>
             <TextField
                 type="text"
@@ -49,7 +49,9 @@ const InvoiceList = () => {
           {/*</GridItem>*/}
 
           <GridItem xs={12} md={6}>
-            <CreateNewInvoice />
+            <Box display="flex" justify="flex-end">
+              <CreateNewInvoice />
+            </Box>
           </GridItem>
         </GridInnerContainer>
       </Box>

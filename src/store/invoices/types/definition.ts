@@ -5,6 +5,7 @@ export type AvatarColor = "error" | "info" | "warning" | "success"
 
 export interface InvoiceList {
     id: number;
+    jobId: string;
     issuedDate: string;
     address: string;
     company: string;
