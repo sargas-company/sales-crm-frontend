@@ -21,7 +21,7 @@ const dataGridField: DataGridColoumn[] = [
     width: "15%",
   },
   {
-    fieldId: "invoiceStatus",
+    fieldId: "status",
     label: <TrendingUp style={{ fontSize: 18 }} />,
     width: "15%",
   },
@@ -85,8 +85,8 @@ const UserInvoiceList = () => {
                 </Text>
               </Link>
             </DataGridCell>
-            <DataGridCell width={column["invoiceStatus"].width}>
-              <InvoiceListItemStatus itemStatus={item.invoiceStatus} />
+            <DataGridCell width={column["status"].width}>
+              <InvoiceListItemStatus itemStatus={item.status} />
             </DataGridCell>
             <DataGridCell
               width={column["total"].width}

@@ -13,11 +13,11 @@
     "total": 3428,
     "avatar": "",
     "avatarColor": "success",
-    "invoiceStatus": "Paid",
     "balance": "$724",
     "dueDate": "23 Oct 2022",
     "account": "Dmytro",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Draft"
   },
   {
     "id": 4988,
@@ -32,11 +32,11 @@
     "service": "UI/UX Design & Development",
     "total": 5219,
     "avatar": "https://i.ibb.co/pR2DQtZ/1.png",
-    "invoiceStatus": "Downloaded",
     "balance": 0,
     "dueDate": "15 Oct 2022",
     "account": "Artem",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Sent"
   },
   {
     "id": 4989,
@@ -51,11 +51,11 @@
     "service": "Unlimited Extended License",
     "total": 3719,
     "avatar": "https://i.ibb.co/DVxRbB7/2.png",
-    "invoiceStatus": "Paid",
     "balance": 0,
     "dueDate": "03 Oct 2022",
     "account": "Vadym",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Viewed"
   },
   {
     "id": 4990,
@@ -70,11 +70,11 @@
     "service": "Software Development",
     "total": 4749,
     "avatar": "https://i.ibb.co/41vBfv2/3.png",
-    "invoiceStatus": "Sent",
     "balance": 0,
     "dueDate": "11 Oct 2022",
     "account": "Dmytro",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Replied"
   },
   {
     "id": 4991,
@@ -89,11 +89,11 @@
     "service": "UI/UX Design & Development",
     "total": 4056,
     "avatar": "https://i.ibb.co/7bt98f4/4.png",
-    "invoiceStatus": "Draft",
     "balance": "$815",
     "dueDate": "30 Oct 2022",
     "account": "Artem",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Draft"
   },
   {
     "id": 4992,
@@ -109,11 +109,11 @@
     "total": 2771,
     "avatar": "",
     "avatarColor": "info",
-    "invoiceStatus": "Paid",
     "balance": 0,
     "dueDate": "24 Oct 2022",
     "account": "Vadym",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Sent"
   },
   {
     "id": 4993,
@@ -129,11 +129,11 @@
     "total": 2713,
     "avatar": "",
     "avatarColor": "success",
-    "invoiceStatus": "Draft",
     "balance": "$407",
     "dueDate": "22 Oct 2022",
     "account": "Dmytro",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Viewed"
   },
   {
     "id": 4994,
@@ -148,11 +148,11 @@
     "service": "Template Customization",
     "total": 4309,
     "avatar": "https://i.ibb.co/YT68xSC/5.png",
-    "invoiceStatus": "Paid",
     "balance": "-$205",
     "dueDate": "10 Oct 2022",
     "account": "Artem",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Replied"
   },
   {
     "id": 4995,
@@ -167,11 +167,11 @@
     "service": "Software Development",
     "total": 3367,
     "avatar": "https://i.ibb.co/FzZ5TMb/6.png",
-    "invoiceStatus": "Downloaded",
     "balance": 0,
     "dueDate": "24 Oct 2022",
     "account": "Vadym",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Draft"
   },
   {
     "id": 4996,
@@ -186,11 +186,11 @@
     "service": "Software Development",
     "total": 4776,
     "avatar": "https://i.ibb.co/J5k44gj/7.png",
-    "invoiceStatus": "Downloaded",
     "balance": "$305",
     "dueDate": "02 Oct 2022",
     "account": "Dmytro",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Sent"
   },
   {
     "id": 4997,
@@ -205,11 +205,11 @@
     "service": "Unlimited Extended License",
     "total": 3789,
     "avatar": "https://i.ibb.co/cv0f9Jw/8.png",
-    "invoiceStatus": "Partial Payment",
     "balance": "$666",
     "dueDate": "18 Oct 2022",
     "account": "Artem",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Viewed"
   },
   {
     "id": 4998,
@@ -224,11 +224,11 @@
     "service": "Unlimited Extended License",
     "total": 5200,
     "avatar": "https://i.ibb.co/pR2DQtZ/1.png",
-    "invoiceStatus": "Partial Payment",
     "balance": 0,
     "dueDate": "17 Oct 2022",
     "account": "Vadym",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Replied"
   },
   {
     "id": 4999,
@@ -243,11 +243,11 @@
     "service": "Software Development",
     "total": 4558,
     "avatar": "https://i.ibb.co/DVxRbB7/2.png",
-    "invoiceStatus": "Paid",
     "balance": 0,
     "dueDate": "01 Oct 2022",
     "account": "Dmytro",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Draft"
   },
   {
     "id": 5000,
@@ -262,11 +262,11 @@
     "service": "Template Customization",
     "total": 3503,
     "avatar": "https://i.ibb.co/41vBfv2/3.png",
-    "invoiceStatus": "Paid",
     "balance": 0,
     "dueDate": "22 Oct 2022",
     "account": "Artem",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Sent"
   },
   {
     "id": 5001,
@@ -281,11 +281,11 @@
     "service": "Unlimited Extended License",
     "total": 5285,
     "avatar": "https://i.ibb.co/7bt98f4/4.png",
-    "invoiceStatus": "Partial Payment",
     "balance": "-$202",
     "dueDate": "02 Oct 2022",
     "account": "Vadym",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Viewed"
   },
   {
     "id": 5002,
@@ -300,11 +300,11 @@
     "service": "UI/UX Design & Development",
     "total": 3668,
     "avatar": "https://i.ibb.co/YT68xSC/5.png",
-    "invoiceStatus": "Downloaded",
     "balance": "$731",
     "dueDate": "15 Oct 2022",
     "account": "Dmytro",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Replied"
   },
   {
     "id": 5003,
@@ -320,11 +320,11 @@
     "total": 4372,
     "avatar": "",
     "avatarColor": "warning",
-    "invoiceStatus": "Sent",
     "balance": "-$344",
     "dueDate": "17 Oct 2022",
     "account": "Artem",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Draft"
   },
   {
     "id": 5004,
@@ -339,11 +339,11 @@
     "service": "Template Customization",
     "total": 3198,
     "avatar": "https://i.ibb.co/FzZ5TMb/6.png",
-    "invoiceStatus": "Partial Payment",
     "balance": "-$253",
     "dueDate": "16 Oct 2022",
     "account": "Vadym",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Sent"
   },
   {
     "id": 5005,
@@ -359,10 +359,10 @@
     "total": 5293,
     "avatar": "",
     "avatarColor": "error",
-    "invoiceStatus": "Past Due",
     "balance": 0,
     "dueDate": "01 Oct 2022",
     "account": "Dmytro",
-    "platform": "Upwork"
+    "platform": "Upwork",
+    "status": "Viewed"
   }
 ]

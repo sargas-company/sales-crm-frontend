@@ -21,7 +21,7 @@ const columns: DataGridColoumn[] = [
     width: "120px",
   },
   {
-    fieldId: "invoiceStatus",
+    fieldId: "status",
     label: <TrendingUp style={{ fontSize: 18 }} />,
     width: "120px",
   },
@@ -71,8 +71,8 @@ const InvoiceTable = () => {
             }
           />
           <DataGridCell
-            width={field["invoiceStatus"].width}
-            children={<InvoiceListItemStatus itemStatus={row.invoiceStatus} />}
+            width={field["status"].width}
+            children={<InvoiceListItemStatus itemStatus={row.status} />}
           />
           <DataGridCell
             width={field["name"].width}

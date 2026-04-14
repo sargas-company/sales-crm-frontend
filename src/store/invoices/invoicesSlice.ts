@@ -44,6 +44,6 @@ const search = (item: InvoiceList, term: string): boolean => {
     contains(item.name) ||
     contains(item.companyEmail) ||
     contains(item.total.toString()) ||
-    contains(item.invoiceStatus)
+    contains(item.status)
   )
 }

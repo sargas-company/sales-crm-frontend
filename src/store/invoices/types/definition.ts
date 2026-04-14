@@ -1,5 +1,5 @@
 
-export type InvoiceStatus = "Paid" | "Sent" | "Draft" | "Downloaded" | "Partial Payment" | "Past Due";
+export type InvoiceStatus = "Draft" | "Sent" | "Viewed" | "Replied";
 
 export type AvatarColor = "error" | "info" | "warning" | "success"
 
@@ -23,7 +23,7 @@ export interface InvoiceList {
     total: number;
     avatar: string | undefined;
     avatarColor?: AvatarColor;
-    invoiceStatus: InvoiceStatus;
+    status: InvoiceStatus;
     balance: string | 0;
     dueDate: string;
 }

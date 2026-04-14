@@ -18,7 +18,6 @@ import InvoiceListItemStatus from "./InvoiceListItemStatus";
 import DataGridUserDetail from "../../data-grid/DataGridUserDetail";
 import { Text, Chip } from "../../../ui";
 
-import { TrendingUp } from "@mui/icons-material";
 
 import type { DataGridColoumn } from "../../layout/data-grid/type";
 import { InvoiceList } from "../../../store/invoices/types/definition";
@@ -47,8 +46,8 @@ const columns: DataGridColoumn[] = [
     width: "120px",
   },
   {
-    fieldId: "invoiceStatus",
-    label: <TrendingUp style={{ fontSize: 18 }} />,
+    fieldId: "status",
+    label: "Status",
     width: "120px",
   },
   {
@@ -131,8 +130,8 @@ const InvoiceTable = () => {
               }
             />
             <DataGridCell
-              width={field["invoiceStatus"].width}
-              children={<InvoiceListItemStatus itemStatus={row.invoiceStatus} />}
+              width={field["status"].width}
+              children={<InvoiceListItemStatus itemStatus={row.status} />}
             />
             <DataGridCell
               width={field["name"].width}
