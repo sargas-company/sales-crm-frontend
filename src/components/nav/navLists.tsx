@@ -1,17 +1,22 @@
-import {ReactNode} from "react"
-import NavOptions, {NavItemType} from "./type"
+import NavOptions from "./type"
 
-import {ChatBubbleOutlineRounded, DescriptionOutlined, Home} from "@mui/icons-material"
+import {
+  ChatBubbleOutlineRounded,
+  Home,
+  MenuBookOutlined,
+  PeopleOutlined,
+  RequestQuoteOutlined,
+} from "@mui/icons-material"
 
-const format = (label: string, path: string, icon?: ReactNode): NavItemType => {
-  return icon ? { label, path, icon } : { label, path };
-};
-
-const formatGroupButton = (
-  title: string,
-  icon: ReactNode,
-  rootPath: string
-) => ({ title, icon, rootPath });
+// const format = (label: string, path: string, icon?: ReactNode): NavItemType => {
+//   return icon ? { label, path, icon } : { label, path };
+// };
+//
+// const formatGroupButton = (
+//   title: string,
+//   icon: ReactNode,
+//   rootPath: string
+// ) => ({ title, icon, rootPath });
 
 const navList: NavOptions[] = [
   // {
@@ -32,14 +37,29 @@ const navList: NavOptions[] = [
     path: "/apps/chat/",
     icon: <ChatBubbleOutlineRounded />,
   },
+  // {
+  //   parent: formatGroupButton("Proposal", <DescriptionOutlined />, "/proposal/"),
+  //   childrens: [
+  //     format("List", "/proposal/list/"),
+  //     format("Preview", "/proposal/preview/"),
+  //     format("Edit", "/proposal/edit/"),
+  //     format("Add", "/proposal/add/"),
+  //   ],
+  // },
   {
-    parent: formatGroupButton("Proposal", <DescriptionOutlined />, "/proposal/"),
-    childrens: [
-      format("List", "/proposal/list/"),
-      format("Preview", "/proposal/preview/"),
-      format("Edit", "/proposal/edit/"),
-      format("Add", "/proposal/add/"),
-    ],
+    label: "Proposals",
+    path: "/proposal/list/",
+    icon: <RequestQuoteOutlined />,
+  },
+  {
+    label: "Leads",
+    path: "/leads/list/",
+    icon: <PeopleOutlined />,
+  },
+  {
+    label: "Base Knowledge",
+    path: "/knowlage/list",
+    icon: <MenuBookOutlined />,
   },
   // {
   //   parent: formatGroupButton("User", <PersonOutline />, "/user/"),

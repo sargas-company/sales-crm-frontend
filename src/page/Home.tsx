@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import AppBar from "../components/appbar/AppBar";
-import Footer from "../components/footer/Footer";
+// import Footer from "../components/footer/Footer";
 const ThemeCustomizer = lazy(
   () => import("../components/customizer/Customizer")
 );
@@ -47,7 +47,7 @@ const Home = () => {
             </Routes>
           </Suspense>
         </main>
-        <Footer />
+        {/*<Footer />*/}
       </Flex>
       <Suspense fallback={null}>
         <ThemeCustomizer />

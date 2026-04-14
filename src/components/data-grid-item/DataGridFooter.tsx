@@ -22,6 +22,7 @@ const DataGridFooter: FC<Props> = (props) => {
       justify="flex-end"
       px={20}
       space={1}
+      mt={20}
     >
       {rowPerPageOptions.length > 1 && (
         <Box display="flex" align="center" space={0.3} justify="space-evenly">

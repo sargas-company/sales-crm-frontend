@@ -5,6 +5,7 @@ import Box from "../../../components/box/Box";
 import Card from "../../../components/card/Card";
 import InvoiceLayout from "../../../components/invoice/layout/InvoiceLayout";
 import PreviewMain from "../../../components/invoice/preview/PreviewMain";
+import ProposalChat from "../../../components/invoice/preview/ProposalChat";
 import { Button, Tab, TabList, TabItem, TabContent } from "../../../ui";
 import { RootState } from "../../../store/store";
 import { InfoOutlined, ChatOutlined } from "@mui/icons-material";
@@ -51,9 +52,7 @@ const InvoicePreview = () => {
             <PreviewMain {...currentInvoiceItem} />
           </TabContent>
           <TabContent tabIndex={2}>
-            <Box padding={20}>
-              {/* Chat content will go here */}
-            </Box>
+            <ProposalChat />
           </TabContent>
         </Card>
       </Tab>
