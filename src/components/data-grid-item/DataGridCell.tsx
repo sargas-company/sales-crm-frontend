@@ -15,8 +15,8 @@ const DataGridCell: FC<Props> = ({ value, width, hidden, children }) => {
         width: `${cellWidth}`,
         minWidth: `${cellWidth}`,
         maxWidth: `${cellWidth}`,
-        minHeight: 50,
-        maxHeight: 50,
+        minHeight: 58,
+        maxHeight: 58,
       }}
       padding={24}
     >

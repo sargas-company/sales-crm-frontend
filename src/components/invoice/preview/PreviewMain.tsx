@@ -3,7 +3,6 @@ import styled from "styled-components";
 import { InvoiceList } from "../../../store/invoices/types/definition";
 import { Button, Divider, Text } from "../../../ui";
 import Box from "../../box/Box";
-import Card from "../../card/Card";
 import { GridInnerContainer, GridItem } from "../../layout";
 import BillingDetail from "../BillingDetail";
 import OragnizationDetail from "../OrganizationDetails";
@@ -22,7 +21,7 @@ const PreviewMain: FC<Partial<InvoiceList>> = (props) => {
     name,
   } = props;
   return (
-    <Card py="20px">
+    <Box py={20}>
       <GridInnerContainer>
         <GridItem xs={12} sm={7}>
           <OragnizationDetail />
@@ -126,7 +125,7 @@ const PreviewMain: FC<Partial<InvoiceList>> = (props) => {
         <Button color="error">Print</Button>
         <Button color="success">Download</Button>
       </Box>
-    </Card>
+    </Box>
   );
 };
 export default PreviewMain;

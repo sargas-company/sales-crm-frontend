@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 
 import DataGrid from "../../layout/data-grid/DataGrid";
+import Box from "../../box/Box";
 import DataGridCell from "../../data-grid-item/DataGridCell";
 import InvoiceListItemStatus from "./InvoiceListItemStatus";
 import DataGridUserDetail from "../../data-grid/DataGridUserDetail";
@@ -56,6 +57,7 @@ const InvoiceTable = () => {
   );
   if (!invoiceList || invoiceList.length === 0) return <></>;
   return (
+    <Box padding={24} >
     <DataGrid
       rows={invoiceList}
       renderGridData={(row, field) => (
@@ -63,7 +65,7 @@ const InvoiceTable = () => {
           <DataGridCell
             width={field["id"].width}
             children={
-              <Link to={`/invoice/preview/${row.id}/`}>
+              <Link to={`/proposal/preview/${row.id}`}>
                 <Text skinColor>#{row.id}</Text>
               </Link>
             }
@@ -106,6 +108,7 @@ const InvoiceTable = () => {
       rowPerPage={8}
       rowPerPageOption={[5, 8, 20]}
     />
+    </Box>
   );
 };
 export default InvoiceTable;

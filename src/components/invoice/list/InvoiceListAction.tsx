@@ -13,12 +13,12 @@ const InvoiceListAction = ({ invoiceId }: { invoiceId: number }) => (
     <IconButton varient="text" size={30} fontSize={21} contentOpacity={5}>
       <DeleteOutline />
     </IconButton>
-    <Link to={`/invoice/preview/${invoiceId}/`}>
+    <Link to={`/proposal/preview/${invoiceId}`}>
       <IconButton varient="text" size={30} fontSize={21} contentOpacity={5}>
         <VisibilityOutlined />
       </IconButton>
     </Link>
-    <Link to={`/invoice/edit/${invoiceId}/`}>
+    <Link to={`/proposal/edit/${invoiceId}`}>
       <IconButton varient="text" size={30} fontSize={21} contentOpacity={5}>
         <EditOutlined />
       </IconButton>
