@@ -135,5 +135,5 @@ export const Input = styled('input') <InputOptions>`
 export const StyledTextarea = styled(Input) <InputOptions>`
     padding-top: 8px;
     padding-bottom: 8px;
-    resize: none;
+    resize: vertical;
 `; 

@@ -6,6 +6,8 @@ import useTheme from "./theme/useTheme";
 import GlobalStyle from "./global.styled";
 import AppRoutes from "./routes/AppRoutes";
 import AuthInitializer from "./components/auth/AuthInitializer";
+import { ToastProvider } from "./context/toast/ToastContext";
+
 const App = () => {
   const {
     theme: {
@@ -16,7 +18,7 @@ const App = () => {
   } = useTheme();
 
   return (
-    <>
+    <ToastProvider>
       <GlobalStyle
         textColor={mode.textColor}
         backgroundColor={mode.background}
@@ -27,7 +29,7 @@ const App = () => {
       />
       <AuthInitializer />
       <AppRoutes />
-    </>
+    </ToastProvider>
   );
 };
 export default App;

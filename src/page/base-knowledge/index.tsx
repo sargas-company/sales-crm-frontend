@@ -1,26 +1,16 @@
-import { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
-import { fetchInvoiceData } from "../../store/invoices/invoicesSlice";
-import { useAppDispatch } from "../../hooks";
 import PageNotFound from "../404/PageNotFound";
-import InvoiceAdd from "./add/InvoiceAdd";
-import InvoiceEdit from "./edit/InvoiceEdit.page";
-import InvoiceList from "./list/InvoiceList.page";
-import InvoicePreview from "./preview/InvoicePreview";
-const Invoice = () => {
-  const dispatch = useAppDispatch();
+import BaseKnowledgeList from "./list/BaseKnowledgeList.page";
+import BaseKnowledgePreview from "./preview/BaseKnowledgePreview";
 
-  useEffect(() => {
-    dispatch(fetchInvoiceData());
-  }, []);
+const BaseKnowledge = () => {
   return (
     <Routes>
-      <Route path="/list/" element={<InvoiceList />} />
-      <Route path="/add/" element={<InvoiceAdd />} />
-      <Route path="/edit/*" element={<InvoiceEdit />} />
-      <Route path="/preview/*" element={<InvoicePreview />} />
+      <Route path="/list/" element={<BaseKnowledgeList />} />
+      <Route path="/list" element={<BaseKnowledgeList />} />
+      <Route path="/preview/:id" element={<BaseKnowledgePreview />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
 };
-export default Invoice;
+export default BaseKnowledge;

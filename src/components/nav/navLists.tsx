@@ -58,7 +58,7 @@ const navList: NavOptions[] = [
   },
   {
     label: "Base Knowledge",
-    path: "/knowlage/list",
+    path: "/knowledge/list",
     icon: <MenuBookOutlined />,
   },
   // {

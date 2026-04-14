@@ -42,7 +42,7 @@ const Home = () => {
               <Route path="/apps/chat/*" element={<Chat />} />
               <Route path="/proposal/*" element={<Invoice />} />
               <Route path="/leads/*" element={<Leads />} />
-              <Route path="/knowlage/*" element={<BaseKnowledge />} />
+              <Route path="/knowledge/*" element={<BaseKnowledge />} />
               {/*<Route path="/user/*" element={<Users />} />*/}
               {/*<Route path="/pages/*" element={<Pages />} />*/}
               {/*<Route path="/charts/*" element={<Charts />} />*/}
