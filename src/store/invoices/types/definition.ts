@@ -18,6 +18,7 @@ export interface InvoiceList {
     platform: Platform;
     proposalType: ProposalType;
     boosted: BoostedStatus;
+    connects: number;
     coverLetter: string;
     issuedDate: string;
     address: string;

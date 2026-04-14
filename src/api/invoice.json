@@ -20,7 +20,8 @@
     "status": "Draft",
     "coverLetter": "I have 7+ years of experience building scalable web applications with React and Node.js. I have successfully delivered projects for clients in fintech and e-commerce sectors, always meeting deadlines.",
     "proposalType": "Bid",
-    "boosted": "Boosted"
+    "boosted": "Boosted",
+    "connects": 6
   },
   {
     "id": 4988,
@@ -42,7 +43,8 @@
     "status": "Sent",
     "coverLetter": "As a full-stack developer with deep expertise in TypeScript and cloud infrastructure, I can help you build a robust and maintainable solution. I have worked with similar systems and delivered results on time.",
     "proposalType": "Invite",
-    "boosted": "Not Boosted"
+    "boosted": "Not Boosted",
+    "connects": 12
   },
   {
     "id": 4989,
@@ -64,7 +66,8 @@
     "status": "Viewed",
     "coverLetter": "My background in UI/UX design combined with strong frontend skills makes me an ideal fit for this project. I focus on clean code and pixel-perfect implementation that users love.",
     "proposalType": "Direct Message",
-    "boosted": "Boosted Outbid"
+    "boosted": "Boosted Outbid",
+    "connects": 1
   },
   {
     "id": 4990,
@@ -86,7 +89,8 @@
     "status": "Replied",
     "coverLetter": "I specialize in performance optimization and have reduced load times by up to 60% in previous projects. Let me bring that same level of dedication and technical excellence to your project.",
     "proposalType": "Bid",
-    "boosted": "Boosted"
+    "boosted": "Boosted",
+    "connects": 8
   },
   {
     "id": 4991,
@@ -108,7 +112,8 @@
     "status": "Draft",
     "coverLetter": "With a strong portfolio in SaaS product development, I understand the importance of scalability and clean architecture. I am confident I can deliver exactly what you need within your timeline.",
     "proposalType": "Invite",
-    "boosted": "Not Boosted"
+    "boosted": "Not Boosted",
+    "connects": 3
   },
   {
     "id": 4992,
@@ -131,7 +136,8 @@
     "status": "Sent",
     "coverLetter": "I bring extensive experience in agile development and cross-functional team collaboration. My communication skills ensure smooth project delivery and transparent progress reporting.",
     "proposalType": "Direct Message",
-    "boosted": "Boosted Outbid"
+    "boosted": "Boosted Outbid",
+    "connects": 16
   },
   {
     "id": 4993,
@@ -154,7 +160,8 @@
     "status": "Viewed",
     "coverLetter": "Having built several e-commerce platforms from scratch, I understand the nuances of complex data flows and user experience. I would love to bring this expertise to your project.",
     "proposalType": "Bid",
-    "boosted": "Boosted"
+    "boosted": "Boosted",
+    "connects": 2
   },
   {
     "id": 4994,
@@ -176,7 +183,8 @@
     "status": "Replied",
     "coverLetter": "I have worked with startups and enterprise clients alike, adapting to different needs and constraints. My versatility and problem-solving skills are my strongest assets.",
     "proposalType": "Invite",
-    "boosted": "Not Boosted"
+    "boosted": "Not Boosted",
+    "connects": 10
   },
   {
     "id": 4995,
@@ -198,7 +206,8 @@
     "status": "Draft",
     "coverLetter": "Your project aligns perfectly with my core skill set. I have delivered similar solutions for three clients in the past year, all of whom left five-star reviews and requested additional work.",
     "proposalType": "Direct Message",
-    "boosted": "Boosted Outbid"
+    "boosted": "Boosted Outbid",
+    "connects": 5
   },
   {
     "id": 4996,
@@ -220,7 +229,8 @@
     "status": "Sent",
     "coverLetter": "I am passionate about writing clean, testable code and building systems that scale. I have contributed to open source projects and stay current with the latest industry trends.",
     "proposalType": "Bid",
-    "boosted": "Boosted"
+    "boosted": "Boosted",
+    "connects": 20
   },
   {
     "id": 4997,
@@ -242,7 +252,8 @@
     "status": "Viewed",
     "coverLetter": "My experience with real-time data processing and WebSocket integrations makes me a great fit for this role. I have delivered similar features in fintech applications with strict reliability requirements.",
     "proposalType": "Invite",
-    "boosted": "Not Boosted"
+    "boosted": "Not Boosted",
+    "connects": 4
   },
   {
     "id": 4998,
@@ -264,7 +275,8 @@
     "status": "Replied",
     "coverLetter": "I take pride in delivering work that exceeds expectations. My attention to detail and commitment to quality have earned long-term relationships with clients across multiple industries.",
     "proposalType": "Direct Message",
-    "boosted": "Boosted Outbid"
+    "boosted": "Boosted Outbid",
+    "connects": 9
   },
   {
     "id": 4999,
@@ -286,7 +298,8 @@
     "status": "Draft",
     "coverLetter": "As a developer with both backend and frontend expertise, I can handle the full scope of your project without context-switching delays. I deliver clean APIs and beautiful interfaces.",
     "proposalType": "Bid",
-    "boosted": "Boosted"
+    "boosted": "Boosted",
+    "connects": 14
   },
   {
     "id": 5000,
@@ -308,7 +321,8 @@
     "status": "Sent",
     "coverLetter": "I have helped several clients modernize their legacy systems with minimal downtime. My migration strategies are carefully planned and thoroughly tested before any production changes.",
     "proposalType": "Invite",
-    "boosted": "Not Boosted"
+    "boosted": "Not Boosted",
+    "connects": 1
   },
   {
     "id": 5001,
@@ -330,7 +344,8 @@
     "status": "Viewed",
     "coverLetter": "I am a quick learner and adapt fast to new technologies and codebases. I have ramped up on complex projects within days and started delivering value almost immediately.",
     "proposalType": "Direct Message",
-    "boosted": "Boosted Outbid"
+    "boosted": "Boosted Outbid",
+    "connects": 7
   },
   {
     "id": 5002,
@@ -352,7 +367,8 @@
     "status": "Replied",
     "coverLetter": "Your requirements match my specialization exactly. I have built three similar platforms in the last two years and can bring proven patterns and reusable solutions to accelerate delivery.",
     "proposalType": "Bid",
-    "boosted": "Boosted"
+    "boosted": "Boosted",
+    "connects": 11
   },
   {
     "id": 5003,
@@ -375,7 +391,8 @@
     "status": "Draft",
     "coverLetter": "I value long-term client relationships over one-off projects. I am invested in your success and will go the extra mile to ensure the final product meets your vision.",
     "proposalType": "Invite",
-    "boosted": "Not Boosted"
+    "boosted": "Not Boosted",
+    "connects": 3
   },
   {
     "id": 5004,
@@ -397,7 +414,8 @@
     "status": "Sent",
     "coverLetter": "With strong DevOps skills in addition to my development expertise, I can set up CI/CD pipelines and cloud infrastructure to support your project from day one.",
     "proposalType": "Direct Message",
-    "boosted": "Boosted Outbid"
+    "boosted": "Boosted Outbid",
+    "connects": 18
   },
   {
     "id": 5005,
@@ -420,6 +438,7 @@
     "status": "Viewed",
     "coverLetter": "I focus on building accessible and responsive interfaces that work flawlessly across all devices. Accessibility and performance are non-negotiables in my development process.",
     "proposalType": "Bid",
-    "boosted": "Boosted"
+    "boosted": "Boosted",
+    "connects": 6
   }
 ]
