@@ -3,9 +3,12 @@ export type InvoiceStatus = "Paid" | "Sent" | "Draft" | "Downloaded" | "Partial 
 
 export type AvatarColor = "error" | "info" | "warning" | "success"
 
+export type AccountName = "Dmytro" | "Artem" | "Vadym";
+
 export interface InvoiceList {
     id: number;
     jobId: string;
+    account: AccountName;
     issuedDate: string;
     address: string;
     company: string;

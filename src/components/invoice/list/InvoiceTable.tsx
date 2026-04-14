@@ -28,6 +28,11 @@ const columns: DataGridColoumn[] = [
     width: "200px",
   },
   {
+    fieldId: "account",
+    label: "Account",
+    width: "140px",
+  },
+  {
     fieldId: "invoiceStatus",
     label: <TrendingUp style={{ fontSize: 18 }} />,
     width: "120px",
@@ -96,6 +101,10 @@ const InvoiceTable = () => {
                   <Text skinColor>{row.jobId.replace(/.*~/, "")}</Text>
                 </span>
               }
+            />
+            <DataGridCell
+              width={field["account"].width}
+              value={row.account}
             />
             <DataGridCell
               width={field["invoiceStatus"].width}
