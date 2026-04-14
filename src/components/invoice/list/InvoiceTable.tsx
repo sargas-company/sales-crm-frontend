@@ -29,7 +29,8 @@ const columns: DataGridColoumn[] = [
   { fieldId: "id",           label: "#",            width: "120px" },
   { fieldId: "jobId",        label: "JobID",        width: "200px" },
   { fieldId: "account",      label: "Account",      width: "140px" },
-  { fieldId: "platform",     label: "Platform",     width: "120px" },
+  { fieldId: "platform",      label: "Platform",     width: "120px" },
+  { fieldId: "proposalType", label: "Type",         width: "140px" },
   { fieldId: "status",       label: "Status",       width: "120px" },
   { fieldId: "coverLetter",  label: "Cover Letter", width: "320px" },
   { fieldId: "name",         label: "client",       width: "320px" },
@@ -89,6 +90,7 @@ const InvoiceTable = () => {
                 />
               }
             />
+            <DataGridCell width={field["proposalType"].width} value={row.proposalType} />
             <DataGridCell
               width={field["status"].width}
               children={<InvoiceListItemStatus itemStatus={row.status} />}
