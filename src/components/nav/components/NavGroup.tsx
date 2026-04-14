@@ -1,4 +1,4 @@
-import { createRef, FC, useEffect, useId, useState } from "react";
+import { createRef, FC, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import styled from "styled-components";
 import NavOptions from "../type";
@@ -57,7 +57,7 @@ const NavGroup: FC<Props> = ({
       >
         {childrens &&
           childrens.map((item, i) => {
-            const key = useId();
+            const key = String(i);
             if (item.childrens) {
               return (
                 <>

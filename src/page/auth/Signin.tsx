@@ -19,13 +19,13 @@ const Signin = () => {
   // Still initializing (checking stored refresh token)
   if (isAuthenticated === null) return <PageLoading />;
   // Already logged in → go to dashboard
-  if (isAuthenticated) return <Navigate to="/dashboards/crm/" replace />;
+  if (isAuthenticated) return <Navigate to="/dashboards/analytics/" replace />;
 
   const handleSubmit = async (inputs: LoginFormData) => {
     try {
       const tokens = await login({ email: inputs.email, password: inputs.password }).unwrap();
       dispatch(setCredentials(tokens));
-      navigate("/dashboards/crm/");
+      navigate("/dashboards/analytics/");
     } catch {}
   };
 

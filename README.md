@@ -1,7 +1,7 @@
 <!-- PROJECT LOGO -->
 <div align="center">
   <a href="https://github.com/huzgrx/react-dashboard">
-    <img src="./src/assets/logo.png" alt="Logo" width="80" height="80">
+    <img src="src/assets/logo2.png" alt="Logo" width="80" height="80">
   </a>
 
 <h3 align="center">Triolo</h3>

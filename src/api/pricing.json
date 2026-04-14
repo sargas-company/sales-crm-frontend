@@ -1,0 +1,132 @@
+{
+    "pricingPlans": [
+        {
+            "title": "Basic",
+            "monthlyPrice": 0,
+            "currentPlan": true,
+            "popularPlan": false,
+            "subtitle": "A simple start for everyone",
+            "imgSrc": "https://i.ibb.co/9v7HYVL/basic.png",
+            "yearlyPlan": {
+                "perMonth": 0,
+                "totalAnnual": 0
+            },
+            "planBenefits": [
+                "100 responses a month",
+                "Unlimited forms and surveys",
+                "Unlimited fields",
+                "Basic form creation tools",
+                "Up to 2 subdomains"
+            ]
+        },
+        {
+            "monthlyPrice": 49,
+            "title": "Standard",
+            "popularPlan": true,
+            "currentPlan": false,
+            "subtitle": "For small to medium businesses",
+            "imgSrc": "https://i.ibb.co/vmgPKTG/standard.png",
+            "yearlyPlan": {
+                "perMonth": 40,
+                "totalAnnual": 480
+            },
+            "planBenefits": [
+                "Unlimited responses",
+                "Unlimited forms and surveys",
+                "Instagram profile page",
+                "Google Docs integration",
+                "Custom “Thank you” page"
+            ]
+        },
+        {
+            "monthlyPrice": 99,
+            "popularPlan": false,
+            "currentPlan": false,
+            "title": "Enterprise",
+            "subtitle": "Solution for big organizations",
+            "imgSrc": "https://i.ibb.co/JR4gf9W/enterprise.png",
+            "yearlyPlan": {
+                "perMonth": 80,
+                "totalAnnual": 960
+            },
+            "planBenefits": [
+                "PayPal payments",
+                "Logic Jumps",
+                "File upload with 5GB storage",
+                "Custom domain support",
+                "Stripe integration"
+            ]
+        }
+    ],
+    "pricingTable": {
+        "header": [
+            {
+                "title": "Features",
+                "subtitle": "Native Front Features"
+            },
+            {
+                "title": "Starter",
+                "subtitle": "Free"
+            },
+            {
+                "isPro": true,
+                "title": "Pro",
+                "subtitle": "$7.5/month"
+            },
+            {
+                "title": "Enterprise",
+                "subtitle": "$16/month"
+            }
+        ],
+        "rows": [
+            {
+                "pro": true,
+                "starter": true,
+                "enterprise": true,
+                "feature": "14-days free trial"
+            },
+            {
+                "pro": false,
+                "starter": false,
+                "enterprise": true,
+                "feature": "No user limit"
+            },
+            {
+                "pro": true,
+                "starter": false,
+                "enterprise": true,
+                "feature": "Product Support"
+            },
+            {
+                "starter": false,
+                "enterprise": true,
+                "pro": "Add-On Available",
+                "feature": "Email Support"
+            },
+            {
+                "pro": true,
+                "starter": false,
+                "enterprise": true,
+                "feature": "Integrations"
+            },
+            {
+                "starter": false,
+                "enterprise": true,
+                "pro": "Add-On Available",
+                "feature": "Removal of Front branding"
+            },
+            {
+                "pro": false,
+                "starter": false,
+                "enterprise": true,
+                "feature": "Active maintenance & support"
+            },
+            {
+                "pro": false,
+                "starter": false,
+                "enterprise": true,
+                "feature": "Data storage for 365 days"
+            }
+        ]
+    }
+}

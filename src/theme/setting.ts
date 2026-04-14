@@ -18,8 +18,8 @@ const themeSettings: SettingType = {
         footerPosition: setting?.footerPosition ? setting.footerPosition : 'static'
     },
     primaryColor: {
-        name: setting?.primaryColor?.name ? setting.primaryColor.name : 'purple',
-        color: setting?.primaryColor?.color ? setting?.primaryColor.color : "rgba(166, 108, 255, 1)"
+        name: setting?.primaryColor?.name ? setting.primaryColor.name : 'blue',
+        color: setting?.primaryColor?.color ? setting?.primaryColor.color : "rgba(0, 215, 255, 1)"
     },
     menuStyle: {
         collapse: setting?.menuCollapse ? setting.menuCollapse : false,
