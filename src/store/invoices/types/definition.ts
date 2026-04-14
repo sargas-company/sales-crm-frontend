@@ -12,6 +12,7 @@ export interface InvoiceList {
     jobId: string;
     account: AccountName;
     platform: Platform;
+    coverLetter: string;
     issuedDate: string;
     address: string;
     company: string;

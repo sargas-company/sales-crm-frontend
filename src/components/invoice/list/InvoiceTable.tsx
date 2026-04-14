@@ -5,80 +5,43 @@ import { Snackbar, Alert } from "@mui/material";
 import upworkLogo from "../../../image/logo/upwork2.png"; // TODO: replace with Upwork logo
 import type { Platform } from "../../../store/invoices/types/definition";
 
-const platformLogos: Record<Platform, string> = {
-  Upwork: upworkLogo,
-  LinkedIn: upworkLogo, // TODO: replace with LinkedIn logo
-  Jobble: upworkLogo,   // TODO: replace with Jobble logo
-};
-
 import DataGrid from "../../layout/data-grid/DataGrid";
 import Box from "../../box/Box";
 import DataGridCell from "../../data-grid-item/DataGridCell";
 import InvoiceListItemStatus from "./InvoiceListItemStatus";
 import DataGridUserDetail from "../../data-grid/DataGridUserDetail";
+import Modal from "../../modal/Modal";
+import ModalContentLayout from "../../users/layout/ModalContentLayout";
 import { Text, Chip } from "../../../ui";
-
 
 import type { DataGridColoumn } from "../../layout/data-grid/type";
 import { InvoiceList } from "../../../store/invoices/types/definition";
 import { useAppSelector } from "../../../hooks";
 import InvoiceListAction from "./InvoiceListAction";
 
+const platformLogos: Record<Platform, string> = {
+  Upwork: upworkLogo,
+  LinkedIn: upworkLogo, // TODO: replace with LinkedIn logo
+  Jobble: upworkLogo,   // TODO: replace with Jobble logo
+};
+
 const columns: DataGridColoumn[] = [
-  {
-    fieldId: "id",
-    label: "#",
-    width: "120px",
-  },
-  {
-    fieldId: "jobId",
-    label: "JobID",
-    width: "200px",
-  },
-  {
-    fieldId: "account",
-    label: "Account",
-    width: "140px",
-  },
-  {
-    fieldId: "platform",
-    label: "Platform",
-    width: "120px",
-  },
-  {
-    fieldId: "status",
-    label: "Status",
-    width: "120px",
-  },
-  {
-    fieldId: "name",
-    label: "client",
-    width: "320px",
-  },
-  {
-    fieldId: "total",
-    label: "total",
-    width: "10%",
-  },
-  {
-    fieldId: "issuedDate",
-    label: "Issued date",
-    width: "15%",
-  },
-  {
-    fieldId: "balance",
-    label: "balance",
-    width: "10%",
-  },
-  {
-    fieldId: "actions",
-    label: "Actions",
-    width: "10%",
-  },
+  { fieldId: "id",           label: "#",            width: "120px" },
+  { fieldId: "jobId",        label: "JobID",        width: "200px" },
+  { fieldId: "account",      label: "Account",      width: "140px" },
+  { fieldId: "platform",     label: "Platform",     width: "120px" },
+  { fieldId: "status",       label: "Status",       width: "120px" },
+  { fieldId: "coverLetter",  label: "Cover Letter", width: "320px" },
+  { fieldId: "name",         label: "client",       width: "320px" },
+  { fieldId: "total",        label: "total",        width: "10%"   },
+  { fieldId: "issuedDate",   label: "Issued date",  width: "15%"   },
+  { fieldId: "balance",      label: "balance",      width: "10%"   },
+  { fieldId: "actions",      label: "Actions",      width: "10%"   },
 ];
 
 const InvoiceTable = () => {
   const [toastOpen, setToastOpen] = useState(false);
+  const [coverLetterText, setCoverLetterText] = useState<string | null>(null);
 
   const invoiceList: InvoiceList[] = useAppSelector(
     (state) => state.invoice.data
@@ -115,10 +78,7 @@ const InvoiceTable = () => {
                 </span>
               }
             />
-            <DataGridCell
-              width={field["account"].width}
-              value={row.account}
-            />
+            <DataGridCell width={field["account"].width} value={row.account} />
             <DataGridCell
               width={field["platform"].width}
               children={
@@ -134,6 +94,25 @@ const InvoiceTable = () => {
               children={<InvoiceListItemStatus itemStatus={row.status} />}
             />
             <DataGridCell
+              width={field["coverLetter"].width}
+              children={
+                <span
+                  onClick={() => setCoverLetterText(row.coverLetter)}
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                    fontSize: 13,
+                    lineHeight: "1.5",
+                    cursor: "pointer",
+                  }}
+                >
+                  {row.coverLetter}
+                </span>
+              }
+            />
+            <DataGridCell
               width={field["name"].width}
               children={
                 <DataGridUserDetail
@@ -145,10 +124,7 @@ const InvoiceTable = () => {
               }
             />
             <DataGridCell width={field["total"].width} value={`$${row.total}`} />
-            <DataGridCell
-              width={field["issuedDate"].width}
-              value={row.issuedDate}
-            />
+            <DataGridCell width={field["issuedDate"].width} value={row.issuedDate} />
             <DataGridCell width={field["balance"].width}>
               {row.balance === 0 ? (
                 <Chip label="Paid" skin="light" size="small" color="success" />
@@ -167,6 +143,20 @@ const InvoiceTable = () => {
         rowPerPage={8}
         rowPerPageOption={[5, 8, 20]}
       />
+
+      {coverLetterText && (
+        <Modal handleOutClick={() => setCoverLetterText(null)}>
+          <ModalContentLayout maxWidth="600px">
+            <Box display="flex" flexDirection="column" space={3}>
+              <Text heading="h6">Cover Letter</Text>
+              <Text varient="body2" paragraph>
+                {coverLetterText}
+              </Text>
+            </Box>
+          </ModalContentLayout>
+        </Modal>
+      )}
+
       <Snackbar
         open={toastOpen}
         autoHideDuration={2000}
