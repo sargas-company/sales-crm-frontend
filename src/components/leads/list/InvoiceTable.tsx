@@ -65,7 +65,7 @@ const InvoiceTable = () => {
           <DataGridCell
             width={field["id"].width}
             children={
-              <Link to={`/proposal/preview/${row.id}`}>
+              <Link to={`/leads/preview/${row.id}`}>
                 <Text skinColor>#{row.id}</Text>
               </Link>
             }

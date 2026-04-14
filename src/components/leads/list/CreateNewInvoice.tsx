@@ -5,7 +5,7 @@ import { Button } from "../../../ui";
 const CreateNewInvoice = () => {
   const navigate = useNavigate();
   return (
-    <Button onClick={() => navigate("/proposal/add/")}>Create proposal</Button>
+    <Button onClick={() => navigate("/leads/add/")}>Create Lead</Button>
   );
 };
 export default memo(CreateNewInvoice);

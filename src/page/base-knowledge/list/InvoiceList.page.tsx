@@ -1,9 +1,9 @@
 import React, { useCallback, useState } from "react";
 import Box from "../../../components/box/Box";
 import Card from "../../../components/card/Card";
-import CreateNewInvoice from "../../../components/invoice/list/CreateNewInvoice";
-// import InvoiceFilter from "../../../components/invoice/list/InvoiceFilter";
-import InvoiceTable from "../../../components/invoice/list/InvoiceTable";
+import CreateNewInvoice from "../../../components/base-knowledge/list/CreateNewInvoice";
+// import InvoiceFilter from "../../../components/base-knowledge/list/InvoiceFilter";
+import InvoiceTable from "../../../components/base-knowledge/list/InvoiceTable";
 import { GridInnerContainer, GridItem } from "../../../components/layout";
 import { searchData } from "../../../store/invoices/invoicesSlice";
 import { useAppDispatch } from "../../../hooks";
