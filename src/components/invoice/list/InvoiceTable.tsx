@@ -2,6 +2,15 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Snackbar, Alert } from "@mui/material";
 
+import upworkLogo from "../../../image/logo/upwork2.png"; // TODO: replace with Upwork logo
+import type { Platform } from "../../../store/invoices/types/definition";
+
+const platformLogos: Record<Platform, string> = {
+  Upwork: upworkLogo,
+  LinkedIn: upworkLogo, // TODO: replace with LinkedIn logo
+  Jobble: upworkLogo,   // TODO: replace with Jobble logo
+};
+
 import DataGrid from "../../layout/data-grid/DataGrid";
 import Box from "../../box/Box";
 import DataGridCell from "../../data-grid-item/DataGridCell";
@@ -31,6 +40,11 @@ const columns: DataGridColoumn[] = [
     fieldId: "account",
     label: "Account",
     width: "140px",
+  },
+  {
+    fieldId: "platform",
+    label: "Platform",
+    width: "120px",
   },
   {
     fieldId: "invoiceStatus",
@@ -105,6 +119,16 @@ const InvoiceTable = () => {
             <DataGridCell
               width={field["account"].width}
               value={row.account}
+            />
+            <DataGridCell
+              width={field["platform"].width}
+              children={
+                <img
+                  src={platformLogos[row.platform]}
+                  alt={row.platform}
+                  style={{ width: 24, height: 24, objectFit: "contain" }}
+                />
+              }
             />
             <DataGridCell
               width={field["invoiceStatus"].width}

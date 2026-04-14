@@ -16,7 +16,8 @@
     "invoiceStatus": "Paid",
     "balance": "$724",
     "dueDate": "23 Oct 2022",
-    "account": "Dmytro"
+    "account": "Dmytro",
+    "platform": "Upwork"
   },
   {
     "id": 4988,
@@ -34,7 +35,8 @@
     "invoiceStatus": "Downloaded",
     "balance": 0,
     "dueDate": "15 Oct 2022",
-    "account": "Artem"
+    "account": "Artem",
+    "platform": "Upwork"
   },
   {
     "id": 4989,
@@ -52,7 +54,8 @@
     "invoiceStatus": "Paid",
     "balance": 0,
     "dueDate": "03 Oct 2022",
-    "account": "Vadym"
+    "account": "Vadym",
+    "platform": "Upwork"
   },
   {
     "id": 4990,
@@ -70,7 +73,8 @@
     "invoiceStatus": "Sent",
     "balance": 0,
     "dueDate": "11 Oct 2022",
-    "account": "Dmytro"
+    "account": "Dmytro",
+    "platform": "Upwork"
   },
   {
     "id": 4991,
@@ -88,7 +92,8 @@
     "invoiceStatus": "Draft",
     "balance": "$815",
     "dueDate": "30 Oct 2022",
-    "account": "Artem"
+    "account": "Artem",
+    "platform": "Upwork"
   },
   {
     "id": 4992,
@@ -107,7 +112,8 @@
     "invoiceStatus": "Paid",
     "balance": 0,
     "dueDate": "24 Oct 2022",
-    "account": "Vadym"
+    "account": "Vadym",
+    "platform": "Upwork"
   },
   {
     "id": 4993,
@@ -126,7 +132,8 @@
     "invoiceStatus": "Draft",
     "balance": "$407",
     "dueDate": "22 Oct 2022",
-    "account": "Dmytro"
+    "account": "Dmytro",
+    "platform": "Upwork"
   },
   {
     "id": 4994,
@@ -144,7 +151,8 @@
     "invoiceStatus": "Paid",
     "balance": "-$205",
     "dueDate": "10 Oct 2022",
-    "account": "Artem"
+    "account": "Artem",
+    "platform": "Upwork"
   },
   {
     "id": 4995,
@@ -162,7 +170,8 @@
     "invoiceStatus": "Downloaded",
     "balance": 0,
     "dueDate": "24 Oct 2022",
-    "account": "Vadym"
+    "account": "Vadym",
+    "platform": "Upwork"
   },
   {
     "id": 4996,
@@ -180,7 +189,8 @@
     "invoiceStatus": "Downloaded",
     "balance": "$305",
     "dueDate": "02 Oct 2022",
-    "account": "Dmytro"
+    "account": "Dmytro",
+    "platform": "Upwork"
   },
   {
     "id": 4997,
@@ -198,7 +208,8 @@
     "invoiceStatus": "Partial Payment",
     "balance": "$666",
     "dueDate": "18 Oct 2022",
-    "account": "Artem"
+    "account": "Artem",
+    "platform": "Upwork"
   },
   {
     "id": 4998,
@@ -216,7 +227,8 @@
     "invoiceStatus": "Partial Payment",
     "balance": 0,
     "dueDate": "17 Oct 2022",
-    "account": "Vadym"
+    "account": "Vadym",
+    "platform": "Upwork"
   },
   {
     "id": 4999,
@@ -234,7 +246,8 @@
     "invoiceStatus": "Paid",
     "balance": 0,
     "dueDate": "01 Oct 2022",
-    "account": "Dmytro"
+    "account": "Dmytro",
+    "platform": "Upwork"
   },
   {
     "id": 5000,
@@ -252,7 +265,8 @@
     "invoiceStatus": "Paid",
     "balance": 0,
     "dueDate": "22 Oct 2022",
-    "account": "Artem"
+    "account": "Artem",
+    "platform": "Upwork"
   },
   {
     "id": 5001,
@@ -270,7 +284,8 @@
     "invoiceStatus": "Partial Payment",
     "balance": "-$202",
     "dueDate": "02 Oct 2022",
-    "account": "Vadym"
+    "account": "Vadym",
+    "platform": "Upwork"
   },
   {
     "id": 5002,
@@ -288,7 +303,8 @@
     "invoiceStatus": "Downloaded",
     "balance": "$731",
     "dueDate": "15 Oct 2022",
-    "account": "Dmytro"
+    "account": "Dmytro",
+    "platform": "Upwork"
   },
   {
     "id": 5003,
@@ -307,7 +323,8 @@
     "invoiceStatus": "Sent",
     "balance": "-$344",
     "dueDate": "17 Oct 2022",
-    "account": "Artem"
+    "account": "Artem",
+    "platform": "Upwork"
   },
   {
     "id": 5004,
@@ -325,7 +342,8 @@
     "invoiceStatus": "Partial Payment",
     "balance": "-$253",
     "dueDate": "16 Oct 2022",
-    "account": "Vadym"
+    "account": "Vadym",
+    "platform": "Upwork"
   },
   {
     "id": 5005,
@@ -344,6 +362,7 @@
     "invoiceStatus": "Past Due",
     "balance": 0,
     "dueDate": "01 Oct 2022",
-    "account": "Dmytro"
+    "account": "Dmytro",
+    "platform": "Upwork"
   }
 ]
