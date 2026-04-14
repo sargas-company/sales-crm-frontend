@@ -8,12 +8,12 @@ import { Button, Text } from "../../../ui";
 import Box from "../../box/Box";
 import Card from "../../card/Card";
 import DataGridCell from "../../data-grid-item/DataGridCell";
-import InvoiceListAction from "../../invoice/list/InvoiceListAction";
-import InvoiceListItemStatus from "../../invoice/list/InvoiceListItemStatus";
+import ProposalListAction from "../../proposal/list/ProposalListAction";
+import ProposalListItemStatus from "../../proposal/list/ProposalListItemStatus";
 import DataGrid from "../../layout/data-grid/DataGrid";
 import { DataGridColoumn } from "../../layout/data-grid/type";
 
-const selectInvoiceList = (state: RootState) => state.invoice.allData;
+const selectInvoiceList = (state: RootState) => state.proposal.allData;
 const dataGridField: DataGridColoumn[] = [
   {
     fieldId: "id",
@@ -86,7 +86,7 @@ const UserInvoiceList = () => {
               </Link>
             </DataGridCell>
             <DataGridCell width={column["status"].width}>
-              <InvoiceListItemStatus itemStatus={item.status} />
+              <ProposalListItemStatus itemStatus={item.status} />
             </DataGridCell>
             <DataGridCell
               width={column["total"].width}
@@ -97,7 +97,7 @@ const UserInvoiceList = () => {
               value={item.createdAt}
             />
             <DataGridCell width={column[""].width}>
-              <InvoiceListAction invoiceId={item.id} />
+              <ProposalListAction proposalId={item.id} />
             </DataGridCell>
           </>
         )}

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
-import { fetchInvoiceData } from "../../store/invoices/invoicesSlice";
+import { fetchProposalData } from "../../store/proposals/proposalsSlice";
 import { useAppDispatch } from "../../hooks";
 import PageNotFound from "../404/PageNotFound";
 import InvoiceAdd from "./add/InvoiceAdd";
@@ -11,7 +11,7 @@ const Invoice = () => {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    dispatch(fetchInvoiceData());
+    dispatch(fetchProposalData());
   }, []);
   return (
     <Routes>

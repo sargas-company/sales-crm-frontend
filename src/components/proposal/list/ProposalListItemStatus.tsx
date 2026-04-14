@@ -8,7 +8,7 @@ const statusColor: Record<ProposalStatus, string> = {
   Replied: "success",
 };
 
-const InvoiceListItemStatus = ({ itemStatus }: { itemStatus: ProposalStatus }) => (
+const ProposalListItemStatus = ({ itemStatus }: { itemStatus: ProposalStatus }) => (
   <Chip
     label={itemStatus}
     skin="light"
@@ -17,4 +17,4 @@ const InvoiceListItemStatus = ({ itemStatus }: { itemStatus: ProposalStatus }) =
   />
 );
 
-export default InvoiceListItemStatus;
+export default ProposalListItemStatus;

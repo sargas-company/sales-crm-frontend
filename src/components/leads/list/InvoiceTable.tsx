@@ -10,7 +10,7 @@ import { Text, Chip } from "../../../ui";
 import { TrendingUp } from "@mui/icons-material";
 
 import type { DataGridColoumn } from "../../layout/data-grid/type";
-import { InvoiceList } from "../../../store/invoices/types/definition";
+import { ProposalList } from "../../../store/proposals/types/definition";
 import { useAppSelector } from "../../../hooks";
 import InvoiceListAction from "./InvoiceListAction";
 
@@ -52,8 +52,8 @@ const columns: DataGridColoumn[] = [
   },
 ];
 const InvoiceTable = () => {
-  const invoiceList: InvoiceList[] = useAppSelector(
-    (state) => state.invoice.data
+  const invoiceList: ProposalList[] = useAppSelector(
+    (state) => state.proposal.data
   );
   if (!invoiceList || invoiceList.length === 0) return <></>;
   return (

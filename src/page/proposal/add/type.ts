@@ -1,9 +1,9 @@
 import type { ProposalItem } from "../../../components/proposal/item/type";
-export interface Invoice {
-    invoiceNo: number;
+export interface Proposal {
+    proposalNo: number;
     dateIssue: Date;
     dateDue: Date;
-    invoiceTo: number;
+    proposalTo: number;
     salesperson: string;
     msgLeave: string;
     note: string;

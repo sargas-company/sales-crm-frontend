@@ -2,13 +2,13 @@ import { configureStore } from '@reduxjs/toolkit'
 import { baseApi } from '../api/baseApi'
 import authReducer from './auth/authSlice'
 import chatReducer from './chats/chatSlice'
-import invoiceReducer from './invoices/invoicesSlice'
+import proposalReducer from './proposals/proposalsSlice'
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     chat: chatReducer,
-    invoice: invoiceReducer,
+    proposal: proposalReducer,
     [baseApi.reducerPath]: baseApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>

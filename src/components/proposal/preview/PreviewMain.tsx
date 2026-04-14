@@ -7,7 +7,7 @@ import { GridInnerContainer, GridItem } from "../../layout";
 import BillingDetail from "../BillingDetail";
 import OragnizationDetail from "../OrganizationDetails";
 import TotalAmount from "../TotalAmount";
-import PreviewInvoiceTable from "./PreviewInvoiceTable";
+import PreviewProposalTable from "./PreviewProposalTable";
 
 const PreviewMain: FC<Partial<ProposalList>> = (props) => {
   const {
@@ -94,7 +94,7 @@ const PreviewMain: FC<Partial<ProposalList>> = (props) => {
         </GridInnerContainer>
       </Box>
       <Divider styles={{ margin: "1.6rem 0 0.8rem 0" }} />
-      <PreviewInvoiceTable />
+      <PreviewProposalTable />
       <Box px={20} py={16}>
         <StyledMisc rowSpacing={0.6}>
           <GridItem xs={12} sm={4}>

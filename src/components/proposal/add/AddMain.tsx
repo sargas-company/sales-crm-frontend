@@ -6,10 +6,10 @@ import Card from "../../card/Card";
 import { GridInnerContainer, GridItem } from "../../layout";
 import AddNewItem from "../item/AddNewItem";
 import BillingDetail from "../BillingDetail";
-import InvoiceDate from "../InvoiceDate";
-import InvoiceNote from "../InvoiceNote";
-import InvoiceNumber from "../InvoiceNumber";
-import InvoiceTo from "../InvoiceTo";
+import ProposalDate from "../ProposalDate";
+import ProposalNote from "../ProposalNote";
+import ProposalNumber from "../ProposalNumber";
+import ProposalTo from "../ProposalTo";
 import OragnizationDetail from "../OrganizationDetails";
 import type { Proposal } from "../../../page/proposal/add/type";
 
@@ -27,17 +27,17 @@ const AddMain: FC<Partial<Proposal>> = (props) => {
   return (
     <Card py="1rem">
       <OragnizationDetail />
-      {/* Invoice number */}
+      {/* Proposal number */}
       <Box display="flex" flexDirection="column" space={1} my={12}>
-        <InvoiceNumber value={proposalNo ? proposalNo : 2001} />
-        <InvoiceDate dateDue={dateDue} dateIssue={dateIssue} />
+        <ProposalNumber value={proposalNo ? proposalNo : 2001} />
+        <ProposalDate dateDue={dateDue} dateIssue={dateIssue} />
       </Box>
 
       <Divider styles={{ margin: "1rem 0rem" }} />
-      {/* Invoice to */}
+      {/* Proposal to */}
       <GridInnerContainer>
         <GridItem xs={12} md={7}>
-          <InvoiceTo id={proposalTo!} />
+          <ProposalTo id={proposalTo!} />
         </GridItem>
         <GridItem xs={12} md={5}>
           <BillingDetail />
@@ -47,7 +47,7 @@ const AddMain: FC<Partial<Proposal>> = (props) => {
       {/* Add Item */}
       <AddNewItem items={items} salesperson={salesperson} msgLeave={msgLeave} />
       <Divider styles={{ margin: "2rem 0" }} />
-      <InvoiceNote note={note} />
+      <ProposalNote note={note} />
     </Card>
   );
 };

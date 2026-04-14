@@ -1,15 +1,15 @@
 import React, { useCallback, useState } from "react";
 import Box from "../../../components/box/Box";
 import Card from "../../../components/card/Card";
-import CreateNewInvoice from "../../../components/leads/list/CreateNewInvoice";
-// import InvoiceFilter from "../../../components/leads/list/InvoiceFilter";
-import InvoiceTable from "../../../components/leads/list/InvoiceTable";
+import CreateNewProposal from "../../../components/proposal/list/CreateNewProposal";
+// import ProposalFilter from "../../../components/proposal/list/ProposalFilter";
+import ProposalTable from "../../../components/proposal/list/ProposalTable";
 import { GridInnerContainer, GridItem } from "../../../components/layout";
 import { searchData } from "../../../store/proposals/proposalsSlice";
 import { useAppDispatch } from "../../../hooks";
 import { TextField } from "../../../ui";
 
-const InvoiceList = () => {
+const ProposalList = () => {
   const dispatch = useAppDispatch();
   const [searchKey, setSearchKey] = useState("");
   // const [filterKey, setFilterKey] = useState("");
@@ -28,8 +28,8 @@ const InvoiceList = () => {
   // }, []);
   return (
     <Card>
-      <Box display="flex" justify="flex-end" padding={20}>
-        <GridInnerContainer alignItems="center">
+      <Box display="flex" justify="space-between" padding={20}>
+        <GridInnerContainer alignItems="center" justifyContent="space-between">
           <GridItem xs={12} md={6}>
             <TextField
                 type="text"
@@ -49,13 +49,15 @@ const InvoiceList = () => {
           {/*</GridItem>*/}
 
           <GridItem xs={12} md={6}>
-            <CreateNewInvoice />
+            <Box display="flex" justify="flex-end">
+              <CreateNewProposal />
+            </Box>
           </GridItem>
         </GridInnerContainer>
       </Box>
 
-      <InvoiceTable />
+      <ProposalTable />
     </Card>
   );
 };
-export default InvoiceList;
+export default ProposalList;

@@ -14,7 +14,7 @@ const Analytics = lazy(() => import("./analytics"));
 // const Charts = lazy(() => import("./charts/Charts"));
 const Chat = lazy(() => import("./chat"));
 // const Email = lazy(() => import("./email"));
-const Invoice = lazy(() => import("./invoice"));
+const Proposal = lazy(() => import("./proposal"));
 const Leads = lazy(() => import("./leads"));
 const BaseKnowledge = lazy(() => import("./base-knowledge"));
 // const Pages = lazy(() => import("./pages/Pages"));
@@ -40,7 +40,7 @@ const Home = () => {
               <Route path="/dashboards/analytics/" element={<Analytics />} />
               {/*<Route path="/apps/email/*" element={<Email />} />*/}
               <Route path="/apps/chat/*" element={<Chat />} />
-              <Route path="/proposal/*" element={<Invoice />} />
+              <Route path="/proposal/*" element={<Proposal />} />
               <Route path="/leads/*" element={<Leads />} />
               <Route path="/knowledge/*" element={<BaseKnowledge />} />
               {/*<Route path="/user/*" element={<Users />} />*/}

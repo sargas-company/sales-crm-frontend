@@ -4,7 +4,7 @@ import ProposalAction from "../../../components/proposal/ProposalAction";
 import ProposalOption from "../../../components/proposal/ProposalOption";
 import ProposalLayout from "../../../components/proposal/layout/ProposalLayout";
 
-const InvoiceAdd = () => {
+const ProposalAdd = () => {
   return (
     <ProposalLayout>
       <AddMain />
@@ -17,4 +17,4 @@ const InvoiceAdd = () => {
     </ProposalLayout>
   );
 };
-export default InvoiceAdd;
+export default ProposalAdd;
