@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Snackbar, Alert } from "@mui/material";
+import { Snackbar, Alert, IconButton, Tooltip } from "@mui/material";
+import { ContentCopy } from "@mui/icons-material";
 
 import upworkLogo from "../../../image/logo/upwork2.png"; // TODO: replace with Upwork logo
 import type { Platform } from "../../../store/invoices/types/definition";
@@ -9,10 +10,10 @@ import DataGrid from "../../layout/data-grid/DataGrid";
 import Box from "../../box/Box";
 import DataGridCell from "../../data-grid-item/DataGridCell";
 import InvoiceListItemStatus from "./InvoiceListItemStatus";
-import DataGridUserDetail from "../../data-grid/DataGridUserDetail";
+// import DataGridUserDetail from "../../data-grid/DataGridUserDetail";
 import Modal from "../../modal/Modal";
 import ModalContentLayout from "../../users/layout/ModalContentLayout";
-import { Text, Chip } from "../../../ui";
+import { Text } from "../../../ui";
 
 import type { DataGridColoumn } from "../../layout/data-grid/type";
 import { InvoiceList } from "../../../store/invoices/types/definition";
@@ -27,7 +28,7 @@ const platformLogos: Record<Platform, string> = {
 
 const columns: DataGridColoumn[] = [
   { fieldId: "id",           label: "#",            width: "120px" },
-  { fieldId: "jobId",        label: "JobID",        width: "200px" },
+  { fieldId: "jobId",        label: "JobID",        width: "100px" },
   { fieldId: "account",      label: "Account",      width: "140px" },
   { fieldId: "platform",      label: "Platform",     width: "120px" },
   { fieldId: "proposalType", label: "Type",         width: "140px" },
@@ -35,11 +36,11 @@ const columns: DataGridColoumn[] = [
   { fieldId: "connects",     label: "Connects",     width: "110px" },
   { fieldId: "status",       label: "Status",       width: "120px" },
   { fieldId: "coverLetter",  label: "Cover Letter", width: "320px" },
-  { fieldId: "name",         label: "client",       width: "320px" },
-  { fieldId: "total",        label: "total",        width: "10%"   },
+  // { fieldId: "name",         label: "client",       width: "320px" },
+  // { fieldId: "total",        label: "total",        width: "10%"   },
   { fieldId: "createdAt",    label: "Created At",   width: "130px" },
   { fieldId: "sentAt",       label: "Sent At",      width: "130px" },
-  { fieldId: "balance",      label: "balance",      width: "10%"   },
+  // { fieldId: "balance",      label: "balance",      width: "10%"   },
   { fieldId: "actions",      label: "Actions",      width: "10%"   },
 ];
 
@@ -74,12 +75,11 @@ const InvoiceTable = () => {
             <DataGridCell
               width={field["jobId"].width}
               children={
-                <span
-                  style={{ cursor: "pointer" }}
-                  onClick={() => handleCopyJobId(row.jobId)}
-                >
-                  <Text skinColor>{row.jobId.replace(/.*~/, "")}</Text>
-                </span>
+                <Tooltip title={row.jobId} placement="top">
+                  <IconButton size="small" onClick={() => handleCopyJobId(row.jobId)}>
+                    <ContentCopy fontSize="small" />
+                  </IconButton>
+                </Tooltip>
               }
             />
             <DataGridCell width={field["account"].width} value={row.account} />
@@ -119,7 +119,7 @@ const InvoiceTable = () => {
                 </span>
               }
             />
-            <DataGridCell
+            {/* <DataGridCell
               width={field["name"].width}
               children={
                 <DataGridUserDetail
@@ -129,17 +129,17 @@ const InvoiceTable = () => {
                   avatarsrc={row.avatar}
                 />
               }
-            />
-            <DataGridCell width={field["total"].width} value={`$${row.total}`} />
+            /> */}
+            {/* <DataGridCell width={field["total"].width} value={`$${row.total}`} /> */}
             <DataGridCell width={field["createdAt"].width} value={row.createdAt} />
             <DataGridCell width={field["sentAt"].width} value={row.sentAt} />
-            <DataGridCell width={field["balance"].width}>
+            {/* <DataGridCell width={field["balance"].width}>
               {row.balance === 0 ? (
                 <Chip label="Paid" skin="light" size="small" color="success" />
               ) : (
                 row.balance
               )}
-            </DataGridCell>
+            </DataGridCell> */}
             <DataGridCell width={field["actions"].width}>
               <InvoiceListAction invoiceId={row.id} />
             </DataGridCell>
