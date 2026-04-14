@@ -36,8 +36,8 @@ const columns: DataGridColoumn[] = [
     width: "10%",
   },
   {
-    fieldId: "issuedDate",
-    label: "Issued date",
+    fieldId: "createdAt",
+    label: "Created At",
     width: "15%",
   },
   {
@@ -87,8 +87,8 @@ const InvoiceTable = () => {
           />
           <DataGridCell width={field["total"].width} value={`$${row.total}`} />
           <DataGridCell
-            width={field["issuedDate"].width}
-            value={row.issuedDate}
+            width={field["createdAt"].width}
+            value={row.createdAt}
           />
           <DataGridCell width={field["balance"].width}>
             {row.balance === 0 ? (

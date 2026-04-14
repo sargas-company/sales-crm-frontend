@@ -37,7 +37,8 @@ const columns: DataGridColoumn[] = [
   { fieldId: "coverLetter",  label: "Cover Letter", width: "320px" },
   { fieldId: "name",         label: "client",       width: "320px" },
   { fieldId: "total",        label: "total",        width: "10%"   },
-  { fieldId: "issuedDate",   label: "Issued date",  width: "15%"   },
+  { fieldId: "createdAt",    label: "Created At",   width: "130px" },
+  { fieldId: "sentAt",       label: "Sent At",      width: "130px" },
   { fieldId: "balance",      label: "balance",      width: "10%"   },
   { fieldId: "actions",      label: "Actions",      width: "10%"   },
 ];
@@ -130,7 +131,8 @@ const InvoiceTable = () => {
               }
             />
             <DataGridCell width={field["total"].width} value={`$${row.total}`} />
-            <DataGridCell width={field["issuedDate"].width} value={row.issuedDate} />
+            <DataGridCell width={field["createdAt"].width} value={row.createdAt} />
+            <DataGridCell width={field["sentAt"].width} value={row.sentAt} />
             <DataGridCell width={field["balance"].width}>
               {row.balance === 0 ? (
                 <Chip label="Paid" skin="light" size="small" color="success" />

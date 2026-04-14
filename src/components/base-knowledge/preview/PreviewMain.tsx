@@ -17,7 +17,7 @@ const PreviewMain: FC<Partial<InvoiceList>> = (props) => {
     contact,
     dueDate,
     id,
-    issuedDate,
+    createdAt,
     name,
   } = props;
   return (
@@ -47,7 +47,7 @@ const PreviewMain: FC<Partial<InvoiceList>> = (props) => {
                     <Text>Date Issued:</Text>
                   </td>
                   <td>
-                    <Text>{issuedDate}</Text>
+                    <Text>{createdAt}</Text>
                   </td>
                 </tr>
                 <tr>

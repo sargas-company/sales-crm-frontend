@@ -31,7 +31,7 @@ const dataGridField: DataGridColoumn[] = [
     width: "20%",
   },
   {
-    fieldId: "issuedDate",
+    fieldId: "createdAt",
     label: "issued date",
     width: "30%",
   },
@@ -94,7 +94,7 @@ const UserInvoiceList = () => {
             />
             <DataGridCell
               width={column["issuedDate"].width}
-              value={item.issuedDate}
+              value={item.createdAt}
             />
             <DataGridCell width={column[""].width}>
               <InvoiceListAction invoiceId={item.id} />

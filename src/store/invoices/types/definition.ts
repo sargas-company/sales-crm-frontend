@@ -20,7 +20,8 @@ export interface InvoiceList {
     boosted: BoostedStatus;
     connects: number;
     coverLetter: string;
-    issuedDate: string;
+    createdAt: string;
+    sentAt: string;
     address: string;
     company: string;
     companyEmail: string;
