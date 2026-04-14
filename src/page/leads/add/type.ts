@@ -1,11 +1,11 @@
-import type { ProposalItem } from "../../../components/proposal/item/type";
-export interface Invoice {
-    invoiceNo: number;
+import type { LeadItem } from "../../../components/leads/item/type";
+export interface Lead {
+    leadNo: number;
     dateIssue: Date;
     dateDue: Date;
-    invoiceTo: number;
+    leadTo: number;
     salesperson: string;
     msgLeave: string;
     note: string;
-    items: ProposalItem[];
+    items: LeadItem[];
 }

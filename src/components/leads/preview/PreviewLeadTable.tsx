@@ -64,7 +64,7 @@ const data = [
     total: 12,
   },
 ];
-const PreviewInvoiceTable = () => {
+const PreviewLeadTable = () => {
   return (
     <Table
       fields={columns}
@@ -94,4 +94,4 @@ const PreviewInvoiceTable = () => {
     />
   );
 };
-export default PreviewInvoiceTable;
+export default PreviewLeadTable;

@@ -2,7 +2,7 @@ import { FC } from "react";
 import { Text, TextField } from "../../ui";
 import Box from "../box/Box";
 
-const InvoiceDate: FC<Props> = (props) => {
+const LeadDate: FC<Props> = (props) => {
   const { dateDue, dateIssue } = props;
   return (
     <Box px={20}>
@@ -11,7 +11,7 @@ const InvoiceDate: FC<Props> = (props) => {
         <TextField
           type="text"
           defaultValue={toLocalDate(dateIssue)}
-          name="invoice-date_issue"
+          name="lead-date_issue"
           sizes="small"
           maxWidth="250px"
         />
@@ -21,7 +21,7 @@ const InvoiceDate: FC<Props> = (props) => {
         <TextField
           type="text"
           defaultValue={toLocalDate(dateDue)}
-          name="invoice-date_due"
+          name="lead-date_due"
           sizes="small"
           maxWidth="250px"
         />
@@ -29,7 +29,7 @@ const InvoiceDate: FC<Props> = (props) => {
     </Box>
   );
 };
-export default InvoiceDate;
+export default LeadDate;
 
 interface Props {
   dateIssue?: Date;

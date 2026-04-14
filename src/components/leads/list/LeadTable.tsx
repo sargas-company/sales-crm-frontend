@@ -3,16 +3,16 @@ import { Link } from "react-router-dom";
 import DataGrid from "../../layout/data-grid/DataGrid";
 import Box from "../../box/Box";
 import DataGridCell from "../../data-grid-item/DataGridCell";
-import InvoiceListItemStatus from "./InvoiceListItemStatus";
+import LeadListItemStatus from "./LeadListItemStatus";
 import DataGridUserDetail from "../../data-grid/DataGridUserDetail";
 import { Text, Chip } from "../../../ui";
 
 import { TrendingUp } from "@mui/icons-material";
 
 import type { DataGridColoumn } from "../../layout/data-grid/type";
-import { ProposalList } from "../../../store/proposals/types/definition";
+import { LeadList } from "../../../store/leads/types/definition";
 import { useAppSelector } from "../../../hooks";
-import InvoiceListAction from "./InvoiceListAction";
+import LeadListAction from "./LeadListAction";
 
 const columns: DataGridColoumn[] = [
   {
@@ -51,15 +51,16 @@ const columns: DataGridColoumn[] = [
     width: "10%",
   },
 ];
-const InvoiceTable = () => {
-  const invoiceList: ProposalList[] = useAppSelector(
-    (state) => state.proposal.data
+
+const LeadTable = () => {
+  const leadList: LeadList[] = useAppSelector(
+    (state) => state.lead.data
   );
-  if (!invoiceList || invoiceList.length === 0) return <></>;
+  if (!leadList || leadList.length === 0) return <></>;
   return (
     <Box padding={24} pl={40}>
     <DataGrid
-      rows={invoiceList}
+      rows={leadList}
       renderGridData={(row, field) => (
         <>
           <DataGridCell
@@ -72,7 +73,7 @@ const InvoiceTable = () => {
           />
           <DataGridCell
             width={field["status"].width}
-            children={<InvoiceListItemStatus itemStatus={row.status} />}
+            children={<LeadListItemStatus itemStatus={row.status} />}
           />
           <DataGridCell
             width={field["name"].width}
@@ -98,7 +99,7 @@ const InvoiceTable = () => {
             )}
           </DataGridCell>
           <DataGridCell width={field["actions"].width}>
-            <InvoiceListAction invoiceId={row.id} />
+            <LeadListAction leadId={row.id} />
           </DataGridCell>
         </>
       )}
@@ -111,4 +112,4 @@ const InvoiceTable = () => {
     </Box>
   );
 };
-export default InvoiceTable;
+export default LeadTable;

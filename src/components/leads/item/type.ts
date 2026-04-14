@@ -1,4 +1,4 @@
-export interface InvoiceItem {
+export interface LeadItem {
   id: number;
   title: string;
   description: string;
@@ -8,5 +8,5 @@ export interface InvoiceItem {
 }
 
 export interface NewItemHandle {
-  items: Array<InvoiceItem>;
+  items: Array<LeadItem>;
 }

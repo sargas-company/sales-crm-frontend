@@ -8,21 +8,21 @@ import {
   EditOutlined,
 } from "@mui/icons-material";
 
-const InvoiceListAction = ({ invoiceId }: { invoiceId: number }) => (
+const LeadListAction = ({ leadId }: { leadId: number }) => (
   <Box display="flex">
     <IconButton varient="text" size={30} fontSize={21} contentOpacity={5}>
       <DeleteOutline />
     </IconButton>
-    <Link to={`/leads/preview/${invoiceId}`}>
+    <Link to={`/leads/preview/${leadId}`}>
       <IconButton varient="text" size={30} fontSize={21} contentOpacity={5}>
         <VisibilityOutlined />
       </IconButton>
     </Link>
-    <Link to={`/leads/edit/${invoiceId}`}>
+    <Link to={`/leads/edit/${leadId}`}>
       <IconButton varient="text" size={30} fontSize={21} contentOpacity={5}>
         <EditOutlined />
       </IconButton>
     </Link>
   </Box>
 );
-export default InvoiceListAction;
+export default LeadListAction;

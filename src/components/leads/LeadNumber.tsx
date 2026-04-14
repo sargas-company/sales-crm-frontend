@@ -1,15 +1,15 @@
 import Box from "../box/Box";
 import { Text, TextField } from "../../ui";
 
-const InvoiceNumber = ({ value }: { value?: number }) => {
+const LeadNumber = ({ value }: { value?: number }) => {
   return (
     <Box display="flex" align="center" justify="flex-start" px={20}>
       <Text heading="h6" styles={{ minWidth: 120 }}>
-        Invoice
+        Lead
       </Text>
       <TextField
         type="number"
-        name="invoice-no"
+        name="lead-no"
         sizes="small"
         startAdornment={<Text weight="medium">#</Text>}
         defaultValue={value}
@@ -19,4 +19,4 @@ const InvoiceNumber = ({ value }: { value?: number }) => {
     </Box>
   );
 };
-export default InvoiceNumber;
+export default LeadNumber;

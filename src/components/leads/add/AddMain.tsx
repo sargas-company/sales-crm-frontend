@@ -6,17 +6,17 @@ import Card from "../../card/Card";
 import { GridInnerContainer, GridItem } from "../../layout";
 import AddNewItem from "../item/AddNewItem";
 import BillingDetail from "../BillingDetail";
-import InvoiceDate from "../InvoiceDate";
-import InvoiceNote from "../InvoiceNote";
-import InvoiceNumber from "../InvoiceNumber";
-import InvoiceTo from "../InvoiceTo";
+import LeadDate from "../LeadDate";
+import LeadNote from "../LeadNote";
+import LeadNumber from "../LeadNumber";
+import LeadTo from "../LeadTo";
 import OragnizationDetail from "../OrganizationDetails";
-import type { Proposal } from "../../../page/proposal/add/type";
+import type { Lead } from "../../../page/leads/add/type";
 
-const AddMain: FC<Partial<Proposal>> = (props) => {
+const AddMain: FC<Partial<Lead>> = (props) => {
   const {
-    proposalNo,
-    proposalTo,
+    leadNo,
+    leadTo,
     dateDue,
     dateIssue,
     salesperson,
@@ -27,17 +27,17 @@ const AddMain: FC<Partial<Proposal>> = (props) => {
   return (
     <Card py="1rem">
       <OragnizationDetail />
-      {/* Invoice number */}
+      {/* Lead number */}
       <Box display="flex" flexDirection="column" space={1} my={12}>
-        <InvoiceNumber value={proposalNo ? proposalNo : 2001} />
-        <InvoiceDate dateDue={dateDue} dateIssue={dateIssue} />
+        <LeadNumber value={leadNo ? leadNo : 2001} />
+        <LeadDate dateDue={dateDue} dateIssue={dateIssue} />
       </Box>
 
       <Divider styles={{ margin: "1rem 0rem" }} />
-      {/* Invoice to */}
+      {/* Lead to */}
       <GridInnerContainer>
         <GridItem xs={12} md={7}>
-          <InvoiceTo id={proposalTo!} />
+          <LeadTo id={leadTo!} />
         </GridItem>
         <GridItem xs={12} md={5}>
           <BillingDetail />
@@ -47,7 +47,7 @@ const AddMain: FC<Partial<Proposal>> = (props) => {
       {/* Add Item */}
       <AddNewItem items={items} salesperson={salesperson} msgLeave={msgLeave} />
       <Divider styles={{ margin: "2rem 0" }} />
-      <InvoiceNote note={note} />
+      <LeadNote note={note} />
     </Card>
   );
 };

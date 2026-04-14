@@ -2,7 +2,7 @@ import { memo, useState } from "react";
 import { Select, SelectItem, Text } from "../../ui";
 import Box from "../box/Box";
 
-const invoiceTo = {
+const leadTo = {
   1: {
     name: "Wonder-Land, LLC",
     address: "37843 Valkary Monden",
@@ -22,20 +22,20 @@ const invoiceTo = {
     mail: "kiasa@email.com",
   },
 };
-type InvoiceKey = typeof invoiceTo;
-const InvoiceTo = ({ id }: { id: number }) => {
-  const [invoice, setInvoice] = useState<any>(id);
-  const handleSelectInvoice = (val: string) => {
-    setInvoice(+val);
+type LeadKey = typeof leadTo;
+const LeadTo = ({ id }: { id: number }) => {
+  const [selected, setSelected] = useState<any>(id);
+  const handleSelectLead = (val: string) => {
+    setSelected(+val);
   };
   return (
     <Box display="flex" flexDirection="column" space={0.8} px={20}>
       <Text varient="body2" weight="bold" paragraph>
-        Invoice To:{" "}
+        Lead To:{" "}
       </Text>
       <Select
-        defaultValue={invoice?.toString()!}
-        onChange={handleSelectInvoice}
+        defaultValue={selected?.toString()!}
+        onChange={handleSelectLead}
         sizes="small"
         width="250px"
         labelWidth="250px"
@@ -45,23 +45,23 @@ const InvoiceTo = ({ id }: { id: number }) => {
         <SelectItem value="2" label="Jack Frag" />
         <SelectItem value="3" label="Tomo Graphic" />
       </Select>
-      {invoice && (
+      {selected && (
         <Box my={12} display="flex" flexDirection="column" space={0.2}>
           <Text varient="body2">
-            {invoiceTo[invoice as keyof InvoiceKey].name}
+            {leadTo[selected as keyof LeadKey].name}
           </Text>
           <Text varient="body2">
-            {invoiceTo[invoice as keyof InvoiceKey].address}
+            {leadTo[selected as keyof LeadKey].address}
           </Text>
           <Text varient="body2">
-            {invoiceTo[invoice as keyof InvoiceKey].phone}
+            {leadTo[selected as keyof LeadKey].phone}
           </Text>
           <Text varient="body2">
-            {invoiceTo[invoice as keyof InvoiceKey].mail}
+            {leadTo[selected as keyof LeadKey].mail}
           </Text>
         </Box>
       )}
     </Box>
   );
 };
-export default memo(InvoiceTo);
+export default memo(LeadTo);

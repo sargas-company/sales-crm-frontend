@@ -3,33 +3,33 @@ import { useLocation } from "react-router-dom";
 import { useAppSelector } from "../../../hooks";
 import Box from "../../../components/box/Box";
 import Card from "../../../components/card/Card";
-import ProposalLayout from "../../../components/proposal/layout/ProposalLayout";
-import PreviewMain from "../../../components/proposal/preview/PreviewMain";
-import ProposalChat from "../../../components/proposal/preview/ProposalChat";
+import LeadLayout from "../../../components/leads/layout/LeadLayout";
+import PreviewMain from "../../../components/leads/preview/PreviewMain";
+import LeadChat from "../../../components/leads/preview/LeadChat";
 import { Button, Tab, TabList, TabItem, TabContent } from "../../../ui";
 import { RootState } from "../../../store/store";
 import { InfoOutlined, ChatOutlined } from "@mui/icons-material";
 
-const selectInvoiceItem = (state: RootState, id?: number) =>
+const selectLeadItem = (state: RootState, id?: number) =>
   id
-    ? state.proposal.allData.find((item) => item.id === id)
-    : state.proposal.allData[0];
+    ? state.lead.allData.find((item) => item.id === id)
+    : state.lead.allData[0];
 
-const InvoicePreview = () => {
+const LeadPreview = () => {
   const { pathname } = useLocation();
   const [activeTab, setActiveTab] = useState(1);
   const pathChunk = pathname.match(/\w+/g);
   if (pathChunk!.length > 3) {
     return <></>;
   }
-  const currentInvoiceItem = useAppSelector((state) =>
-    selectInvoiceItem(state, +pathChunk?.pop()!)
+  const currentLeadItem = useAppSelector((state) =>
+    selectLeadItem(state, +pathChunk?.pop()!)
   );
-  if (!currentInvoiceItem) {
+  if (!currentLeadItem) {
     return <></>;
   }
   return (
-    <ProposalLayout>
+    <LeadLayout>
       <Tab value={activeTab}>
         <Card>
           <Box px={20} pt={16}>
@@ -49,22 +49,22 @@ const InvoicePreview = () => {
             </TabList>
           </Box>
           <TabContent tabIndex={1}>
-            <PreviewMain {...currentInvoiceItem} />
+            <PreviewMain {...currentLeadItem} />
           </TabContent>
           <TabContent tabIndex={2}>
-            <ProposalChat />
+            <LeadChat />
           </TabContent>
         </Card>
       </Tab>
       <Card padding="1.2rem">
         <Box display="flex" flexDirection="column" space={1}>
-          <Button color="error">send invoice</Button>
+          <Button color="error">send lead</Button>
           <Button varient="outlined" color="info">
-            edit invoice
+            edit lead
           </Button>
         </Box>
       </Card>
-    </ProposalLayout>
+    </LeadLayout>
   );
 };
-export default InvoicePreview;
+export default LeadPreview;

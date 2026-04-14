@@ -1,15 +1,15 @@
 import { FC } from "react";
 import styled from "styled-components";
-import { ProposalList } from "../../../store/proposals/types/definition";
+import { LeadList } from "../../../store/leads/types/definition";
 import { Button, Divider, Text } from "../../../ui";
 import Box from "../../box/Box";
 import { GridInnerContainer, GridItem } from "../../layout";
 import BillingDetail from "../BillingDetail";
 import OragnizationDetail from "../OrganizationDetails";
 import TotalAmount from "../TotalAmount";
-import PreviewInvoiceTable from "./PreviewInvoiceTable";
+import PreviewLeadTable from "./PreviewLeadTable";
 
-const PreviewMain: FC<Partial<ProposalList>> = (props) => {
+const PreviewMain: FC<Partial<LeadList>> = (props) => {
   const {
     address,
     company,
@@ -33,7 +33,7 @@ const PreviewMain: FC<Partial<ProposalList>> = (props) => {
                 <tr>
                   <td>
                     <Text heading="h6" weight="bold">
-                      Invoice
+                      Lead
                     </Text>
                   </td>
                   <td>
@@ -69,7 +69,7 @@ const PreviewMain: FC<Partial<ProposalList>> = (props) => {
           <GridItem xs={12} sm={7}>
             <Box display="flex" flexDirection="column" space={0.4} px={20}>
               <Text varient="body1" weight="medium" paragraph>
-                Invoice To:
+                Lead To:
               </Text>
               <Text varient="body2" paragraph>
                 {name}
@@ -94,7 +94,7 @@ const PreviewMain: FC<Partial<ProposalList>> = (props) => {
         </GridInnerContainer>
       </Box>
       <Divider styles={{ margin: "1.6rem 0 0.8rem 0" }} />
-      <PreviewInvoiceTable />
+      <PreviewLeadTable />
       <Box px={20} py={16}>
         <StyledMisc rowSpacing={0.6}>
           <GridItem xs={12} sm={4}>

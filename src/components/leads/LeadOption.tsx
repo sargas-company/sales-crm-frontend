@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Select, SelectItem, Text, Toggle } from "../../ui";
 import Box from "../box/Box";
 
-const InvoiceOption = () => {
+const LeadOption = () => {
   const [paymentTerm, setPaymentTerm] = useState(true);
   const [clientNote, setClientNote] = useState(false);
   const [paymentStub, setPaymentStub] = useState(false);
@@ -33,4 +33,4 @@ const InvoiceOption = () => {
     </Box>
   );
 };
-export default InvoiceOption;
+export default LeadOption;

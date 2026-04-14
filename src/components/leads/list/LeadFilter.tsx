@@ -1,7 +1,7 @@
 import { FC, memo } from "react";
 import { Select, SelectItem } from "../../../ui";
 
-const InvoiceFilter: FC<Props> = ({ changeFilter, status }) => {
+const LeadFilter: FC<Props> = ({ changeFilter, status }) => {
   return (
     <>
       <Select
@@ -9,7 +9,7 @@ const InvoiceFilter: FC<Props> = ({ changeFilter, status }) => {
         width="100%"
         labelWidth="100%"
         containerWidth="80%"
-        label="Invoice Status"
+        label="Lead Status"
         onChange={changeFilter}
       >
         <SelectItem value="" label="none" />
@@ -22,7 +22,7 @@ const InvoiceFilter: FC<Props> = ({ changeFilter, status }) => {
     </>
   );
 };
-export default memo(InvoiceFilter);
+export default memo(LeadFilter);
 
 interface Props {
   changeFilter: (status: string) => void;

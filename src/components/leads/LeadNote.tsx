@@ -1,13 +1,13 @@
 import { Text, TextField } from "../../ui";
 import Box from "../box/Box";
 
-const InvoiceNote = ({ note }: { note?: string }) => (
+const LeadNote = ({ note }: { note?: string }) => (
   <Box px={20}>
     <Text varient="body2" lineHeight="30px" secondary paragraph>
       Note:
     </Text>
     <TextField
-      name="invoice-note"
+      name="lead-note"
       defaultValue={
         note
           ? note
@@ -17,4 +17,4 @@ const InvoiceNote = ({ note }: { note?: string }) => (
     />
   </Box>
 );
-export default InvoiceNote;
+export default LeadNote;

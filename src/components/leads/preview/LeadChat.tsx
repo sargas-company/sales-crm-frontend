@@ -13,7 +13,7 @@ import {
 import { useAppDispatch, useAppSelector } from "../../../hooks";
 import { Divider } from "../../../ui";
 
-const ProposalChat = () => {
+const LeadChat = () => {
   const dispatch = useAppDispatch();
   const chats = useAppSelector((state) => state.chat.chats);
   const isChatSelected = useAppSelector(
@@ -49,4 +49,4 @@ const ProposalChat = () => {
     </chatModalCtx.Provider>
   );
 };
-export default ProposalChat;
+export default LeadChat;

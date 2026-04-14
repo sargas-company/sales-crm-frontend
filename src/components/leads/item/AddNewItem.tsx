@@ -8,9 +8,9 @@ import NewItem from "./NewItem";
 import SalesPerson from "../SalesPerson";
 import TotalAmount from "../TotalAmount";
 
-import type { InvoiceItem, NewItemHandle } from "./type";
+import type { LeadItem, NewItemHandle } from "./type";
 
-const itemId = (item: Array<InvoiceItem>) => {
+const itemId = (item: Array<LeadItem>) => {
   const id = item.reduce((acc, cur): number => {
     if (cur.id > acc) {
       return cur.id;
@@ -30,7 +30,7 @@ const itemTemplate = (id: number) => ({
 });
 
 const AddNewItem = forwardRef<NewItemHandle, ItemPros>((props, ref) => {
-  const [items, setItems] = useState<Array<InvoiceItem>>(
+  const [items, setItems] = useState<Array<LeadItem>>(
     props.items ? props.items : [itemTemplate(1)]
   );
   useImperativeHandle(ref, () => ({
@@ -99,12 +99,12 @@ const AddNewItem = forwardRef<NewItemHandle, ItemPros>((props, ref) => {
 export default AddNewItem;
 
 interface ItemPros {
-  items?: Array<InvoiceItem>;
+  items?: Array<LeadItem>;
   salesperson?: string;
   msgLeave?: string;
 }
 
-export interface ItemDetail extends InvoiceItem {
+export interface ItemDetail extends LeadItem {
   handleChange: (
     id: number,
     value: React.ChangeEvent<HTMLInputElement>

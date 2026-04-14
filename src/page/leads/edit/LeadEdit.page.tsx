@@ -1,26 +1,26 @@
 import { AttachMoney } from "@mui/icons-material";
 import Box from "../../../components/box/Box";
 import Card from "../../../components/card/Card";
-import AddMain from "../../../components/proposal/add/AddMain";
-import ProposalAction from "../../../components/proposal/ProposalAction";
-import ProposalOption from "../../../components/proposal/ProposalOption";
-import ProposalLayout from "../../../components/proposal/layout/ProposalLayout";
+import AddMain from "../../../components/leads/add/AddMain";
+import LeadAction from "../../../components/leads/LeadAction";
+import LeadOption from "../../../components/leads/LeadOption";
+import LeadLayout from "../../../components/leads/layout/LeadLayout";
 import { Button } from "../../../ui";
 
-const InvoiceEdit = () => {
+const LeadEdit = () => {
   return (
-    <ProposalLayout>
+    <LeadLayout>
       <AddMain />
       <Box>
         <Card padding="20px">
-          <ProposalAction />
+          <LeadAction />
           <Button color="success" styles={{ width: "100%", marginTop: 16 }}>
             <AttachMoney fontSize="small" /> Add Payment
           </Button>
         </Card>
-        <ProposalOption />
+        <LeadOption />
       </Box>
-    </ProposalLayout>
+    </LeadLayout>
   );
 };
-export default InvoiceEdit;
+export default LeadEdit;

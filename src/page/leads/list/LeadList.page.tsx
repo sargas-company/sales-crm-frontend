@@ -1,18 +1,16 @@
 import React, { useCallback, useState } from "react";
 import Box from "../../../components/box/Box";
 import Card from "../../../components/card/Card";
-import CreateNewInvoice from "../../../components/leads/list/CreateNewInvoice";
-// import InvoiceFilter from "../../../components/leads/list/InvoiceFilter";
-import InvoiceTable from "../../../components/leads/list/InvoiceTable";
+import CreateNewLead from "../../../components/leads/list/CreateNewLead";
+import LeadTable from "../../../components/leads/list/LeadTable";
 import { GridInnerContainer, GridItem } from "../../../components/layout";
-import { searchData } from "../../../store/proposals/proposalsSlice";
+import { searchData } from "../../../store/leads/leadsSlice";
 import { useAppDispatch } from "../../../hooks";
 import { TextField } from "../../../ui";
 
-const InvoiceList = () => {
+const LeadList = () => {
   const dispatch = useAppDispatch();
   const [searchKey, setSearchKey] = useState("");
-  // const [filterKey, setFilterKey] = useState("");
   const handleChangeSearch = useCallback(
     (eve: React.ChangeEvent<HTMLInputElement>) => {
       setTimeout(() => {
@@ -22,10 +20,6 @@ const InvoiceList = () => {
     },
     []
   );
-  // const handleChangeFilter = useCallback((invoiceStatus: string) => {
-  //   dispatch(searchData(invoiceStatus));
-  //   setFilterKey(filterKey);
-  // }, []);
   return (
     <Card>
       <Box display="flex" justify="flex-end" padding={20}>
@@ -33,29 +27,22 @@ const InvoiceList = () => {
           <GridItem xs={12} md={6}>
             <TextField
                 type="text"
-                name="search-invoice"
-                placeholder="Search proposal"
+                name="search-lead"
+                placeholder="Search lead"
                 sizes="small"
                 maxWidth="280px"
                 onChange={handleChangeSearch}
                 defaultValue={searchKey}
             />
           </GridItem>
-          {/*<GridItem xs={12} md={6}>*/}
-          {/*  <InvoiceFilter*/}
-          {/*    status={filterKey}*/}
-          {/*    changeFilter={handleChangeFilter}*/}
-          {/*  />*/}
-          {/*</GridItem>*/}
-
           <GridItem xs={12} md={6}>
-            <CreateNewInvoice />
+            <CreateNewLead />
           </GridItem>
         </GridInnerContainer>
       </Box>
 
-      <InvoiceTable />
+      <LeadTable />
     </Card>
   );
 };
-export default InvoiceList;
+export default LeadList;
