@@ -1,24 +1,21 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit'
+import axiosInstance from '../../api/axiosInstance'
 import { Chats, ChatState, Contacts, Message, Status } from './definition'
-
-const API_BASE = import.meta.env.PROD
-  ? 'https://react-dashboard-server.onrender.com/api'
-  : '/api'
 
 // Temporary thunks — will be replaced with RTK Query (chatApi) during GPT integration
 export const fetchUserProfile = createAsyncThunk('chats/fetchUserProfile', async () => {
-  const res = await fetch(`${API_BASE}/chat/userProfile`)
-  return res.json()
+  const { data } = await axiosInstance.get('/chat/userProfile')
+  return data
 })
 
 export const fetchChat = createAsyncThunk('chats/fetchChats', async () => {
-  const res = await fetch(`${API_BASE}/chat/chats`)
-  return res.json()
+  const { data } = await axiosInstance.get('/chat/chats')
+  return data
 })
 
 export const fetchChatContact = createAsyncThunk('chats/fetchChatContacts', async () => {
-  const res = await fetch(`${API_BASE}/chat/chatContacts`)
-  return res.json()
+  const { data } = await axiosInstance.get('/chat/chatContacts')
+  return data
 })
 
 const initialState: ChatState = {

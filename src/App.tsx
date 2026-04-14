@@ -5,6 +5,7 @@ import "./styles/modal/Modal.css";
 import useTheme from "./theme/useTheme";
 import GlobalStyle from "./global.styled";
 import AppRoutes from "./routes/AppRoutes";
+import AuthInitializer from "./components/auth/AuthInitializer";
 const App = () => {
   const {
     theme: {
@@ -24,6 +25,7 @@ const App = () => {
         skinColor={color}
         skin={skin}
       />
+      <AuthInitializer />
       <AppRoutes />
     </>
   );

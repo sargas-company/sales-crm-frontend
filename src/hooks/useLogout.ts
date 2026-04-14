@@ -1,15 +1,20 @@
 import { useLogoutUserMutation } from '../store/auth/authApi'
+import { logout } from '../store/auth/authSlice'
+import { useAppDispatch } from '.'
 import useNavigation from './useNavigation'
 
 const useLogout = () => {
+  const dispatch = useAppDispatch()
   const [logoutUser] = useLogoutUserMutation()
   const { navigate } = useNavigation()
 
   return async () => {
     try {
       await logoutUser().unwrap()
+    } catch {
+      // Even if the server request fails, clear local state
     } finally {
-      // Always redirect — even if the request fails the local state is cleared
+      dispatch(logout())
       navigate('/auth/login/')
     }
   }

@@ -1,28 +1,14 @@
-import { ReactNode, useLayoutEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import useAuth from "../hooks/useAuth";
+import { ReactNode } from 'react'
+import { Navigate } from 'react-router-dom'
+import useAuth from '../hooks/useAuth'
+import PageLoading from '../components/loading/PageLoading'
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth()
 
-  useLayoutEffect(() => {
-    if (typeof isAuthenticated == "boolean") {
-      if (!isAuthenticated) {
-        return navigate("/auth/login/");
-      } else {
-        if (pathname == "/") {
-          navigate("/dashboards/crm/");
-        }
-      }
-    }
-  }, [isAuthenticated]);
+  if (isAuthenticated === null) return <PageLoading />
+  if (!isAuthenticated) return <Navigate to="/auth/login" replace />
+  return <>{children}</>
+}
 
-  if (typeof isAuthenticated !== "boolean") {
-    return <></>;
-  }
-  return <>{children}</>;
-};
-
-export default ProtectedRoute;
+export default ProtectedRoute

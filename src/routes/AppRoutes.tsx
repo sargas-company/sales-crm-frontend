@@ -10,7 +10,7 @@ const AppRoutes = () => {
     <Routes>
       <Route
         caseSensitive
-        path="/auth/register/"
+        path="/auth/register"
         element={
           <Suspense fallback={<PageLoading />}>
             <Signup />
@@ -19,7 +19,7 @@ const AppRoutes = () => {
       />
       <Route
         caseSensitive
-        path="/auth/login/"
+        path="/auth/login"
         element={
           <Suspense fallback={<PageLoading />}>
             <Signin />
