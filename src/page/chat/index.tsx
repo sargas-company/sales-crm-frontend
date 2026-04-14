@@ -7,7 +7,7 @@ import {
   fetchChat,
   fetchChatContact,
   fetchUserProfile,
-} from "../../features/chats/chatSlice";
+} from "../../store/chats/chatSlice";
 import { useAppDispatch } from "../../hooks";
 import Content from "./chunk/Content";
 
@@ -22,10 +22,10 @@ const Chat = () => {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    dispatch(fetchChat);
-    dispatch(fetchUserProfile);
-    dispatch(fetchChatContact);
-  }, []);
+    dispatch(fetchChat())
+    dispatch(fetchUserProfile())
+    dispatch(fetchChatContact())
+  }, [dispatch]);
   return (
     <StyledChatContainer height="85vh" className="overflow-hidden">
       <GridInnerContainer alignItems="stretch">

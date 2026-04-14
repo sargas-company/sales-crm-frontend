@@ -1,7 +1,7 @@
 import { FC, useMemo } from "react";
 import { useDispatch } from "react-redux";
-import { selectCurrentChat } from "../../../features/chats/creator";
-import { Chats } from "../../../features/chats/definition";
+import { selectCurrentChat } from "../../../store/chats/chatSlice";
+import { Chats } from "../../../store/chats/definition";
 import Box from "../../box/Box";
 import NotFound from "../NotFound";
 import ChatItem from "./ChatItem";

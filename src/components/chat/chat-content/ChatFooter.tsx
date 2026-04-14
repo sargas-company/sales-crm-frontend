@@ -5,7 +5,7 @@ import {
 } from "@mui/icons-material";
 import React, { memo, useState } from "react";
 import { shallowEqual } from "react-redux";
-import { sendMessage } from "../../../features/chats/creator";
+import { sendMessage } from "../../../store/chats/chatSlice";
 import { useAppDispatch, useAppSelector } from "../../../hooks";
 import { RootState } from "../../../store/store";
 import { IconButton, TextField } from "../../../ui";

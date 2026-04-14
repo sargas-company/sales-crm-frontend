@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { Status } from "../../features/chats/definition";
+import { Status } from "../../store/chats/definition";
 import { Avatar, CustomAvatar, Dot } from "../../ui";
 import { StatusColor } from "../../page/chat";
 import Box from "../box/Box";

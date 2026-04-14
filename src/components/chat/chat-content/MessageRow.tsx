@@ -1,6 +1,6 @@
 import { Done, DoneAll } from "@mui/icons-material";
 import { FC } from "react";
-import { Message } from "../../../features/chats/definition";
+import { Message } from "../../../store/chats/definition";
 import { Text } from "../../../ui";
 import Box from "../../box/Box";
 import TimeStamp from "../TimeStamp";

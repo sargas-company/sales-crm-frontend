@@ -1,14 +1,19 @@
-import { applyMiddleware, createStore, AnyAction } from 'redux';
-import thunkMiddleware, { ThunkDispatch } from 'redux-thunk'
-import { composeWithDevTools } from 'redux-devtools-extension'
-import rootReducer from './rootReducer'
+import { configureStore } from '@reduxjs/toolkit'
+import { baseApi } from '../api/baseApi'
+import authReducer from './auth/authSlice'
+import chatReducer from './chats/chatSlice'
 
-const composedEnhancer = composeWithDevTools(applyMiddleware(thunkMiddleware))
+export const store = configureStore({
+  reducer: {
+    auth: authReducer,
+    chat: chatReducer,
+    [baseApi.reducerPath]: baseApi.reducer,
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(baseApi.middleware),
+})
 
-const store = createStore(rootReducer, composedEnhancer)
+export type RootState = ReturnType<typeof store.getState>
+export type AppDispatch = typeof store.dispatch
 
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch & AppThunk;
-export type AppThunk = ThunkDispatch<RootState, null, AnyAction>
-
-export default store;
+export default store

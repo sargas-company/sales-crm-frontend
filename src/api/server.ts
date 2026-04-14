@@ -18,6 +18,9 @@ export default function () {
                 const {collectionName} = req.params;
                 return users[collectionName];
             })
+
+            // Pass all unhandled routes through to the Vite proxy (real API)
+            this.passthrough()
         }
     })
 }

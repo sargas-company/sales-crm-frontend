@@ -3,13 +3,13 @@ import AuthBanner from "../../components/auth/AuthBanner";
 import Register, { FormData } from "../../components/auth/Register";
 import ColorBox from "../../components/box/ColorBox";
 import AuthLayout from "../../components/layout/auth-form/AuthLayout";
-import useAuth, { IAuth } from "../../hooks/useAuth";
+import useAuth from "../../hooks/useAuth";
 import useLocalStorage from "../../hooks/useLocalStorage";
 import useNavigation from "../../hooks/useNavigation";
 
 const Signup = () => {
   const { isAuthenticated } = useAuth();
-  const { addLocalStorage } = useLocalStorage<IAuth>("userData");
+  const { addLocalStorage } = useLocalStorage("userData");
   const { navigate } = useNavigation();
 
   useEffect(() => {

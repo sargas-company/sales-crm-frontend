@@ -1,6 +1,6 @@
 import { memo, useLayoutEffect, useRef } from "react";
 import { shallowEqual } from "react-redux";
-import { Message, UserProfile } from "../../../features/chats/definition";
+import { Message, UserProfile } from "../../../store/chats/definition";
 import { useAppSelector } from "../../../hooks";
 import { RootState } from "../../../store/store";
 import ScrollContainer from "../../scroll-container/ScrollContainer";

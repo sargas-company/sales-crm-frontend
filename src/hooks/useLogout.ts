@@ -1,12 +1,18 @@
-import useLocalStorage from "./useLocalStorage"
-import useNavigation from "./useNavigation";
+import { useLogoutUserMutation } from '../store/auth/authApi'
+import useNavigation from './useNavigation'
 
 const useLogout = () => {
-    const {removeLocalStorage} = useLocalStorage("userData");
-    const {navigate} = useNavigation()
-    return () => {
-        removeLocalStorage();
-        navigate("/auth/login/")
+  const [logoutUser] = useLogoutUserMutation()
+  const { navigate } = useNavigation()
+
+  return async () => {
+    try {
+      await logoutUser().unwrap()
+    } finally {
+      // Always redirect — even if the request fails the local state is cleared
+      navigate('/auth/login/')
     }
+  }
 }
-export default useLogout;
+
+export default useLogout

@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { UserProfile } from "../../../features/chats/definition";
+import { UserProfile } from "../../../store/chats/definition";
 import { Text } from "../../../ui";
 import Box from "../../box/Box";
 import UserAvatar from "../UserAvatar";

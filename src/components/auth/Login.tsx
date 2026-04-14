@@ -17,9 +17,11 @@ export interface LoginFormData {
 interface Props {
   onSubmit: (inputs: LoginFormData) => void;
   hyperComponent?: ReactNode;
+  isLoading?: boolean;
+  serverError?: string;
 }
 
-const Login: FC<Props> = ({ onSubmit, hyperComponent }) => {
+const Login: FC<Props> = ({ onSubmit, hyperComponent, isLoading, serverError }) => {
   const { isToggle, handleTogglePassword } = useTogglePassword();
   const [inputs, setInputs] = useState<LoginFormData>({
     email: "",
@@ -74,9 +76,9 @@ const Login: FC<Props> = ({ onSubmit, hyperComponent }) => {
           />
           {hyperComponent}
           <Box display="flex" flexDirection="column" space={1}>
-            {error && (
+            {(error || serverError) && (
               <Alert severity="error" alertTitle="Authentication Failure!">
-                {error}
+                {error || serverError}
               </Alert>
             )}
             <TextField
@@ -112,7 +114,9 @@ const Login: FC<Props> = ({ onSubmit, hyperComponent }) => {
               />
 
             </Box>
-            <Button type="submit">login</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Signing in...' : 'Login'}
+            </Button>
           </Box>
         </Form>
       </Box>

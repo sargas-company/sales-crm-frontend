@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { Status } from "../../../../features/chats/definition";
+import { Status } from "../../../../store/chats/definition";
 import { Choice, ChoiceGroup } from "../../../../ui";
 import Box from "../../../box/Box";
 import SectionTitle from "../SectionTitle";
