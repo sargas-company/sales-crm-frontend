@@ -9,12 +9,15 @@ export type Platform = "Upwork" | "LinkedIn" | "Jobble";
 
 export type ProposalType = "Bid" | "Invite" | "Direct Message";
 
+export type BoostedStatus = "Boosted" | "Not Boosted" | "Boosted Outbid";
+
 export interface InvoiceList {
     id: number;
     jobId: string;
     account: AccountName;
     platform: Platform;
     proposalType: ProposalType;
+    boosted: BoostedStatus;
     coverLetter: string;
     issuedDate: string;
     address: string;
