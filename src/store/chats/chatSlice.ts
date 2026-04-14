@@ -1,21 +1,18 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit'
-import axiosInstance from '../../api/axiosInstance'
+import chatsMock from '../../api/chats.json'
 import { Chats, ChatState, Contacts, Message, Status } from './definition'
 
-// Temporary thunks — will be replaced with RTK Query (chatApi) during GPT integration
+// TODO: replace with RTK Query (chatApi) during GPT integration
 export const fetchUserProfile = createAsyncThunk('chats/fetchUserProfile', async () => {
-  const { data } = await axiosInstance.get('/chat/userProfile')
-  return data
+  return chatsMock.userProfile as any
 })
 
 export const fetchChat = createAsyncThunk('chats/fetchChats', async () => {
-  const { data } = await axiosInstance.get('/chat/chats')
-  return data
+  return chatsMock.chats as any
 })
 
 export const fetchChatContact = createAsyncThunk('chats/fetchChatContacts', async () => {
-  const { data } = await axiosInstance.get('/chat/chatContacts')
-  return data
+  return chatsMock.chatContacts as any
 })
 
 const initialState: ChatState = {
