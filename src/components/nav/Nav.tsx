@@ -1,4 +1,3 @@
-import { useId } from "react";
 import ScrollContainer from "../scroll-container/ScrollContainer";
 import NavGroup from "./components/NavGroup";
 import NavHeading from "./components/NavHeading";
@@ -13,8 +12,8 @@ const Nav = () => {
       <NavContent>
         <NavHeading />
         <ScrollContainer maxHeight="calc(100vh - 4rem)" scrollBarSize="4px">
-          {navList.map((nav) => {
-            const key = useId();
+          {navList.map((nav, index) => {
+            const key = String(index);
             if (nav.childrens) {
               return (
                 <NavGroup
