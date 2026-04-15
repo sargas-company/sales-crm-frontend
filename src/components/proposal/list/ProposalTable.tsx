@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Snackbar, Alert, IconButton, Tooltip } from "@mui/material";
+import { Snackbar, Alert } from "@mui/material";
+import { Tooltip } from "@mui/material";
 import { ContentCopy } from "@mui/icons-material";
+import { IconButton } from "../../../ui";
 
 import upworkLogo from "../../../image/logo/upwork2.png"; // TODO: replace with Upwork logo
 import type { Platform } from "../../../store/proposals/types/definition";
@@ -30,6 +32,7 @@ const platformLogos: Record<Platform, string> = {
 
 const columns: DataGridColoumn[] = [
   { fieldId: "id",           label: "#",            width: "120px" },
+  { fieldId: "jobId",        label: "JobID",        width: "130px" },
   { fieldId: "status",       label: "Status",       width: "120px" },
   { fieldId: "manager",      label: "Manager",      width: "160px" },
   { fieldId: "account",      label: "Account",      width: "140px" },
@@ -40,7 +43,6 @@ const columns: DataGridColoumn[] = [
   { fieldId: "createdAt",    label: "Created At",   width: "160px" },
   { fieldId: "sentAt",       label: "Sent At",      width: "160px" },
   { fieldId: "coverLetter",  label: "Cover Letter", width: "320px" },
-  { fieldId: "jobId",        label: "JobID",        width: "100px" },
   { fieldId: "actions",      label: "Actions",      width: "10%"   },
 ];
 
@@ -70,6 +72,24 @@ const ProposalTable = () => {
                 <Link to={`/proposal/preview/${row.id}`}>
                   <Text skinColor>#{row.id}</Text>
                 </Link>
+              }
+            />
+            <DataGridCell
+              width={field["jobId"].width}
+              justify="center"
+              children={
+                <Box display="flex" align="center">
+                  <span style={{ cursor: "pointer" }} onClick={() => handleCopyJobId(row.jobId)}>
+                    <Text skinColor>...{row.jobId.slice(-4)}</Text>
+                  </span>
+                  <Tooltip title={row.jobId} placement="top">
+                    <span style={{ marginLeft: 4 }}>
+                      <IconButton varient="text" size={30} fontSize={21} contentOpacity={5} onClick={() => handleCopyJobId(row.jobId)}>
+                        <ContentCopy style={{ fontSize: 16 }} />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Box>
               }
             />
             <DataGridCell
@@ -117,16 +137,6 @@ const ProposalTable = () => {
                 >
                   {row.coverLetter}
                 </span>
-              }
-            />
-            <DataGridCell
-              width={field["jobId"].width}
-              children={
-                <Tooltip title={row.jobId} placement="top">
-                  <IconButton size="small" onClick={() => handleCopyJobId(row.jobId)}>
-                    <ContentCopy fontSize="small" />
-                  </IconButton>
-                </Tooltip>
               }
             />
             <DataGridCell width={field["actions"].width}>

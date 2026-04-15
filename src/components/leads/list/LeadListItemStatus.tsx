@@ -17,6 +17,7 @@ const LeadListItemStatus = ({ itemStatus }: { itemStatus: LeadStatus }) => (
     skin="light"
     size="small"
     color={statusColor[itemStatus]}
+    styles={{ whiteSpace: "nowrap" }}
   />
 );
 

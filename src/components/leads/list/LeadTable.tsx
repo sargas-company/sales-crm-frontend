@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Snackbar, Alert, IconButton, Tooltip } from "@mui/material";
+import { Snackbar, Alert } from "@mui/material";
+import { Tooltip } from "@mui/material";
 import { ContentCopy } from "@mui/icons-material";
+import { IconButton } from "../../../ui";
 
 import DataGrid from "../../layout/data-grid/DataGrid";
 import Box from "../../box/Box";
@@ -13,18 +15,19 @@ import type { DataGridColoumn } from "../../layout/data-grid/type";
 import { LeadList } from "../../../store/leads/types/definition";
 import { useAppSelector } from "../../../hooks";
 import LeadListAction from "./LeadListAction";
+import LeadListItemClientType from "./LeadListItemClientType";
 
 const columns: DataGridColoumn[] = [
   { fieldId: "id",         label: "#",           width: "100px" },
+  { fieldId: "bidId",      label: "Bid ID",      width: "130px" },
   { fieldId: "name",       label: "Lead Name",   width: "200px" },
-  { fieldId: "status",     label: "Status",      width: "170px" },
-  { fieldId: "clientType", label: "Client Type", width: "120px" },
+  { fieldId: "status",     label: "Status",      width: "210px" },
+  { fieldId: "clientType", label: "Client Type", width: "160px" },
   { fieldId: "rate",       label: "Rate",        width: "90px"  },
   { fieldId: "location",   label: "Location",    width: "160px" },
-  { fieldId: "repliedAt",  label: "Replied At",  width: "120px" },
-  { fieldId: "acceptedAt", label: "Accepted At", width: "120px" },
-  { fieldId: "holdOnAt",   label: "Hold On At",  width: "120px" },
-  { fieldId: "bidId",      label: "Bid ID",      width: "80px"  },
+  { fieldId: "repliedAt",  label: "Replied At",  width: "160px" },
+  { fieldId: "acceptedAt", label: "Accepted At", width: "160px" },
+  { fieldId: "holdOnAt",   label: "Hold On At",  width: "160px" },
   { fieldId: "actions",    label: "Actions",     width: "80px"  },
 ];
 
@@ -55,27 +58,38 @@ const LeadTable = () => {
                 </Link>
               }
             />
+            <DataGridCell
+              width={field["bidId"].width}
+              justify="center"
+              children={
+                <Box display="flex" align="center">
+                  <span style={{ cursor: "pointer" }} onClick={() => handleCopyBidId(row.jobId)}>
+                    <Text skinColor>...{row.jobId.slice(-4)}</Text>
+                  </span>
+                  <Tooltip title={row.jobId} placement="top">
+                    <span style={{ marginLeft: 4 }}>
+                      <IconButton varient="text" size={30} fontSize={21} contentOpacity={5} onClick={() => handleCopyBidId(row.jobId)}>
+                        <ContentCopy style={{ fontSize: 16 }} />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Box>
+              }
+            />
             <DataGridCell width={field["name"].width} value={row.name} />
             <DataGridCell
               width={field["status"].width}
               children={<LeadListItemStatus itemStatus={row.status} />}
             />
-            <DataGridCell width={field["clientType"].width} value={row.clientType} />
-            <DataGridCell width={field["rate"].width}       value={`$${row.rate}`} />
+            <DataGridCell
+              width={field["clientType"].width}
+              children={<LeadListItemClientType clientType={row.clientType} />}
+            />
+            <DataGridCell width={field["rate"].width} justify="center" value={`$${row.rate}`} />
             <DataGridCell width={field["location"].width}   value={row.location} />
             <DataGridCell width={field["repliedAt"].width}  value={row.repliedAt} />
             <DataGridCell width={field["acceptedAt"].width} value={row.acceptedAt} />
             <DataGridCell width={field["holdOnAt"].width}   value={row.holdOnAt} />
-            <DataGridCell
-              width={field["bidId"].width}
-              children={
-                <Tooltip title={row.jobId} placement="top">
-                  <IconButton size="small" onClick={() => handleCopyBidId(row.jobId)}>
-                    <ContentCopy fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              }
-            />
             <DataGridCell width={field["actions"].width}>
               <LeadListAction leadId={row.id} />
             </DataGridCell>
