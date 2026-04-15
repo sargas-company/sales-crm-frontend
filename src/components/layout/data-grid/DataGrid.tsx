@@ -145,6 +145,7 @@ const DataGrid = <T extends unknown>({
                   fieldId={item.fieldId}
                   label={item.label}
                   width={item.width}
+                  flex={item.flex}
                   sorted={item.fieldId === sortOption.fieldName}
                   onSortField={(field, dir) =>
                     setSortOption({ fieldName: field, by: dir! })

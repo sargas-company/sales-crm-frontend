@@ -43,7 +43,7 @@ const columns: DataGridColoumn[] = [
   { fieldId: "createdAt",    label: "Created At",   width: "160px" },
   { fieldId: "sentAt",       label: "Sent At",      width: "160px" },
   { fieldId: "coverLetter",  label: "Cover Letter", width: "320px" },
-  { fieldId: "actions",      label: "Actions",      width: "10%"   },
+  { fieldId: "actions",      label: "Actions",      width: "140px" },
 ];
 
 const ProposalTable = () => {

@@ -28,7 +28,7 @@ const columns: DataGridColoumn[] = [
   { fieldId: "repliedAt",  label: "Replied At",  width: "160px" },
   { fieldId: "acceptedAt", label: "Accepted At", width: "160px" },
   { fieldId: "holdOnAt",   label: "Hold On At",  width: "160px" },
-  { fieldId: "actions",    label: "Actions",     width: "80px"  },
+  { fieldId: "actions",    label: "Actions",     width: "140px" },
 ];
 
 const LeadTable = () => {

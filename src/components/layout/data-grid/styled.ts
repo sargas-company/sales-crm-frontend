@@ -5,7 +5,8 @@ const StyledDataGrid = styled("div") <StyledProps>`
     padding: 20px 0px;
     & .data_grid {
         .data_grid_content {
-            width: auto;
+            width: 100%;
+            min-width: max-content;
 
             .data_grid_body {
                 min-height: 200px;

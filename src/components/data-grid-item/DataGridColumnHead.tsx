@@ -77,6 +77,7 @@ const SortIcon: FC<{ icon: ReactNode }> = ({ icon }) => (
 
 interface StyleOption {
   width: string | number;
+  flex?: number;
   sorted: boolean;
 }
 
@@ -91,9 +92,10 @@ interface Props extends StyleOption {
 const StyleDataGridHead = styled("div")<StyleOption>`
   position: relative;
   display: flex;
-  width: ${({ width }) => width};
-  min-width: ${({ width }) => width};
-  max-width: ${({ width }) => width};
+  ${({ flex, width }) => flex
+    ? `flex: ${flex}; min-width: 0;`
+    : `width: ${width}; min-width: ${width}; max-width: ${width};`
+  }
   justify-content: space-between;
   align-items: center;
   vertical-alignment: middle;
