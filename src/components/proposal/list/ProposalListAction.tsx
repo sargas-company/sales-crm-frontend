@@ -1,14 +1,9 @@
 import { Link } from "react-router-dom";
 import Box from "../../box/Box";
 import { IconButton } from "../../../ui";
+import { DeleteOutline, VisibilityOutlined, EditOutlined } from "@mui/icons-material";
 
-import {
-  DeleteOutline,
-  VisibilityOutlined,
-  EditOutlined,
-} from "@mui/icons-material";
-
-const ProposalListAction = ({ proposalId }: { proposalId: number }) => (
+const ProposalListAction = ({ proposalId }: { proposalId: string }) => (
   <Box display="flex">
     <IconButton varient="text" size={30} fontSize={21} contentOpacity={5}>
       <DeleteOutline />
@@ -25,4 +20,5 @@ const ProposalListAction = ({ proposalId }: { proposalId: number }) => (
     </Link>
   </Box>
 );
+
 export default ProposalListAction;
