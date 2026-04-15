@@ -1,11 +1,12 @@
-import { useState } from "react";
-import type { Platform, ProposalType } from "../../../store/proposals/types/definition";
+import { useState, useEffect } from "react";
+import type { Platform, ProposalType, ProposalStatus } from "../../../store/proposals/types/definition";
 
 export interface ProposalFormFields {
   manager: string;
   account: string;
   proposalType: ProposalType | "";
   platform: Platform;
+  status: ProposalStatus;
   jobUrl: string;
   boosted: boolean;
   connects: string;
@@ -26,6 +27,7 @@ const INITIAL: ProposalFormFields = {
   account: "",
   proposalType: "",
   platform: "Upwork",
+  status: "Draft",
   jobUrl: "",
   boosted: false,
   connects: "0",
@@ -43,9 +45,16 @@ const validate = (fields: ProposalFormFields): ProposalFormErrors => {
   return errors;
 };
 
-const useProposalForm = () => {
-  const [fields, setFields] = useState<ProposalFormFields>(INITIAL);
+const useProposalForm = (initialValues?: Partial<ProposalFormFields>) => {
+  const [fields, setFields] = useState<ProposalFormFields>({ ...INITIAL, ...initialValues });
   const [errors, setErrors]  = useState<ProposalFormErrors>({});
+
+  useEffect(() => {
+    if (initialValues) {
+      setFields({ ...INITIAL, ...initialValues });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(initialValues)]);
 
   const setField = <K extends keyof ProposalFormFields>(key: K, value: ProposalFormFields[K]) => {
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -63,6 +72,7 @@ const useProposalForm = () => {
     account:      fields.account.trim(),
     proposalType: fields.proposalType as ProposalType,
     platform:     fields.platform,
+    status:       fields.status,
     jobUrl:       fields.jobUrl.trim() || null,
     boosted:      fields.boosted,
     connects:     Number(fields.connects) || 0,

@@ -1,0 +1,352 @@
+import { FormEvent, ChangeEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import Card from "../../card/Card";
+import Box from "../../box/Box";
+import { GridInnerContainer, GridItem } from "../../layout";
+import {
+  Text, TextField, Button, Divider,
+  Toggle, Select, SelectItem,
+} from "../../../ui";
+import {
+  useCreateProposalMutation,
+  useUpdateProposalMutation,
+  useGetProposalByIdQuery,
+} from "../../../store/proposals/proposalsApi";
+import { useToast } from "../../../context/toast/ToastContext";
+import useProposalForm from "../add/useProposalForm";
+import parseServerError from "../../../utils/parseServerError";
+import type { ProposalItem } from "../../../store/proposals/types/definition";
+
+interface ProposalFormProps {
+  mode: "create" | "edit";
+  id?: string;
+}
+
+const SectionLabel = ({ children }: { children: string }) => (
+  <Text
+    varient="caption"
+    weight="medium"
+    secondary
+    classes="section-label"
+    style={{ textTransform: "uppercase", letterSpacing: "0.08em" }}
+  >
+    {children}
+  </Text>
+);
+
+const toFormValues = (data: ProposalItem) => ({
+  manager:      data.manager,
+  account:      data.account,
+  proposalType: data.proposalType,
+  platform:     data.platform,
+  status:       data.status,
+  jobUrl:       data.jobUrl ?? "",
+  boosted:      data.boosted,
+  connects:     String(data.connects),
+  coverLetter:  data.coverLetter,
+  vacancy:      data.vacancy  ?? "",
+  comment:      data.comment  ?? "",
+  context:      data.context  ?? "",
+});
+
+const ProposalFormInner = ({
+  mode,
+  id,
+  initialData,
+}: ProposalFormProps & { initialData?: ProposalItem }) => {
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  const { fields, errors, setField, runValidation, getPayload } = useProposalForm(
+    initialData ? toFormValues(initialData) : undefined
+  );
+
+  const [createProposal, { isLoading: isCreating }] = useCreateProposalMutation();
+  const [updateProposal, { isLoading: isUpdating }] = useUpdateProposalMutation();
+  const isLoading = isCreating || isUpdating;
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!runValidation()) return;
+    try {
+      if (mode === "edit" && id) {
+        await updateProposal({ id, body: getPayload() }).unwrap();
+        showToast("Proposal updated successfully", "success");
+      } else {
+        await createProposal(getPayload()).unwrap();
+        showToast("Proposal created successfully", "success");
+      }
+      navigate("/proposal/list");
+    } catch (err) {
+      showToast(parseServerError(err), "error");
+    }
+  };
+
+  return (
+    <Card py="2rem" px="2rem">
+      <Box style={{ maxWidth: 720, margin: "0 auto" }}>
+
+        {/* Header */}
+        <Box mb={5}>
+          <Text heading="h5">{mode === "edit" ? "Edit Proposal" : "New Proposal"}</Text>
+          <Box mt={1}>
+            <Text varient="body2" secondary>
+              {mode === "edit"
+                ? "Update the proposal details below"
+                : "Fill in the details to create a new proposal"}
+            </Text>
+          </Box>
+        </Box>
+
+        <form onSubmit={handleSubmit}>
+          <Box display="flex" flexDirection="column" space={5}>
+
+            {/* ── Main Details ── */}
+            <Box display="flex" flexDirection="column" space={3}>
+              <SectionLabel>Main Details</SectionLabel>
+              <GridInnerContainer spacing={2}>
+
+                <GridItem xs={12} md={6}>
+                  <Box display="flex" flexDirection="column" space={1}>
+                    <Text varient="body2" weight="medium">Manager</Text>
+                    <TextField
+                      name="manager"
+                      placeholder="e.g. John Doe"
+                      value={fields.manager}
+                      onChange={(e) => setField("manager", e.target.value)}
+                      error={!!errors.manager}
+                      hypertext={errors.manager}
+                      width="100%"
+                    />
+                  </Box>
+                </GridItem>
+
+                <GridItem xs={12} md={6}>
+                  <Box display="flex" flexDirection="column" space={1}>
+                    <Text varient="body2" weight="medium">Developer account</Text>
+                    <TextField
+                      name="account"
+                      placeholder="e.g. Dmytro Dev"
+                      value={fields.account}
+                      onChange={(e) => setField("account", e.target.value)}
+                      error={!!errors.account}
+                      hypertext={errors.account}
+                      width="100%"
+                    />
+                  </Box>
+                </GridItem>
+
+                <GridItem xs={12} md={6}>
+                  <Box display="flex" flexDirection="column" space={1}>
+                    <Text varient="body2" weight="medium">Proposal Type *</Text>
+                    <Select
+                      label="Select type"
+                      defaultValue={fields.proposalType}
+                      onChange={(value) => setField("proposalType", value as any)}
+                      width="100%"
+                      sizes="normal"
+                    >
+                      <SelectItem label="Bid"            value="Bid" />
+                      <SelectItem label="Invite"         value="Invite" />
+                      <SelectItem label="Direct Message" value="Direct Message" />
+                    </Select>
+                    {errors.proposalType && (
+                      <Text varient="caption" color="error">{errors.proposalType}</Text>
+                    )}
+                  </Box>
+                </GridItem>
+
+                <GridItem xs={12} md={6}>
+                  <Box display="flex" flexDirection="column" space={1}>
+                    <Text varient="body2" weight="medium">Platform</Text>
+                    <Select
+                      label="Select platform"
+                      defaultValue={fields.platform}
+                      onChange={(value) => setField("platform", value as any)}
+                      width="100%"
+                      sizes="normal"
+                    >
+                      <SelectItem label="Upwork"   value="Upwork" />
+                      <SelectItem label="LinkedIn" value="LinkedIn" />
+                      <SelectItem label="Jobble"   value="Jobble" />
+                    </Select>
+                  </Box>
+                </GridItem>
+
+                <GridItem xs={12} md={6}>
+                  <Box display="flex" flexDirection="column" space={1}>
+                    <Text varient="body2" weight="medium">Status</Text>
+                    <Select
+                      label="Select status"
+                      defaultValue={fields.status}
+                      onChange={(value) => setField("status", value as any)}
+                      width="100%"
+                      sizes="normal"
+                    >
+                      <SelectItem label="Draft"   value="Draft" />
+                      <SelectItem label="Sent"    value="Sent" />
+                      <SelectItem label="Viewed"  value="Viewed" />
+                      <SelectItem label="Replied" value="Replied" />
+                    </Select>
+                  </Box>
+                </GridItem>
+
+              </GridInnerContainer>
+            </Box>
+
+            <Divider />
+
+            {/* ── Job Details ── */}
+            <Box display="flex" flexDirection="column" space={3}>
+              <SectionLabel>Job Details</SectionLabel>
+              <GridInnerContainer spacing={2}>
+
+                <GridItem xs={12} md={8}>
+                  <TextField
+                    name="jobUrl"
+                    label="Job URL"
+                    placeholder="https://www.upwork.com/jobs/~..."
+                    value={fields.jobUrl}
+                    onChange={(e) => setField("jobUrl", e.target.value)}
+                    width="100%"
+                  />
+                </GridItem>
+
+                <GridItem xs={12} md={4}>
+                  <TextField
+                    name="connects"
+                    label="Connects"
+                    type="number"
+                    value={fields.connects}
+                    onChange={(e) => setField("connects", e.target.value)}
+                    width="100%"
+                    minValue={0}
+                  />
+                </GridItem>
+
+                <GridItem xs={12}>
+                  <Toggle
+                    toggled={fields.boosted}
+                    onToggle={() => setField("boosted", !fields.boosted)}
+                    label="Boosted proposal"
+                  />
+                </GridItem>
+
+              </GridInnerContainer>
+            </Box>
+
+            <Divider />
+
+            {/* ── Content ── */}
+            <Box display="flex" flexDirection="column" space={3}>
+              <SectionLabel>Content</SectionLabel>
+
+              <Box display="flex" flexDirection="column" space={1}>
+                <Text varient="body2" weight="medium">Vacancy Description</Text>
+                <TextField
+                  name="vacancy"
+                  placeholder="Paste the job description from the platform…"
+                  value={fields.vacancy}
+                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                    setField("vacancy", e.target.value)
+                  }
+                  multiRow
+                  width="100%"
+                  style={{ minHeight: 100, resize: "vertical" }}
+                />
+              </Box>
+
+              <Box display="flex" flexDirection="column" space={1}>
+                <Text varient="body2" weight="medium">Cover Letter</Text>
+                <TextField
+                  name="coverLetter"
+                  placeholder="Write your cover letter…"
+                  value={fields.coverLetter}
+                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                    setField("coverLetter", e.target.value)
+                  }
+                  multiRow
+                  width="100%"
+                  style={{ minHeight: 140, resize: "vertical" }}
+                />
+              </Box>
+
+              <GridInnerContainer spacing={2}>
+                <GridItem xs={12} md={6}>
+                  <Box display="flex" flexDirection="column" space={1}>
+                    <Text varient="body2" weight="medium">Comment</Text>
+                    <TextField
+                      name="comment"
+                      placeholder="Internal note about the client or job…"
+                      value={fields.comment}
+                      onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                        setField("comment", e.target.value)
+                      }
+                      multiRow
+                      width="100%"
+                      style={{ minHeight: 90, resize: "vertical" }}
+                    />
+                  </Box>
+                </GridItem>
+
+                <GridItem xs={12} md={6}>
+                  <Box display="flex" flexDirection="column" space={1}>
+                    <Text varient="body2" weight="medium">Context</Text>
+                    <TextField
+                      name="context"
+                      placeholder="Budget, client rating, location…"
+                      value={fields.context}
+                      onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                        setField("context", e.target.value)
+                      }
+                      multiRow
+                      width="100%"
+                      style={{ minHeight: 90, resize: "vertical" }}
+                    />
+                  </Box>
+                </GridItem>
+              </GridInnerContainer>
+
+            </Box>
+
+            {/* ── Actions ── */}
+            <Box display="flex" justify="flex-end" space={1}>
+              <Button
+                varient="outlined"
+                color="info"
+                type="button"
+                onClick={() => navigate("/proposal/list")}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading
+                  ? mode === "edit" ? "Saving…" : "Creating…"
+                  : mode === "edit" ? "Save Changes" : "Create Proposal"}
+              </Button>
+            </Box>
+
+          </Box>
+        </form>
+
+      </Box>
+    </Card>
+  );
+};
+
+const ProposalForm = ({ mode, id }: ProposalFormProps) => {
+  const { data, isLoading } = useGetProposalByIdQuery(id!, { skip: mode !== "edit" || !id });
+
+  if (mode === "edit" && isLoading) {
+    return (
+      <Card py="2rem" px="2rem">
+        <Box style={{ maxWidth: 720, margin: "0 auto" }}>
+          <Text varient="body2" secondary>Loading…</Text>
+        </Box>
+      </Card>
+    );
+  }
+
+  return <ProposalFormInner mode={mode} id={id} initialData={data} />;
+};
+
+export default ProposalForm;
