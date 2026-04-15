@@ -135,9 +135,11 @@ const ProposalTable = () => {
           <ModalContentLayout maxWidth="600px">
             <Box display="flex" flexDirection="column" space={3}>
               <Text heading="h6">Cover Letter</Text>
-              <Text varient="body2" paragraph>
-                {coverLetterText}
-              </Text>
+              <Box style={{ maxHeight: "70vh", overflowY: "auto" }}>
+                <Text varient="body2" paragraph>
+                  {coverLetterText}
+                </Text>
+              </Box>
             </Box>
           </ModalContentLayout>
         </Modal>
