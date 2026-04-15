@@ -3,7 +3,7 @@ export type ProposalStatus = "Draft" | "Sent" | "Viewed" | "Replied";
 
 export type AvatarColor = "error" | "info" | "warning" | "success"
 
-export type AccountName = "Dmytro" | "Artem" | "Vadym";
+export type AccountName = "Dmytro Sarafaniuk" | "Artem Kovalenko" | "Vadym Petrenko";
 
 export type Platform = "Upwork" | "LinkedIn" | "Jobble";
 
@@ -14,6 +14,7 @@ export type BoostedStatus = "Boosted" | "Not Boosted" | "Boosted Outbid";
 export interface ProposalList {
     id: number;
     jobId: string;
+    manager: string;
     account: AccountName;
     platform: Platform;
     proposalType: ProposalType;

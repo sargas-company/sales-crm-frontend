@@ -12,7 +12,7 @@ export type ClientType = "Company" | "Individual";
 
 export type AvatarColor = "error" | "info" | "warning" | "success"
 
-export type AccountName = "Dmytro" | "Artem" | "Vadym";
+export type AccountName = "Dmytro Sarafaniuk" | "Artem Kovalenko" | "Vadym Petrenko";
 
 export type Platform = "Upwork" | "LinkedIn" | "Jobble";
 

@@ -10,6 +10,8 @@ import DataGrid from "../../layout/data-grid/DataGrid";
 import Box from "../../box/Box";
 import DataGridCell from "../../data-grid-item/DataGridCell";
 import ProposalListItemStatus from "./ProposalListItemStatus";
+import ProposalListItemType from "./ProposalListItemType";
+import ProposalListItemBoosted from "./ProposalListItemBoosted";
 // import DataGridUserDetail from "../../data-grid/DataGridUserDetail";
 import Modal from "../../modal/Modal";
 import ModalContentLayout from "../../users/layout/ModalContentLayout";
@@ -29,13 +31,14 @@ const platformLogos: Record<Platform, string> = {
 const columns: DataGridColoumn[] = [
   { fieldId: "id",           label: "#",            width: "120px" },
   { fieldId: "status",       label: "Status",       width: "120px" },
+  { fieldId: "manager",      label: "Manager",      width: "160px" },
   { fieldId: "account",      label: "Account",      width: "140px" },
   { fieldId: "platform",     label: "Platform",     width: "120px" },
-  { fieldId: "proposalType", label: "Type",         width: "140px" },
-  { fieldId: "boosted",      label: "Boosted",      width: "150px" },
+  { fieldId: "proposalType", label: "Type",         width: "160px" },
+  { fieldId: "boosted",      label: "Boosted",      width: "175px" },
   { fieldId: "connects",     label: "Connects",     width: "110px" },
-  { fieldId: "createdAt",    label: "Created At",   width: "130px" },
-  { fieldId: "sentAt",       label: "Sent At",      width: "130px" },
+  { fieldId: "createdAt",    label: "Created At",   width: "160px" },
+  { fieldId: "sentAt",       label: "Sent At",      width: "160px" },
   { fieldId: "coverLetter",  label: "Cover Letter", width: "320px" },
   { fieldId: "jobId",        label: "JobID",        width: "100px" },
   { fieldId: "actions",      label: "Actions",      width: "10%"   },
@@ -73,9 +76,11 @@ const ProposalTable = () => {
               width={field["status"].width}
               children={<ProposalListItemStatus itemStatus={row.status} />}
             />
+            <DataGridCell width={field["manager"].width} value={row.manager} />
             <DataGridCell width={field["account"].width} value={row.account} />
             <DataGridCell
               width={field["platform"].width}
+              justify="center"
               children={
                 <img
                   src={platformLogos[row.platform]}
@@ -84,9 +89,15 @@ const ProposalTable = () => {
                 />
               }
             />
-            <DataGridCell width={field["proposalType"].width} value={row.proposalType} />
-            <DataGridCell width={field["boosted"].width}      value={row.boosted} />
-            <DataGridCell width={field["connects"].width}     value={String(row.connects)} />
+            <DataGridCell
+              width={field["proposalType"].width}
+              children={<ProposalListItemType itemType={row.proposalType} />}
+            />
+            <DataGridCell
+              width={field["boosted"].width}
+              children={<ProposalListItemBoosted itemBoosted={row.boosted} />}
+            />
+            <DataGridCell width={field["connects"].width} justify="center" value={String(row.connects)} />
             <DataGridCell width={field["createdAt"].width}    value={row.createdAt} />
             <DataGridCell width={field["sentAt"].width}       value={row.sentAt} />
             <DataGridCell

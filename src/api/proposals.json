@@ -2,7 +2,8 @@
   {
     "id": 1001,
     "jobId": "https://www.upwork.com/jobs/~022043622476558247216",
-    "account": "Dmytro",
+    "manager": "Dmytro Sarafaniuk",
+    "account": "Dmytro Sarafaniuk",
     "platform": "Upwork",
     "proposalType": "Bid",
     "boosted": "Boosted",
@@ -18,7 +19,8 @@
   {
     "id": 1002,
     "jobId": "https://www.upwork.com/jobs/~031874502198476312047",
-    "account": "Artem",
+    "manager": "Artem Kovalenko",
+    "account": "Artem Kovalenko",
     "platform": "Upwork",
     "proposalType": "Invite",
     "boosted": "Not Boosted",
@@ -34,7 +36,8 @@
   {
     "id": 1003,
     "jobId": "https://www.upwork.com/jobs/~047291830564712938405",
-    "account": "Vadym",
+    "manager": "Vadym Petrenko",
+    "account": "Vadym Petrenko",
     "platform": "LinkedIn",
     "proposalType": "Direct Message",
     "boosted": "Boosted Outbid",
@@ -50,7 +53,8 @@
   {
     "id": 1004,
     "jobId": "https://www.upwork.com/jobs/~058362941785023649318",
-    "account": "Dmytro",
+    "manager": "Dmytro Sarafaniuk",
+    "account": "Dmytro Sarafaniuk",
     "platform": "Upwork",
     "proposalType": "Bid",
     "boosted": "Boosted",
@@ -66,7 +70,8 @@
   {
     "id": 1005,
     "jobId": "https://www.upwork.com/jobs/~069453052896134750429",
-    "account": "Artem",
+    "manager": "Artem Kovalenko",
+    "account": "Artem Kovalenko",
     "platform": "Jobble",
     "proposalType": "Invite",
     "boosted": "Not Boosted",
@@ -82,7 +87,8 @@
   {
     "id": 1006,
     "jobId": "https://www.upwork.com/jobs/~071534163907245861530",
-    "account": "Vadym",
+    "manager": "Vadym Petrenko",
+    "account": "Vadym Petrenko",
     "platform": "Upwork",
     "proposalType": "Direct Message",
     "boosted": "Boosted Outbid",
@@ -98,7 +104,8 @@
   {
     "id": 1007,
     "jobId": "https://www.upwork.com/jobs/~082625274018356972641",
-    "account": "Dmytro",
+    "manager": "Dmytro Sarafaniuk",
+    "account": "Dmytro Sarafaniuk",
     "platform": "LinkedIn",
     "proposalType": "Bid",
     "boosted": "Boosted",
@@ -114,7 +121,8 @@
   {
     "id": 1008,
     "jobId": "https://www.upwork.com/jobs/~093716385129467083752",
-    "account": "Artem",
+    "manager": "Artem Kovalenko",
+    "account": "Artem Kovalenko",
     "platform": "Upwork",
     "proposalType": "Invite",
     "boosted": "Not Boosted",
@@ -130,7 +138,8 @@
   {
     "id": 1009,
     "jobId": "https://www.upwork.com/jobs/~104807496230578194863",
-    "account": "Vadym",
+    "manager": "Vadym Petrenko",
+    "account": "Vadym Petrenko",
     "platform": "Jobble",
     "proposalType": "Direct Message",
     "boosted": "Boosted Outbid",
@@ -146,7 +155,8 @@
   {
     "id": 1010,
     "jobId": "https://www.upwork.com/jobs/~115898507341689205974",
-    "account": "Dmytro",
+    "manager": "Dmytro Sarafaniuk",
+    "account": "Dmytro Sarafaniuk",
     "platform": "Upwork",
     "proposalType": "Bid",
     "boosted": "Boosted",
@@ -162,7 +172,8 @@
   {
     "id": 1011,
     "jobId": "https://www.upwork.com/jobs/~126989618452790317085",
-    "account": "Artem",
+    "manager": "Artem Kovalenko",
+    "account": "Artem Kovalenko",
     "platform": "LinkedIn",
     "proposalType": "Invite",
     "boosted": "Not Boosted",
@@ -178,7 +189,8 @@
   {
     "id": 1012,
     "jobId": "https://www.upwork.com/jobs/~138070729563801428196",
-    "account": "Vadym",
+    "manager": "Vadym Petrenko",
+    "account": "Vadym Petrenko",
     "platform": "Upwork",
     "proposalType": "Direct Message",
     "boosted": "Boosted Outbid",
@@ -194,7 +206,8 @@
   {
     "id": 1013,
     "jobId": "https://www.upwork.com/jobs/~149161830674912539307",
-    "account": "Dmytro",
+    "manager": "Dmytro Sarafaniuk",
+    "account": "Dmytro Sarafaniuk",
     "platform": "Upwork",
     "proposalType": "Bid",
     "boosted": "Boosted",
@@ -210,7 +223,8 @@
   {
     "id": 1014,
     "jobId": "https://www.upwork.com/jobs/~150252941785023640418",
-    "account": "Artem",
+    "manager": "Artem Kovalenko",
+    "account": "Artem Kovalenko",
     "platform": "Jobble",
     "proposalType": "Invite",
     "boosted": "Not Boosted",
@@ -226,7 +240,8 @@
   {
     "id": 1015,
     "jobId": "https://www.upwork.com/jobs/~161343052896134751529",
-    "account": "Vadym",
+    "manager": "Vadym Petrenko",
+    "account": "Vadym Petrenko",
     "platform": "LinkedIn",
     "proposalType": "Direct Message",
     "boosted": "Boosted Outbid",
@@ -242,7 +257,8 @@
   {
     "id": 1016,
     "jobId": "https://www.upwork.com/jobs/~172434163907245862630",
-    "account": "Dmytro",
+    "manager": "Dmytro Sarafaniuk",
+    "account": "Dmytro Sarafaniuk",
     "platform": "Upwork",
     "proposalType": "Bid",
     "boosted": "Boosted",
@@ -258,7 +274,8 @@
   {
     "id": 1017,
     "jobId": "https://www.upwork.com/jobs/~183525274018356973741",
-    "account": "Artem",
+    "manager": "Artem Kovalenko",
+    "account": "Artem Kovalenko",
     "platform": "Upwork",
     "proposalType": "Invite",
     "boosted": "Not Boosted",
@@ -274,7 +291,8 @@
   {
     "id": 1018,
     "jobId": "https://www.upwork.com/jobs/~194616385129467084852",
-    "account": "Vadym",
+    "manager": "Vadym Petrenko",
+    "account": "Vadym Petrenko",
     "platform": "Jobble",
     "proposalType": "Direct Message",
     "boosted": "Boosted Outbid",
@@ -290,7 +308,8 @@
   {
     "id": 1019,
     "jobId": "https://www.upwork.com/jobs/~205707496230578195963",
-    "account": "Dmytro",
+    "manager": "Dmytro Sarafaniuk",
+    "account": "Dmytro Sarafaniuk",
     "platform": "Upwork",
     "proposalType": "Bid",
     "boosted": "Boosted",
