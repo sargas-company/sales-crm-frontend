@@ -1,5 +1,14 @@
 
-export type LeadStatus = "Draft" | "Sent" | "Viewed" | "Replied";
+export type LeadStatus =
+  | "Conversation Ongoing"
+  | "Trial"
+  | "Hold"
+  | "Archived"
+  | "Contract Offer"
+  | "Accept Contract"
+  | "Start Contract";
+
+export type ClientType = "Company" | "Individual";
 
 export type AvatarColor = "error" | "info" | "warning" | "success"
 
@@ -14,6 +23,15 @@ export type BoostedStatus = "Boosted" | "Not Boosted" | "Boosted Outbid";
 export interface LeadList {
     id: number;
     jobId: string;
+    name: string;
+    clientType: ClientType;
+    rate: number;
+    location: string;
+    repliedAt: string;
+    acceptedAt: string;
+    holdOnAt: string;
+    status: LeadStatus;
+    // legacy fields
     account: AccountName;
     platform: Platform;
     leadType: LeadType;
@@ -27,12 +45,10 @@ export interface LeadList {
     companyEmail: string;
     country: string;
     contact: string;
-    name: string;
     service: string;
     total: number;
     avatar: string | undefined;
     avatarColor?: AvatarColor;
-    status: LeadStatus;
     balance: string | 0;
     dueDate: string;
 }

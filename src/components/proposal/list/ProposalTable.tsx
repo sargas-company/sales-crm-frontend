@@ -28,19 +28,16 @@ const platformLogos: Record<Platform, string> = {
 
 const columns: DataGridColoumn[] = [
   { fieldId: "id",           label: "#",            width: "120px" },
-  { fieldId: "jobId",        label: "JobID",        width: "100px" },
+  { fieldId: "status",       label: "Status",       width: "120px" },
   { fieldId: "account",      label: "Account",      width: "140px" },
-  { fieldId: "platform",      label: "Platform",     width: "120px" },
+  { fieldId: "platform",     label: "Platform",     width: "120px" },
   { fieldId: "proposalType", label: "Type",         width: "140px" },
   { fieldId: "boosted",      label: "Boosted",      width: "150px" },
   { fieldId: "connects",     label: "Connects",     width: "110px" },
-  { fieldId: "status",       label: "Status",       width: "120px" },
-  { fieldId: "coverLetter",  label: "Cover Letter", width: "320px" },
-  // { fieldId: "name",         label: "client",       width: "320px" },
-  // { fieldId: "total",        label: "total",        width: "10%"   },
   { fieldId: "createdAt",    label: "Created At",   width: "130px" },
   { fieldId: "sentAt",       label: "Sent At",      width: "130px" },
-  // { fieldId: "balance",      label: "balance",      width: "10%"   },
+  { fieldId: "coverLetter",  label: "Cover Letter", width: "320px" },
+  { fieldId: "jobId",        label: "JobID",        width: "100px" },
   { fieldId: "actions",      label: "Actions",      width: "10%"   },
 ];
 
@@ -73,14 +70,8 @@ const ProposalTable = () => {
               }
             />
             <DataGridCell
-              width={field["jobId"].width}
-              children={
-                <Tooltip title={row.jobId} placement="top">
-                  <IconButton size="small" onClick={() => handleCopyJobId(row.jobId)}>
-                    <ContentCopy fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              }
+              width={field["status"].width}
+              children={<ProposalListItemStatus itemStatus={row.status} />}
             />
             <DataGridCell width={field["account"].width} value={row.account} />
             <DataGridCell
@@ -94,12 +85,10 @@ const ProposalTable = () => {
               }
             />
             <DataGridCell width={field["proposalType"].width} value={row.proposalType} />
-            <DataGridCell width={field["boosted"].width} value={row.boosted} />
-            <DataGridCell width={field["connects"].width} value={String(row.connects)} />
-            <DataGridCell
-              width={field["status"].width}
-              children={<ProposalListItemStatus itemStatus={row.status} />}
-            />
+            <DataGridCell width={field["boosted"].width}      value={row.boosted} />
+            <DataGridCell width={field["connects"].width}     value={String(row.connects)} />
+            <DataGridCell width={field["createdAt"].width}    value={row.createdAt} />
+            <DataGridCell width={field["sentAt"].width}       value={row.sentAt} />
             <DataGridCell
               width={field["coverLetter"].width}
               children={
@@ -119,27 +108,16 @@ const ProposalTable = () => {
                 </span>
               }
             />
-            {/* <DataGridCell
-              width={field["name"].width}
+            <DataGridCell
+              width={field["jobId"].width}
               children={
-                <DataGridUserDetail
-                  userName={row.name}
-                  userid={row.companyEmail}
-                  avatarColor={row.avatarColor}
-                  avatarsrc={row.avatar}
-                />
+                <Tooltip title={row.jobId} placement="top">
+                  <IconButton size="small" onClick={() => handleCopyJobId(row.jobId)}>
+                    <ContentCopy fontSize="small" />
+                  </IconButton>
+                </Tooltip>
               }
-            /> */}
-            {/* <DataGridCell width={field["total"].width} value={`$${row.total}`} /> */}
-            <DataGridCell width={field["createdAt"].width} value={row.createdAt} />
-            <DataGridCell width={field["sentAt"].width} value={row.sentAt} />
-            {/* <DataGridCell width={field["balance"].width}>
-              {row.balance === 0 ? (
-                <Chip label="Paid" skin="light" size="small" color="success" />
-              ) : (
-                row.balance
-              )}
-            </DataGridCell> */}
+            />
             <DataGridCell width={field["actions"].width}>
               <ProposalListAction proposalId={row.id} />
             </DataGridCell>

@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit'
-import proposalMock from '../../api/invoice.json'
+import proposalMock from '../../api/proposals.json'
 import type { ProposalList, ProposalState } from './types/definition'
 
 export const fetchProposalData = createAsyncThunk('proposal/fetchData', async () => {

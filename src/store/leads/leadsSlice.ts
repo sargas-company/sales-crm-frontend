@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit'
-import leadMock from '../../api/invoice.json'
+import leadMock from '../../api/leads.json'
 import type { LeadList, LeadState } from './types/definition'
 
 export const fetchLeadData = createAsyncThunk('lead/fetchData', async () => {
