@@ -34,7 +34,7 @@ const navList: NavOptions[] = [
   },
   {
     label: "Chat",
-    path: "/apps/chat/",
+    path: "/chats",
     icon: <ChatBubbleOutlineRounded />,
   },
   // {

@@ -89,6 +89,25 @@ Authorization: Bearer <accessToken>
 
 ## Proposals
 
+### Поля proposal
+
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `manager` | string | да | Имя менеджера |
+| `account` | string | да | Название аккаунта/компании |
+| `proposalType` | enum | да | `Bid` \| `Invite` \| `DirectMessage` |
+| `platform` | enum | нет | `Upwork` \| `LinkedIn` (default: `Upwork`) |
+| `status` | enum | нет | `Draft` \| `Sent` \| `Viewed` \| `Replied` (default: `Draft`) |
+| `jobUrl` | string | нет | Ссылка на вакансию |
+| `boosted` | boolean | нет | Буст (default: `false`) |
+| `connects` | number | нет | Количество коннектов (default: `0`) |
+| `coverLetter` | string | нет | Сопроводительное письмо |
+| `vacancy` | string | нет | Текст вакансии |
+| `comment` | string | нет | Комментарий менеджера |
+| `context` | string | нет | Дополнительный контекст |
+
+---
+
 ### POST /proposals — создать
 
 ```http
@@ -97,24 +116,37 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "title": "React Dashboard — Upwork",
-  "vacancy": "Looking for React developer...",
+  "manager": "John Doe",
+  "account": "MyCompany",
+  "proposalType": "Bid",
+  "platform": "Upwork",
+  "jobUrl": "https://upwork.com/jobs/~01abc1234567890def",
+  "boosted": false,
+  "connects": 6,
+  "vacancy": "Looking for React developer to build an admin dashboard.",
   "comment": "Клиент с рейтингом 4.9, бюджет адекватный",
   "context": "Budget: $3000-5000. Client rating: 4.9"
 }
 ```
-
-> `vacancy`, `comment`, `context` — опциональные. `title` — обязательный.
 
 **Ответ `201`:**
 
 ```json
 {
   "id": "uuid",
-  "title": "React Dashboard — Upwork",
+  "manager": "John Doe",
+  "account": "MyCompany",
+  "proposalType": "Bid",
+  "platform": "Upwork",
+  "status": "Draft",
+  "jobUrl": "https://upwork.com/jobs/~01abc1234567890def",
+  "boosted": false,
+  "connects": 6,
+  "coverLetter": null,
   "vacancy": "Looking for React developer...",
   "comment": "Клиент с рейтингом 4.9, бюджет адекватный",
   "context": "Budget: $3000-5000. Client rating: 4.9",
+  "sentAt": null,
   "userId": "uuid",
   "createdAt": "2024-01-01T00:00:00.000Z",
   "updatedAt": "2024-01-01T00:00:00.000Z"
@@ -123,14 +155,28 @@ Content-Type: application/json
 
 ---
 
-### GET /proposals — список
+### GET /proposals — список с пагинацией
 
 ```http
-GET /proposals
+GET /proposals?page=1&limit=10
 Authorization: Bearer <token>
 ```
 
-**Ответ `200`:** массив proposals текущего пользователя, отсортированных по дате (новые первые).
+| Параметр | Тип | По умолчанию |
+|---|---|---|
+| `page` | number | `1` |
+| `limit` | number | `10` |
+
+**Ответ `200`:**
+
+```json
+{
+  "data": [...],
+  "total": 42
+}
+```
+
+> Возвращает только proposals текущего пользователя, отсортированные по `createdAt desc`.
 
 ---
 
@@ -141,7 +187,7 @@ GET /proposals/:id
 Authorization: Bearer <token>
 ```
 
-**Ответ `200`:** объект proposal. `404` если не найден или принадлежит другому пользователю.
+**Ответ `200`:** объект proposal. `404` если не найден.
 
 ---
 
@@ -153,12 +199,13 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "title": "Новое название",
-  "vacancy": "Обновлённый текст вакансии",
-  "comment": "Новый комментарий",
-  "context": "Новый контекст"
+  "status": "Sent",
+  "coverLetter": "Dear client, ...",
+  "connects": 8
 }
 ```
+
+> Все поля опциональны. При переводе в статус `Sent` автоматически проставляется `sentAt`.
 
 **Ответ `200`:** обновлённый объект proposal.
 
@@ -213,8 +260,6 @@ Authorization: Bearer <token>
 
 ### POST /proposals/:id/analyze — только анализ
 
-Получить решение AI без генерации текста. Полезно для UI с подтверждением перед генерацией.
-
 ```http
 POST /proposals/:id/analyze
 Authorization: Bearer <token>
@@ -236,11 +281,85 @@ Content-Type: application/json
 
 ---
 
+## Chats
+
+### GET /chats — список всех чатов (cursor-based пагинация)
+
+Возвращает все proposals вне зависимости от владельца. Отсортированы по `updatedAt` (новые первые). Для каждого включены: данные автора, количество сообщений, последнее сообщение.
+
+```http
+GET /chats?limit=20
+Authorization: Bearer <token>
+```
+
+| Параметр | Тип | По умолчанию | Ограничения | Описание |
+|---|---|---|---|---|
+| `limit` | number | `20` | 1–100 | Количество записей |
+| `cursor` | string | — | UUID | ID последнего элемента предыдущей страницы |
+
+**Ответ `200`:**
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "title": "React Dashboard — Upwork",
+      "vacancy": "Looking for React developer...",
+      "comment": "Клиент с рейтингом 4.9",
+      "context": "Budget: $3000-5000",
+      "userId": "uuid",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "user": {
+        "id": "uuid",
+        "email": "manager@example.com"
+      },
+      "_count": {
+        "messages": 5
+      },
+      "messages": [
+        {
+          "id": "uuid",
+          "role": "assistant",
+          "content": "...",
+          "decision": "bid",
+          "reasoning": "...",
+          "createdAt": "2024-01-01T00:00:00.000Z"
+        }
+      ]
+    }
+  ],
+  "nextCursor": "uuid-of-last-item"
+}
+```
+
+> `nextCursor: null` — страниц больше нет.
+
+**Пример итерации по всем страницам:**
+
+```js
+let cursor;
+const allChats = [];
+
+do {
+  const params = new URLSearchParams({ limit: '20' });
+  if (cursor) params.set('cursor', cursor);
+
+  const { data, nextCursor } = await fetch(`/chats?${params}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  }).then(r => r.json());
+
+  allChats.push(...data);
+  cursor = nextCursor;
+} while (cursor);
+```
+
+---
+
 ## Чат (WebSocket — стриминг)
 
 ### Подключение с авторизацией
-
-WebSocket требует передачи `accessToken` при подключении:
 
 ```js
 import { io } from 'socket.io-client';
@@ -268,8 +387,8 @@ socket.emit('send_message', {
 
 | Поле | Тип | Описание |
 |---|---|---|
-| `proposalId` | `string` | ID существующего proposal (должен принадлежать текущему пользователю) |
-| `content` | `string` | Текст сообщения менеджера |
+| `proposalId` | `string` | ID proposal (обязательный) |
+| `content` | `string` | Текст сообщения (обязательный) |
 
 ---
 
@@ -292,7 +411,7 @@ socket.emit('send_message', {
 import { io } from 'socket.io-client';
 
 // 1. Логин
-const { accessToken, refreshToken } = await fetch('http://localhost:3000/auth/login', {
+const { accessToken } = await fetch('http://localhost:3000/auth/login', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ email: 'admin@test.com', password: 'admin123' }),
@@ -308,17 +427,18 @@ const proposal = await fetch('http://localhost:3000/proposals', {
   method: 'POST',
   headers,
   body: JSON.stringify({
-    title: 'React Dashboard — Upwork',
-    vacancy: 'Looking for React developer to build an admin dashboard. Budget $3000-5000.',
-    comment: 'Клиент с рейтингом 4.9, бюджет адекватный',
+    manager: 'John Doe',
+    account: 'MyCompany',
+    proposalType: 'Bid',
+    platform: 'Upwork',
+    vacancy: 'Looking for React developer to build an admin dashboard.',
+    comment: 'Клиент с рейтингом 4.9',
     context: 'Budget: $3000-5000. Client rating: 4.9',
   }),
 }).then(r => r.json());
 
-// 3. Подключиться к WebSocket с токеном
-const socket = io('http://localhost:3001', {
-  auth: { token: accessToken }
-});
+// 3. Подключиться к WebSocket
+const socket = io('http://localhost:3001', { auth: { token: accessToken } });
 
 let fullText = '';
 
@@ -330,23 +450,16 @@ socket.on('connect', () => {
   });
 });
 
-// 5. Получить решение AI
 socket.on('analysis', ({ decision, reasoning }) => {
   console.log('Decision:', decision);   // 'bid' | 'decline' | 'clarify'
   console.log('Reasoning:', reasoning);
 });
 
-// 6. Собирать текст по чанкам
-socket.on('chunk', ({ text }) => {
-  fullText += text;
-});
+socket.on('chunk', ({ text }) => { fullText += text; });
 
 socket.on('done', () => {
   console.log('Full response:', fullText);
-  // История уже сохранена в БД с decision и reasoning
 });
-
-socket.on('error', ({ message }) => console.error('Error:', message));
 ```
 
 ---
@@ -373,23 +486,39 @@ Content-Type: application/json
 
 ---
 
-### GET /base-knowledge — список
+### GET /base-knowledge — список с пагинацией
 
 ```http
-GET /base-knowledge
+GET /base-knowledge?page=1&limit=8
 Authorization: Bearer <token>
 ```
+
+| Параметр | Тип | По умолчанию | Описание |
+|---|---|---|---|
+| `page` | number | `1` | Номер страницы |
+| `limit` | number | `8` | Записей на странице |
+
+**Ответ `200`:**
+
+```json
+{
+  "data": [...],
+  "total": 25
+}
+```
+
+> Количество страниц: `Math.ceil(total / limit)`
 
 ---
 
 ### GET /base-knowledge/search — семантический поиск
 
-Возвращает до 5 наиболее релевантных записей. Записи с дистанцией ≥ 1.2 не возвращаются.
-
 ```http
 GET /base-knowledge/search?q=polite+decline+client
 Authorization: Bearer <token>
 ```
+
+Возвращает до 5 наиболее релевантных записей (дистанция < 1.2).
 
 ---
 
@@ -403,8 +532,6 @@ Authorization: Bearer <token>
 ---
 
 ### PUT /base-knowledge/:id — обновить
-
-Эмбеддинг пересчитывается автоматически при изменении `title` или `description`.
 
 ```http
 PUT /base-knowledge/:id
@@ -467,9 +594,9 @@ Content-Type: application/json
 
 | Код | Описание |
 |---|---|
-| `400` | Неверные данные |
+| `400` | Неверные данные запроса |
 | `401` | Не авторизован / токен истёк / невалидный refresh token |
-| `404` | Ресурс не найден или принадлежит другому пользователю |
+| `404` | Ресурс не найден |
 | `500` | Внутренняя ошибка сервера |
 
 **Формат ошибки:**

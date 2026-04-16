@@ -1,54 +1,58 @@
-import { useEffect } from "react";
-import styled from "styled-components";
-import Card from "../../components/card/Card";
-import ChatNav from "../../components/chat/chat-nav/ChatNav";
-import { GridInnerContainer, GridItem } from "../../components/layout";
-import {
-  fetchChat,
-  fetchChatContact,
-  fetchUserProfile,
-} from "../../store/chats/chatSlice";
-import { useAppDispatch } from "../../hooks";
-import Content from "./chunk/Content";
+import { useEffect } from 'react'
+import styled from 'styled-components'
+import Card from '../../components/card/Card'
+import { GridInnerContainer, GridItem } from '../../components/layout'
+import { useAppDispatch } from '../../hooks'
+import { fetchChats } from '../../store/chats/apiChatSlice'
+import { useSocket } from '../../hooks/useSocket'
+import ChatNav from '../../components/chat/api-chat/ChatNav'
+import ChatContent from './chunk/ChatContent'
 
-export const StatusColor = {
-  Online: "success",
-  Away: "warning",
-  Dnd: "error",
-  Offline: "gray",
-};
+export const StatusColor: Record<string, string> = {
+  Online: 'success',
+  Away: 'warning',
+  Dnd: 'error',
+  Offline: 'gray',
+}
 
 const Chat = () => {
-  const dispatch = useAppDispatch();
+  const dispatch = useAppDispatch()
+  const { sendMessage } = useSocket()
 
   useEffect(() => {
-    dispatch(fetchChat())
-    dispatch(fetchUserProfile())
-    dispatch(fetchChatContact())
-  }, [dispatch]);
+    dispatch(fetchChats())
+  }, [dispatch])
+
   return (
     <StyledChatContainer height="85vh" className="overflow-hidden">
-      <GridInnerContainer alignItems="stretch">
+      <StretchGrid alignItems="stretch">
         <GridItem md={5} lg={4} classes="xs-hidden md-visible">
-          <ChatNav />
+          <PanelFill>
+            <ChatNav />
+          </PanelFill>
         </GridItem>
         <GridItem xs={12} md={7} lg={8}>
-          <Content />
+          <PanelFill>
+            <ChatContent sendMessage={sendMessage} />
+          </PanelFill>
         </GridItem>
-      </GridInnerContainer>
-      <div id="chat-modal" />
+      </StretchGrid>
     </StyledChatContainer>
-  );
-};
-export default Chat;
+  )
+}
+
+export default Chat
 
 const StyledChatContainer = styled(Card)`
   position: relative;
-  #chat-modal {
-    position: absolute;
-    height: 100%;
-    width: 100%;
-    top: 0;
-    pointer-events: none;
-  }
-`;
+`
+
+const StretchGrid = styled(GridInnerContainer)`
+  height: 100%;
+`
+
+const PanelFill = styled.div`
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+`

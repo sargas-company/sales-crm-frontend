@@ -39,7 +39,7 @@ const Home = () => {
               <Route index element={<Analytics />} />
               <Route path="/dashboards/analytics/" element={<Analytics />} />
               {/*<Route path="/apps/email/*" element={<Email />} />*/}
-              <Route path="/apps/chat/*" element={<Chat />} />
+              <Route path="/chats" element={<Chat />} />
               <Route path="/proposal/*" element={<Proposal />} />
               <Route path="/leads/*" element={<Leads />} />
               <Route path="/knowledge/*" element={<BaseKnowledge />} />
