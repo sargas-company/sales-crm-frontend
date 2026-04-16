@@ -12,6 +12,8 @@ import {
   useUpdateProposalMutation,
   useGetProposalByIdQuery,
 } from "../../../store/proposals/proposalsApi";
+import { useGetAccountsQuery } from "../../../store/accounts/accountsApi";
+import { useGetPlatformsQuery } from "../../../store/platforms/platformsApi";
 import { useToast } from "../../../context/toast/ToastContext";
 import useProposalForm from "../add/useProposalForm";
 import parseServerError from "../../../utils/parseServerError";
@@ -36,18 +38,15 @@ const SectionLabel = ({ children }: { children: string }) => (
 
 const toFormValues = (data: ProposalItem) => ({
   title:        data.title,
-  manager:      data.manager,
-  account:      data.account,
+  accountId:    data.accountId,
+  platformId:   data.platformId,
   proposalType: data.proposalType,
-  platform:     data.platform,
   status:       data.status,
   jobUrl:       data.jobUrl ?? "",
   boosted:      data.boosted,
   connects:     String(data.connects),
   coverLetter:  data.coverLetter,
-  vacancy:      data.vacancy  ?? "",
-  comment:      data.comment  ?? "",
-  context:      data.context  ?? "",
+  vacancy:      data.vacancy ?? "",
 });
 
 const ProposalFormInner = ({
@@ -61,9 +60,18 @@ const ProposalFormInner = ({
     initialData ? toFormValues(initialData) : undefined
   );
 
+  const { data: accounts = [], isLoading: accountsLoading } = useGetAccountsQuery();
+  const { data: platforms = [], isLoading: platformsLoading } = useGetPlatformsQuery();
+
   const [createProposal, { isLoading: isCreating }] = useCreateProposalMutation();
   const [updateProposal, { isLoading: isUpdating }] = useUpdateProposalMutation();
   const isLoading = isCreating || isUpdating;
+
+  const handleAccountChange = (accountId: string) => {
+    setField("accountId", accountId);
+    const account = accounts.find((a) => a.id === accountId);
+    if (account) setField("platformId", account.platformId);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -125,31 +133,42 @@ const ProposalFormInner = ({
 
                 <GridItem xs={12} md={6}>
                   <Box display="flex" flexDirection="column" space={1}>
-                    <Text varient="body2" weight="medium">Manager</Text>
-                    <TextField
-                      name="manager"
-                      placeholder="e.g. John Doe"
-                      value={fields.manager}
-                      onChange={(e) => setField("manager", e.target.value)}
-                      error={!!errors.manager}
-                      hypertext={errors.manager}
+                    <Text varient="body2" weight="medium">Developer Account *</Text>
+                    <Select
+                      label={accountsLoading ? "Loading…" : "Select account"}
+                      defaultValue={fields.accountId}
+                      onChange={(value) => handleAccountChange(value as string)}
                       width="100%"
-                    />
+                      sizes="normal"
+                    >
+                      {accounts.map((acc) => (
+                        <SelectItem
+                          key={acc.id}
+                          label={`${acc.firstName} ${acc.lastName} (${acc.platform.title})`}
+                          value={acc.id}
+                        />
+                      ))}
+                    </Select>
+                    {errors.accountId && (
+                      <Text varient="caption" color="error">{errors.accountId}</Text>
+                    )}
                   </Box>
                 </GridItem>
 
                 <GridItem xs={12} md={6}>
                   <Box display="flex" flexDirection="column" space={1}>
-                    <Text varient="body2" weight="medium">Developer account</Text>
-                    <TextField
-                      name="account"
-                      placeholder="e.g. Dmytro Dev"
-                      value={fields.account}
-                      onChange={(e) => setField("account", e.target.value)}
-                      error={!!errors.account}
-                      hypertext={errors.account}
+                    <Text varient="body2" weight="medium">Platform</Text>
+                    <Select
+                      label={platformsLoading ? "Loading…" : "Select platform"}
+                      defaultValue={fields.platformId}
+                      onChange={(value) => setField("platformId", value as string)}
                       width="100%"
-                    />
+                      sizes="normal"
+                    >
+                      {platforms.map((p) => (
+                        <SelectItem key={p.id} label={p.title} value={p.id} />
+                      ))}
+                    </Select>
                   </Box>
                 </GridItem>
 
@@ -165,28 +184,11 @@ const ProposalFormInner = ({
                     >
                       <SelectItem label="Bid"            value="Bid" />
                       <SelectItem label="Invite"         value="Invite" />
-                      <SelectItem label="Direct Message" value="Direct Message" />
+                      <SelectItem label="Direct Message" value="DirectMessage" />
                     </Select>
                     {errors.proposalType && (
                       <Text varient="caption" color="error">{errors.proposalType}</Text>
                     )}
-                  </Box>
-                </GridItem>
-
-                <GridItem xs={12} md={6}>
-                  <Box display="flex" flexDirection="column" space={1}>
-                    <Text varient="body2" weight="medium">Platform</Text>
-                    <Select
-                      label="Select platform"
-                      defaultValue={fields.platform}
-                      onChange={(value) => setField("platform", value as any)}
-                      width="100%"
-                      sizes="normal"
-                    >
-                      <SelectItem label="Upwork"   value="Upwork" />
-                      <SelectItem label="LinkedIn" value="LinkedIn" />
-                      <SelectItem label="Jobble"   value="Jobble" />
-                    </Select>
                   </Box>
                 </GridItem>
 
@@ -289,42 +291,6 @@ const ProposalFormInner = ({
                   style={{ minHeight: 140, resize: "vertical" }}
                 />
               </Box>
-
-              <GridInnerContainer spacing={2}>
-                <GridItem xs={12} md={6}>
-                  <Box display="flex" flexDirection="column" space={1}>
-                    <Text varient="body2" weight="medium">Comment</Text>
-                    <TextField
-                      name="comment"
-                      placeholder="Internal note about the client or job…"
-                      value={fields.comment}
-                      onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                        setField("comment", e.target.value)
-                      }
-                      multiRow
-                      width="100%"
-                      style={{ minHeight: 90, resize: "vertical" }}
-                    />
-                  </Box>
-                </GridItem>
-
-                <GridItem xs={12} md={6}>
-                  <Box display="flex" flexDirection="column" space={1}>
-                    <Text varient="body2" weight="medium">Context</Text>
-                    <TextField
-                      name="context"
-                      placeholder="Budget, client rating, location…"
-                      value={fields.context}
-                      onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                        setField("context", e.target.value)
-                      }
-                      multiRow
-                      width="100%"
-                      style={{ minHeight: 90, resize: "vertical" }}
-                    />
-                  </Box>
-                </GridItem>
-              </GridInnerContainer>
 
             </Box>
 

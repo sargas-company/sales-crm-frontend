@@ -4,12 +4,18 @@ import { Chip } from "../../../ui";
 const typeColor: Record<ProposalType, string> = {
   Bid: "info",
   Invite: "success",
-  "Direct Message": "#FF9F43",
+  DirectMessage: "#FF9F43",
+};
+
+const typeLabel: Record<ProposalType, string> = {
+  Bid: "Bid",
+  Invite: "Invite",
+  DirectMessage: "Direct Message",
 };
 
 const ProposalListItemType = ({ itemType }: { itemType: ProposalType }) => (
   <Chip
-    label={itemType}
+    label={typeLabel[itemType]}
     skin="light"
     size="small"
     color={typeColor[itemType]}

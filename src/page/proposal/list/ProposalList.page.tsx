@@ -36,8 +36,8 @@ const ProposalList = () => {
         const q = search.toLowerCase();
         return (
           item.id.toString().includes(q) ||
-          item.manager.toLowerCase().includes(q) ||
-          item.account.toLowerCase().includes(q) ||
+          `${item.user.firstName} ${item.user.lastName}`.toLowerCase().includes(q) ||
+          `${item.account.firstName} ${item.account.lastName}`.toLowerCase().includes(q) ||
           item.status.toLowerCase().includes(q)
         );
       })

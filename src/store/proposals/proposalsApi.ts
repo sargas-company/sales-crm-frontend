@@ -1,5 +1,5 @@
 import { baseApi } from '../../api/baseApi'
-import type { ProposalItem, ProposalPage, ProposalListParams } from './types/definition'
+import type { ProposalItem, ProposalPage, ProposalListParams, ProposalType, ProposalStatus } from './types/definition'
 
 export interface ChatMessage {
   id: string;
@@ -7,6 +7,31 @@ export interface ChatMessage {
   content: string;
   decision?: string;
   createdAt: string;
+}
+
+export interface ProposalCreatePayload {
+  title: string;
+  accountId: string;
+  platformId: string;
+  proposalType: ProposalType;
+  jobUrl?: string | null;
+  boosted?: boolean;
+  connects?: number;
+  coverLetter?: string;
+  vacancy?: string | null;
+}
+
+export interface ProposalUpdatePayload {
+  title?: string;
+  accountId?: string;
+  platformId?: string;
+  proposalType?: ProposalType;
+  status?: ProposalStatus;
+  jobUrl?: string | null;
+  boosted?: boolean;
+  connects?: number;
+  coverLetter?: string;
+  vacancy?: string | null;
 }
 
 export const proposalsApi = baseApi.injectEndpoints({
@@ -21,12 +46,12 @@ export const proposalsApi = baseApi.injectEndpoints({
       providesTags: (_, __, id) => [{ type: 'Proposal', id }],
     }),
 
-    createProposal: builder.mutation<ProposalItem, Partial<ProposalItem>>({
+    createProposal: builder.mutation<ProposalItem, ProposalCreatePayload>({
       query: (body) => ({ url: '/proposals', method: 'POST', body }),
       invalidatesTags: ['Proposal'],
     }),
 
-    updateProposal: builder.mutation<ProposalItem, { id: string; body: Partial<ProposalItem> }>({
+    updateProposal: builder.mutation<ProposalItem, { id: string; body: ProposalUpdatePayload }>({
       query: ({ id, body }) => ({ url: `/proposals/${id}`, method: 'PUT', body }),
       invalidatesTags: (_, __, { id }) => ['Proposal', { type: 'Proposal', id }],
     }),

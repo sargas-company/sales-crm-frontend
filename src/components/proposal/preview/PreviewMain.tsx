@@ -66,13 +66,13 @@ const PreviewMain = ({ proposal }: Props) => {
 
           <GridItem xs={12} md={6}>
             <InfoRow icon={<PersonOutlined style={{ fontSize: 18 }} />} label="Manager">
-              <Text varient="body2">{proposal.manager}</Text>
+              <Text varient="body2">{proposal.user.firstName} {proposal.user.lastName}</Text>
             </InfoRow>
           </GridItem>
 
           <GridItem xs={12} md={6}>
             <InfoRow icon={<BusinessOutlined style={{ fontSize: 18 }} />} label="Developer acc">
-              <Text varient="body2">{proposal.account}</Text>
+              <Text varient="body2">{proposal.account.firstName} {proposal.account.lastName}</Text>
             </InfoRow>
           </GridItem>
 
@@ -142,28 +142,6 @@ const PreviewMain = ({ proposal }: Props) => {
         </>
       )}
 
-      {(proposal.comment || proposal.context) && (
-        <>
-          <Divider />
-          <Box display="flex" flexDirection="column" space={3}>
-            <SectionLabel>Notes</SectionLabel>
-            <GridInnerContainer spacing={3}>
-              {proposal.comment && (
-                <GridItem xs={12} md={6}>
-                  <Text varient="body2" weight="medium">Comment</Text>
-                  <TextBlock>{proposal.comment}</TextBlock>
-                </GridItem>
-              )}
-              {proposal.context && (
-                <GridItem xs={12} md={6}>
-                  <Text varient="body2" weight="medium">Context</Text>
-                  <TextBlock>{proposal.context}</TextBlock>
-                </GridItem>
-              )}
-            </GridInnerContainer>
-          </Box>
-        </>
-      )}
 
     </Box>
   );

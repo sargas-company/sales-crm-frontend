@@ -5,8 +5,7 @@ import { Tooltip } from "@mui/material";
 import { ContentCopy } from "@mui/icons-material";
 import { IconButton } from "../../../ui";
 
-import upworkLogo from "../../../image/logo/upwork2.png";
-import type { Platform, ProposalItem } from "../../../store/proposals/types/definition";
+import type { ProposalItem } from "../../../store/proposals/types/definition";
 import { formatDate, shortUuid } from "../../../utils/formatDate";
 
 import DataGrid from "../../layout/data-grid/DataGrid";
@@ -22,17 +21,11 @@ import { Text } from "../../../ui";
 import type { DataGridColoumn } from "../../layout/data-grid/type";
 import ProposalListAction from "./ProposalListAction";
 
-const platformLogos: Record<Platform, string> = {
-  Upwork: upworkLogo,
-  LinkedIn: upworkLogo,
-  Jobble: upworkLogo,
-};
-
 const columns: DataGridColoumn[] = [
   { fieldId: "id",           label: "#",            width: "120px" },
-  { fieldId: "jobUrl",        label: "Job URL",      width: "130px" },
+  { fieldId: "jobUrl",       label: "Job URL",      width: "130px" },
   { fieldId: "status",       label: "Status",       width: "120px" },
-  { fieldId: "manager",      label: "Manager",      width: "160px" },
+  { fieldId: "user",         label: "Manager",      width: "160px" },
   { fieldId: "account",      label: "Account",      width: "140px" },
   { fieldId: "platform",     label: "Platform",     width: "120px" },
   { fieldId: "proposalType", label: "Type",         width: "160px" },
@@ -104,17 +97,27 @@ const ProposalTable = ({ items, isLoading, onDelete }: Props) => {
               width={field["status"].width}
               children={<ProposalListItemStatus itemStatus={row.status} />}
             />
-            <DataGridCell width={field["manager"].width} value={row.manager} />
-            <DataGridCell width={field["account"].width} value={row.account} />
+            <DataGridCell
+              width={field["user"].width}
+              value={`${row.user.firstName} ${row.user.lastName}`}
+            />
+            <DataGridCell
+              width={field["account"].width}
+              value={`${row.account.firstName} ${row.account.lastName}`}
+            />
             <DataGridCell
               width={field["platform"].width}
               justify="center"
               children={
-                <img
-                  src={platformLogos[row.platform]}
-                  alt={row.platform}
-                  style={{ width: 24, height: 24, objectFit: "contain" }}
-                />
+                row.platform.imageUrl ? (
+                  <img
+                    src={row.platform.imageUrl}
+                    alt={row.platform.title}
+                    style={{ width: 24, height: 24, objectFit: "contain" }}
+                  />
+                ) : (
+                  <Text varient="body2">{row.platform.title}</Text>
+                )
               }
             />
             <DataGridCell

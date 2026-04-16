@@ -1,50 +1,42 @@
 import { useState, useEffect } from "react";
-import type { Platform, ProposalType, ProposalStatus } from "../../../store/proposals/types/definition";
+import type { ProposalType, ProposalStatus } from "../../../store/proposals/types/definition";
 
 export interface ProposalFormFields {
   title: string;
-  manager: string;
-  account: string;
+  accountId: string;
+  platformId: string;
   proposalType: ProposalType | "";
-  platform: Platform;
   status: ProposalStatus;
   jobUrl: string;
   boosted: boolean;
   connects: string;
   coverLetter: string;
   vacancy: string;
-  comment: string;
-  context: string;
 }
 
 export interface ProposalFormErrors {
   title?: string;
-  manager?: string;
-  account?: string;
+  accountId?: string;
   proposalType?: string;
 }
 
 const INITIAL: ProposalFormFields = {
   title: "",
-  manager: "",
-  account: "",
+  accountId: "",
+  platformId: "",
   proposalType: "",
-  platform: "Upwork",
   status: "Draft",
   jobUrl: "",
   boosted: false,
   connects: "0",
   coverLetter: "",
   vacancy: "",
-  comment: "",
-  context: "",
 };
 
 const validate = (fields: ProposalFormFields): ProposalFormErrors => {
   const errors: ProposalFormErrors = {};
   if (!fields.title.trim())    errors.title        = "Title is required";
-  if (!fields.manager.trim())  errors.manager      = "Manager is required";
-  if (!fields.account.trim())  errors.account      = "Account is required";
+  if (!fields.accountId)       errors.accountId    = "Account is required";
   if (!fields.proposalType)    errors.proposalType = "Proposal type is required";
   return errors;
 };
@@ -73,18 +65,15 @@ const useProposalForm = (initialValues?: Partial<ProposalFormFields>) => {
 
   const getPayload = () => ({
     title:        fields.title.trim(),
-    manager:      fields.manager.trim(),
-    account:      fields.account.trim(),
+    accountId:    fields.accountId,
+    platformId:   fields.platformId,
     proposalType: fields.proposalType as ProposalType,
-    platform:     fields.platform,
     status:       fields.status,
     jobUrl:       fields.jobUrl.trim() || null,
     boosted:      fields.boosted,
     connects:     Number(fields.connects) || 0,
     coverLetter:  fields.coverLetter.trim(),
-    vacancy:      fields.vacancy.trim(),
-    comment:      fields.comment.trim(),
-    context:      fields.context.trim(),
+    vacancy:      fields.vacancy.trim() || null,
   });
 
   return { fields, errors, setField, runValidation, getPayload };
