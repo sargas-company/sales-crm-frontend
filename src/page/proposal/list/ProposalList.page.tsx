@@ -3,10 +3,16 @@ import Box from "../../../components/box/Box";
 import Card from "../../../components/card/Card";
 import CreateNewProposal from "../../../components/proposal/list/CreateNewProposal";
 import ProposalTable from "../../../components/proposal/list/ProposalTable";
+import ProposalDeleteModal from "../../../components/proposal/list/ProposalDeleteModal";
 import DataGridFooter from "../../../components/data-grid-item/DataGridFooter";
 import { GridInnerContainer, GridItem } from "../../../components/layout";
 import { TextField } from "../../../ui";
 import { useGetProposalListQuery } from "../../../store/proposals/proposalsApi";
+
+interface DeleteTarget {
+  id: string;
+  title: string;
+}
 
 const LIMIT_OPTIONS = [8, 20];
 
@@ -14,10 +20,16 @@ const ProposalList = () => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(LIMIT_OPTIONS[0]);
   const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  const { data, isLoading } = useGetProposalListQuery({ page, limit });
+  const { data, isLoading, refetch } = useGetProposalListQuery({ page, limit });
   const allItems = data?.data ?? [];
   const total = data?.total ?? 0;
+
+  const handleDelete = (id: string) => {
+    const item = allItems.find((i) => i.id === id);
+    if (item) setDeleteTarget({ id, title: item.title });
+  };
 
   const items = search
     ? allItems.filter((item) => {
@@ -40,6 +52,7 @@ const ProposalList = () => {
   };
 
   return (
+    <>
     <Card>
       <Box display="flex" justify="space-between" padding={20}>
         <GridInnerContainer alignItems="center" justifyContent="space-between">
@@ -61,7 +74,7 @@ const ProposalList = () => {
         </GridInnerContainer>
       </Box>
 
-      <ProposalTable items={items} isLoading={isLoading} />
+      <ProposalTable items={items} isLoading={isLoading} onDelete={handleDelete} />
 
       {total > 0 && (
         <DataGridFooter
@@ -76,6 +89,19 @@ const ProposalList = () => {
         />
       )}
     </Card>
+
+      {deleteTarget && (
+        <ProposalDeleteModal
+          id={deleteTarget.id}
+          title={deleteTarget.title}
+          onClose={() => setDeleteTarget(null)}
+          onSuccess={() => {
+            if (allItems.length === 1 && page > 1) setPage(page - 1);
+            else refetch();
+          }}
+        />
+      )}
+    </>
   );
 };
 

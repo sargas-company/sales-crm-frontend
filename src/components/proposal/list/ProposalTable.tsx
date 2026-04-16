@@ -47,9 +47,10 @@ const columns: DataGridColoumn[] = [
 interface Props {
   items: ProposalItem[];
   isLoading: boolean;
+  onDelete: (id: string) => void;
 }
 
-const ProposalTable = ({ items, isLoading }: Props) => {
+const ProposalTable = ({ items, isLoading, onDelete }: Props) => {
   const [toastOpen, setToastOpen] = useState(false);
   const [coverLetterText, setCoverLetterText] = useState<string | null>(null);
 
@@ -153,7 +154,7 @@ const ProposalTable = ({ items, isLoading }: Props) => {
               }
             />
             <DataGridCell width={field["actions"].width}>
-              <ProposalListAction proposalId={row.id} />
+              <ProposalListAction proposalId={row.id} onDelete={onDelete} />
             </DataGridCell>
           </>
         )}

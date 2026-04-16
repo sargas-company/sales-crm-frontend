@@ -3,9 +3,14 @@ import Box from "../../box/Box";
 import { IconButton } from "../../../ui";
 import { DeleteOutline, VisibilityOutlined, EditOutlined } from "@mui/icons-material";
 
-const ProposalListAction = ({ proposalId }: { proposalId: string }) => (
+interface Props {
+  proposalId: string;
+  onDelete: (id: string) => void;
+}
+
+const ProposalListAction = ({ proposalId, onDelete }: Props) => (
   <Box display="flex">
-    <IconButton varient="text" size={30} fontSize={21} contentOpacity={5}>
+    <IconButton varient="text" size={30} fontSize={21} contentOpacity={5} onClick={() => onDelete(proposalId)}>
       <DeleteOutline />
     </IconButton>
     <Link to={`/proposal/preview/${proposalId}`}>
