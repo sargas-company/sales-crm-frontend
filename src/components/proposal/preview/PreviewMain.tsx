@@ -1,138 +1,172 @@
-import { FC } from "react";
-import styled from "styled-components";
-import { ProposalList } from "../../../store/proposals/types/definition";
-import { Button, Divider, Text } from "../../../ui";
+import {
+  PersonOutlined, BusinessOutlined,
+  CalendarTodayOutlined, SendOutlined,
+  FlashOnOutlined, LinkOutlined,
+  ContentCopy, OpenInNew,
+} from "@mui/icons-material";
+import { Tooltip } from "@mui/material";
 import Box from "../../box/Box";
+import { Text, Chip, Divider, IconButton } from "../../../ui";
 import { GridInnerContainer, GridItem } from "../../layout";
-import BillingDetail from "../BillingDetail";
-import OragnizationDetail from "../OrganizationDetails";
-import TotalAmount from "../TotalAmount";
-import PreviewProposalTable from "./PreviewProposalTable";
+import { formatDate } from "../../../utils/formatDate";
+import type { ProposalItem } from "../../../store/proposals/types/definition";
 
-const PreviewMain: FC<Partial<ProposalList>> = (props) => {
-  const {
-    address,
-    company,
-    companyEmail,
-    contact,
-    dueDate,
-    id,
-    createdAt,
-    name,
-  } = props;
+const SectionLabel = ({ children }: { children: string }) => (
+  <Text
+    varient="caption"
+    weight="medium"
+    secondary
+    style={{ textTransform: "uppercase", letterSpacing: "0.08em" }}
+  >
+    {children}
+  </Text>
+);
+
+const InfoRow = ({ icon, label, children }: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) => (
+  <Box display="flex" align="center" space={2} style={{ minHeight: 36 }}>
+    <Box
+      display="flex"
+      align="center"
+      space={1}
+      style={{ minWidth: 140, color: "var(--text-secondary, #8A8D93)" }}
+    >
+      {icon}
+      <Text varient="body2" secondary>{label}</Text>
+    </Box>
+    <Box>{children}</Box>
+  </Box>
+);
+
+const TextBlock = ({ children }: { children: string }) => (
+  <Box style={{ borderLeft: "3px solid #e0e0e0", paddingLeft: 14, marginTop: 8 }}>
+    <Text varient="body2" style={{ whiteSpace: "pre-wrap", lineHeight: "1.75" }}>
+      {children}
+    </Text>
+  </Box>
+);
+
+interface Props {
+  proposal: ProposalItem;
+}
+
+const PreviewMain = ({ proposal }: Props) => {
+  const copy = (text: string) => navigator.clipboard.writeText(text);
+
   return (
-    <Box px={30}>
-      <GridInnerContainer>
-        <GridItem xs={12} sm={7}>
-          <OragnizationDetail />
-        </GridItem>
-        <GridItem xs={12} sm={5}>
-          <Box display="flex" padding={20}>
-            <table>
-              <tbody>
-                <tr>
-                  <td>
-                    <Text heading="h6" weight="bold">
-                      Invoice
-                    </Text>
-                  </td>
-                  <td>
-                    <Text heading="h6" weight="bold">
-                      #{id}
-                    </Text>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <Text>Date Issued:</Text>
-                  </td>
-                  <td>
-                    <Text>{createdAt}</Text>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <Text>Date Due:</Text>
-                  </td>
-                  <td>
-                    <Text>{dueDate}</Text>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </Box>
-        </GridItem>
-      </GridInnerContainer>
-      <Divider styles={{ margin: "1.6rem 0" }} />
-      <Box>
-        <GridInnerContainer rowSpacing={1}>
-          <GridItem xs={12} sm={7}>
-            <Box display="flex" flexDirection="column" space={0.4} px={20}>
-              <Text varient="body1" weight="medium" paragraph>
-                Invoice To:
-              </Text>
-              <Text varient="body2" paragraph>
-                {name}
-              </Text>
-              <Text varient="body2" paragraph>
-                {company}
-              </Text>
-              <Text varient="body2" paragraph>
-                {address}
-              </Text>
-              <Text varient="body2" paragraph>
-                {contact}
-              </Text>
-              <Text varient="body2" paragraph>
-                {companyEmail}
-              </Text>
-            </Box>
+    <Box pt={4} display="flex" flexDirection="column" space={5}>
+
+      {/* ── Details ── */}
+      <Box display="flex" flexDirection="column" space={3}>
+        <SectionLabel>Details</SectionLabel>
+        <GridInnerContainer spacing={1}>
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<PersonOutlined style={{ fontSize: 18 }} />} label="Manager">
+              <Text varient="body2">{proposal.manager}</Text>
+            </InfoRow>
           </GridItem>
-          <GridItem xs={12} sm={5}>
-            <BillingDetail />
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<BusinessOutlined style={{ fontSize: 18 }} />} label="Developer acc">
+              <Text varient="body2">{proposal.account}</Text>
+            </InfoRow>
           </GridItem>
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<CalendarTodayOutlined style={{ fontSize: 18 }} />} label="Created">
+              <Text varient="body2">{formatDate(proposal.createdAt)}</Text>
+            </InfoRow>
+          </GridItem>
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<SendOutlined style={{ fontSize: 18 }} />} label="Sent At">
+              <Text varient="body2">{proposal.sentAt ? formatDate(proposal.sentAt) : "—"}</Text>
+            </InfoRow>
+          </GridItem>
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<FlashOnOutlined style={{ fontSize: 18 }} />} label="Connects">
+              <Chip label={String(proposal.connects)} skin="light" size="small" color="info" />
+            </InfoRow>
+          </GridItem>
+
+          {proposal.jobUrl && (
+            <GridItem xs={12}>
+              <InfoRow icon={<LinkOutlined style={{ fontSize: 18 }} />} label="Job URL">
+                <Box display="flex" align="center" space={1}>
+                  <Text varient="body2" skinColor style={{ wordBreak: "break-all" }}>
+                    {proposal.jobUrl}
+                  </Text>
+                  <Tooltip title="Copy URL">
+                    <span>
+                      <IconButton varient="text" size={26} fontSize={16} contentOpacity={5} onClick={() => copy(proposal.jobUrl!)}>
+                        <ContentCopy style={{ fontSize: 14 }} />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <a href={proposal.jobUrl} target="_blank" rel="noopener noreferrer">
+                    <IconButton varient="text" size={26} fontSize={16} contentOpacity={5}>
+                      <OpenInNew style={{ fontSize: 14 }} />
+                    </IconButton>
+                  </a>
+                </Box>
+              </InfoRow>
+            </GridItem>
+          )}
+
         </GridInnerContainer>
       </Box>
-      <Divider styles={{ margin: "1.6rem 0 0.8rem 0" }} />
-      <PreviewProposalTable />
-      <Box px={20} py={16}>
-        <StyledMisc rowSpacing={0.6}>
-          <GridItem xs={12} sm={4}>
-            <TotalAmount items={[]} />
-          </GridItem>
-          <GridItem xs={12} sm={8}>
-            <Box>
-              <Text weight="medium" lineHeight="40px" paragraph>
-                Salesperson: <Text weight="regular">Jack Frags</Text>
-              </Text>
-              <Text varient="body2" weight="medium" secondary>
-                Thanks for your business
-              </Text>
-            </Box>
-          </GridItem>
-        </StyledMisc>
-      </Box>
-      <Divider styles={{ margin: "1rem 0" }} />
-      <Box padding={20}>
-        <Text varient="body2">
-          <strong>Note: </strong> It was a pleasure working with you and your
-          team. We hope you will keep us in mind for future freelance projects.
-          Thank You!
-        </Text>
-      </Box>
 
-      <Box display="flex" justify="flex-end" px={20} mt={20} space={0.8}>
-        <Button color="error">Print</Button>
-        <Button color="success">Download</Button>
-      </Box>
+      {/* ── Content sections ── */}
+      {proposal.vacancy && (
+        <>
+          <Divider />
+          <Box display="flex" flexDirection="column" space={1}>
+            <SectionLabel>Vacancy Description</SectionLabel>
+            <TextBlock>{proposal.vacancy}</TextBlock>
+          </Box>
+        </>
+      )}
+
+      {proposal.coverLetter && (
+        <>
+          <Divider />
+          <Box display="flex" flexDirection="column" space={1}>
+            <SectionLabel>Cover Letter</SectionLabel>
+            <TextBlock>{proposal.coverLetter}</TextBlock>
+          </Box>
+        </>
+      )}
+
+      {(proposal.comment || proposal.context) && (
+        <>
+          <Divider />
+          <Box display="flex" flexDirection="column" space={3}>
+            <SectionLabel>Notes</SectionLabel>
+            <GridInnerContainer spacing={3}>
+              {proposal.comment && (
+                <GridItem xs={12} md={6}>
+                  <Text varient="body2" weight="medium">Comment</Text>
+                  <TextBlock>{proposal.comment}</TextBlock>
+                </GridItem>
+              )}
+              {proposal.context && (
+                <GridItem xs={12} md={6}>
+                  <Text varient="body2" weight="medium">Context</Text>
+                  <TextBlock>{proposal.context}</TextBlock>
+                </GridItem>
+              )}
+            </GridInnerContainer>
+          </Box>
+        </>
+      )}
+
     </Box>
   );
 };
-export default PreviewMain;
 
-const StyledMisc = styled(GridInnerContainer)`
-  flex-direction: row;
-  @media screen and (min-width: 600px) {
-    flex-direction: row-reverse;
-  }
-`;
+export default PreviewMain;

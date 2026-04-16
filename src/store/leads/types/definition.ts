@@ -14,7 +14,7 @@ export type AvatarColor = "error" | "info" | "warning" | "success"
 
 export type AccountName = "Dmytro Sarafaniuk" | "Artem Kovalenko" | "Vadym Petrenko";
 
-export type Platform = "Upwork" | "LinkedIn" | "Jobble";
+export type Platform = "Upwork" | "LinkedIn";
 
 export type LeadType = "Bid" | "Invite" | "Direct Message";
 

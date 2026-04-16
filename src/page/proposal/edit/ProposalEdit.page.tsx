@@ -1,26 +1,9 @@
-import { AttachMoney } from "@mui/icons-material";
-import Box from "../../../components/box/Box";
-import Card from "../../../components/card/Card";
-import AddMain from "../../../components/proposal/add/AddMain";
-import ProposalAction from "../../../components/proposal/ProposalAction";
-import ProposalOption from "../../../components/proposal/ProposalOption";
-import ProposalLayout from "../../../components/proposal/layout/ProposalLayout";
-import { Button } from "../../../ui";
+import { useParams } from "react-router-dom";
+import ProposalForm from "../../../components/proposal/form/ProposalForm";
 
 const ProposalEdit = () => {
-  return (
-    <ProposalLayout>
-      <AddMain />
-      <Box>
-        <Card padding="20px">
-          <ProposalAction />
-          <Button color="success" styles={{ width: "100%", marginTop: 16 }}>
-            <AttachMoney fontSize="small" /> Add Payment
-          </Button>
-        </Card>
-        <ProposalOption />
-      </Box>
-    </ProposalLayout>
-  );
+  const { id } = useParams<{ id: string }>();
+  return <ProposalForm mode="edit" id={id} />;
 };
+
 export default ProposalEdit;

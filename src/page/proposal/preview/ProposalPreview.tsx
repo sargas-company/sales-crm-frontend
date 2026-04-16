@@ -1,70 +1,131 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
-import { useAppSelector } from "../../../hooks";
+import { useParams, useNavigate } from "react-router-dom";
+import { InfoOutlined, ChatOutlined, ArrowBackOutlined, EditOutlined, ContentCopy } from "@mui/icons-material";
+import { Tooltip } from "@mui/material";
 import Box from "../../../components/box/Box";
 import Card from "../../../components/card/Card";
-import ProposalLayout from "../../../components/proposal/layout/ProposalLayout";
 import PreviewMain from "../../../components/proposal/preview/PreviewMain";
 import ProposalChat from "../../../components/proposal/preview/ProposalChat";
-import { Button, Tab, TabList, TabItem, TabContent } from "../../../ui";
-import { RootState } from "../../../store/store";
-import { InfoOutlined, ChatOutlined } from "@mui/icons-material";
-
-const selectProposalItem = (state: RootState, id?: number) =>
-  id
-    ? state.proposal.allData.find((item) => item.id === id)
-    : state.proposal.allData[0];
+import { Button, Tab, TabList, TabItem, TabContent, Text, IconButton } from "../../../ui";
+import ProposalListItemStatus from "../../../components/proposal/list/ProposalListItemStatus";
+import ProposalListItemType from "../../../components/proposal/list/ProposalListItemType";
+import ProposalListItemBoosted from "../../../components/proposal/list/ProposalListItemBoosted";
+import { useGetProposalByIdQuery } from "../../../store/proposals/proposalsApi";
+import { shortUuid, formatDate } from "../../../utils/formatDate";
 
 const ProposalPreview = () => {
-  const { pathname } = useLocation();
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(1);
-  const pathChunk = pathname.match(/\w+/g);
-  if (pathChunk!.length > 3) {
-    return <></>;
+
+  const { data: proposal, isLoading, isError } = useGetProposalByIdQuery(id!, { skip: !id });
+
+  if (isLoading) {
+    return (
+      <Card py="2rem" px="2rem">
+        <Box style={{ maxWidth: 900, margin: "0 auto" }}>
+          <Text secondary>Loading proposal…</Text>
+        </Box>
+      </Card>
+    );
   }
-  const currentProposalItem = useAppSelector((state) =>
-    selectProposalItem(state, +pathChunk?.pop()!)
-  );
-  if (!currentProposalItem) {
-    return <></>;
-  }
-  return (
-    <ProposalLayout>
-      <Tab value={activeTab}>
-        <Card>
-          <Box px={20} pt={16}>
-            <TabList>
-              <TabItem
-                value={1}
-                label="Info"
-                icon={<InfoOutlined />}
-                onClick={(v) => setActiveTab(v as number)}
-              />
-              <TabItem
-                value={2}
-                label="Chat"
-                icon={<ChatOutlined />}
-                onClick={(v) => setActiveTab(v as number)}
-              />
-            </TabList>
-          </Box>
-          <TabContent tabIndex={1}>
-            <PreviewMain {...currentProposalItem} />
-          </TabContent>
-          <TabContent tabIndex={2}>
-            <ProposalChat />
-          </TabContent>
-        </Card>
-      </Tab>
-      <Card padding="1.2rem">
-        <Box display="flex" flexDirection="column" space={1}>
-          <Button color="error">send invoice</Button>
-          <Button varient="outlined" color="info">
-            edit invoice
+
+  if (isError || !proposal) {
+    return (
+      <Card py="2rem" px="2rem">
+        <Box style={{ maxWidth: 900, margin: "0 auto" }} display="flex" flexDirection="column" align="center" space={3}>
+          <Text heading="h6">Proposal not found</Text>
+          <Button varient="outlined" color="info" onClick={() => navigate("/proposal/list")}>
+            Back to list
           </Button>
         </Box>
       </Card>
-    </ProposalLayout>
+    );
+  }
+
+  return (
+    <Card py="2rem" px="2rem">
+      <Box style={{ maxWidth: 900, margin: "0 auto" }}>
+
+        {/* ── Header ── */}
+        <Box display="flex" align="center" justify="space-between" mb={4} style={{ flexWrap: "wrap", gap: 12 }}>
+
+          <Box display="flex" align="center" space={3}>
+            <IconButton varient="text" size={34} fontSize={20} onClick={() => navigate("/proposal/list")}>
+              <ArrowBackOutlined />
+            </IconButton>
+            <Box>
+              <Text heading="h5">{proposal.title}</Text>
+              <Box display="flex" align="center" space={1} style={{ marginTop: 2 }}>
+                <Text varient="caption" secondary>
+                  {proposal.platform} · {formatDate(proposal.createdAt)} ·
+                </Text>
+                <Tooltip title={proposal.id} placement="top">
+                  <span>
+                    <Text varient="caption" secondary style={{ fontFamily: "monospace" }}>
+                      #{shortUuid(proposal.id)}
+                    </Text>
+                  </span>
+                </Tooltip>
+                <IconButton
+                  varient="text"
+                  size={22}
+                  fontSize={13}
+                  contentOpacity={5}
+                  onClick={() => navigator.clipboard.writeText(proposal.id)}
+                >
+                  <ContentCopy style={{ fontSize: 12 }} />
+                </IconButton>
+              </Box>
+            </Box>
+          </Box>
+
+          <Box display="flex" align="center" space={2} style={{ flexWrap: "wrap", gap: 8 }}>
+            <ProposalListItemStatus itemStatus={proposal.status} />
+            <ProposalListItemType itemType={proposal.proposalType} />
+            <ProposalListItemBoosted itemBoosted={proposal.boosted ? "Boosted" : "Not Boosted"} />
+            <Button
+              varient="outlined"
+              color="info"
+              onClick={() => navigate(`/proposal/edit/${proposal.id}`)}
+              style={{ display: "flex", alignItems: "center", gap: 6 }}
+            >
+              <EditOutlined style={{ fontSize: 16 }} />
+              Edit
+            </Button>
+          </Box>
+
+        </Box>
+
+        {/* ── Tabs ── */}
+        <Tab value={activeTab}>
+          <TabList>
+            <TabItem
+              value={1}
+              label="Info"
+              icon={<InfoOutlined />}
+              onClick={(v) => setActiveTab(v as number)}
+            />
+            <TabItem
+              value={2}
+              label="Chat"
+              icon={<ChatOutlined />}
+              onClick={(v) => setActiveTab(v as number)}
+            />
+          </TabList>
+
+          <TabContent tabIndex={1}>
+            <PreviewMain proposal={proposal} />
+          </TabContent>
+
+          <TabContent tabIndex={2}>
+            <ProposalChat proposalId={proposal.id} />
+          </TabContent>
+        </Tab>
+
+      </Box>
+    </Card>
   );
 };
+
 export default ProposalPreview;
