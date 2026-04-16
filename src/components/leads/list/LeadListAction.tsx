@@ -8,9 +8,9 @@ import {
   EditOutlined,
 } from "@mui/icons-material";
 
-const LeadListAction = ({ leadId }: { leadId: number }) => (
+const LeadListAction = ({ leadId, onDelete }: { leadId: string; onDelete: (id: string) => void }) => (
   <Box display="flex">
-    <IconButton varient="text" size={30} fontSize={21} contentOpacity={5}>
+    <IconButton varient="text" size={30} fontSize={21} contentOpacity={5} onClick={() => onDelete(leadId)}>
       <DeleteOutline />
     </IconButton>
     <Link to={`/leads/preview/${leadId}`}>

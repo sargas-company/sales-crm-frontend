@@ -1,19 +1,27 @@
-import { ClientType } from "../../../store/leads/types/definition";
+import { ApiClientType } from "../../../store/leads/types/definition";
 import { Chip } from "../../../ui";
 
-const clientTypeColor: Record<ClientType, string> = {
-  Company:    "#9155FD",
-  Individual: "#FF9F43",
+const clientTypeColor: Record<ApiClientType, string> = {
+  company:    "#9155FD",
+  individual: "#FF9F43",
 };
 
-const LeadListItemClientType = ({ clientType }: { clientType: ClientType }) => (
-  <Chip
-    label={clientType}
-    skin="light"
-    size="small"
-    color={clientTypeColor[clientType]}
-    styles={{ whiteSpace: "nowrap" }}
-  />
-);
+const clientTypeLabel: Record<ApiClientType, string> = {
+  company:    "Company",
+  individual: "Individual",
+};
+
+const LeadListItemClientType = ({ clientType }: { clientType: ApiClientType | null }) => {
+  if (!clientType) return null;
+  return (
+    <Chip
+      label={clientTypeLabel[clientType]}
+      skin="light"
+      size="small"
+      color={clientTypeColor[clientType]}
+      styles={{ whiteSpace: "nowrap" }}
+    />
+  );
+};
 
 export default LeadListItemClientType;

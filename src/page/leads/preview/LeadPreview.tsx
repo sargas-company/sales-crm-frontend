@@ -1,70 +1,165 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
-import { useAppSelector } from "../../../hooks";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  InfoOutlined,
+  ArrowBackOutlined,
+  EditOutlined,
+  ContentCopy,
+} from "@mui/icons-material";
+import { Tooltip } from "@mui/material";
 import Box from "../../../components/box/Box";
 import Card from "../../../components/card/Card";
-import LeadLayout from "../../../components/leads/layout/LeadLayout";
 import PreviewMain from "../../../components/leads/preview/PreviewMain";
-import LeadChat from "../../../components/leads/preview/LeadChat";
-import { Button, Tab, TabList, TabItem, TabContent } from "../../../ui";
-import { RootState } from "../../../store/store";
-import { InfoOutlined, ChatOutlined } from "@mui/icons-material";
+import { Button, Tab, TabList, TabItem, TabContent, Text, IconButton, Chip } from "../../../ui";
+import { useGetLeadByIdQuery } from "../../../store/leads/leadsApi";
+import { formatDate, shortUuid } from "../../../utils/formatDate";
+import type { ApiLeadStatus } from "../../../store/leads/types/definition";
 
-const selectLeadItem = (state: RootState, id?: number) =>
-  id
-    ? state.lead.allData.find((item) => item.id === id)
-    : state.lead.allData[0];
+const statusLabel: Record<ApiLeadStatus, string> = {
+  conversation_ongoing: "Conversation Ongoing",
+  trial:                "Trial",
+  hold:                 "Hold",
+  contract_offer:       "Contract Offer",
+  accept_contract:      "Accept Contract",
+  start_contract:       "Start Contract",
+  suspended:            "Suspended",
+};
+
+const statusColor: Record<ApiLeadStatus, string> = {
+  conversation_ongoing: "info",
+  trial:                "warning",
+  hold:                 "#607D8B",
+  contract_offer:       "#9155FD",
+  accept_contract:      "success",
+  start_contract:       "#00897B",
+  suspended:            "#9E9E9E",
+};
 
 const LeadPreview = () => {
-  const { pathname } = useLocation();
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(1);
-  const pathChunk = pathname.match(/\w+/g);
-  if (pathChunk!.length > 3) {
-    return <></>;
+
+  const { data: lead, isLoading, isError } = useGetLeadByIdQuery(id!, { skip: !id });
+
+  if (isLoading) {
+    return (
+      <Card py="2rem" px="2rem">
+        <Box style={{ maxWidth: 900, margin: "0 auto" }}>
+          <Text secondary>Loading lead…</Text>
+        </Box>
+      </Card>
+    );
   }
-  const currentLeadItem = useAppSelector((state) =>
-    selectLeadItem(state, +pathChunk?.pop()!)
-  );
-  if (!currentLeadItem) {
-    return <></>;
-  }
-  return (
-    <LeadLayout>
-      <Tab value={activeTab}>
-        <Card>
-          <Box px={20} pt={16}>
-            <TabList>
-              <TabItem
-                value={1}
-                label="Info"
-                icon={<InfoOutlined />}
-                onClick={(v) => setActiveTab(v as number)}
-              />
-              <TabItem
-                value={2}
-                label="Chat"
-                icon={<ChatOutlined />}
-                onClick={(v) => setActiveTab(v as number)}
-              />
-            </TabList>
-          </Box>
-          <TabContent tabIndex={1}>
-            <PreviewMain {...currentLeadItem} />
-          </TabContent>
-          <TabContent tabIndex={2}>
-            <LeadChat />
-          </TabContent>
-        </Card>
-      </Tab>
-      <Card padding="1.2rem">
-        <Box display="flex" flexDirection="column" space={1}>
-          <Button color="error">send lead</Button>
-          <Button varient="outlined" color="info">
-            edit lead
+
+  if (isError || !lead) {
+    return (
+      <Card py="2rem" px="2rem">
+        <Box
+          style={{ maxWidth: 900, margin: "0 auto" }}
+          display="flex"
+          flexDirection="column"
+          align="center"
+          space={3}
+        >
+          <Text heading="h6">Lead not found</Text>
+          <Button varient="outlined" color="info" onClick={() => navigate("/leads/list")}>
+            Back to list
           </Button>
         </Box>
       </Card>
-    </LeadLayout>
+    );
+  }
+
+  return (
+    <Card py="2rem" px="2rem">
+      <Box style={{ maxWidth: 900, margin: "0 auto" }}>
+
+        {/* ── Header ── */}
+        <Box
+          display="flex"
+          align="center"
+          justify="space-between"
+          mb={4}
+          style={{ flexWrap: "wrap", gap: 12 }}
+        >
+          <Box display="flex" align="center" space={3}>
+            <IconButton
+              varient="text"
+              size={34}
+              fontSize={20}
+              onClick={() => navigate("/leads/list")}
+            >
+              <ArrowBackOutlined />
+            </IconButton>
+            <Box>
+              <Text heading="h5">
+                {lead.leadName ?? `Lead #${lead.number}`}
+              </Text>
+              <Box display="flex" align="center" space={1} style={{ marginTop: 2 }}>
+                <Text varient="caption" secondary>
+                  #{lead.number} · {formatDate(lead.repliedAt)} ·
+                </Text>
+                <Tooltip title={lead.id} placement="top">
+                  <span>
+                    <Text varient="caption" secondary styles={{ fontFamily: "monospace" }}>
+                      {shortUuid(lead.id)}
+                    </Text>
+                  </span>
+                </Tooltip>
+                <IconButton
+                  varient="text"
+                  size={22}
+                  fontSize={13}
+                  contentOpacity={5}
+                  onClick={() => navigator.clipboard.writeText(lead.id)}
+                >
+                  <ContentCopy style={{ fontSize: 12 }} />
+                </IconButton>
+              </Box>
+            </Box>
+          </Box>
+
+          <Box display="flex" align="center" space={2} style={{ flexWrap: "wrap", gap: 8 }}>
+            <Chip
+              label={statusLabel[lead.status]}
+              skin="light"
+              size="small"
+              color={statusColor[lead.status]}
+              styles={{ whiteSpace: "nowrap" }}
+            />
+            <Button
+              varient="outlined"
+              color="info"
+              onClick={() => navigate(`/leads/edit/${lead.id}`)}
+            >
+              <Box display="flex" align="center" space={1}>
+                <EditOutlined style={{ fontSize: 16 }} />
+                Edit
+              </Box>
+            </Button>
+          </Box>
+        </Box>
+
+        {/* ── Tabs ── */}
+        <Tab value={activeTab}>
+          <TabList>
+            <TabItem
+              value={1}
+              label="Info"
+              icon={<InfoOutlined />}
+              onClick={(v) => setActiveTab(v as number)}
+            />
+          </TabList>
+
+          <TabContent tabIndex={1}>
+            <PreviewMain lead={lead} />
+          </TabContent>
+        </Tab>
+
+      </Box>
+    </Card>
   );
 };
+
 export default LeadPreview;

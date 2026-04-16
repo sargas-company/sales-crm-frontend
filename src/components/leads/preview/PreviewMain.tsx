@@ -1,138 +1,227 @@
-import { FC } from "react";
-import styled from "styled-components";
-import { LeadList } from "../../../store/leads/types/definition";
-import { Button, Divider, Text } from "../../../ui";
+import {
+  PersonOutlined,
+  LocationOnOutlined,
+  AttachMoneyOutlined,
+  CalendarTodayOutlined,
+  ReplyOutlined,
+  CheckCircleOutlined,
+  PauseCircleOutlined,
+  LinkOutlined,
+  ContentCopy,
+} from "@mui/icons-material";
+import { Tooltip } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import Box from "../../box/Box";
+import { Text, Chip, Divider, IconButton } from "../../../ui";
 import { GridInnerContainer, GridItem } from "../../layout";
-import BillingDetail from "../BillingDetail";
-import OragnizationDetail from "../OrganizationDetails";
-import TotalAmount from "../TotalAmount";
-import PreviewLeadTable from "./PreviewLeadTable";
+import { formatDate } from "../../../utils/formatDate";
+import type { LeadItem, ApiLeadStatus, ApiClientType } from "../../../store/leads/types/definition";
 
-const PreviewMain: FC<Partial<LeadList>> = (props) => {
-  const {
-    address,
-    company,
-    companyEmail,
-    contact,
-    dueDate,
-    id,
-    createdAt,
-    name,
-  } = props;
+const statusLabel: Record<ApiLeadStatus, string> = {
+  conversation_ongoing: "Conversation Ongoing",
+  trial:                "Trial",
+  hold:                 "Hold",
+  contract_offer:       "Contract Offer",
+  accept_contract:      "Accept Contract",
+  start_contract:       "Start Contract",
+  suspended:            "Suspended",
+};
+
+const statusColor: Record<ApiLeadStatus, string> = {
+  conversation_ongoing: "info",
+  trial:                "warning",
+  hold:                 "#607D8B",
+  contract_offer:       "#9155FD",
+  accept_contract:      "success",
+  start_contract:       "#00897B",
+  suspended:            "#9E9E9E",
+};
+
+const clientTypeLabel: Record<ApiClientType, string> = {
+  company:    "Company",
+  individual: "Individual",
+};
+
+const clientTypeColor: Record<ApiClientType, string> = {
+  company:    "#9155FD",
+  individual: "#FF9F43",
+};
+
+const SectionLabel = ({ children }: { children: string }) => (
+  <Text
+    varient="caption"
+    weight="medium"
+    secondary
+    styles={{ textTransform: "uppercase", letterSpacing: "0.08em" }}
+  >
+    {children}
+  </Text>
+);
+
+const InfoRow = ({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) => (
+  <Box display="flex" align="center" space={2} style={{ minHeight: 36 }}>
+    <Box
+      display="flex"
+      align="center"
+      space={1}
+      style={{ minWidth: 160, color: "var(--text-secondary, #8A8D93)" }}
+    >
+      {icon}
+      <Text varient="body2" secondary>
+        {label}
+      </Text>
+    </Box>
+    <Box>{children}</Box>
+  </Box>
+);
+
+interface Props {
+  lead: LeadItem;
+}
+
+const PreviewMain = ({ lead }: Props) => {
+  const navigate = useNavigate();
+  const copy = (text: string) => navigator.clipboard.writeText(text);
+
   return (
-    <Box px={30}>
-      <GridInnerContainer>
-        <GridItem xs={12} sm={7}>
-          <OragnizationDetail />
-        </GridItem>
-        <GridItem xs={12} sm={5}>
-          <Box display="flex" padding={20}>
-            <table>
-              <tbody>
-                <tr>
-                  <td>
-                    <Text heading="h6" weight="bold">
-                      Lead
-                    </Text>
-                  </td>
-                  <td>
-                    <Text heading="h6" weight="bold">
-                      #{id}
-                    </Text>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <Text>Date Issued:</Text>
-                  </td>
-                  <td>
-                    <Text>{createdAt}</Text>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <Text>Date Due:</Text>
-                  </td>
-                  <td>
-                    <Text>{dueDate}</Text>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </Box>
-        </GridItem>
-      </GridInnerContainer>
-      <Divider styles={{ margin: "1.6rem 0" }} />
-      <Box>
-        <GridInnerContainer rowSpacing={1}>
-          <GridItem xs={12} sm={7}>
-            <Box display="flex" flexDirection="column" space={0.4} px={20}>
-              <Text varient="body1" weight="medium" paragraph>
-                Lead To:
-              </Text>
-              <Text varient="body2" paragraph>
-                {name}
-              </Text>
-              <Text varient="body2" paragraph>
-                {company}
-              </Text>
-              <Text varient="body2" paragraph>
-                {address}
-              </Text>
-              <Text varient="body2" paragraph>
-                {contact}
-              </Text>
-              <Text varient="body2" paragraph>
-                {companyEmail}
-              </Text>
-            </Box>
+    <Box pt={4} display="flex" flexDirection="column" space={5}>
+
+      {/* ── Details ── */}
+      <Box display="flex" flexDirection="column" space={3}>
+        <SectionLabel>Details</SectionLabel>
+        <GridInnerContainer spacing={1}>
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<PersonOutlined style={{ fontSize: 18 }} />} label="Lead Name">
+              <Text varient="body2">{lead.leadName ?? "—"}</Text>
+            </InfoRow>
           </GridItem>
-          <GridItem xs={12} sm={5}>
-            <BillingDetail />
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<LocationOnOutlined style={{ fontSize: 18 }} />} label="Location">
+              <Text varient="body2">{lead.location ?? "—"}</Text>
+            </InfoRow>
           </GridItem>
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<AttachMoneyOutlined style={{ fontSize: 18 }} />} label="Rate">
+              {lead.rate != null ? (
+                <Chip label={`$${lead.rate} / hr`} skin="light" size="small" color="success" />
+              ) : (
+                <Text varient="body2">—</Text>
+              )}
+            </InfoRow>
+          </GridItem>
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<PersonOutlined style={{ fontSize: 18 }} />} label="Client Type">
+              {lead.clientType ? (
+                <Chip
+                  label={clientTypeLabel[lead.clientType]}
+                  skin="light"
+                  size="small"
+                  color={clientTypeColor[lead.clientType]}
+                />
+              ) : (
+                <Text varient="body2">—</Text>
+              )}
+            </InfoRow>
+          </GridItem>
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<CheckCircleOutlined style={{ fontSize: 18 }} />} label="Status">
+              <Chip
+                label={statusLabel[lead.status]}
+                skin="light"
+                size="small"
+                color={statusColor[lead.status]}
+                styles={{ whiteSpace: "nowrap" }}
+              />
+            </InfoRow>
+          </GridItem>
+
         </GridInnerContainer>
       </Box>
-      <Divider styles={{ margin: "1.6rem 0 0.8rem 0" }} />
-      <PreviewLeadTable />
-      <Box px={20} py={16}>
-        <StyledMisc rowSpacing={0.6}>
-          <GridItem xs={12} sm={4}>
-            <TotalAmount items={[]} />
+
+      <Divider />
+
+      {/* ── Timeline ── */}
+      <Box display="flex" flexDirection="column" space={3}>
+        <SectionLabel>Timeline</SectionLabel>
+        <GridInnerContainer spacing={1}>
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<ReplyOutlined style={{ fontSize: 18 }} />} label="Replied At">
+              <Text varient="body2">{formatDate(lead.repliedAt)}</Text>
+            </InfoRow>
           </GridItem>
-          <GridItem xs={12} sm={8}>
-            <Box>
-              <Text weight="medium" lineHeight="40px" paragraph>
-                Salesperson: <Text weight="regular">Jack Frags</Text>
-              </Text>
-              <Text varient="body2" weight="medium" secondary>
-                Thanks for your business
-              </Text>
-            </Box>
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<CheckCircleOutlined style={{ fontSize: 18 }} />} label="Accepted At">
+              <Text varient="body2">{formatDate(lead.acceptedAt)}</Text>
+            </InfoRow>
           </GridItem>
-        </StyledMisc>
-      </Box>
-      <Divider styles={{ margin: "1rem 0" }} />
-      <Box padding={20}>
-        <Text varient="body2">
-          <strong>Note: </strong> It was a pleasure working with you and your
-          team. We hope you will keep us in mind for future freelance projects.
-          Thank You!
-        </Text>
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<PauseCircleOutlined style={{ fontSize: 18 }} />} label="Hold At">
+              <Text varient="body2">{formatDate(lead.holdAt)}</Text>
+            </InfoRow>
+          </GridItem>
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<CalendarTodayOutlined style={{ fontSize: 18 }} />} label="Created At">
+              <Text varient="body2">{formatDate(lead.createdAt)}</Text>
+            </InfoRow>
+          </GridItem>
+
+        </GridInnerContainer>
       </Box>
 
-      <Box display="flex" justify="flex-end" px={20} mt={20} space={0.8}>
-        <Button color="error">Print</Button>
-        <Button color="success">Download</Button>
-      </Box>
+      {/* ── Linked Proposal ── */}
+      {lead.proposalId && (
+        <>
+          <Divider />
+          <Box display="flex" flexDirection="column" space={3}>
+            <SectionLabel>Linked Proposal</SectionLabel>
+            <InfoRow icon={<LinkOutlined style={{ fontSize: 18 }} />} label="Proposal ID">
+              <Box display="flex" align="center" space={1}>
+                <span
+                  style={{ cursor: "pointer", fontFamily: "monospace" }}
+                  onClick={() => navigate(`/proposal/preview/${lead.proposalId}`)}
+                >
+                  <Text varient="body2" skinColor>
+                    {lead.proposalId}
+                  </Text>
+                </span>
+                <Tooltip title="Copy ID">
+                  <span>
+                    <IconButton
+                      varient="text"
+                      size={26}
+                      fontSize={16}
+                      contentOpacity={5}
+                      onClick={() => copy(lead.proposalId!)}
+                    >
+                      <ContentCopy style={{ fontSize: 14 }} />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
+            </InfoRow>
+          </Box>
+        </>
+      )}
+
     </Box>
   );
 };
-export default PreviewMain;
 
-const StyledMisc = styled(GridInnerContainer)`
-  flex-direction: row;
-  @media screen and (min-width: 600px) {
-    flex-direction: row-reverse;
-  }
-`;
+export default PreviewMain;

@@ -6,6 +6,6 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:30
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: axiosBaseQuery,
-  tagTypes: ['BaseKnowledge', 'Proposal', 'ProposalChat'],
+  tagTypes: ['BaseKnowledge', 'Proposal', 'ProposalChat', 'Lead'],
   endpoints: () => ({}),
 })

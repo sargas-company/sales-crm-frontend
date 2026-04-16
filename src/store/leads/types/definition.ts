@@ -10,6 +10,44 @@ export type LeadStatus =
 
 export type ClientType = "Company" | "Individual";
 
+// API types
+export type ApiLeadStatus =
+  | 'conversation_ongoing'
+  | 'trial'
+  | 'hold'
+  | 'contract_offer'
+  | 'accept_contract'
+  | 'start_contract'
+  | 'suspended';
+
+export type ApiClientType = 'individual' | 'company';
+
+export interface LeadItem {
+  id: string;
+  number: number;
+  proposalId: string | null;
+  leadName: string | null;
+  status: ApiLeadStatus;
+  clientType: ApiClientType | null;
+  rate: number | null;
+  location: string | null;
+  repliedAt: string;
+  acceptedAt: string | null;
+  holdAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadPage {
+  data: LeadItem[];
+  total: number;
+}
+
+export interface LeadListParams {
+  page: number;
+  limit: number;
+}
+
 export type AvatarColor = "error" | "info" | "warning" | "success"
 
 export type AccountName = "Dmytro Sarafaniuk" | "Artem Kovalenko" | "Vadym Petrenko";

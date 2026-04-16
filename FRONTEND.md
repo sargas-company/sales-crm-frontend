@@ -176,7 +176,7 @@ Authorization: Bearer <token>
 }
 ```
 
-> Возвращает только proposals текущего пользователя, отсортированные по `createdAt desc`.
+> Возвращает все proposals (без фильтра по владельцу), отсортированные по `createdAt desc`.
 
 ---
 
@@ -205,7 +205,7 @@ Content-Type: application/json
 }
 ```
 
-> Все поля опциональны. При переводе в статус `Sent` автоматически проставляется `sentAt`.
+> Все поля опциональны. При переводе в статус `Sent` — автоматически проставляется `sentAt`. При переводе в статус `Replied` — автоматически создаётся связанный `Lead`.
 
 **Ответ `200`:** обновлённый объект proposal.
 
@@ -281,6 +281,115 @@ Content-Type: application/json
 
 ---
 
+## Leads
+
+Lead создаётся автоматически при переводе Proposal в статус `Replied`. Ручного создания нет.
+
+### Поля lead
+
+| Поле | Тип | Описание |
+|---|---|---|
+| `id` | string (uuid) | Уникальный идентификатор |
+| `number` | number | Порядковый номер (1, 2, 3...) |
+| `proposalId` | string \| null | ID связанного proposal (null если proposal удалён) |
+| `leadName` | string \| null | Имя лида |
+| `status` | enum | Статус (см. ниже) |
+| `clientType` | enum \| null | `individual` \| `company` |
+| `rate` | number \| null | Ставка в $ |
+| `location` | string \| null | Локация клиента |
+| `repliedAt` | datetime | Время получения ответа от клиента |
+| `acceptedAt` | datetime \| null | Проставляется при переходе в `accept_contract` |
+| `holdAt` | datetime \| null | Проставляется при переходе в `hold` |
+| `createdAt` | datetime | — |
+| `updatedAt` | datetime | — |
+
+**Статусы `LeadStatus`:** `conversation_ongoing` \| `trial` \| `hold` \| `contract_offer` \| `accept_contract` \| `start_contract` \| `suspended`
+
+---
+
+### GET /leads — список с пагинацией
+
+```http
+GET /leads?page=1&limit=10
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:**
+
+```json
+{
+  "data": [...],
+  "total": 15
+}
+```
+
+---
+
+### GET /leads/:id — один lead
+
+```http
+GET /leads/:id
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:** объект lead с вложенным `proposal` (или `null` если proposal удалён). `404` если не найден.
+
+```json
+{
+  "id": "uuid",
+  "number": 1,
+  "proposalId": "uuid",
+  "leadName": "John Doe",
+  "status": "conversation_ongoing",
+  "clientType": "individual",
+  "rate": 50,
+  "location": "United States",
+  "repliedAt": "2024-01-01T00:00:00.000Z",
+  "acceptedAt": null,
+  "holdAt": null,
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "proposal": { ... }
+}
+```
+
+---
+
+### PATCH /leads/:id — обновить
+
+```http
+PATCH /leads/:id
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "leadName": "John Doe",
+  "status": "trial",
+  "clientType": "company",
+  "rate": 75,
+  "location": "Canada"
+}
+```
+
+> Все поля опциональны. При переходе в `accept_contract` — автоматически проставляется `acceptedAt`. При переходе в `hold` — `holdAt`. Повторный переход в тот же статус не перезаписывает дату.
+
+**Ответ `200`:** обновлённый объект lead.
+
+---
+
+### DELETE /leads/:id — удалить
+
+```http
+DELETE /leads/:id
+Authorization: Bearer <token>
+```
+
+> Удаляет только лид. Связанный proposal остаётся нетронутым.
+
+**Ответ `204`:** пустое тело.
+
+---
+
 ## Chats
 
 ### GET /chats — список всех чатов (cursor-based пагинация)
@@ -304,10 +413,19 @@ Authorization: Bearer <token>
   "data": [
     {
       "id": "uuid",
-      "title": "React Dashboard — Upwork",
+      "manager": "John Doe",
+      "account": "MyCompany",
+      "proposalType": "Bid",
+      "platform": "Upwork",
+      "status": "Draft",
+      "jobUrl": null,
+      "boosted": false,
+      "connects": 6,
+      "coverLetter": null,
       "vacancy": "Looking for React developer...",
       "comment": "Клиент с рейтингом 4.9",
       "context": "Budget: $3000-5000",
+      "sentAt": null,
       "userId": "uuid",
       "createdAt": "2024-01-01T00:00:00.000Z",
       "updatedAt": "2024-01-01T00:00:00.000Z",
