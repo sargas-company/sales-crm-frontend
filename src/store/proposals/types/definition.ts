@@ -9,6 +9,7 @@ export type BoostedStatus = "Boosted" | "Not Boosted" | "Boosted Outbid";
 
 export interface ProposalItem {
   id: string;
+  title: string;
   jobUrl: string | null;
   status: ProposalStatus;
   manager: string;

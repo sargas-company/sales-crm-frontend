@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import type { Platform, ProposalType, ProposalStatus } from "../../../store/proposals/types/definition";
 
 export interface ProposalFormFields {
+  title: string;
   manager: string;
   account: string;
   proposalType: ProposalType | "";
@@ -17,12 +18,14 @@ export interface ProposalFormFields {
 }
 
 export interface ProposalFormErrors {
+  title?: string;
   manager?: string;
   account?: string;
   proposalType?: string;
 }
 
 const INITIAL: ProposalFormFields = {
+  title: "",
   manager: "",
   account: "",
   proposalType: "",
@@ -39,6 +42,7 @@ const INITIAL: ProposalFormFields = {
 
 const validate = (fields: ProposalFormFields): ProposalFormErrors => {
   const errors: ProposalFormErrors = {};
+  if (!fields.title.trim())    errors.title        = "Title is required";
   if (!fields.manager.trim())  errors.manager      = "Manager is required";
   if (!fields.account.trim())  errors.account      = "Account is required";
   if (!fields.proposalType)    errors.proposalType = "Proposal type is required";
@@ -68,6 +72,7 @@ const useProposalForm = (initialValues?: Partial<ProposalFormFields>) => {
   };
 
   const getPayload = () => ({
+    title:        fields.title.trim(),
     manager:      fields.manager.trim(),
     account:      fields.account.trim(),
     proposalType: fields.proposalType as ProposalType,

@@ -35,6 +35,7 @@ const SectionLabel = ({ children }: { children: string }) => (
 );
 
 const toFormValues = (data: ProposalItem) => ({
+  title:        data.title,
   manager:      data.manager,
   account:      data.account,
   proposalType: data.proposalType,
@@ -72,7 +73,8 @@ const ProposalFormInner = ({
         await updateProposal({ id, body: getPayload() }).unwrap();
         showToast("Proposal updated successfully", "success");
       } else {
-        await createProposal(getPayload()).unwrap();
+        const { status: _omit, ...createPayload } = getPayload();
+        await createProposal(createPayload).unwrap();
         showToast("Proposal created successfully", "success");
       }
       navigate("/proposal/list");
@@ -99,6 +101,22 @@ const ProposalFormInner = ({
 
         <form onSubmit={handleSubmit}>
           <Box display="flex" flexDirection="column" space={5}>
+
+            {/* ── Title ── */}
+            <Box display="flex" flexDirection="column" space={1}>
+              <Text varient="body2" weight="medium">Title *</Text>
+              <TextField
+                name="title"
+                placeholder="e.g. React developer for SaaS product"
+                value={fields.title}
+                onChange={(e) => setField("title", e.target.value)}
+                error={!!errors.title}
+                hypertext={errors.title}
+                width="100%"
+              />
+            </Box>
+
+            <Divider />
 
             {/* ── Main Details ── */}
             <Box display="flex" flexDirection="column" space={3}>
@@ -172,23 +190,25 @@ const ProposalFormInner = ({
                   </Box>
                 </GridItem>
 
-                <GridItem xs={12} md={6}>
-                  <Box display="flex" flexDirection="column" space={1}>
-                    <Text varient="body2" weight="medium">Status</Text>
-                    <Select
-                      label="Select status"
-                      defaultValue={fields.status}
-                      onChange={(value) => setField("status", value as any)}
-                      width="100%"
-                      sizes="normal"
-                    >
-                      <SelectItem label="Draft"   value="Draft" />
-                      <SelectItem label="Sent"    value="Sent" />
-                      <SelectItem label="Viewed"  value="Viewed" />
-                      <SelectItem label="Replied" value="Replied" />
-                    </Select>
-                  </Box>
-                </GridItem>
+                {mode === "edit" && (
+                  <GridItem xs={12} md={6}>
+                    <Box display="flex" flexDirection="column" space={1}>
+                      <Text varient="body2" weight="medium">Status</Text>
+                      <Select
+                        label="Select status"
+                        defaultValue={fields.status}
+                        onChange={(value) => setField("status", value as any)}
+                        width="100%"
+                        sizes="normal"
+                      >
+                        <SelectItem label="Draft"   value="Draft" />
+                        <SelectItem label="Sent"    value="Sent" />
+                        <SelectItem label="Viewed"  value="Viewed" />
+                        <SelectItem label="Replied" value="Replied" />
+                      </Select>
+                    </Box>
+                  </GridItem>
+                )}
 
               </GridInnerContainer>
             </Box>
