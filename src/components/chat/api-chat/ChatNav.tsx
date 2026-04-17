@@ -1,26 +1,29 @@
 import styled from 'styled-components'
 import Box from '../../box/Box'
-import { Divider, Text } from '../../../ui'
+import {Divider, Tab, TabContent, TabItem, TabList, Text} from '../../../ui'
 import ScrollContainer from '../../scroll-container/ScrollContainer'
 import ChatList from './ChatList'
 import { useAppDispatch, useAppSelector } from '../../../hooks'
 import { setActiveTab, fetchChats } from '../../../store/chats/apiChatSlice'
 import type { ChatTabType } from '../../../store/chats/apiChatSlice'
-import useTheme from '../../../theme/useTheme'
-import genColorShades from '../../../utils/genColorShades'
 
-const TABS: { label: string; value: ChatTabType }[] = [
-  { label: 'Proposals', value: 'proposal' },
-  { label: 'Leads', value: 'lead' },
-]
+const TAB_VALUES: Record<ChatTabType, number> = {
+  proposal: 1,
+  lead: 2,
+}
+
+const TAB_TYPES: Record<number, ChatTabType> = {
+  1: 'proposal',
+  2: 'lead',
+}
 
 const ChatNav = () => {
   const dispatch = useAppDispatch()
   const activeTab = useAppSelector((state) => state.apiChat.activeTab)
-  const { theme: { primaryColor: { color } } } = useTheme()
 
-  const handleTabChange = (tab: ChatTabType) => {
-    if (tab === activeTab) return
+  const handleTabChange = (v: number) => {
+    const tab = TAB_TYPES[v]
+    if (!tab || tab === activeTab) return
     dispatch(setActiveTab(tab))
     dispatch(fetchChats({ type: tab }))
   }
@@ -34,54 +37,41 @@ const ChatNav = () => {
       </Box>
       <Divider />
 
-      {/* Tab switcher */}
-      <TabRow>
-        {TABS.map((tab) => (
-          <TabButton
-            key={tab.value}
-            active={activeTab === tab.value}
-            primaryColor={color}
-            onClick={() => handleTabChange(tab.value)}
-          >
-            {tab.label}
-          </TabButton>
-        ))}
-      </TabRow>
-      <Divider />
+      <Tab value={TAB_VALUES[activeTab]}>
+        <FullWidthTabList>
+          <TabList>
+            <TabItem value={1} label="Proposals" onClick={(v) => handleTabChange(v as number)} />
+            <TabItem value={2} label="Leads" onClick={(v) => handleTabChange(v as number)} />
+          </TabList>
+        </FullWidthTabList>
 
-      <Box pl={12}>
-        <ScrollContainer maxHeight="68vh">
-          <ChatList />
-        </ScrollContainer>
-      </Box>
+        <TabContent tabIndex={1}>
+          <Box pl={12}>
+            <ScrollContainer maxHeight="68vh">
+              <ChatList />
+            </ScrollContainer>
+          </Box>
+        </TabContent>
+
+        <TabContent tabIndex={2}>
+          <Box pl={12}>
+            <ScrollContainer maxHeight="68vh">
+              <ChatList />
+            </ScrollContainer>
+          </Box>
+        </TabContent>
+      </Tab>
     </Box>
   )
 }
 
 export default ChatNav
 
-const TabRow = styled.div`
-  display: flex;
-`
-
-const TabButton = styled.button<{ active: boolean; primaryColor: string }>`
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: ${({ active }) => (active ? 600 : 400)};
-  color: ${({ active, primaryColor }) =>
-    active ? primaryColor : 'var(--text-secondary, #8A8D93)'};
-  border-bottom: 2px solid
-    ${({ active, primaryColor }) => (active ? primaryColor : 'transparent')};
-  transition: color 0.15s, border-color 0.15s;
-
-  &:hover {
-    color: ${({ primaryColor }) => primaryColor};
+const FullWidthTabList = styled.div`
+  .tab-list-wrapper {
+    .tab-item {
+      flex: 1;
+      min-width: 0;
+    }
   }
 `

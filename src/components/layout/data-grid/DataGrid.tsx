@@ -1,4 +1,4 @@
-import {
+import React, {
   createContext,
   memo,
   useEffect,
@@ -20,7 +20,8 @@ import DataGridOptions, {
   DataGridColoumn,
 } from "./type";
 import DataGridFooterContainer from "../../data-grid-item/DataGridFooterContainer";
-import { Text } from "../../../ui";
+import {CustomAvatar, Text} from "../../../ui"
+import {ChatBubbleOutlineRounded, ForwardToInboxOutlined, InboxOutlined} from '@mui/icons-material'
 
 export const DataGridOptionContext = createContext<DataOptionContext | null>(
   null
@@ -216,7 +217,9 @@ const DataGrid = <T extends unknown>({
                 ))
             ) : (
               <Box padding={56} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-                <Icon icon="mdi:inbox-outline" width={48} height={48} style={{ opacity: 0.35 }} />
+                <CustomAvatar size={100} color="info" skin="light">
+                  <InboxOutlined />
+                </CustomAvatar>
                 <Text align="center" paragraph>
                   No data found.
                 </Text>

@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import styled from 'styled-components'
-import { SendRounded } from '@mui/icons-material'
+import {ChatBubbleOutlineRounded, SendRounded} from '@mui/icons-material'
 import axiosInstance from '../../../api/axiosInstance'
 import { usePanelSocket } from '../../../hooks/usePanelSocket'
 import Box from '../../box/Box'
 import ColorBox from '../../box/ColorBox'
-import { Text, TextField } from '../../../ui'
+import {CustomAvatar, Text, TextField} from '../../../ui'
 import MsgBox from '../chat-content/MsgBox'
 
 interface Message {
@@ -126,14 +126,19 @@ const ChatPanel = ({ historyUrl, proposalId }: Props) => {
         {messages.length === 0 && !streaming.active && (
           <Box
             display="flex"
+            flexDirection={'column'}
             align="center"
             justify="center"
-            style={{ paddingTop: 48 }}
+            height={'100%'}
           >
-            <Text varient="body2" secondary>
+            <CustomAvatar size={100} color="info" skin="light">
+              <ChatBubbleOutlineRounded />
+            </CustomAvatar>
+            <Text heading="h6" skinColor>
               No messages yet
             </Text>
           </Box>
+
         )}
 
         {messages.map((msg) => (
@@ -222,11 +227,13 @@ const ChatPanel = ({ historyUrl, proposalId }: Props) => {
         )}
       </MessagesScroll>
 
-      <Box display="flex" align="center" space={0.8} px={12} py={8}>
+      <Box display="flex" align="center" space={0.8} px={12} py={8} mb={20}>
         <ColorBox
           display="flex"
+          backgroundTheme="foreground"
           transparency={3}
           borderRadius="26px"
+          border={{ show: true, size: "1px", radius: "26px" }}
           className="overflow-hidden"
           flex={1}
         >
@@ -242,7 +249,7 @@ const ChatPanel = ({ historyUrl, proposalId }: Props) => {
                 : 'Type your message here...'
             }
             endAdornment={
-              <Box mr={16} onClick={handleSend} className="cursor-pointer">
+              <Box mr={16} mt={6} onClick={handleSend} className="cursor-pointer">
                 <SendRounded />
               </Box>
             }
@@ -251,7 +258,7 @@ const ChatPanel = ({ historyUrl, proposalId }: Props) => {
             }
             onKeyDown={handleKeyDown}
             width="100%"
-            style={{ padding: '12px 40px 12px 20px', border: 0, outline: 0 }}
+            style={{  padding: '12px 40px 12px 25px', border: 0, outline: 0,  }}
             disable={streaming.active || !proposalId}
           />
         </ColorBox>

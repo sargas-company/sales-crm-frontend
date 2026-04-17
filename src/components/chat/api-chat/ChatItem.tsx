@@ -24,22 +24,22 @@ const ChatListItem = ({ chat, onSelect }: Props) => {
         ml={8}
         mr={12}
       >
-        <Text varient="body2" weight="bold" textOverflow="ellipsis">
+        <Text varient="body2" weight="light" textOverflow="ellipsis">
           {title}
         </Text>
-        <Text varient="body2" textOverflow="ellipsis" secondary>
-          {lastMsg?.content
-            ? lastMsg.content.length > 60
-              ? lastMsg.content.slice(0, 60) + '…'
-              : lastMsg.content
-            : subtitle ?? 'No messages yet'}
-        </Text>
+        {/*<Text varient="body2" textOverflow="ellipsis" secondary>*/}
+        {/*  {lastMsg?.content*/}
+        {/*    ? lastMsg.content.length > 60*/}
+        {/*      ? lastMsg.content.slice(0, 60) + '…'*/}
+        {/*      : lastMsg.content*/}
+        {/*    : subtitle ?? 'No messages yet'}*/}
+        {/*</Text>*/}
       </Box>
       <Box display="flex" flexDirection="column" align="flex-end" space={0.4}>
         <TimeStamp timeStamp={chat.createdAt} />
-        <Text varient="caption" secondary>
-          {chat._count.messages}
-        </Text>
+        {/*<Text varient="caption" secondary>*/}
+        {/*  {chat._count.messages}*/}
+        {/*</Text>*/}
       </Box>
     </ChatItemWrapper>
   )

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import styled from 'styled-components'
 import { useAppSelector } from '../../../hooks'
 import Box from '../../box/Box'
@@ -15,10 +15,26 @@ const Messages = () => {
 
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
+  // Instant scroll on first render
   useLayoutEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [chatHistory, streamingContent])
+  }, [])
+
+  // Smooth scroll when new message added or streaming finishes
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }, [chatHistory.length, isStreaming])
+
+  // Follow streaming content as it comes in
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || !isStreaming) return
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+    if (isNearBottom) el.scrollTop = el.scrollHeight
+  }, [streamingContent, isStreaming])
 
   if (loadingHistory) {
     return (
@@ -50,14 +66,15 @@ const Messages = () => {
           >
             {msg.role === 'assistant' && msg.decision && (
               <ColorBox
-                transparency={3}
+                transparency={100}
                 px={10}
                 py={4}
-                mb={4}
+                mb={15}
                 borderRadius="6px"
                 style={{ display: 'inline-flex', gap: 8 }}
+                color={'transparent'}
               >
-                <Text varient="caption" weight="bold" color="primary">
+                <Text varient="caption" weight="bold" color="black">
                   {msg.decision.toUpperCase()}
                 </Text>
                 {msg.reasoning && (

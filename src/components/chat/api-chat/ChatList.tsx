@@ -70,7 +70,7 @@ const ChatList = () => {
   }
 
   return (
-    <Box>
+    <Box pr={10}>
       {chatList.map((chat) => (
         <ChatListItem key={chat.id} chat={chat} onSelect={handleSelect} />
       ))}

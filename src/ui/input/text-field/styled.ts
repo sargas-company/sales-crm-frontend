@@ -119,6 +119,17 @@ export const Input = styled('input') <InputOptions>`
     border-radius: ${({ borderRadius }) => borderRadius ? borderRadius : '8px'};
     ${({ disable }) => disable && `pointer-events: none;`}
 
+    &:-webkit-autofill,
+    &:-webkit-autofill:hover,
+    &:-webkit-autofill:focus {
+        -webkit-box-shadow: 0 0 0px 1000px ${({ theme, varient }) => varient === 'filled'
+            ? theme.mode.name === 'dark' ? '#3a3a3a' : '#f5f5f5'
+            : theme.mode.name === 'dark' ? '#1e1e1e' : '#ffffff'
+        } inset;
+        -webkit-text-fill-color: ${({ theme }) => theme.mode.textColor};
+        transition: background-color 5000s ease-in-out 0s;
+    }
+
     &:focus,
     &:focus-visible {
         border-color: ${({ theme, varient }) => (varient === 'filled' || varient === 'standard') ? 'transparent' : theme.primaryColor.color};

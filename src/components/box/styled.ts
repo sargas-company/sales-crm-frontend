@@ -55,7 +55,7 @@ export const StyledColorBox = styled(box) <ColorBoxProps>`
     &:after {
         position: absolute;
         content: '';
-        background: ${({ theme, color }) => color ? alertColor.hasOwnProperty(color) ? alertColor[color as AlertColorType] : color : theme.primaryColor.color};
+        background: ${({ theme, color }) => color ? alertColor.hasOwnProperty(color) ? alertColor[color as AlertColorType] : color : 'transparent'};
         ${({ backgroundTheme, theme }) => backgroundTheme ? `background: ${backgroundTheme === 'background' ? theme.mode.background : backgroundTheme === "foreground" ? theme.mode.foreground : ""};` : ""}
         width: 100%;
         height: 100%;

@@ -33,9 +33,12 @@ const ChatFooter = ({ onSend }: Props) => {
     <Box display="flex" align="center" justify="space-between" space={0.8} px={12}>
       <ColorBox
         display="flex"
+        backgroundTheme="foreground"
         transparency={3}
         borderRadius="26px"
+        border={{ show: true, size: "1px", radius: "26px" }}
         className="overflow-hidden"
+        mb={20}
         flex={1}
       >
         <TextField
@@ -44,7 +47,7 @@ const ChatFooter = ({ onSend }: Props) => {
           value={message}
           placeholder={isStreaming ? 'Waiting for response…' : !selectedProposalId ? 'Chat unavailable' : 'Type your message here...'}
           endAdornment={
-            <Box mr={16} onClick={handleSend} className="cursor-pointer">
+            <Box mr={16} mt={6} onClick={handleSend} className="cursor-pointer">
               <SendRounded />
             </Box>
           }
@@ -52,7 +55,7 @@ const ChatFooter = ({ onSend }: Props) => {
           onKeyDown={handleKeyDown}
           width="100%"
           style={{
-            padding: '12px 40px 12px 20px',
+            padding: '12px 40px 12px 25px',
             border: 0,
             outline: 0,
           }}

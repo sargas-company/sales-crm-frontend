@@ -49,7 +49,7 @@ const ChatFooter = () => {
           type="text"
           name="message-write-box"
           defaultValue={message}
-          placeholder="Type your message here..."
+          placeholder="Type your message here...1"
           endAdornment={
             <Box mr={16}>
               <SendRounded />
