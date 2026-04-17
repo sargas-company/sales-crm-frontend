@@ -67,7 +67,7 @@ const LeadTable = ({ items, isLoading, onDelete }: LeadTableProps) => {
                 row.proposalId ? (
                   <Box display="flex" align="center">
                     <span style={{ cursor: "pointer" }} onClick={() => handleCopyBidId(row.proposalId!)}>
-                      <Text skinColor>...{row.proposalId.slice(-4)}</Text>
+                      <Text skinColor>{row.proposalId.slice(-4)}</Text>
                     </span>
                     <Tooltip title={row.proposalId} placement="top">
                       <span style={{ marginLeft: 4 }}>

@@ -35,7 +35,7 @@ const navList: NavOptions[] = [
     icon: <Home />,
   },
   {
-    label: "Chat",
+    label: "Chats",
     path: "/chats",
     icon: <ChatBubbleOutlineRounded />,
   },
@@ -57,16 +57,6 @@ const navList: NavOptions[] = [
     label: "Leads",
     path: "/leads/list/",
     icon: <PeopleOutlined />,
-  },
-  {
-    label: "Platforms",
-    path: "/platforms/list/",
-    icon: <LayersOutlined />,
-  },
-  {
-    label: "Accounts",
-    path: "/accounts/list/",
-    icon: <AccountCircleOutlined />,
   },
   {
     label: "Base Knowledge",
@@ -145,4 +135,18 @@ const navList: NavOptions[] = [
   //   ],
   // },
 ];
+
+export const secondaryNavList: NavOptions[] = [
+  {
+    label: "Platforms",
+    path: "/platforms/list/",
+    icon: <LayersOutlined />,
+  },
+  {
+    label: "Accounts",
+    path: "/accounts/list/",
+    icon: <AccountCircleOutlined />,
+  },
+];
+
 export default navList;

@@ -1,15 +1,16 @@
-import { useState } from "react";
-import Card from "../../../components/card/Card";
-import Box from "../../../components/box/Box";
-import CreateKnowledgeButton from "../../../components/base-knowledge/list/CreateKnowledgeButton";
-import BaseKnowledgeTable from "../../../components/base-knowledge/list/BaseKnowledgeTable";
-import BaseKnowledgeFormModal from "../../../components/base-knowledge/form/BaseKnowledgeFormModal";
-import BaseKnowledgeEditModal from "../../../components/base-knowledge/form/BaseKnowledgeEditModal";
-import BaseKnowledgeDeleteModal from "../../../components/base-knowledge/form/BaseKnowledgeDeleteModal";
-import DataGridFooter from "../../../components/data-grid-item/DataGridFooter";
-import { GridInnerContainer, GridItem } from "../../../components/layout";
-import useModal from "../../../hooks/useModal";
-import { useGetBaseKnowledgeListQuery } from "../../../store/baseKnowledge/baseKnowledgeApi";
+import {useState} from "react"
+import Card from "../../../components/card/Card"
+import Box from "../../../components/box/Box"
+import CreateKnowledgeButton from "../../../components/base-knowledge/list/CreateKnowledgeButton"
+import BaseKnowledgeTable from "../../../components/base-knowledge/list/BaseKnowledgeTable"
+import BaseKnowledgeFormModal from "../../../components/base-knowledge/form/BaseKnowledgeFormModal"
+import BaseKnowledgeEditModal from "../../../components/base-knowledge/form/BaseKnowledgeEditModal"
+import BaseKnowledgeDeleteModal from "../../../components/base-knowledge/form/BaseKnowledgeDeleteModal"
+import DataGridFooter from "../../../components/data-grid-item/DataGridFooter"
+import {GridInnerContainer, GridItem} from "../../../components/layout"
+import useModal from "../../../hooks/useModal"
+import {useGetBaseKnowledgeListQuery} from "../../../store/baseKnowledge/baseKnowledgeApi"
+import {TextField} from '../../../ui'
 
 const LIMIT_OPTIONS = [10, 20];
 
@@ -46,13 +47,22 @@ const BaseKnowledgeList = () => {
   return (
     <>
       <Card>
-        <Box display="flex" justify="flex-end" padding={20}>
-          <GridInnerContainer alignItems="center">
+        <Box display="flex" justify="space-between" padding={20}>
+          <GridInnerContainer alignItems="center" justifyContent="space-between">
             <GridItem xs={12} md={6}>
-              {/* search will be added later */}
+              {/*<TextField*/}
+              {/*    type="text"*/}
+              {/*    name="search-base-knowledge"*/}
+              {/*    placeholder="Search knowleadge"*/}
+              {/*    sizes="small"*/}
+              {/*    maxWidth="280px"*/}
+              {/*    onChange={()=>{}}*/}
+              {/*/>*/}
             </GridItem>
             <GridItem xs={12} md={6}>
+              <Box display="flex" justify="flex-end">
               <CreateKnowledgeButton onClick={createModal.toggleModal} />
+              </Box>
             </GridItem>
           </GridInnerContainer>
         </Box>

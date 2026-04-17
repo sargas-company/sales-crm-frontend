@@ -1,7 +1,6 @@
 import { useState } from "react";
 import Box from "../../../components/box/Box";
 import Card from "../../../components/card/Card";
-import CreateNewLead from "../../../components/leads/list/CreateNewLead";
 import LeadTable from "../../../components/leads/list/LeadTable";
 import LeadDeleteModal from "../../../components/leads/list/LeadDeleteModal";
 import DataGridFooter from "../../../components/data-grid-item/DataGridFooter";
@@ -65,11 +64,6 @@ const LeadList = () => {
                 maxWidth="280px"
                 onChange={(e) => setSearch(e.target.value)}
               />
-            </GridItem>
-            <GridItem xs={12} md={6}>
-              <Box display="flex" justify="flex-end">
-                <CreateNewLead />
-              </Box>
             </GridItem>
           </GridInnerContainer>
         </Box>

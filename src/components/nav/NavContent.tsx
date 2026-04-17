@@ -15,10 +15,17 @@ const NavContent: FC<{ children: ReactNode }> = ({ children }) => {
       width={collapse ? "90px" : "260px"}
       isCollapsed={collapse}
     >
-      <ul>{children}</ul>
+      <NavInner>{children}</NavInner>
     </StyledNavContent>
   );
 };
+
+const NavInner = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+`;
 
 const StyledNavContent = styled(Card)<{ isCollapsed: boolean }>`
   height: 100%;
