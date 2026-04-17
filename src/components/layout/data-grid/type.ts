@@ -7,7 +7,7 @@ export default interface DataGridOptions<T> {
     pagination?: boolean;
     height?: string;
     width?: string;
-    renderGridData: (row: T, column: { [field: string]: DataGridColoumn }) => ReactNode;
+    renderGridData: (row: T, column: { [field: string]: DataGridColoumn }, index: number) => ReactNode;
     gridDataKey: (item: T) => string | number;
 }
 

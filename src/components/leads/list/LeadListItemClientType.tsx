@@ -1,5 +1,5 @@
 import { ApiClientType } from "../../../store/leads/types/definition";
-import { Chip } from "../../../ui";
+import { Chip, Text } from "../../../ui";
 
 const clientTypeColor: Record<ApiClientType, string> = {
   company:    "#9155FD",
@@ -12,7 +12,7 @@ const clientTypeLabel: Record<ApiClientType, string> = {
 };
 
 const LeadListItemClientType = ({ clientType }: { clientType: ApiClientType | null }) => {
-  if (!clientType) return null;
+  if (!clientType) return <Text>—</Text>;
   return (
     <Chip
       label={clientTypeLabel[clientType]}

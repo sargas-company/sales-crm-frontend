@@ -13,6 +13,7 @@ export interface ProposalUser {
 }
 
 export interface ProposalItem {
+  number: number;
   id: string;
   title: string;
   jobUrl: string | null;

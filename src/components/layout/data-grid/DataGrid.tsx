@@ -208,7 +208,8 @@ const DataGrid = <T extends unknown>({
                           return acc;
                         },
                         {}
-                      )
+                      ),
+                      footerOption.passedRows - 1 + index
                     )}
                   </DataGridRow>
                 ))

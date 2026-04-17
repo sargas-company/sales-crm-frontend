@@ -1,24 +1,21 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Snackbar, Alert } from "@mui/material";
-import { Tooltip } from "@mui/material";
-import { ContentCopy } from "@mui/icons-material";
-import { IconButton } from "../../../ui";
+import {useState} from "react"
+import {Link} from "react-router-dom"
+import {Alert, Snackbar} from "@mui/material"
+import {Text} from "../../../ui"
 
-import DataGrid from "../../layout/data-grid/DataGrid";
-import Box from "../../box/Box";
-import DataGridCell from "../../data-grid-item/DataGridCell";
-import LeadListItemStatus from "./LeadListItemStatus";
-import { Text } from "../../../ui";
+import DataGrid from "../../layout/data-grid/DataGrid"
+import Box from "../../box/Box"
+import DataGridCell from "../../data-grid-item/DataGridCell"
+import LeadListItemStatus from "./LeadListItemStatus"
 
-import type { DataGridColoumn } from "../../layout/data-grid/type";
-import type { LeadItem } from "../../../store/leads/types/definition";
-import LeadListAction from "./LeadListAction";
-import LeadListItemClientType from "./LeadListItemClientType";
-import {formatDate} from '../../../utils/formatDate'
+import type {DataGridColoumn} from "../../layout/data-grid/type"
+import type {LeadItem} from "../../../store/leads/types/definition"
+import LeadListAction from "./LeadListAction"
+import LeadListItemClientType from "./LeadListItemClientType"
+import {formatDate, shortUuid} from '../../../utils/formatDate'
 
 const columns: DataGridColoumn[] = [
-  { fieldId: "number",     label: "#",           width: "100px" },
+  { fieldId: "number",     label: "#",           width: "90px" },
   { fieldId: "proposalId", label: "Bid ID",      width: "130px" },
   { fieldId: "leadName",   label: "Lead Name",   width: "200px" },
   { fieldId: "status",     label: "Status",      width: "210px" },
@@ -40,24 +37,19 @@ interface LeadTableProps {
 const LeadTable = ({ items, isLoading, onDelete }: LeadTableProps) => {
   const [toastOpen, setToastOpen] = useState(false);
 
-  const handleCopyBidId = (id: string) => {
-    navigator.clipboard.writeText(id);
-    setToastOpen(true);
-  };
-
   if (isLoading || !items || items.length === 0) return <></>;
 
   return (
     <Box padding={24} pl={40}>
       <DataGrid
         rows={items}
-        renderGridData={(row, field) => (
+        renderGridData={(row, field, index) => (
           <>
             <DataGridCell
               width={field["number"].width}
               children={
                 <Link to={`/leads/preview/${row.id}`}>
-                  <Text skinColor>#{row.number}</Text>
+                  <Text skinColor>#{index + 1 }</Text>
                 </Link>
               }
             />
@@ -67,16 +59,10 @@ const LeadTable = ({ items, isLoading, onDelete }: LeadTableProps) => {
               children={
                 row.proposalId ? (
                   <Box display="flex" align="center">
-                    <span style={{ cursor: "pointer" }} onClick={() => handleCopyBidId(row.proposalId!)}>
-                      <Text skinColor>{row.proposalId.slice(-4)}</Text>
-                    </span>
-                    <Tooltip title={row.proposalId} placement="top">
-                      <span style={{ marginLeft: 4 }}>
-                        <IconButton varient="text" size={30} fontSize={21} contentOpacity={5} onClick={() => handleCopyBidId(row.proposalId!)}>
-                          <ContentCopy style={{ fontSize: 16 }} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
+                      <Link to={`/proposal/preview/${row.proposalId}`}>
+                          <Text skinColor>{shortUuid(row.proposalId)}</Text>
+                      </Link>
+
                   </Box>
                 ) : (
                   <Text>—</Text>
@@ -90,6 +76,7 @@ const LeadTable = ({ items, isLoading, onDelete }: LeadTableProps) => {
             />
             <DataGridCell
               width={field["clientType"].width}
+              justify="center"
               children={<LeadListItemClientType clientType={row.clientType} />}
             />
             <DataGridCell width={field["rate"].width} justify="center" value={row.rate != null ? `$${row.rate}` : "—"} />

@@ -6,7 +6,7 @@ import { ContentCopy } from "@mui/icons-material";
 import { IconButton } from "../../../ui";
 
 import type { ProposalItem } from "../../../store/proposals/types/definition";
-import { formatDate, shortUuid } from "../../../utils/formatDate";
+import { formatDate } from "../../../utils/formatDate";
 
 import DataGrid from "../../layout/data-grid/DataGrid";
 import Box from "../../box/Box";
@@ -22,7 +22,7 @@ import type { DataGridColoumn } from "../../layout/data-grid/type";
 import ProposalListAction from "./ProposalListAction";
 
 const columns: DataGridColoumn[] = [
-  { fieldId: "id",           label: "#",            width: "120px" },
+  { fieldId: "id",           label: "#",            width: "90px" },
   { fieldId: "jobUrl",       label: "Job URL",      width: "130px" },
   { fieldId: "status",       label: "Status",       width: "120px" },
     { fieldId: "coverLetter",  label: "Cover Letter", width: "320px" },
@@ -61,14 +61,14 @@ const ProposalTable = ({ items, isLoading, onDelete }: Props) => {
     <Box padding={24} pl={40}>
       <DataGrid
         rows={items}
-        renderGridData={(row, field) => (
+        renderGridData={(row, field, index) => (
           <>
             <DataGridCell
               width={field["id"].width}
               children={
                 <Link to={`/proposal/preview/${row.id}`}>
                   <Tooltip title={row.id} placement="top">
-                    <span><Text skinColor>#{shortUuid(row.id)}</Text></span>
+                    <span><Text skinColor>#{index + 1}</Text></span>
                   </Tooltip>
                 </Link>
               }
