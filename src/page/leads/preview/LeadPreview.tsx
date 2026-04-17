@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   InfoOutlined,
+  ChatOutlined,
   ArrowBackOutlined,
   EditOutlined,
   ContentCopy,
@@ -10,6 +11,7 @@ import { Tooltip } from "@mui/material";
 import Box from "../../../components/box/Box";
 import Card from "../../../components/card/Card";
 import PreviewMain from "../../../components/leads/preview/PreviewMain";
+import LeadChat from "../../../components/leads/preview/LeadChat";
 import { Button, Tab, TabList, TabItem, TabContent, Text, IconButton, Chip } from "../../../ui";
 import { useGetLeadByIdQuery } from "../../../store/leads/leadsApi";
 import { formatDate, shortUuid } from "../../../utils/formatDate";
@@ -150,10 +152,20 @@ const LeadPreview = () => {
               icon={<InfoOutlined />}
               onClick={(v) => setActiveTab(v as number)}
             />
+            <TabItem
+              value={2}
+              label="Chat"
+              icon={<ChatOutlined />}
+              onClick={(v) => setActiveTab(v as number)}
+            />
           </TabList>
 
           <TabContent tabIndex={1}>
             <PreviewMain lead={lead} />
+          </TabContent>
+
+          <TabContent tabIndex={2}>
+            <LeadChat />
           </TabContent>
         </Tab>
 

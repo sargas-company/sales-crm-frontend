@@ -37,14 +37,18 @@ const LeadChat = () => {
       value={{ show: false, handleModal: () => {}, closeModal: () => {} }}
     >
       <Box display="flex" flexDirection="column" style={{ minHeight: "70vh" }}>
-        <ChatHeader />
-        <Divider />
-        <Box flex={1} style={{ overflow: "hidden" }}>
-          <Messages />
-        </Box>
-        <Box py={12}>
-          <ChatFooter />
-        </Box>
+        {isChatSelected ? (
+          <>
+            <ChatHeader />
+            <Divider />
+            <Box flex={1} style={{ overflow: "hidden" }}>
+              <Messages />
+            </Box>
+            <Box py={12}>
+              <ChatFooter />
+            </Box>
+          </>
+        ) : null}
       </Box>
     </chatModalCtx.Provider>
   );

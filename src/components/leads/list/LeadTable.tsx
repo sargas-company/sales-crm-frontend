@@ -103,9 +103,6 @@ const LeadTable = ({ items, isLoading, onDelete }: LeadTableProps) => {
         )}
         columns={columns}
         gridDataKey={(item) => item.id}
-        pagination
-        rowPerPage={8}
-        rowPerPageOption={[5, 8, 20]}
       />
 
       <Snackbar
