@@ -14,7 +14,7 @@ const themeSettings: SettingType = {
     } as any,
     layout: {
         appBarBlur: setting?.hasOwnProperty('appbarBlur') ? setting.appbarBlur! : true,
-        appBarPosition: setting?.appBarPosition ? setting.appBarPosition : "fixed",
+        appBarPosition: "fixed", // hardcoded: AppBar Type toggle hidden in Customizer
         footerPosition: setting?.footerPosition ? setting.footerPosition : 'static'
     },
     primaryColor: {
@@ -22,7 +22,7 @@ const themeSettings: SettingType = {
         color: setting?.primaryColor?.color ? setting?.primaryColor.color : "rgba(0, 215, 255, 1)"
     },
     menuStyle: {
-        collapse: setting?.menuCollapse ? setting.menuCollapse : false,
+        collapse: false, // hardcoded: navbar always expanded (toggle button hidden in NavHeading)
         layout: setting?.menuLayout ? setting.menuLayout : "vertical",
         openStyle: setting?.menuOpenStyle ? setting.menuOpenStyle : 'accordion',
         visible: setting?.menuVisible ? setting.menuVisible : false

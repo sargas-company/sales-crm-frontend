@@ -67,12 +67,12 @@ const ThemeCustomizer: FC = () => {
           <SectionBox>
             <Flex direction="column" gap="sm">
               <CustomizerTitle title="layout" />
-              <LayoutType
-                layoutPosition={theme.layout.appBarPosition}
-                onChange={dispatch?.handleAppBarPosition}
-                title="AppBar Type"
-                name="appbar position"
-              />
+              {/*<LayoutType*/}
+              {/*  layoutPosition={theme.layout.appBarPosition}*/}
+              {/*  onChange={dispatch?.handleAppBarPosition}*/}
+              {/*  title="AppBar Type"*/}
+              {/*  name="appbar position"*/}
+              {/*/>*/}
               <LayoutType
                 layoutPosition={theme.layout.footerPosition}
                 onChange={dispatch?.handleAppFooterPosition}

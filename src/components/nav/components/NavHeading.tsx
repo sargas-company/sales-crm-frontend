@@ -3,12 +3,12 @@ import { Choice } from "../../../ui";
 import useTheme from "../../../theme/useTheme";
 import AppLogo from "./AppLogo";
 function NavHeading() {
-  const {
-    theme: {
-      menuStyle: { collapse },
-    },
-    dispatch,
-  } = useTheme();
+  // const {
+  //   theme: {
+  //     menuStyle: { collapse },
+  //   },
+  //   dispatch,
+  // } = useTheme();
   return (
     <Box
       display="flex"
@@ -19,13 +19,13 @@ function NavHeading() {
       py={16}
     >
       <AppLogo />
-      <Choice
-        name="menu-collaps"
-        onChange={dispatch?.handleChangeMenuCollapse}
-        selected={collapse ? "" : "collapsed"}
-        value="collapsed"
-        label=""
-      />
+      {/*<Choice*/}
+      {/*  name="menu-collaps"*/}
+      {/*  onChange={dispatch?.handleChangeMenuCollapse}*/}
+      {/*  selected={collapse ? "" : "collapsed"}*/}
+      {/*  value="collapsed"*/}
+      {/*  label=""*/}
+      {/*/>*/}
     </Box>
   );
 }

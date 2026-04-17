@@ -1,27 +1,20 @@
-import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
-import AppBar from "../components/appbar/AppBar";
+import {lazy, Suspense} from "react"
+import {Route, Routes} from "react-router-dom"
+import AppBar from "../components/appbar/AppBar"
 // import Footer from "../components/footer/Footer";
-const ThemeCustomizer = lazy(
-  () => import("../components/customizer/Customizer")
-);
-import { Flex } from "../components/layout";
-import AppLayout from "../components/layout/AppLayout";
-import PageLoading from "../components/loading/PageLoading";
-import Nav from "../components/nav/Nav";
+import {Flex} from "../components/layout"
+import AppLayout from "../components/layout/AppLayout"
+import PageLoading from "../components/loading/PageLoading"
+import Nav from "../components/nav/Nav"
+
 const PageNotFound = lazy(() => import("./404/PageNotFound"));
 const Analytics = lazy(() => import("./analytics"));
-// const Charts = lazy(() => import("./charts/Charts"));
 const Chat = lazy(() => import("./chat"));
-// const Email = lazy(() => import("./email"));
 const Proposal = lazy(() => import("./proposal"));
 const Leads = lazy(() => import("./leads"));
 const BaseKnowledge = lazy(() => import("./base-knowledge"));
 const Platforms = lazy(() => import("./platforms"));
 const Accounts = lazy(() => import("./accounts"));
-// const Pages = lazy(() => import("./pages/Pages"));
-// const Users = lazy(() => import("./users"));
-// const CardPages = lazy(() => import("./card-pages/index"));
 const Home = () => {
   return (
     <AppLayout>
@@ -40,26 +33,19 @@ const Home = () => {
             <Routes>
               <Route index element={<Analytics />} />
               <Route path="/dashboards/analytics/" element={<Analytics />} />
-              {/*<Route path="/apps/email/*" element={<Email />} />*/}
               <Route path="/chats" element={<Chat />} />
               <Route path="/proposal/*" element={<Proposal />} />
               <Route path="/leads/*" element={<Leads />} />
               <Route path="/knowledge/*" element={<BaseKnowledge />} />
               <Route path="/platforms/*" element={<Platforms />} />
               <Route path="/accounts/*" element={<Accounts />} />
-              {/*<Route path="/user/*" element={<Users />} />*/}
-              {/*<Route path="/pages/*" element={<Pages />} />*/}
-              {/*<Route path="/charts/*" element={<Charts />} />*/}
-              {/*<Route path="/ui/cards/*" element={<CardPages />} />*/}
               <Route path="/*" element={<PageNotFound />} />
             </Routes>
           </Suspense>
         </main>
         {/*<Footer />*/}
       </Flex>
-      <Suspense fallback={null}>
-        <ThemeCustomizer />
-      </Suspense>
+
     </AppLayout>
   );
 };
