@@ -35,7 +35,7 @@ const PlatformList = () => {
 
   return (
     <>
-      <Card>
+      <Card padding={'30px'}>
         <Box display="flex" justify="space-between" padding={20}>
           <GridInnerContainer alignItems="center" justifyContent="space-between">
             <GridItem xs={12} md={6}>

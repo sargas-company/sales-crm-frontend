@@ -31,7 +31,7 @@ const Nav = () => {
   return (
     <NavContainer>
       <NavContent>
-        <div>
+        <div style={{ marginBottom: "70px" }}>
           <NavHeading />
           <ScrollContainer maxHeight="calc(100vh - 10rem)" scrollBarSize="4px">
             {navList.map(renderNavItem)}

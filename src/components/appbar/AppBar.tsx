@@ -56,18 +56,18 @@ const AppBar = () => {
           px={layout === "horizontal" ? 20 : 0}
         >
           <Box display="flex" align="center" space={0.6}>
-            <IconButton
-              varient="text"
-              size={36}
-              fontSize={26}
-              onClick={dispatch?.handleChangeTheme}
-            >
-              {mode.name === "dark" ? (
-                <Icon icon="mdi:weather-night" />
-              ) : (
-                <Icon icon="mdi:weather-sunny" />
-              )}
-            </IconButton>
+            {/*<IconButton*/}
+            {/*  varient="text"*/}
+            {/*  size={36}*/}
+            {/*  fontSize={26}*/}
+            {/*  onClick={dispatch?.handleChangeTheme}*/}
+            {/*>*/}
+            {/*  {mode.name === "dark" ? (*/}
+            {/*    <Icon icon="mdi:weather-night" />*/}
+            {/*  ) : (*/}
+            {/*    <Icon icon="mdi:weather-sunny" />*/}
+            {/*  )}*/}
+            {/*</IconButton>*/}
             <ProfileDropdown />
           </Box>
         </Box>
