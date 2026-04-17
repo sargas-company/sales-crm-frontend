@@ -43,7 +43,7 @@ const InfoRow = ({ icon, label, children }: {
 
 const TextBlock = ({ children }: { children: string }) => (
   <Box style={{ borderLeft: "3px solid #e0e0e0", paddingLeft: 14, marginTop: 8 }}>
-    <Text varient="body2" style={{ whiteSpace: "pre-wrap", lineHeight: "1.75" }}>
+    <Text varient="body2" styles={{ whiteSpace: "pre-wrap", lineHeight: "1.75" }}>
       {children}
     </Text>
   </Box>

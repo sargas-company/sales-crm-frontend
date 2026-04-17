@@ -19,7 +19,7 @@ const LeadListItemClientType = ({ clientType }: { clientType: ApiClientType | nu
       skin="light"
       size="small"
       color={clientTypeColor[clientType]}
-      styles={{ whiteSpace: "nowrap" }}
+      styles={{ whiteSpace: "nowrap", color: "#000000" }}
     />
   );
 };

@@ -14,6 +14,7 @@ const ProposalListItemStatus = ({ itemStatus }: { itemStatus: ProposalStatus }) 
     skin="light"
     size="small"
     color={statusColor[itemStatus]}
+    styles={{ color: "#000000" }}
   />
 );
 

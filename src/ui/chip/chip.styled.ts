@@ -28,7 +28,7 @@ const ChipWrapper = styled("span") <ChipProps>`
             top: 0;
             left: 0;
             background: ${color ? alertColor.hasOwnProperty(color) ? alertColor[color as keyof Colors] : color : theme.color};
-            opacity: 0.12;
+            opacity: 0.35;
             z-index: 0;
         }
         `

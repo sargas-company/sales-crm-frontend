@@ -13,7 +13,7 @@ const ProposalListItemBoosted = ({ itemBoosted }: { itemBoosted: BoostedStatus }
     skin="light"
     size="small"
     color={boostedColor[itemBoosted]}
-    styles={{ whiteSpace: "nowrap" }}
+    styles={{ whiteSpace: "nowrap", color: "#000000" }}
   />
 );
 

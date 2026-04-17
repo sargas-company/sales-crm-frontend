@@ -19,7 +19,7 @@ const ProposalListItemType = ({ itemType }: { itemType: ProposalType }) => (
     skin="light"
     size="small"
     color={typeColor[itemType]}
-    styles={{ whiteSpace: "nowrap" }}
+    styles={{ whiteSpace: "nowrap", color: "#000000" }}
   />
 );
 

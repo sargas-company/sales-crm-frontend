@@ -69,7 +69,7 @@ const Select: FC<SelectProp> = (props) => {
     } else {
       setSelectedItem({ label: "", value: "", icon: "" });
     }
-  }, [defaultValue]);
+  }, [defaultValue, children]);
 
   const handleSelectOpen = (eve: SyntheticEvent) => {
     eve.preventDefault();

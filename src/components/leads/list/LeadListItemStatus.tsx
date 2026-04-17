@@ -27,7 +27,7 @@ const LeadListItemStatus = ({ itemStatus }: { itemStatus: ApiLeadStatus }) => (
     skin="light"
     size="small"
     color={statusColor[itemStatus]}
-    styles={{ whiteSpace: "nowrap" }}
+    styles={{ whiteSpace: "nowrap", color: "#000000" }}
   />
 );
 
