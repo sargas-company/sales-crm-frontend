@@ -97,10 +97,20 @@ const PreviewMain = ({ lead }: Props) => {
         <GridInnerContainer spacing={1}>
 
           <GridItem xs={12} md={6}>
-            <InfoRow icon={<PersonOutlined style={{ fontSize: 18 }} />} label="Lead Name">
-              <Text varient="body2">{lead.leadName ?? "—"}</Text>
+            <InfoRow icon={<PersonOutlined style={{ fontSize: 18 }} />} label="Name">
+              <Text varient="body2">
+                {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || "—"}
+              </Text>
             </InfoRow>
           </GridItem>
+
+          {lead.clientType === "company" && (
+            <GridItem xs={12} md={6}>
+              <InfoRow icon={<PersonOutlined style={{ fontSize: 18 }} />} label="Company Name">
+                <Text varient="body2">{lead.companyName ?? "—"}</Text>
+              </InfoRow>
+            </GridItem>
+          )}
 
           <GridItem xs={12} md={6}>
             <InfoRow icon={<LocationOnOutlined style={{ fontSize: 18 }} />} label="Location">

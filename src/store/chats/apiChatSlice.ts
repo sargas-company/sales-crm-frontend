@@ -17,7 +17,9 @@ export interface ChatLead {
   id: string
   number: number
   status: string
-  leadName: string | null
+  firstName: string | null
+  lastName: string | null
+  companyName: string | null
   user?: ChatUser
 }
 

@@ -61,7 +61,7 @@ const LeadPreview = () => {
               <ArrowBackOutlined />
             </IconButton>
             <Box>
-              <Text heading="h5">{lead.leadName ?? `Lead #${lead.number}`}</Text>
+              <Text heading="h5">{[lead.firstName, lead.lastName].filter(Boolean).join(" ") || `Lead #${lead.number}`}</Text>
               <Box display="flex" align="center" space={1} style={{ marginTop: 2 }}>
                 <Text varient="caption" secondary>
                   #{lead.number} · {formatDate(lead.repliedAt)} ·

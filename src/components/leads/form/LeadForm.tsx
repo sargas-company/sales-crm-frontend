@@ -28,7 +28,9 @@ const SectionLabel = ({ children }: { children: string }) => (
 );
 
 interface FormFields {
-  leadName: string;
+  firstName: string;
+  lastName: string;
+  companyName: string;
   status: ApiLeadStatus;
   clientType: ApiClientType | "";
   rate: string;
@@ -36,11 +38,13 @@ interface FormFields {
 }
 
 const toFormValues = (data: LeadItem): FormFields => ({
-  leadName:   data.leadName   ?? "",
-  status:     data.status,
-  clientType: data.clientType ?? "",
-  rate:       data.rate != null ? String(data.rate) : "",
-  location:   data.location   ?? "",
+  firstName:   data.firstName   ?? "",
+  lastName:    data.lastName    ?? "",
+  companyName: data.companyName ?? "",
+  status:      data.status,
+  clientType:  data.clientType  ?? "",
+  rate:        data.rate != null ? String(data.rate) : "",
+  location:    data.location    ?? "",
 });
 
 const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem }) => {
@@ -56,11 +60,13 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
     e.preventDefault();
     try {
       const body: Partial<LeadItem> = {
-        leadName:   fields.leadName   || null,
-        status:     fields.status,
-        clientType: fields.clientType || null,
-        rate:       fields.rate !== "" ? Number(fields.rate) : null,
-        location:   fields.location   || null,
+        firstName:   fields.firstName   || null,
+        lastName:    fields.lastName    || null,
+        companyName: fields.clientType === "company" ? (fields.companyName || null) : null,
+        status:      fields.status,
+        clientType:  fields.clientType  || null,
+        rate:        fields.rate !== "" ? Number(fields.rate) : null,
+        location:    fields.location    || null,
       };
       await updateLead({ id, body }).unwrap();
       showToast("Lead updated successfully", "success");
@@ -94,12 +100,25 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 
                 <GridItem xs={12} md={6}>
                   <Box display="flex" flexDirection="column" space={1}>
-                    <Text varient="body2" weight="medium">Lead Name</Text>
+                    <Text varient="body2" weight="medium">First Name</Text>
                     <TextField
-                      name="leadName"
-                      placeholder="e.g. John Doe"
-                      value={fields.leadName}
-                      onChange={(e) => setField("leadName", e.target.value)}
+                      name="firstName"
+                      placeholder="e.g. John"
+                      value={fields.firstName}
+                      onChange={(e) => setField("firstName", e.target.value)}
+                      width="100%"
+                    />
+                  </Box>
+                </GridItem>
+
+                <GridItem xs={12} md={6}>
+                  <Box display="flex" flexDirection="column" space={1}>
+                    <Text varient="body2" weight="medium">Last Name</Text>
+                    <TextField
+                      name="lastName"
+                      placeholder="e.g. Doe"
+                      value={fields.lastName}
+                      onChange={(e) => setField("lastName", e.target.value)}
                       width="100%"
                     />
                   </Box>
@@ -153,6 +172,21 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
                       <SelectItem label="Company"    value="company" />
                     </Select>
                   </Box>
+                </GridItem>
+
+                <GridItem xs={12} md={6}>
+                  {fields.clientType === "company" && (
+                    <Box display="flex" flexDirection="column" space={1}>
+                      <Text varient="body2" weight="medium">Company Name</Text>
+                      <TextField
+                        name="companyName"
+                        placeholder="e.g. Acme Corp"
+                        value={fields.companyName}
+                        onChange={(e) => setField("companyName", e.target.value)}
+                        width="100%"
+                      />
+                    </Box>
+                  )}
                 </GridItem>
 
               </GridInnerContainer>

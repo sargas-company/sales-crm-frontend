@@ -17,7 +17,7 @@ import {formatDate, shortUuid} from '../../../utils/formatDate'
 const columns: DataGridColoumn[] = [
   { fieldId: "number",     label: "#",           width: "90px" },
   { fieldId: "proposalId", label: "Bid ID",      width: "130px" },
-  { fieldId: "leadName",   label: "Lead Name",   width: "200px" },
+  { fieldId: "name",       label: "Name",        width: "200px" },
   { fieldId: "status",     label: "Status",      width: "210px" },
   { fieldId: "clientType", label: "Client Type", width: "160px" },
   { fieldId: "rate",       label: "Rate",        width: "90px"  },
@@ -69,7 +69,7 @@ const LeadTable = ({ items, isLoading, onDelete }: LeadTableProps) => {
                 )
               }
             />
-            <DataGridCell width={field["leadName"].width} value={row.leadName ?? "—"} />
+            <DataGridCell width={field["name"].width} value={[row.firstName, row.lastName].filter(Boolean).join(" ") || "—"} />
             <DataGridCell
               width={field["status"].width}
               children={<LeadListItemStatus itemStatus={row.status} />}

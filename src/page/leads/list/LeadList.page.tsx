@@ -28,7 +28,7 @@ const LeadList = () => {
 
   const handleDelete = (id: string) => {
     const item = allItems.find((i) => i.id === id);
-    if (item) setDeleteTarget({ id, title: item.leadName ?? `Lead #${item.number}` });
+    if (item) setDeleteTarget({ id, title: [item.firstName, item.lastName].filter(Boolean).join(" ") || `Lead #${item.number}` });
   };
 
   const items = search
@@ -36,7 +36,8 @@ const LeadList = () => {
         const q = search.toLowerCase();
         return (
           item.number.toString().includes(q) ||
-          (item.leadName ?? "").toLowerCase().includes(q) ||
+          ([item.firstName, item.lastName].filter(Boolean).join(" ").toLowerCase().includes(q)) ||
+          (item.companyName ?? "").toLowerCase().includes(q) ||
           (item.location ?? "").toLowerCase().includes(q) ||
           item.status.toLowerCase().includes(q)
         );

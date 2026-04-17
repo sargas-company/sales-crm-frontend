@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import React, { useEffect, useLayoutEffect, useRef } from 'react'
 import styled from 'styled-components'
 import { useAppSelector } from '../../../hooks'
 import Box from '../../box/Box'
 import ColorBox from '../../box/ColorBox'
-import { Text } from '../../../ui'
+import {CustomAvatar, Text} from '../../../ui'
 import MsgBox from '../chat-content/MsgBox'
+import {ChatBubbleOutlineRounded} from '@mui/icons-material'
 
 const Messages = () => {
   const chatHistory = useAppSelector((state) => state.apiChat.chatHistory)
@@ -48,6 +49,25 @@ const Messages = () => {
 
   return (
     <MessagesScroll ref={scrollRef}>
+
+      {chatHistory.length === 0 && !isStreaming && (
+          <Box
+              display="flex"
+              flexDirection={'column'}
+              align="center"
+              justify="center"
+              height={'100%'}
+          >
+            <CustomAvatar size={100} color="info" skin="light">
+              <ChatBubbleOutlineRounded />
+            </CustomAvatar>
+            <Text heading="h6" skinColor>
+              No messages yet
+            </Text>
+          </Box>
+
+      )}
+
       {chatHistory.map((msg) => (
         <Box
           key={msg.id}

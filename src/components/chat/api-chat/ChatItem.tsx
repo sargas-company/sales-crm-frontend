@@ -11,7 +11,10 @@ interface Props {
 
 const ChatListItem = ({ chat, onSelect }: Props) => {
   const lastMsg = chat.messages[0]
-  const title = chat.proposal?.title ?? chat.lead?.leadName ?? 'Untitled'
+  const lead = chat.lead
+  const title = chat.proposal?.title
+    ?? (lead ? ([lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.companyName || `Lead #${lead.number}`) : 'Untitled')
+
   const subtitle = chat.proposal?.user?.email ?? chat.lead?.user?.email
 
   return (

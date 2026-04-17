@@ -1,5 +1,5 @@
 import { baseApi } from '../../api/baseApi'
-import type { LeadItem, LeadPage, LeadListParams } from './types/definition'
+import type { LeadItem, LeadPage, LeadListParams, CreateLeadBody } from './types/definition'
 
 export const leadsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -22,6 +22,11 @@ export const leadsApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/leads/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Lead'],
     }),
+
+    createLead: builder.mutation<LeadItem, CreateLeadBody>({
+      query: (body) => ({ url: '/leads', method: 'POST', body }),
+      invalidatesTags: ['Lead'],
+    }),
   }),
 })
 
@@ -30,4 +35,5 @@ export const {
   useGetLeadByIdQuery,
   useUpdateLeadMutation,
   useDeleteLeadMutation,
+  useCreateLeadMutation,
 } = leadsApi

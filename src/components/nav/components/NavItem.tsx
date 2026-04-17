@@ -1,6 +1,6 @@
 import { CircleOutlined } from "@mui/icons-material";
 import { FC, ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import useTheme from "../../../theme/useTheme";
 import { Text } from "../../../ui";
@@ -16,6 +16,11 @@ const NavItem: FC<Props> = (props) => {
       menuStyle: { collapse },
     },
   } = useTheme();
+  const location = useLocation();
+  const basePath = "/" + path.split("/").filter(Boolean)[0];
+  const isActiveSection =
+    location.pathname === basePath ||
+    location.pathname.startsWith(basePath + "/");
 
   return (
     <StyledNavItem
@@ -29,9 +34,7 @@ const NavItem: FC<Props> = (props) => {
     >
       <NavLink
         to={path}
-        className={({ isActive }): string =>
-          isActive ? "nav-item-active nav-item" : "nav-item"
-        }
+        className={isActiveSection ? "nav-item-active nav-item" : "nav-item"}
       >
         <Text
           size={icon ? 22 : 14}

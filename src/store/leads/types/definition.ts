@@ -26,7 +26,9 @@ export interface LeadItem {
   id: string;
   number: number;
   proposalId: string | null;
-  leadName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  companyName: string | null;
   status: ApiLeadStatus;
   clientType: ApiClientType | null;
   rate: number | null;
@@ -36,6 +38,15 @@ export interface LeadItem {
   holdAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type CreateLeadBody = {
+  firstName?: string;
+  lastName?: string;
+  companyName?: string;
+  clientType?: ApiClientType;
+  rate?: number;
+  location?: string;
 }
 
 export interface LeadPage {

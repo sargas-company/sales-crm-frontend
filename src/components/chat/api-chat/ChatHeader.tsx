@@ -8,7 +8,10 @@ const ChatHeader = () => {
     state.apiChat.chatList.find((c) => c.id === selectedId)
   )
 
-  const title = chat?.proposal?.title ?? chat?.lead?.leadName ?? ''
+  const lead = chat?.lead
+  const title = chat?.proposal?.title
+    ?? (lead ? ([lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.companyName || `Lead #${lead.number}`) : '')
+
   const subtitle = chat?.proposal?.user?.email ?? chat?.lead?.user?.email ?? ''
 
   return (
