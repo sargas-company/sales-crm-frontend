@@ -3,6 +3,7 @@ import { useAppDispatch, useAppSelector } from '../../../hooks'
 import {
   fetchChats,
   fetchProposalHistory,
+  fetchLeadHistory,
   selectChat,
 } from '../../../store/chats/apiChatSlice'
 import Box from '../../box/Box'
@@ -15,6 +16,7 @@ const ChatList = () => {
   const nextCursor = useAppSelector((state) => state.apiChat.nextCursor)
   const loadingMore = useAppSelector((state) => state.apiChat.loadingMore)
   const loadingList = useAppSelector((state) => state.apiChat.loadingList)
+  const activeTab = useAppSelector((state) => state.apiChat.activeTab)
 
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -26,7 +28,7 @@ const ChatList = () => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && nextCursor && !loadingMore) {
-          dispatch(fetchChats(nextCursor))
+          dispatch(fetchChats({ cursor: nextCursor, type: activeTab }))
         }
       },
       { threshold: 0.1 }
@@ -34,11 +36,17 @@ const ChatList = () => {
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [nextCursor, loadingMore, dispatch])
+  }, [nextCursor, loadingMore, activeTab, dispatch])
 
-  const handleSelect = (id: string) => {
-    dispatch(selectChat(id))
-    dispatch(fetchProposalHistory(id))
+  const handleSelect = (chatId: string) => {
+    const chat = chatList.find((c) => c.id === chatId)
+    const proposalId = chat?.proposal?.id ?? null
+    dispatch(selectChat({ chatId, proposalId }))
+    if (proposalId) {
+      dispatch(fetchProposalHistory(proposalId))
+    } else if (chat?.lead?.id) {
+      dispatch(fetchLeadHistory(chat.lead.id))
+    }
   }
 
   if (loadingList) {

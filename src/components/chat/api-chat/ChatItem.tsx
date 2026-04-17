@@ -11,6 +11,8 @@ interface Props {
 
 const ChatListItem = ({ chat, onSelect }: Props) => {
   const lastMsg = chat.messages[0]
+  const title = chat.proposal?.title ?? chat.lead?.leadName ?? 'Untitled'
+  const subtitle = chat.proposal?.user?.email ?? chat.lead?.user?.email
 
   return (
     <ChatItemWrapper uid={chat.id} onClick={() => onSelect(chat.id)}>
@@ -23,18 +25,18 @@ const ChatListItem = ({ chat, onSelect }: Props) => {
         mr={12}
       >
         <Text varient="body2" weight="bold" textOverflow="ellipsis">
-          {chat.title}
+          {title}
         </Text>
         <Text varient="body2" textOverflow="ellipsis" secondary>
           {lastMsg?.content
             ? lastMsg.content.length > 60
               ? lastMsg.content.slice(0, 60) + '…'
               : lastMsg.content
-            : 'No messages yet'}
+            : subtitle ?? 'No messages yet'}
         </Text>
       </Box>
       <Box display="flex" flexDirection="column" align="flex-end" space={0.4}>
-        <TimeStamp timeStamp={chat.updatedAt} />
+        <TimeStamp timeStamp={chat.createdAt} />
         <Text varient="caption" secondary>
           {chat._count.messages}
         </Text>

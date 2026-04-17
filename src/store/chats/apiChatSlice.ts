@@ -6,8 +6,24 @@ export interface ChatUser {
   email: string
 }
 
+export interface ChatProposal {
+  id: string
+  title: string
+  status: string
+  user: ChatUser
+}
+
+export interface ChatLead {
+  id: string
+  number: number
+  status: string
+  leadName: string | null
+  user?: ChatUser
+}
+
 export interface ChatLastMessage {
   id: string
+  chatId: string
   role: 'user' | 'assistant'
   content: string
   decision: string | null
@@ -17,22 +33,18 @@ export interface ChatLastMessage {
 
 export interface ChatItem {
   id: string
-  title: string
-  vacancy: string | null
-  comment: string | null
-  context: string | null
-  userId: string
+  proposalId: string | null
+  leadId: string | null
   createdAt: string
-  updatedAt: string
-  user: ChatUser
+  proposal: ChatProposal | null
+  lead: ChatLead | null
   _count: { messages: number }
   messages: ChatLastMessage[]
 }
 
 export interface ChatMessage {
   id: string
-  proposalId: string | null
-  leadId: string | null
+  chatId: string | null
   role: 'user' | 'assistant'
   content: string
   decision: string | null
@@ -40,13 +52,17 @@ export interface ChatMessage {
   createdAt: string
 }
 
+export type ChatTabType = 'proposal' | 'lead'
+
 interface ChatState {
   chatList: ChatItem[]
   nextCursor: string | null
   loadingList: boolean
   loadingMore: boolean
+  activeTab: ChatTabType
 
   selectedChatId: string | null
+  selectedProposalId: string | null
   chatHistory: ChatMessage[]
   loadingHistory: boolean
 
@@ -60,8 +76,10 @@ const initialState: ChatState = {
   nextCursor: null,
   loadingList: false,
   loadingMore: false,
+  activeTab: 'proposal',
 
   selectedChatId: null,
+  selectedProposalId: null,
   chatHistory: [],
   loadingHistory: false,
 
@@ -72,9 +90,11 @@ const initialState: ChatState = {
 
 export const fetchChats = createAsyncThunk(
   'apiChat/fetchChats',
-  async (cursor: string | undefined = undefined) => {
+  async (arg: { cursor?: string; type?: ChatTabType } = {}) => {
+    const { cursor, type } = arg
     const params: Record<string, string> = { limit: '20' }
     if (cursor) params.cursor = cursor
+    if (type) params.type = type
     const { data } = await axiosInstance.get<{ data: ChatItem[]; nextCursor: string | null }>(
       '/chats',
       { params }
@@ -91,22 +111,41 @@ export const fetchProposalHistory = createAsyncThunk(
   }
 )
 
+export const fetchLeadHistory = createAsyncThunk(
+  'apiChat/fetchLeadHistory',
+  async (leadId: string) => {
+    const { data } = await axiosInstance.get<ChatMessage[]>(`/leads/${leadId}/chat`)
+    return data
+  }
+)
+
 const apiChatSlice = createSlice({
   name: 'apiChat',
   initialState,
   reducers: {
-    selectChat: (state, action: PayloadAction<string>) => {
-      state.selectedChatId = action.payload
+    setActiveTab: (state, action: PayloadAction<ChatTabType>) => {
+      state.activeTab = action.payload
+      state.chatList = []
+      state.nextCursor = null
+      state.selectedChatId = null
+      state.selectedProposalId = null
       state.chatHistory = []
       state.streamingContent = ''
       state.streamingAnalysis = null
       state.isStreaming = false
     },
-    addUserMessage: (state, action: PayloadAction<{ proposalId: string; content: string }>) => {
+    selectChat: (state, action: PayloadAction<{ chatId: string; proposalId: string | null }>) => {
+      state.selectedChatId = action.payload.chatId
+      state.selectedProposalId = action.payload.proposalId
+      state.chatHistory = []
+      state.streamingContent = ''
+      state.streamingAnalysis = null
+      state.isStreaming = false
+    },
+    addUserMessage: (state, action: PayloadAction<{ content: string }>) => {
       const msg: ChatMessage = {
         id: `temp-${Date.now()}`,
-        proposalId: action.payload.proposalId,
-        leadId: null,
+        chatId: null,
         role: 'user',
         content: action.payload.content,
         decision: null,
@@ -131,8 +170,7 @@ const apiChatSlice = createSlice({
       if (state.streamingContent) {
         const msg: ChatMessage = {
           id: `stream-${Date.now()}`,
-          proposalId: state.selectedChatId,
-          leadId: null,
+          chatId: null,
           role: 'assistant',
           content: state.streamingContent,
           decision: state.streamingAnalysis?.decision ?? null,
@@ -148,7 +186,7 @@ const apiChatSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchChats.pending, (state, action) => {
-        if (action.meta.arg) {
+        if (action.meta.arg?.cursor) {
           state.loadingMore = true
         } else {
           state.loadingList = true
@@ -165,7 +203,7 @@ const apiChatSlice = createSlice({
         state.nextCursor = action.payload.nextCursor
       })
       .addCase(fetchChats.rejected, (state, action) => {
-        if (action.meta.arg) {
+        if (action.meta.arg?.cursor) {
           state.loadingMore = false
         } else {
           state.loadingList = false
@@ -182,10 +220,22 @@ const apiChatSlice = createSlice({
       .addCase(fetchProposalHistory.rejected, (state) => {
         state.loadingHistory = false
       })
+      .addCase(fetchLeadHistory.pending, (state) => {
+        state.loadingHistory = true
+        state.chatHistory = []
+      })
+      .addCase(fetchLeadHistory.fulfilled, (state, action) => {
+        state.chatHistory = action.payload
+        state.loadingHistory = false
+      })
+      .addCase(fetchLeadHistory.rejected, (state) => {
+        state.loadingHistory = false
+      })
   },
 })
 
 export const {
+  setActiveTab,
   selectChat,
   addUserMessage,
   setStreamingAnalysis,

@@ -12,6 +12,13 @@ export interface ProposalUser {
   lastName: string;
 }
 
+export interface ProposalChat {
+  id: string;
+  proposalId: string;
+  leadId: string | null;
+  createdAt: string;
+}
+
 export interface ProposalItem {
   number: number;
   id: string;
@@ -33,6 +40,7 @@ export interface ProposalItem {
   user: ProposalUser;
   account: AccountItem;
   platform: PlatformItem;
+  chat: ProposalChat | null;
 }
 
 export interface ProposalPage {

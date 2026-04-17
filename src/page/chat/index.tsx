@@ -20,7 +20,7 @@ const Chat = () => {
   const { sendMessage } = useSocket()
 
   useEffect(() => {
-    dispatch(fetchChats())
+    dispatch(fetchChats({ type: 'proposal' }))
   }, [dispatch])
 
   return (

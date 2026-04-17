@@ -87,24 +87,213 @@ Authorization: Bearer <accessToken>
 
 ---
 
-## Proposals
+## Platforms
 
-### Поля proposal
+Платформа (Upwork, LinkedIn и т.д.). Нужна для создания аккаунтов и proposals. Создаётся один раз, переиспользуется.
+
+### GET /platforms — все платформы
+
+```http
+GET /platforms
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:** массив платформ, отсортированных по `title`.
+
+```json
+[
+  {
+    "id": "uuid",
+    "title": "Upwork",
+    "slug": "upwork",
+    "imageUrl": "https://example.com/upwork.png",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+]
+```
+
+---
+
+### POST /platforms — создать
+
+```http
+POST /platforms
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "title": "Upwork",
+  "slug": "upwork",
+  "imageUrl": "https://example.com/upwork.png"
+}
+```
 
 | Поле | Тип | Обязательный | Описание |
 |---|---|---|---|
-| `manager` | string | да | Имя менеджера |
-| `account` | string | да | Название аккаунта/компании |
+| `title` | string | да | Название платформы |
+| `slug` | string | да | Уникальный идентификатор (латиница, без пробелов) |
+| `imageUrl` | string | нет | URL логотипа |
+
+**Ответ `201`:** объект платформы. `409` если `slug` уже занят.
+
+---
+
+### GET /platforms/:id — одна платформа
+
+```http
+GET /platforms/:id
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:** объект платформы. `404` если не найдена.
+
+---
+
+### PUT /platforms/:id — обновить
+
+```http
+PUT /platforms/:id
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "title": "Upwork",
+  "slug": "upwork",
+  "imageUrl": "https://example.com/new.png"
+}
+```
+
+**Ответ `200`:** обновлённый объект. `409` если новый `slug` уже занят.
+
+---
+
+### DELETE /platforms/:id — удалить
+
+```http
+DELETE /platforms/:id
+Authorization: Bearer <token>
+```
+
+**Ответ `204`:** пустое тело.
+
+---
+
+## Accounts
+
+Аккаунт менеджера на конкретной платформе (один менеджер — один аккаунт на платформу). Нужен для создания proposals. Привязан к текущему пользователю.
+
+### GET /accounts — все аккаунты текущего пользователя
+
+```http
+GET /accounts
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:** массив аккаунтов, отсортированных по `lastName`, `firstName`. Включает вложенный объект `platform`.
+
+```json
+[
+  {
+    "id": "uuid",
+    "firstName": "Dmytro",
+    "lastName": "Sarafaniuk",
+    "platformId": "uuid",
+    "userId": "uuid",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "platform": {
+      "id": "uuid",
+      "title": "Upwork",
+      "slug": "upwork",
+      "imageUrl": null
+    }
+  }
+]
+```
+
+---
+
+### POST /accounts — создать
+
+```http
+POST /accounts
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "firstName": "Dmytro",
+  "lastName": "Sarafaniuk",
+  "platformId": "uuid-of-platform"
+}
+```
+
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `firstName` | string | да | Имя на платформе |
+| `lastName` | string | да | Фамилия на платформе |
+| `platformId` | string (uuid) | да | ID платформы |
+
+**Ответ `201`:** объект аккаунта с вложенным `platform`. `409` если аккаунт для этой платформы уже существует.
+
+---
+
+### GET /accounts/:id — один аккаунт
+
+```http
+GET /accounts/:id
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:** объект аккаунта с `platform`. `404` если не найден (или принадлежит другому пользователю).
+
+---
+
+### PUT /accounts/:id — обновить
+
+```http
+PUT /accounts/:id
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "firstName": "Dmytro",
+  "lastName": "Sarafaniuk",
+  "platformId": "uuid-of-platform"
+}
+```
+
+**Ответ `200`:** обновлённый объект. `409` если новая платформа уже занята.
+
+---
+
+### DELETE /accounts/:id — удалить
+
+```http
+DELETE /accounts/:id
+Authorization: Bearer <token>
+```
+
+**Ответ `204`:** пустое тело.
+
+---
+
+## Proposals
+
+### Поля proposal (input)
+
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `title` | string | да | Название proposal |
+| `accountId` | string (uuid) | да | ID аккаунта (`GET /accounts`) |
+| `platformId` | string (uuid) | да | ID платформы (`GET /platforms`) |
 | `proposalType` | enum | да | `Bid` \| `Invite` \| `DirectMessage` |
-| `platform` | enum | нет | `Upwork` \| `LinkedIn` (default: `Upwork`) |
-| `status` | enum | нет | `Draft` \| `Sent` \| `Viewed` \| `Replied` (default: `Draft`) |
 | `jobUrl` | string | нет | Ссылка на вакансию |
-| `boosted` | boolean | нет | Буст (default: `false`) |
-| `connects` | number | нет | Количество коннектов (default: `0`) |
+| `boosted` | boolean | нет | Буст (только для `Bid`, default: `false`) |
+| `connects` | number | нет | Коннекты (только для `Bid`, default: `0`) |
+| `boostedConnects` | number | нет | Коннекты за буст (только если `boosted: true`) |
 | `coverLetter` | string | нет | Сопроводительное письмо |
 | `vacancy` | string | нет | Текст вакансии |
-| `comment` | string | нет | Комментарий менеджера |
-| `context` | string | нет | Дополнительный контекст |
 
 ---
 
@@ -116,16 +305,15 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "manager": "John Doe",
-  "account": "MyCompany",
+  "title": "Full Stack Developer — MVP Project",
+  "accountId": "uuid-of-account",
+  "platformId": "uuid-of-platform",
   "proposalType": "Bid",
-  "platform": "Upwork",
   "jobUrl": "https://upwork.com/jobs/~01abc1234567890def",
-  "boosted": false,
+  "boosted": true,
   "connects": 6,
-  "vacancy": "Looking for React developer to build an admin dashboard.",
-  "comment": "Клиент с рейтингом 4.9, бюджет адекватный",
-  "context": "Budget: $3000-5000. Client rating: 4.9"
+  "boostedConnects": 14,
+  "vacancy": "Looking for React developer to build an admin dashboard."
 }
 ```
 
@@ -134,22 +322,25 @@ Content-Type: application/json
 ```json
 {
   "id": "uuid",
-  "manager": "John Doe",
-  "account": "MyCompany",
+  "title": "Full Stack Developer — MVP Project",
   "proposalType": "Bid",
-  "platform": "Upwork",
   "status": "Draft",
   "jobUrl": "https://upwork.com/jobs/~01abc1234567890def",
-  "boosted": false,
+  "boosted": true,
   "connects": 6,
+  "boostedConnects": 14,
   "coverLetter": null,
   "vacancy": "Looking for React developer...",
-  "comment": "Клиент с рейтингом 4.9, бюджет адекватный",
-  "context": "Budget: $3000-5000. Client rating: 4.9",
   "sentAt": null,
+  "accountId": "uuid",
+  "platformId": "uuid",
   "userId": "uuid",
   "createdAt": "2024-01-01T00:00:00.000Z",
-  "updatedAt": "2024-01-01T00:00:00.000Z"
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "user": { "id": "uuid", "email": "manager@example.com", "firstName": "John", "lastName": "Doe" },
+  "account": { "id": "uuid", "firstName": "...", "lastName": "...", "platform": { ... } },
+  "platform": { "id": "uuid", "title": "Upwork", "slug": "upwork" },
+  "chat": { "id": "uuid", "proposalId": "uuid", "leadId": null, "createdAt": "..." }
 }
 ```
 
@@ -205,7 +396,7 @@ Content-Type: application/json
 }
 ```
 
-> Все поля опциональны. При переводе в статус `Sent` — автоматически проставляется `sentAt`. При переводе в статус `Replied` — автоматически создаётся связанный `Lead`.
+> Все поля опциональны. При переводе в статус `Sent` — автоматически проставляется `sentAt`. При переводе в статус `Replied` — автоматически создаётся связанный `Lead`, и чат proposal привязывается к этому lead (история сообщений переходит вместе).
 
 **Ответ `200`:** обновлённый объект proposal.
 
@@ -235,7 +426,7 @@ Authorization: Bearer <token>
 [
   {
     "id": "uuid",
-    "proposalId": "uuid",
+    "chatId": "uuid",
     "role": "user",
     "content": "Write a proposal",
     "decision": null,
@@ -244,7 +435,7 @@ Authorization: Bearer <token>
   },
   {
     "id": "uuid",
-    "proposalId": "uuid",
+    "chatId": "uuid",
     "role": "assistant",
     "content": "...",
     "decision": "bid",
@@ -254,7 +445,8 @@ Authorization: Bearer <token>
 ]
 ```
 
-> `decision` и `reasoning` заполнены только у сообщений с `role: "assistant"`.
+> `decision` и `reasoning` заполнены только у сообщений с `role: "assistant"`.  
+> Сообщения принадлежат объекту `Chat`, который может быть связан и с proposal, и с lead — поэтому поле называется `chatId`, а не `proposalId`.
 
 ---
 
@@ -355,6 +547,42 @@ Authorization: Bearer <token>
 
 ---
 
+### GET /leads/:id/chat — история чата
+
+```http
+GET /leads/:id/chat
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:** массив сообщений, отсортированных по дате (старые первые). Возвращает `[]` если чат ещё не создан.
+
+```json
+[
+  {
+    "id": "uuid",
+    "chatId": "uuid",
+    "role": "user",
+    "content": "Write a proposal",
+    "decision": null,
+    "reasoning": null,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "uuid",
+    "chatId": "uuid",
+    "role": "assistant",
+    "content": "...",
+    "decision": "bid",
+    "reasoning": "...",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+]
+```
+
+> История сообщений сквозная — включает все сообщения начиная с proposal-этапа. `404` если lead не найден.
+
+---
+
 ### PATCH /leads/:id — обновить
 
 ```http
@@ -384,7 +612,7 @@ DELETE /leads/:id
 Authorization: Bearer <token>
 ```
 
-> Удаляет только лид. Связанный proposal остаётся нетронутым.
+> Удаляет только лид. Связанный proposal остаётся нетронутым. Если у чата нет другой связи (proposalId = null) — чат и вся история сообщений удаляются вместе. Если proposal ещё существует — чат остаётся, только `leadId` обнуляется.
 
 **Ответ `204`:** пустое тело.
 
@@ -394,10 +622,10 @@ Authorization: Bearer <token>
 
 ### GET /chats — список всех чатов (cursor-based пагинация)
 
-Возвращает все proposals вне зависимости от владельца. Отсортированы по `updatedAt` (новые первые). Для каждого включены: данные автора, количество сообщений, последнее сообщение.
+Возвращает объекты `Chat`. Отсортированы по `createdAt` (новые первые). Для каждого включены: связанный proposal (с автором), связанный lead, количество сообщений, последнее сообщение.
 
 ```http
-GET /chats?limit=20
+GET /chats?limit=20&type=proposal
 Authorization: Bearer <token>
 ```
 
@@ -405,6 +633,7 @@ Authorization: Bearer <token>
 |---|---|---|---|---|
 | `limit` | number | `20` | 1–100 | Количество записей |
 | `cursor` | string | — | UUID | ID последнего элемента предыдущей страницы |
+| `type` | enum | — | `proposal` \| `lead` | Фильтр: `proposal` — только чаты с proposal, `lead` — только чаты с lead, без параметра — все |
 
 **Ответ `200`:**
 
@@ -413,25 +642,23 @@ Authorization: Bearer <token>
   "data": [
     {
       "id": "uuid",
-      "manager": "John Doe",
-      "account": "MyCompany",
-      "proposalType": "Bid",
-      "platform": "Upwork",
-      "status": "Draft",
-      "jobUrl": null,
-      "boosted": false,
-      "connects": 6,
-      "coverLetter": null,
-      "vacancy": "Looking for React developer...",
-      "comment": "Клиент с рейтингом 4.9",
-      "context": "Budget: $3000-5000",
-      "sentAt": null,
-      "userId": "uuid",
+      "proposalId": "uuid",
+      "leadId": "uuid",
       "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-01T00:00:00.000Z",
-      "user": {
+      "proposal": {
         "id": "uuid",
-        "email": "manager@example.com"
+        "title": "React Developer",
+        "status": "Replied",
+        "user": {
+          "id": "uuid",
+          "email": "manager@example.com"
+        }
+      },
+      "lead": {
+        "id": "uuid",
+        "number": 1,
+        "status": "conversation_ongoing",
+        "leadName": null
       },
       "_count": {
         "messages": 5
@@ -439,6 +666,7 @@ Authorization: Bearer <token>
       "messages": [
         {
           "id": "uuid",
+          "chatId": "uuid",
           "role": "assistant",
           "content": "...",
           "decision": "bid",
@@ -452,7 +680,8 @@ Authorization: Bearer <token>
 }
 ```
 
-> `nextCursor: null` — страниц больше нет.
+> `nextCursor: null` — страниц больше нет.  
+> `proposal` или `lead` могут быть `null`, если соответствующая сущность была удалена.
 
 **Пример итерации по всем страницам:**
 
@@ -545,13 +774,12 @@ const proposal = await fetch('http://localhost:3000/proposals', {
   method: 'POST',
   headers,
   body: JSON.stringify({
-    manager: 'John Doe',
-    account: 'MyCompany',
+    title: 'Full Stack Developer — MVP Project',
+    accountId: 'uuid-of-account',
+    platformId: 'uuid-of-platform',
     proposalType: 'Bid',
-    platform: 'Upwork',
     vacancy: 'Looking for React developer to build an admin dashboard.',
-    comment: 'Клиент с рейтингом 4.9',
-    context: 'Budget: $3000-5000. Client rating: 4.9',
+    connects: 6,
   }),
 }).then(r => r.json());
 

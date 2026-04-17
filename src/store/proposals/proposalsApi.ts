@@ -65,15 +65,6 @@ export const proposalsApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/proposals/${id}/chat` }),
       providesTags: (_, __, id) => [{ type: 'ProposalChat', id }],
     }),
-
-    sendChatMessage: builder.mutation<ChatMessage[], { id: string; content: string }>({
-      query: ({ id, content }) => ({
-        url: `/proposals/${id}/chat`,
-        method: 'POST',
-        body: { content },
-      }),
-      invalidatesTags: (_, __, { id }) => [{ type: 'ProposalChat', id }],
-    }),
   }),
 })
 
@@ -84,5 +75,4 @@ export const {
   useUpdateProposalMutation,
   useDeleteProposalMutation,
   useGetChatHistoryQuery,
-  useSendChatMessageMutation,
 } = proposalsApi

@@ -165,7 +165,7 @@ const LeadPreview = () => {
           </TabContent>
 
           <TabContent tabIndex={2}>
-            <LeadChat />
+            <LeadChat leadId={lead.id} proposalId={lead.proposalId} />
           </TabContent>
         </Tab>
 

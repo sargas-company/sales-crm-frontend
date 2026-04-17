@@ -12,14 +12,14 @@ interface Props {
 
 const ChatFooter = ({ onSend }: Props) => {
   const dispatch = useAppDispatch()
-  const selectedChatId = useAppSelector((state) => state.apiChat.selectedChatId)
+  const selectedProposalId = useAppSelector((state) => state.apiChat.selectedProposalId)
   const isStreaming = useAppSelector((state) => state.apiChat.isStreaming)
   const [message, setMessage] = useState('')
 
   const handleSend = () => {
-    if (!message.trim() || !selectedChatId || isStreaming) return
-    dispatch(addUserMessage({ proposalId: selectedChatId, content: message }))
-    onSend(selectedChatId, message)
+    if (!message.trim() || !selectedProposalId || isStreaming) return
+    dispatch(addUserMessage({ content: message }))
+    onSend(selectedProposalId, message)
     setMessage('')
   }
 
@@ -42,7 +42,7 @@ const ChatFooter = ({ onSend }: Props) => {
           type="text"
           name="chat-message"
           value={message}
-          placeholder={isStreaming ? 'Waiting for response…' : 'Type your message here...'}
+          placeholder={isStreaming ? 'Waiting for response…' : !selectedProposalId ? 'Chat unavailable' : 'Type your message here...'}
           endAdornment={
             <Box mr={16} onClick={handleSend} className="cursor-pointer">
               <SendRounded />
@@ -56,7 +56,7 @@ const ChatFooter = ({ onSend }: Props) => {
             border: 0,
             outline: 0,
           }}
-          disable={isStreaming || !selectedChatId}
+          disable={isStreaming || !selectedProposalId}
         />
       </ColorBox>
     </Box>

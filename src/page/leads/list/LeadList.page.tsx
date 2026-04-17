@@ -66,11 +66,7 @@ const LeadList = () => {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </GridItem>
-            <GridItem xs={12} md={6}>
-              <Box display="flex" justify="flex-end">
-                <CreateNewLead />
-              </Box>
-            </GridItem>
+            <GridItem xs={12} md={6} />
           </GridInnerContainer>
         </Box>
 
