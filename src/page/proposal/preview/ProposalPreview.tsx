@@ -48,7 +48,7 @@ const ProposalPreview = () => {
       <Box style={{ maxWidth: 900, margin: "0 auto" }}>
 
         {/* ── Header ── */}
-        <Box display="flex" align="center" justify="space-between" mb={4} style={{ flexWrap: "wrap", gap: 12 }}>
+        <Box display="flex" align="center" justify="space-between" mx={8} style={{ flexWrap: "wrap", gap: 12 }}>
 
           <Box display="flex" align="center" space={3}>
             <IconButton varient="text" size={34} fontSize={20} onClick={() => navigate("/proposal/list")}>
@@ -80,21 +80,22 @@ const ProposalPreview = () => {
             </Box>
           </Box>
 
-          <Box display="flex" align="center" space={2} style={{ flexWrap: "wrap", gap: 8 }}>
+          <Box display="flex" align="center" space={2} my={20} style={{ flexWrap: "wrap", gap: 8 }}>
             <ProposalListItemStatus itemStatus={proposal.status} />
             <ProposalListItemType itemType={proposal.proposalType} />
             <ProposalListItemBoosted itemBoosted={proposal.boosted ? "Boosted" : "Not Boosted"} />
-            <Button
+
+          </Box>
+
+          <Button
               varient="outlined"
               color="info"
               onClick={() => navigate(`/proposal/edit/${proposal.id}`)}
               style={{ display: "flex", alignItems: "center", gap: 6 }}
-            >
-              <EditOutlined style={{ fontSize: 16 }} />
-              Edit
-            </Button>
-          </Box>
-
+          >
+            <EditOutlined style={{ fontSize: 16 }} />
+            Edit
+          </Button>
         </Box>
 
         {/* ── Tabs ── */}

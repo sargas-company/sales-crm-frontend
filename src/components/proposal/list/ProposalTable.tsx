@@ -55,7 +55,6 @@ const ProposalTable = ({ items, isLoading, onDelete }: Props) => {
   };
 
   if (isLoading) return <Box padding={24}><Text>Loading…</Text></Box>;
-  if (items.length === 0) return <></>;
 
   return (
     <Box padding={24} pl={40}>

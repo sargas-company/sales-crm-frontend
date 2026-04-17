@@ -40,6 +40,7 @@ export interface ProposalItem {
   user: ProposalUser;
   account: AccountItem;
   platform: PlatformItem;
+  lead?: { id: string } | null;
   chat: ProposalChat | null;
 }
 

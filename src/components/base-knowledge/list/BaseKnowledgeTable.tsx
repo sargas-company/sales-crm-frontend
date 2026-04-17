@@ -31,7 +31,6 @@ interface Props {
 
 const BaseKnowledgeTable = ({ items, isLoading, onEdit, onDelete }: Props) => {
   if (isLoading) return <Box padding={24}><Text>Loading…</Text></Box>;
-  if (items.length === 0) return <Box padding={24}><Text>No records found.</Text></Box>;
 
   return (
     <Box padding={24} pl={40}>

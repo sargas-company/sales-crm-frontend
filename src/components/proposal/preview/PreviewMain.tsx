@@ -57,7 +57,7 @@ const PreviewMain = ({ proposal }: Props) => {
   const copy = (text: string) => navigator.clipboard.writeText(text);
 
   return (
-    <Box pt={4} display="flex" flexDirection="column" space={5}>
+    <Box pt={4} pb={35} display="flex" flexDirection="column" space={2}>
 
       {/* ── Details ── */}
       <Box display="flex" flexDirection="column" space={3}>
@@ -76,6 +76,13 @@ const PreviewMain = ({ proposal }: Props) => {
             </InfoRow>
           </GridItem>
 
+          <GridItem xs={12} md={12}>
+            <InfoRow  icon={<CalendarTodayOutlined style={{ fontSize: 18 }} />} label="PLatform">
+              <Text varient="body2">{proposal.platform.title}</Text>
+              <img src={proposal.platform.imageUrl} alt="platformIcon" style={{maxWidth: 25}}/>
+            </InfoRow>
+          </GridItem>
+
           <GridItem xs={12} md={6}>
             <InfoRow icon={<CalendarTodayOutlined style={{ fontSize: 18 }} />} label="Created">
               <Text varient="body2">{formatDate(proposal.createdAt)}</Text>
@@ -90,17 +97,31 @@ const PreviewMain = ({ proposal }: Props) => {
 
           <GridItem xs={12} md={6}>
             <InfoRow icon={<FlashOnOutlined style={{ fontSize: 18 }} />} label="Connects">
-              <Chip label={String(proposal.connects)} skin="light" size="small" color="info" />
+              <Chip label={String(proposal.connects)} skin="light" size="small" color="info"  styles={{ color: "#000000" }}/>
             </InfoRow>
           </GridItem>
+
+          <GridItem xs={12} md={6}>
+            <InfoRow icon={<FlashOnOutlined style={{ fontSize: 18 }} />} label="Boosted connects">
+              <Chip label={String(proposal.boostedConnects)} skin="light" size="small" color="info"   styles={{ color: "#000000" }}/>
+            </InfoRow>
+          </GridItem>
+
 
           {proposal.jobUrl && (
             <GridItem xs={12}>
               <InfoRow icon={<LinkOutlined style={{ fontSize: 18 }} />} label="Job URL">
                 <Box display="flex" align="center" space={1}>
-                  <Text varient="body2" skinColor style={{ wordBreak: "break-all" }}>
-                    {proposal.jobUrl}
-                  </Text>
+                  <a
+                      href={`${proposal.jobUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ wordBreak: "break-all" }}
+                  >
+                    <Text varient="body2" skinColor>
+                      {proposal.jobUrl}
+                    </Text>
+                  </a>
                   <Tooltip title="Copy URL">
                     <span>
                       <IconButton varient="text" size={26} fontSize={16} contentOpacity={5} onClick={() => copy(proposal.jobUrl!)}>
@@ -108,14 +129,40 @@ const PreviewMain = ({ proposal }: Props) => {
                       </IconButton>
                     </span>
                   </Tooltip>
-                  <a href={proposal.jobUrl} target="_blank" rel="noopener noreferrer">
-                    <IconButton varient="text" size={26} fontSize={16} contentOpacity={5}>
-                      <OpenInNew style={{ fontSize: 14 }} />
-                    </IconButton>
-                  </a>
                 </Box>
               </InfoRow>
             </GridItem>
+          )}
+
+          {proposal?.lead?.id && (
+              <GridItem xs={12}>
+                <InfoRow icon={<LinkOutlined style={{ fontSize: 18 }} />} label="Lead URL">
+                  <Box display="flex" align="center" space={1}>
+                    <a
+                      href={`${import.meta.env.VITE_APP_URL}/leads/preview/${proposal.lead?.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ wordBreak: "break-all" }}
+                    >
+                      <Text varient="body2" skinColor>
+                        {`${import.meta.env.VITE_APP_URL}/leads/preview/${proposal.lead?.id}`}
+                      </Text>
+                    </a>
+                    <Tooltip title="Copy URL">
+                      <span>
+                        <IconButton varient="text" size={26} fontSize={16} contentOpacity={5} onClick={() => copy(`${import.meta.env.VITE_APP_URL}/leads/preview/${proposal.lead?.id}`)}>
+                          <ContentCopy style={{ fontSize: 14 }} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <a href={`${import.meta.env.VITE_APP_URL}/leads/preview/${proposal.lead?.id}`} target="_blank" rel="noopener noreferrer">
+                      <IconButton varient="text" size={26} fontSize={16} contentOpacity={5}>
+                        <OpenInNew style={{ fontSize: 14 }} />
+                      </IconButton>
+                    </a>
+                  </Box>
+                </InfoRow>
+              </GridItem>
           )}
 
         </GridInnerContainer>

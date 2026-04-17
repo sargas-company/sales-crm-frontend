@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { Icon } from "@iconify/react";
 import Box from "../../box/Box";
 import StyledDataGrid from "./styled";
 import DataGridColumnHead from "../../data-grid-item/DataGridColumnHead";
@@ -189,7 +190,7 @@ const DataGrid = <T extends unknown>({
           {/*  Render data list */}
           <Box className="data_grid_body">
             {/* Loop through data list */}
-            {dataList ? (
+            {dataList && dataList.length > 0 ? (
               dataList
                 .slice(footerOption.passedRows - 1, footerOption.next)
                 .map((item, index) => (
@@ -214,9 +215,10 @@ const DataGrid = <T extends unknown>({
                   </DataGridRow>
                 ))
             ) : (
-              <Box padding={56}>
+              <Box padding={56} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                <Icon icon="mdi:inbox-outline" width={48} height={48} style={{ opacity: 0.35 }} />
                 <Text align="center" paragraph>
-                  No rows :(
+                  No data found.
                 </Text>
               </Box>
             )}

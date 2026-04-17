@@ -139,11 +139,11 @@ h6,
 }
 
 .alert-info-bg {
-  background: rgb(2, 136, 209);
+  background: rgb(0, 103, 255);
 }
 
 .alert-info-text {
-  color: rgb(2, 136, 209);
+  color: rgb(0, 103, 255);
 }
 
 .alert-success-bg {

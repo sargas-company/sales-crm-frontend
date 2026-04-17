@@ -6,6 +6,8 @@ import {  IconButton } from "../../ui";
 import Box from "../box/Box";
 import Card from "../card/Card";
 import ProfileDropdown from "./components/ProfileDropdown";
+// import Notification from "../notification/Notification";
+import {NotificationsOutlined} from '@mui/icons-material'
 
 const AppBar = () => {
   const {
@@ -56,18 +58,22 @@ const AppBar = () => {
           px={layout === "horizontal" ? 20 : 0}
         >
           <Box display="flex" align="center" space={0.6}>
-            {/*<IconButton*/}
-            {/*  varient="text"*/}
-            {/*  size={36}*/}
-            {/*  fontSize={26}*/}
-            {/*  onClick={dispatch?.handleChangeTheme}*/}
-            {/*>*/}
-            {/*  {mode.name === "dark" ? (*/}
-            {/*    <Icon icon="mdi:weather-night" />*/}
-            {/*  ) : (*/}
-            {/*    <Icon icon="mdi:weather-sunny" />*/}
-            {/*  )}*/}
-            {/*</IconButton>*/}
+            {/*<Notification />*/}
+            <IconButton varient="text" size={40} fontSize={24}>
+              <NotificationsOutlined />
+            </IconButton>
+            <IconButton
+              varient="text"
+              size={36}
+              fontSize={26}
+              onClick={dispatch?.handleChangeTheme}
+            >
+              {mode.name === "dark" ? (
+                <Icon icon="mdi:weather-night" />
+              ) : (
+                <Icon icon="mdi:weather-sunny" />
+              )}
+            </IconButton>
             <ProfileDropdown />
           </Box>
         </Box>

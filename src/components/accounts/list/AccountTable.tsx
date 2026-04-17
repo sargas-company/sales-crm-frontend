@@ -21,7 +21,7 @@ interface AccountTableProps {
 }
 
 const AccountTable = ({ items, isLoading, onDelete }: AccountTableProps) => {
-  if (isLoading || !items || items.length === 0) return <></>;
+  if (isLoading || !items) return <></>;
 
   return (
     <Box padding={24} pl={40}>
