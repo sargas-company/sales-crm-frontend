@@ -7,12 +7,11 @@ import {
   CheckCircleOutlined,
   PauseCircleOutlined,
   LinkOutlined,
-  ContentCopy,
-} from "@mui/icons-material";
-import { Tooltip } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+
+} from "@mui/icons-material"
+
 import Box from "../../box/Box";
-import { Text, Chip, Divider, IconButton } from "../../../ui";
+import { Text, Chip, Divider } from "../../../ui";
 import { GridInnerContainer, GridItem } from "../../layout";
 import { formatDate } from "../../../utils/formatDate";
 import type { LeadItem, ApiLeadStatus, ApiClientType } from "../../../store/leads/types/definition";
@@ -88,11 +87,9 @@ interface Props {
 }
 
 const PreviewMain = ({ lead }: Props) => {
-  const navigate = useNavigate();
-  const copy = (text: string) => navigator.clipboard.writeText(text);
 
   return (
-    <Box pt={4} display="flex" flexDirection="column" space={5}>
+      <Box pt={4} pb={35} display="flex" flexDirection="column" space={2}>
 
       {/* ── Details ── */}
       <Box display="flex" flexDirection="column" space={3}>
@@ -114,7 +111,7 @@ const PreviewMain = ({ lead }: Props) => {
           <GridItem xs={12} md={6}>
             <InfoRow icon={<AttachMoneyOutlined style={{ fontSize: 18 }} />} label="Rate">
               {lead.rate != null ? (
-                <Chip label={`$${lead.rate} / hr`} skin="light" size="small" color="success" />
+                <Chip label={`$${lead.rate} / hr`} skin="light" size="small" color="success"   styles={{ whiteSpace: "nowrap", color: "#000000" }}/>
               ) : (
                 <Text varient="body2">—</Text>
               )}
@@ -129,6 +126,7 @@ const PreviewMain = ({ lead }: Props) => {
                   skin="light"
                   size="small"
                   color={clientTypeColor[lead.clientType]}
+                  styles={{ whiteSpace: "nowrap", color: "#000000" }}
                 />
               ) : (
                 <Text varient="body2">—</Text>
@@ -143,7 +141,7 @@ const PreviewMain = ({ lead }: Props) => {
                 skin="light"
                 size="small"
                 color={statusColor[lead.status]}
-                styles={{ whiteSpace: "nowrap" }}
+                styles={{ whiteSpace: "nowrap", color: "#000000" }}
               />
             </InfoRow>
           </GridItem>
@@ -193,27 +191,16 @@ const PreviewMain = ({ lead }: Props) => {
             <SectionLabel>Linked Proposal</SectionLabel>
             <InfoRow icon={<LinkOutlined style={{ fontSize: 18 }} />} label="Proposal ID">
               <Box display="flex" align="center" space={1}>
-                <span
-                  style={{ cursor: "pointer", fontFamily: "monospace" }}
-                  onClick={() => navigate(`/proposal/preview/${lead.proposalId}`)}
+                <a
+                    href={`${import.meta.env.VITE_APP_URL}/proposal/preview/${lead.proposalId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ wordBreak: "break-all" }}
                 >
                   <Text varient="body2" skinColor>
-                    {lead.proposalId}
+                    {`${import.meta.env.VITE_APP_URL}/proposal/preview/${lead.proposalId}`}
                   </Text>
-                </span>
-                <Tooltip title="Copy ID">
-                  <span>
-                    <IconButton
-                      varient="text"
-                      size={26}
-                      fontSize={16}
-                      contentOpacity={5}
-                      onClick={() => copy(lead.proposalId!)}
-                    >
-                      <ContentCopy style={{ fontSize: 14 }} />
-                    </IconButton>
-                  </span>
-                </Tooltip>
+                </a>
               </Box>
             </InfoRow>
           </Box>

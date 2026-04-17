@@ -12,30 +12,11 @@ import Box from "../../../components/box/Box";
 import Card from "../../../components/card/Card";
 import PreviewMain from "../../../components/leads/preview/PreviewMain";
 import LeadChat from "../../../components/leads/preview/LeadChat";
-import { Button, Tab, TabList, TabItem, TabContent, Text, IconButton, Chip } from "../../../ui";
+import LeadListItemStatus from "../../../components/leads/list/LeadListItemStatus";
+import LeadListItemClientType from "../../../components/leads/list/LeadListItemClientType";
+import { Button, Tab, TabList, TabItem, TabContent, Text, IconButton } from "../../../ui";
 import { useGetLeadByIdQuery } from "../../../store/leads/leadsApi";
 import { formatDate, shortUuid } from "../../../utils/formatDate";
-import type { ApiLeadStatus } from "../../../store/leads/types/definition";
-
-const statusLabel: Record<ApiLeadStatus, string> = {
-  conversation_ongoing: "Conversation Ongoing",
-  trial:                "Trial",
-  hold:                 "Hold",
-  contract_offer:       "Contract Offer",
-  accept_contract:      "Accept Contract",
-  start_contract:       "Start Contract",
-  suspended:            "Suspended",
-};
-
-const statusColor: Record<ApiLeadStatus, string> = {
-  conversation_ongoing: "info",
-  trial:                "warning",
-  hold:                 "#607D8B",
-  contract_offer:       "#9155FD",
-  accept_contract:      "success",
-  start_contract:       "#00897B",
-  suspended:            "#9E9E9E",
-};
 
 const LeadPreview = () => {
   const { id } = useParams<{ id: string }>();
@@ -57,13 +38,7 @@ const LeadPreview = () => {
   if (isError || !lead) {
     return (
       <Card py="2rem" px="2rem">
-        <Box
-          style={{ maxWidth: 900, margin: "0 auto" }}
-          display="flex"
-          flexDirection="column"
-          align="center"
-          space={3}
-        >
+        <Box style={{ maxWidth: 900, margin: "0 auto" }} display="flex" flexDirection="column" align="center" space={3}>
           <Text heading="h6">Lead not found</Text>
           <Button varient="outlined" color="info" onClick={() => navigate("/leads/list")}>
             Back to list
@@ -78,26 +53,15 @@ const LeadPreview = () => {
       <Box style={{ maxWidth: 900, margin: "0 auto" }}>
 
         {/* ── Header ── */}
-        <Box
-          display="flex"
-          align="center"
-          justify="space-between"
-          mb={4}
-          style={{ flexWrap: "wrap", gap: 12 }}
-        >
+        <Box display="flex" flexDirection="column" space={2} mb={4}>
+
+          {/* Row 1: back button + title + subtitle */}
           <Box display="flex" align="center" space={3}>
-            <IconButton
-              varient="text"
-              size={34}
-              fontSize={20}
-              onClick={() => navigate("/leads/list")}
-            >
+            <IconButton varient="text" size={34} fontSize={20} onClick={() => navigate("/leads/list")}>
               <ArrowBackOutlined />
             </IconButton>
             <Box>
-              <Text heading="h5">
-                {lead.leadName ?? `Lead #${lead.number}`}
-              </Text>
+              <Text heading="h5">{lead.leadName ?? `Lead #${lead.number}`}</Text>
               <Box display="flex" align="center" space={1} style={{ marginTop: 2 }}>
                 <Text varient="caption" secondary>
                   #{lead.number} · {formatDate(lead.repliedAt)} ·
@@ -109,55 +73,37 @@ const LeadPreview = () => {
                     </Text>
                   </span>
                 </Tooltip>
-                <IconButton
-                  varient="text"
-                  size={22}
-                  fontSize={13}
-                  contentOpacity={5}
-                  onClick={() => navigator.clipboard.writeText(lead.id)}
-                >
+                <IconButton varient="text" size={22} fontSize={13} contentOpacity={5} onClick={() => navigator.clipboard.writeText(lead.id)}>
                   <ContentCopy style={{ fontSize: 12 }} />
                 </IconButton>
               </Box>
             </Box>
           </Box>
 
-          <Box display="flex" align="center" space={2} style={{ flexWrap: "wrap", gap: 8 }}>
-            <Chip
-              label={statusLabel[lead.status]}
-              skin="light"
-              size="small"
-              color={statusColor[lead.status]}
-              styles={{ whiteSpace: "nowrap" }}
-            />
+          {/* Row 2: chips left, Edit button right */}
+          <Box display="flex" align="center" justify="space-between">
+            <Box display="flex" align="center" space={2} style={{ flexWrap: "wrap", gap: 8 }}>
+              <LeadListItemStatus itemStatus={lead.status} />
+              {lead.clientType && <LeadListItemClientType clientType={lead.clientType} />}
+            </Box>
             <Button
               varient="outlined"
               color="info"
               onClick={() => navigate(`/leads/edit/${lead.id}`)}
+              styles={{ display: "flex", alignItems: "center", gap: 6 }}
             >
-              <Box display="flex" align="center" space={1}>
-                <EditOutlined style={{ fontSize: 16 }} />
-                Edit
-              </Box>
+              <EditOutlined style={{ fontSize: 16 }} />
+              Edit
             </Button>
           </Box>
+
         </Box>
 
         {/* ── Tabs ── */}
         <Tab value={activeTab}>
           <TabList>
-            <TabItem
-              value={1}
-              label="Info"
-              icon={<InfoOutlined />}
-              onClick={(v) => setActiveTab(v as number)}
-            />
-            <TabItem
-              value={2}
-              label="Chat"
-              icon={<ChatOutlined />}
-              onClick={(v) => setActiveTab(v as number)}
-            />
+            <TabItem value={1} label="Info" icon={<InfoOutlined />} onClick={(v) => setActiveTab(v as number)} />
+            <TabItem value={2} label="Chat" icon={<ChatOutlined />} onClick={(v) => setActiveTab(v as number)} />
           </TabList>
 
           <TabContent tabIndex={1}>

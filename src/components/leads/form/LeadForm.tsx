@@ -85,7 +85,7 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
         </Box>
 
         <form onSubmit={handleSubmit}>
-          <Box display="flex" flexDirection="column" space={5}>
+          <Box display="flex" flexDirection="column" space={2}>
 
             {/* ── Lead Info ── */}
             <Box display="flex" flexDirection="column" space={3}>

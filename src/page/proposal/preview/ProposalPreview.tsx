@@ -48,8 +48,9 @@ const ProposalPreview = () => {
       <Box style={{ maxWidth: 900, margin: "0 auto" }}>
 
         {/* ── Header ── */}
-        <Box display="flex" align="center" justify="space-between" mx={8} style={{ flexWrap: "wrap", gap: 12 }}>
+        <Box display="flex" flexDirection="column" space={2} mb={4}>
 
+          {/* Row 1: back button + title + subtitle */}
           <Box display="flex" align="center" space={3}>
             <IconButton varient="text" size={34} fontSize={20} onClick={() => navigate("/proposal/list")}>
               <ArrowBackOutlined />
@@ -62,40 +63,36 @@ const ProposalPreview = () => {
                 </Text>
                 <Tooltip title={proposal.id} placement="top">
                   <span>
-                    <Text varient="caption" secondary style={{ fontFamily: "monospace" }}>
+                    <Text varient="caption" secondary styles={{ fontFamily: "monospace" }}>
                       #{shortUuid(proposal.id)}
                     </Text>
                   </span>
                 </Tooltip>
-                <IconButton
-                  varient="text"
-                  size={22}
-                  fontSize={13}
-                  contentOpacity={5}
-                  onClick={() => navigator.clipboard.writeText(proposal.id)}
-                >
+                <IconButton varient="text" size={22} fontSize={13} contentOpacity={5} onClick={() => navigator.clipboard.writeText(proposal.id)}>
                   <ContentCopy style={{ fontSize: 12 }} />
                 </IconButton>
               </Box>
             </Box>
           </Box>
 
-          <Box display="flex" align="center" space={2} my={20} style={{ flexWrap: "wrap", gap: 8 }}>
-            <ProposalListItemStatus itemStatus={proposal.status} />
-            <ProposalListItemType itemType={proposal.proposalType} />
-            <ProposalListItemBoosted itemBoosted={proposal.boosted ? "Boosted" : "Not Boosted"} />
-
-          </Box>
-
-          <Button
+          {/* Row 2: chips left, Edit button right */}
+          <Box display="flex" align="center" justify="space-between">
+            <Box display="flex" align="center" space={2} style={{ flexWrap: "wrap", gap: 8 }}>
+              <ProposalListItemStatus itemStatus={proposal.status} />
+              <ProposalListItemType itemType={proposal.proposalType} />
+              <ProposalListItemBoosted itemBoosted={proposal.boosted ? "Boosted" : "Not Boosted"} />
+            </Box>
+            <Button
               varient="outlined"
               color="info"
               onClick={() => navigate(`/proposal/edit/${proposal.id}`)}
-              style={{ display: "flex", alignItems: "center", gap: 6 }}
-          >
-            <EditOutlined style={{ fontSize: 16 }} />
-            Edit
-          </Button>
+              styles={{ display: "flex", alignItems: "center", gap: 6 }}
+            >
+              <EditOutlined style={{ fontSize: 16 }} />
+              Edit
+            </Button>
+          </Box>
+
         </Box>
 
         {/* ── Tabs ── */}
