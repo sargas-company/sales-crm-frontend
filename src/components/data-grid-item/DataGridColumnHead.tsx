@@ -38,34 +38,34 @@ const DataGridColumnHead: FC<Props> = (props) => {
           ) : (
             label
           )}
-          <span className={`icon-wrapper ${sorted ? "show-icon" : ""}`}>
-            {sorted ? (
-              sortDir === "asc" ? (
-                <SortIcon icon={<ArrowUpward />} />
-              ) : (
-                <SortIcon icon={<ArrowDownward />} />
-              )
-            ) : (
-              <SortIcon icon={<ArrowUpward />} />
-            )}
-          </span>
+          {/*<span className={`icon-wrapper ${sorted ? "show-icon" : ""}`}>*/}
+          {/*  {sorted ? (*/}
+          {/*    sortDir === "asc" ? (*/}
+          {/*      <SortIcon icon={<ArrowUpward />} />*/}
+          {/*    ) : (*/}
+          {/*      <SortIcon icon={<ArrowDownward />} />*/}
+          {/*    )*/}
+          {/*  ) : (*/}
+          {/*    <SortIcon icon={<ArrowUpward />} />*/}
+          {/*  )}*/}
+          {/*</span>*/}
         </>
       </Box>
 
-      <DataGridDropDownMain
-        fieldId={fieldId}
-        label={
-          <IconButton
-            varient="text"
-            fontSize={20}
-            size={30}
-            className="head-more-option dropdown-btn"
-            contentOpacity={7}
-          >
-            <MoreVert />
-          </IconButton>
-        }
-      />
+      {/*<DataGridDropDownMain*/}
+      {/*  fieldId={fieldId}*/}
+      {/*  label={*/}
+      {/*    <IconButton*/}
+      {/*      varient="text"*/}
+      {/*      fontSize={20}*/}
+      {/*      size={30}*/}
+      {/*      className="head-more-option dropdown-btn"*/}
+      {/*      contentOpacity={7}*/}
+      {/*    >*/}
+      {/*      <MoreVert />*/}
+      {/*    </IconButton>*/}
+      {/*  }*/}
+      {/*/>*/}
     </StyleDataGridHead>
   );
 };

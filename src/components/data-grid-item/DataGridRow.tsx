@@ -44,8 +44,8 @@ const StyledRow = styled("div")`
   position: relative;
   flex-wrap: nowrap;
   vertical-align: middle;
-  max-height: 58px;
-  min-height: 58px;
+  max-height: 72px;
+  min-height: 72px;
   border-bottom: 1px solid
     ${({ theme }) => (theme.mode === "dark" ? "#b1b1b154" : "#7a7a7a54")};
   border-top-left-radius: 6px;

@@ -6,8 +6,8 @@ const DataGridCell: FC<Props> = ({ value, width, flex, hidden, children, justify
   if (hidden) return <></>;
   const cellWidth = typeof width === "number" ? `${width}px` : width;
   const flexStyle = flex
-    ? { flex, minWidth: 0, minHeight: 58, maxHeight: 58 }
-    : { width: cellWidth, minWidth: cellWidth, maxWidth: cellWidth, minHeight: 58, maxHeight: 58 };
+    ? { flex, minWidth: 0, minHeight: 72, maxHeight: 72 }
+    : { width: cellWidth, minWidth: cellWidth, maxWidth: cellWidth, minHeight: 72, maxHeight: 72 };
   return (
     <Box
       display="flex"

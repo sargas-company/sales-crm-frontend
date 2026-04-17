@@ -25,8 +25,9 @@ const columns: DataGridColoumn[] = [
   { fieldId: "id",           label: "#",            width: "120px" },
   { fieldId: "jobUrl",       label: "Job URL",      width: "130px" },
   { fieldId: "status",       label: "Status",       width: "120px" },
+    { fieldId: "coverLetter",  label: "Cover Letter", width: "320px" },
   { fieldId: "user",         label: "Manager",      width: "160px" },
-  { fieldId: "account",      label: "Account",      width: "140px" },
+  { fieldId: "account",      label: "Account",      width: "200px" },
   { fieldId: "platform",     label: "Platform",     width: "120px" },
   { fieldId: "proposalType", label: "Type",         width: "160px" },
   { fieldId: "boosted",      label: "Boosted",      width: "175px" },
@@ -34,7 +35,7 @@ const columns: DataGridColoumn[] = [
   { fieldId: "boostedConnects", label: "Boosted Connects", width: "175px" },
   { fieldId: "createdAt",    label: "Created At",   width: "160px" },
   { fieldId: "sentAt",       label: "Sent At",      width: "160px" },
-  { fieldId: "coverLetter",  label: "Cover Letter", width: "320px" },
+
   { fieldId: "actions",      label: "Actions",      width: "140px" },
 ];
 
@@ -98,6 +99,29 @@ const ProposalTable = ({ items, isLoading, onDelete }: Props) => {
               width={field["status"].width}
               children={<ProposalListItemStatus itemStatus={row.status} />}
             />
+              <DataGridCell
+                  width={field["coverLetter"].width}
+                  children={
+                      row.coverLetter ? (
+                          <span
+                              onClick={() => setCoverLetterText(row.coverLetter)}
+                              style={{
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                  fontSize: 13,
+                                  lineHeight: "1.5",
+                                  cursor: "pointer",
+                              }}
+                          >
+                    {row.coverLetter}
+                  </span>
+                      ) : (
+                          <Text>—</Text>
+                      )
+                  }
+              />
             <DataGridCell
               width={field["user"].width}
               value={`${row.user.firstName} ${row.user.lastName}`}
@@ -135,29 +159,7 @@ const ProposalTable = ({ items, isLoading, onDelete }: Props) => {
             <DataGridCell width={field["boostedConnects"].width} justify="center" value={String(row.boostedConnects)} />
             <DataGridCell width={field["createdAt"].width} value={formatDate(row.createdAt)} />
             <DataGridCell width={field["sentAt"].width}    value={formatDate(row.sentAt)} />
-            <DataGridCell
-              width={field["coverLetter"].width}
-              children={
-                row.coverLetter ? (
-                  <span
-                    onClick={() => setCoverLetterText(row.coverLetter)}
-                    style={{
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                      fontSize: 13,
-                      lineHeight: "1.5",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {row.coverLetter}
-                  </span>
-                ) : (
-                  <Text>—</Text>
-                )
-              }
-            />
+
             <DataGridCell width={field["actions"].width}>
               <ProposalListAction proposalId={row.id} onDelete={onDelete} />
             </DataGridCell>

@@ -15,6 +15,7 @@ import type { DataGridColoumn } from "../../layout/data-grid/type";
 import type { LeadItem } from "../../../store/leads/types/definition";
 import LeadListAction from "./LeadListAction";
 import LeadListItemClientType from "./LeadListItemClientType";
+import {formatDate} from '../../../utils/formatDate'
 
 const columns: DataGridColoumn[] = [
   { fieldId: "number",     label: "#",           width: "100px" },
@@ -93,9 +94,9 @@ const LeadTable = ({ items, isLoading, onDelete }: LeadTableProps) => {
             />
             <DataGridCell width={field["rate"].width} justify="center" value={row.rate != null ? `$${row.rate}` : "—"} />
             <DataGridCell width={field["location"].width}   value={row.location ?? "—"} />
-            <DataGridCell width={field["repliedAt"].width}  value={row.repliedAt} />
-            <DataGridCell width={field["acceptedAt"].width} value={row.acceptedAt ?? "—"} />
-            <DataGridCell width={field["holdAt"].width}     value={row.holdAt ?? "—"} />
+            <DataGridCell width={field["repliedAt"].width}  value={formatDate(row.repliedAt)} />
+            <DataGridCell width={field["acceptedAt"].width} value={formatDate(row.acceptedAt) ?? "—"} />
+            <DataGridCell width={field["holdAt"].width}     value={formatDate(row.holdAt) ?? "—"} />
             <DataGridCell width={field["actions"].width}>
               <LeadListAction leadId={row.id} onDelete={onDelete} />
             </DataGridCell>

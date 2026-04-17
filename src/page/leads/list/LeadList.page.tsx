@@ -7,6 +7,7 @@ import DataGridFooter from "../../../components/data-grid-item/DataGridFooter";
 import { GridInnerContainer, GridItem } from "../../../components/layout";
 import { TextField } from "../../../ui";
 import { useGetLeadListQuery } from "../../../store/leads/leadsApi";
+import CreateNewLead from '../../../components/leads/list/CreateNewLead'
 
 interface DeleteTarget {
   id: string;
@@ -52,7 +53,7 @@ const LeadList = () => {
 
   return (
     <>
-      <Card>
+      <Card padding={'30px'}>
         <Box display="flex" justify="space-between" padding={20}>
           <GridInnerContainer alignItems="center" justifyContent="space-between">
             <GridItem xs={12} md={6}>
@@ -64,6 +65,11 @@ const LeadList = () => {
                 maxWidth="280px"
                 onChange={(e) => setSearch(e.target.value)}
               />
+            </GridItem>
+            <GridItem xs={12} md={6}>
+              <Box display="flex" justify="flex-end">
+                <CreateNewLead />
+              </Box>
             </GridItem>
           </GridInnerContainer>
         </Box>
