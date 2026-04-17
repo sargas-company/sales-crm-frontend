@@ -6,6 +6,8 @@ import {
   MenuBookOutlined,
   PeopleOutlined,
   RequestQuoteOutlined,
+  LayersOutlined,
+  AccountCircleOutlined,
 } from "@mui/icons-material"
 
 // const format = (label: string, path: string, icon?: ReactNode): NavItemType => {
@@ -55,6 +57,16 @@ const navList: NavOptions[] = [
     label: "Leads",
     path: "/leads/list/",
     icon: <PeopleOutlined />,
+  },
+  {
+    label: "Platforms",
+    path: "/platforms/list/",
+    icon: <LayersOutlined />,
+  },
+  {
+    label: "Accounts",
+    path: "/accounts/list/",
+    icon: <AccountCircleOutlined />,
   },
   {
     label: "Base Knowledge",

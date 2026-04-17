@@ -58,7 +58,7 @@ const ProposalPreview = () => {
               <Text heading="h5">{proposal.title}</Text>
               <Box display="flex" align="center" space={1} style={{ marginTop: 2 }}>
                 <Text varient="caption" secondary>
-                  {proposal.platform} · {formatDate(proposal.createdAt)} ·
+                  {proposal.platform.title} · {formatDate(proposal.createdAt)} ·
                 </Text>
                 <Tooltip title={proposal.id} placement="top">
                   <span>

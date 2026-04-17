@@ -30,7 +30,8 @@ const columns: DataGridColoumn[] = [
   { fieldId: "platform",     label: "Platform",     width: "120px" },
   { fieldId: "proposalType", label: "Type",         width: "160px" },
   { fieldId: "boosted",      label: "Boosted",      width: "175px" },
-  { fieldId: "connects",     label: "Connects",     width: "110px" },
+  { fieldId: "connects",        label: "Connects",        width: "110px" },
+  { fieldId: "boostedConnects", label: "Boosted Connects", width: "175px" },
   { fieldId: "createdAt",    label: "Created At",   width: "160px" },
   { fieldId: "sentAt",       label: "Sent At",      width: "160px" },
   { fieldId: "coverLetter",  label: "Cover Letter", width: "320px" },
@@ -131,6 +132,7 @@ const ProposalTable = ({ items, isLoading, onDelete }: Props) => {
               }
             />
             <DataGridCell width={field["connects"].width} justify="center" value={String(row.connects)} />
+            <DataGridCell width={field["boostedConnects"].width} justify="center" value={String(row.boostedConnects)} />
             <DataGridCell width={field["createdAt"].width} value={formatDate(row.createdAt)} />
             <DataGridCell width={field["sentAt"].width}    value={formatDate(row.sentAt)} />
             <DataGridCell

@@ -10,6 +10,7 @@ export interface ProposalFormFields {
   jobUrl: string;
   boosted: boolean;
   connects: string;
+  boostedConnects: string;
   coverLetter: string;
   vacancy: string;
 }
@@ -18,6 +19,7 @@ export interface ProposalFormErrors {
   title?: string;
   accountId?: string;
   proposalType?: string;
+  jobUrl?: string;
 }
 
 const INITIAL: ProposalFormFields = {
@@ -29,15 +31,22 @@ const INITIAL: ProposalFormFields = {
   jobUrl: "",
   boosted: false,
   connects: "0",
+  boostedConnects: "0",
   coverLetter: "",
   vacancy: "",
 };
+
+// https://www.upwork.com/jobs/~<id>
+// https://www.upwork.com/freelance-jobs/apply/<title>_~<id>/
+const UPWORK_JOB_URL = /^https:\/\/www\.upwork\.com\/(jobs\/~\d+|freelance-jobs\/apply\/[^/]+_~\d+\/?)$/;
 
 const validate = (fields: ProposalFormFields): ProposalFormErrors => {
   const errors: ProposalFormErrors = {};
   if (!fields.title.trim())    errors.title        = "Title is required";
   if (!fields.accountId)       errors.accountId    = "Account is required";
   if (!fields.proposalType)    errors.proposalType = "Proposal type is required";
+  if (fields.jobUrl.trim() && !UPWORK_JOB_URL.test(fields.jobUrl.trim()))
+    errors.jobUrl = "Must be a valid Upwork job URL";
   return errors;
 };
 
@@ -70,8 +79,9 @@ const useProposalForm = (initialValues?: Partial<ProposalFormFields>) => {
     proposalType: fields.proposalType as ProposalType,
     status:       fields.status,
     jobUrl:       fields.jobUrl.trim() || null,
-    boosted:      fields.boosted,
-    connects:     Number(fields.connects) || 0,
+    boosted:         fields.boosted,
+    connects:        Number(fields.connects) || 0,
+    boostedConnects: Number(fields.boostedConnects) || 0,
     coverLetter:  fields.coverLetter.trim(),
     vacancy:      fields.vacancy.trim() || null,
   });

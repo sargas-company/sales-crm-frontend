@@ -16,6 +16,7 @@ export interface DataGridColoumn {
     label: string | ReactNode;
     width: number | string;
     flex?: number;
+    wrapLabel?: boolean;
 }
 
 type FieldName = string | "";

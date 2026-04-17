@@ -43,8 +43,9 @@ const toFormValues = (data: ProposalItem) => ({
   proposalType: data.proposalType,
   status:       data.status,
   jobUrl:       data.jobUrl ?? "",
-  boosted:      data.boosted,
-  connects:     String(data.connects),
+  boosted:         data.boosted,
+  connects:        String(data.connects),
+  boostedConnects: String(data.boostedConnects),
   coverLetter:  data.coverLetter,
   vacancy:      data.vacancy ?? "",
 });
@@ -108,7 +109,7 @@ const ProposalFormInner = ({
         </Box>
 
         <form onSubmit={handleSubmit}>
-          <Box display="flex" flexDirection="column" space={5}>
+          <Box display="flex" flexDirection="column" space={1.5}>
 
             {/* ── Title ── */}
             <Box display="flex" flexDirection="column" space={1}>
@@ -146,6 +147,7 @@ const ProposalFormInner = ({
                           key={acc.id}
                           label={`${acc.firstName} ${acc.lastName} (${acc.platform.title})`}
                           value={acc.id}
+                          icon={acc.platform.imageUrl ?? undefined}
                         />
                       ))}
                     </Select>
@@ -178,7 +180,13 @@ const ProposalFormInner = ({
                     <Select
                       label="Select type"
                       defaultValue={fields.proposalType}
-                      onChange={(value) => setField("proposalType", value as any)}
+                      onChange={(value) => {
+                        setField("proposalType", value as any);
+                        if (value !== "Bid") {
+                          setField("boosted", false);
+                          setField("boostedConnects", "0");
+                        }
+                      }}
                       width="100%"
                       sizes="normal"
                     >
@@ -230,28 +238,49 @@ const ProposalFormInner = ({
                     value={fields.jobUrl}
                     onChange={(e) => setField("jobUrl", e.target.value)}
                     width="100%"
+                    error={!!errors.jobUrl}
+                    hypertext={errors.jobUrl}
                   />
                 </GridItem>
 
-                <GridItem xs={12} md={4}>
-                  <TextField
-                    name="connects"
-                    label="Connects"
-                    type="number"
-                    value={fields.connects}
-                    onChange={(e) => setField("connects", e.target.value)}
-                    width="100%"
-                    minValue={0}
-                  />
-                </GridItem>
+                {fields.proposalType === "Bid" && (
+                  <>
+                    <GridItem xs={12} md={4}>
+                      <TextField
+                        name="connects"
+                        label="Connects"
+                        type="number"
+                        value={fields.connects}
+                        onChange={(e) => setField("connects", e.target.value)}
+                        width="100%"
+                        minValue={0}
+                      />
+                    </GridItem>
 
-                <GridItem xs={12}>
-                  <Toggle
-                    toggled={fields.boosted}
-                    onToggle={() => setField("boosted", !fields.boosted)}
-                    label="Boosted proposal"
-                  />
-                </GridItem>
+                    <GridItem xs={12}>
+                      <Box display="flex" justify="space-between" align="center">
+                        <Toggle
+                          toggled={fields.boosted}
+                          onToggle={() => setField("boosted", !fields.boosted)}
+                          label="Boosted proposal"
+                        />
+                        {fields.boosted && (
+                          <Box style={{ width: 160 }}>
+                            <TextField
+                              name="boostedConnects"
+                              label="Boosted Connects"
+                              type="number"
+                              value={fields.boostedConnects}
+                              onChange={(e) => setField("boostedConnects", e.target.value)}
+                              width="100%"
+                              minValue={0}
+                            />
+                          </Box>
+                        )}
+                      </Box>
+                    </GridItem>
+                  </>
+                )}
 
               </GridInnerContainer>
             </Box>

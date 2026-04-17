@@ -6,12 +6,13 @@ import Box from "../box/Box";
 import DataGridDropDownMain from "./dropdowns/DataGridDropDownMain";
 
 const DataGridColumnHead: FC<Props> = (props) => {
-  const { onSortField, label, fieldId, sortDir, width, sorted, hidden } = props;
+  const { onSortField, label, fieldId, sortDir, width, sorted, hidden, wrapLabel } = props;
   if (hidden) return <></>;
   return (
     <StyleDataGridHead
       width={width}
       sorted={sorted}
+      wrapLabel={wrapLabel}
       data-id={fieldId}
       aria-label={fieldId}
       onClick={(eve) => {
@@ -22,14 +23,15 @@ const DataGridColumnHead: FC<Props> = (props) => {
         );
       }}
     >
-      <Box display="flex" align="center">
+      <Box display="flex" align="center" justify={wrapLabel ? "center" : undefined} style={wrapLabel ? { flex: 1 } : undefined}>
         <>
           {typeof label === "string" ? (
             <Text
               size={12}
               weight="bold"
               textTransform="uppercase"
-              textOverflow="ellipsis"
+              textOverflow={wrapLabel ? "unset" : "ellipsis"}
+              align={wrapLabel ? "center" : undefined}
             >
               {label}
             </Text>
@@ -79,6 +81,7 @@ interface StyleOption {
   width: string | number;
   flex?: number;
   sorted: boolean;
+  wrapLabel?: boolean;
 }
 
 interface Props extends StyleOption {
@@ -99,10 +102,12 @@ const StyleDataGridHead = styled("div")<StyleOption>`
   justify-content: space-between;
   align-items: center;
   vertical-alignment: middle;
-  padding-left: 1.5rem;
+  padding-left: ${({ wrapLabel }) => wrapLabel ? "6px" : "1.5rem"};
   padding-right: 6px;
+  padding-top: ${({ wrapLabel }) => wrapLabel ? "8px" : "0"};
+  padding-bottom: ${({ wrapLabel }) => wrapLabel ? "8px" : "0"};
   min-height: 50px;
-  max-height: 50px;
+  ${({ wrapLabel }) => !wrapLabel && `max-height: 50px;`}
   cursor: pointer;
   z-index: 900;
 

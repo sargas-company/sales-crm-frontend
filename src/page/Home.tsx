@@ -17,6 +17,8 @@ const Chat = lazy(() => import("./chat"));
 const Proposal = lazy(() => import("./proposal"));
 const Leads = lazy(() => import("./leads"));
 const BaseKnowledge = lazy(() => import("./base-knowledge"));
+const Platforms = lazy(() => import("./platforms"));
+const Accounts = lazy(() => import("./accounts"));
 // const Pages = lazy(() => import("./pages/Pages"));
 // const Users = lazy(() => import("./users"));
 // const CardPages = lazy(() => import("./card-pages/index"));
@@ -43,6 +45,8 @@ const Home = () => {
               <Route path="/proposal/*" element={<Proposal />} />
               <Route path="/leads/*" element={<Leads />} />
               <Route path="/knowledge/*" element={<BaseKnowledge />} />
+              <Route path="/platforms/*" element={<Platforms />} />
+              <Route path="/accounts/*" element={<Accounts />} />
               {/*<Route path="/user/*" element={<Users />} />*/}
               {/*<Route path="/pages/*" element={<Pages />} />*/}
               {/*<Route path="/charts/*" element={<Charts />} />*/}

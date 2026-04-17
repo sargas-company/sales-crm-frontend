@@ -15,7 +15,7 @@ import { InputVarient } from "../type";
 import StyledSelectWrapper, { StyledSelectButton } from "./styled";
 
 interface DefaultProps {
-  handleOnChange: (value: string, name: string) => void;
+  handleOnChange: (value: string, name: string, icon?: string) => void;
   currentSelection: string;
 }
 interface SelectProp {
@@ -53,20 +53,23 @@ const Select: FC<SelectProp> = (props) => {
   const [selectedItem, setSelectedItem] = useState({
     label: "",
     value: "",
+    icon: "",
   });
 
   useEffect(() => {
     if (defaultValue) {
       Children.forEach(
         children as any,
-        (ele: { props: { label: string; value: string } }) => {
+        (ele: { props: { label: string; value: string; icon?: string } }) => {
           if (ele.props.value.toLowerCase() === defaultValue.toLowerCase()) {
-            setSelectedItem({ label: ele.props.label, value: ele.props.value });
+            setSelectedItem({ label: ele.props.label, value: ele.props.value, icon: ele.props.icon ?? "" });
           }
         }
       );
+    } else {
+      setSelectedItem({ label: "", value: "", icon: "" });
     }
-  }, []);
+  }, [defaultValue]);
 
   const handleSelectOpen = (eve: SyntheticEvent) => {
     eve.preventDefault();
@@ -76,8 +79,8 @@ const Select: FC<SelectProp> = (props) => {
       return true;
     });
   };
-  const HandleOnChange = (value: string, label: string) => {
-    setSelectedItem({ value, label });
+  const HandleOnChange = (value: string, label: string, icon?: string) => {
+    setSelectedItem({ value, label, icon: icon ?? "" });
     onChange && onChange(value, label);
   };
 
@@ -111,7 +114,12 @@ const Select: FC<SelectProp> = (props) => {
           width={labelWidth}
           sizes={sizes}
         >
-          {selectedItem.label || defaultValue}
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {selectedItem.label || defaultValue}
+            {selectedItem.icon && (
+              <img src={selectedItem.icon} alt="" style={{ width: 20, height: 20, objectFit: "contain", borderRadius: 2 }} />
+            )}
+          </span>
         </StyledSelectButton>
         <span
           className={`input-label floating-label select-label ${
@@ -152,12 +160,13 @@ export default Select;
 export const SelectItem: FC<SelectItemProps> = ({
   label,
   value,
+  icon,
   textAlign,
 }) => {
   const han = useContext(SelectCtx);
   return (
     <li
-      onClick={() => han?.handleOnChange(value, label)}
+      onClick={() => han?.handleOnChange(value, label, icon)}
       role="option"
       value={value}
       aria-label={label}
@@ -166,7 +175,12 @@ export const SelectItem: FC<SelectItemProps> = ({
       }`}
       style={textAlign ? { textAlign } : {}}
     >
-      {label}
+      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {label}
+        {icon && (
+          <img src={icon} alt="" style={{ width: 20, height: 20, objectFit: "contain", borderRadius: 2, flexShrink: 0 }} />
+        )}
+      </span>
     </li>
   );
 };
@@ -174,5 +188,6 @@ export const SelectItem: FC<SelectItemProps> = ({
 interface SelectItemProps {
   label: string;
   value: string;
+  icon?: string;
   textAlign?: "center" | "left" | "right";
 }
