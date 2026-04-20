@@ -13,6 +13,7 @@ const Chat = lazy(() => import('./chat'))
 const Proposal = lazy(() => import('./proposal'))
 const Leads = lazy(() => import('./leads'))
 const BaseKnowledge = lazy(() => import('./base-knowledge'))
+const Invoices = lazy(() => import('./invoices'))
 const Platforms = lazy(() => import('./platforms'))
 const Accounts = lazy(() => import('./accounts'))
 const Home = () => {
@@ -33,12 +34,16 @@ const Home = () => {
 						<Routes>
 							<Route index element={<Analytics />} />
 							<Route path='/dashboards/analytics/' element={<Analytics />} />
+
 							<Route path='/chats' element={<Chat />} />
 							<Route path='/proposal/*' element={<Proposal />} />
 							<Route path='/leads/*' element={<Leads />} />
 							<Route path='/knowledge/*' element={<BaseKnowledge />} />
+							<Route path='/invoices/*' element={<Invoices />} />
+
 							<Route path='/platforms/*' element={<Platforms />} />
 							<Route path='/accounts/*' element={<Accounts />} />
+
 							<Route path='/*' element={<PageNotFound />} />
 						</Routes>
 					</Suspense>

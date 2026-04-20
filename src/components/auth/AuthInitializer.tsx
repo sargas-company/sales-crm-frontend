@@ -3,7 +3,6 @@ import { useAppDispatch, useAppSelector } from '../../hooks'
 import { setCredentials, logout, setInitialized } from '../../store/auth/authSlice'
 import axiosInstance from '../../api/axiosInstance'
 
-
 const AuthInitializer = () => {
 	const dispatch = useAppDispatch()
 	const refreshToken = useAppSelector((state) => state.auth.refreshToken)

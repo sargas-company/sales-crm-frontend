@@ -10,7 +10,6 @@ import DataGridFooter from '../../../components/data-grid-item/DataGridFooter'
 import { GridInnerContainer, GridItem } from '../../../components/layout'
 import useModal from '../../../hooks/useModal'
 import { useGetBaseKnowledgeListQuery } from '../../../store/baseKnowledge/baseKnowledgeApi'
-// import {TextField} from '../../../ui'
 
 const LIMIT_OPTIONS = [10, 20]
 
