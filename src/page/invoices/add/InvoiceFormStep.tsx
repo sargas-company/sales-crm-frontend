@@ -129,7 +129,7 @@ const labelSx = {
 const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => {
 	const [form, setForm] = useState(() => buildInitialForm(selectedParty, selectedType))
 	const [items, setItems] = useState<InvoiceItem[]>([
-		{ id: '1', name: 'Web Development services', quantity: 160, unitCost: 21.87 },
+		{ id: '1', name: 'Web Development services', quantity: 160, unitCost: 1.87 },
 		{ id: '2', name: 'Bonus', quantity: 1, unitCost: 252.8 },
 	])
 
