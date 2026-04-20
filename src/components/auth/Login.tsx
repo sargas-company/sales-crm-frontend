@@ -1,8 +1,7 @@
 import React, {FC, ReactNode, useEffect, useState} from "react"
 import {Icon} from "@iconify/react"
-import {Link} from "react-router-dom"
 import useTogglePassword from "../../hooks/useTogglePassword"
-import {Alert, Button, IconButton, Text, TextField} from "../../ui"
+import {Alert, Button, IconButton, TextField} from "../../ui"
 import Box from "../box/Box"
 import Form from "../form/Form"
 import AuthFormContainer from "./AuthFormContainer"
@@ -71,7 +70,7 @@ const Login: FC<Props> = ({ onSubmit, hyperComponent, isLoading, serverError }) 
       <Box width="100%" mb={20}>
         <Form onSubmit={handleSubmit} preventDefault>
           <FormHeading
-            title="Welcome to Sargas"
+            title="Welcome to"
             subtitle="Please sign-in to your account and start the adventure"
           />
           {hyperComponent}
@@ -119,14 +118,6 @@ const Login: FC<Props> = ({ onSubmit, hyperComponent, isLoading, serverError }) 
             </Button>
           </Box>
         </Form>
-      </Box>
-      <Box mb={20}>
-        <Text varient="body2" align="center" secondary paragraph>
-          New on platform?{" "}
-          <Link to="/auth/register/" className="text-primary">
-            Create an account
-          </Link>
-        </Text>
       </Box>
     </AuthFormContainer>
   );

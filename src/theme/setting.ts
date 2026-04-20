@@ -1,9 +1,10 @@
 import { ThemeModeName } from './type.d';
 import SettingType, { SettingThemeLocalstorage } from './type';
+import { BLUE_COLOR } from './colors';
 
 const setting = JSON.parse(localStorage.getItem("triolo-settings") as string) as SettingThemeLocalstorage;
 
-const modeName: ThemeModeName = setting?.mode === "light" ? "light" : "dark";
+const modeName: ThemeModeName = setting?.mode === "dark" ? "dark" : "light";
 
 const themeSettings: SettingType = {
     mode: {
@@ -19,7 +20,7 @@ const themeSettings: SettingType = {
     },
     primaryColor: {
         name: setting?.primaryColor?.name ? setting.primaryColor.name : 'blue',
-        color: setting?.primaryColor?.color ? setting?.primaryColor.color : "rgba(0, 215, 255, 1)"
+        color: setting?.primaryColor?.color ? setting?.primaryColor.color : BLUE_COLOR
     },
     menuStyle: {
         collapse: false, // hardcoded: navbar always expanded (toggle button hidden in NavHeading)
