@@ -20,14 +20,14 @@ declare global {
 const AuthBanner: FC<Props> = ({ children, bgDark, bgLight }) => {
 
   return (
-    <Box display={'flex'} flexDirection={'column'} justify={'center'}  align={'center'} height={'100%'} style={{background: 'radial-gradient(circle at 35% 40%, #ffffff 0%, #f5f9ff 35%, #eaf2ff 65%, #dbe8ff 100%)'}}>
+    <Box display={'flex'} flexDirection={'column'} justify={'center'}  align={'center'} height={'100%'} style={{background: 'radial-gradient(circle at 35% 40%, rgb(33 150 243 / 0%) 0%, rgb(238 238 238) 35%, rgb(234, 242, 255) 65%, rgb(154 164 183) 100%)'}}>
       <Box display="flex" flexDirection="column" space={0.6} my={32}>
             <Box display={'flex'}>
               <Text heading="h3" weight="extraBold" color={'black'}>
                 Your Sales Pipeline
               </Text>
             </Box>
-            <Text heading="h5"  weight="bold" paragraph secondary color={BLUE_COLOR} align={'center'}>
+            <Text heading="h5"  weight="bold" paragraph secondary color={BLUE_COLOR} align={'center'} styles={{border: '1px solid', padding: '6px', borderRadius: '8px'}}>
               CLEAN, FOCUSE, UNDER CONTROL
             </Text>
       </Box>
