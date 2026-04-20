@@ -185,6 +185,15 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 					>
 						Back
 					</Button>
+
+					<Card sx={{ borderRadius: '12px' }}>
+						<CardContent>
+							<Box sx={{ display: 'flex', flexDirection: 'raw', gap: 1.5 }}>
+								<Button variant='contained'>Create PDF</Button>
+								<Button variant='outlined'>Save Draft</Button>
+							</Box>
+						</CardContent>
+					</Card>
 				</Box>
 
 				<Card
