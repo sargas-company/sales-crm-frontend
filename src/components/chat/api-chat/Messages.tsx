@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import styled from 'styled-components'
 import { useAppSelector } from '../../../hooks'
 import Box from '../../box/Box'
