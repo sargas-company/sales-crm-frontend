@@ -1,16 +1,16 @@
-import { createGlobalStyle } from 'styled-components';
+import { createGlobalStyle } from 'styled-components'
 interface ThemeOptions {
-    textColor: string;
-    backgroundColor: string;
-    skinColor: string;
-    skin: "bordered" | "default";
-    foregroundColor: string;
-    mode: "dark" | "light"
+	textColor: string
+	backgroundColor: string
+	skinColor: string
+	skin: 'bordered' | 'default'
+	foregroundColor: string
+	mode: 'dark' | 'light'
 }
 const GlobalStyle = createGlobalStyle<ThemeOptions>`
     body {
         color: ${({ textColor }) => textColor};
-        background: ${({ backgroundColor, skin, foregroundColor }) => skin === "bordered" ? foregroundColor : backgroundColor};
+        background: ${({ backgroundColor, skin, foregroundColor }) => (skin === 'bordered' ? foregroundColor : backgroundColor)};
     }
     a {
         color: inherit;
@@ -21,10 +21,10 @@ const GlobalStyle = createGlobalStyle<ThemeOptions>`
         background: ${({ skinColor }) => skinColor};
     }
     .bg-theme {
-        background: ${({backgroundColor}) => backgroundColor};
+        background: ${({ backgroundColor }) => backgroundColor};
     }
     .fg-theme {
-        background: ${({foregroundColor}) => foregroundColor};
+        background: ${({ foregroundColor }) => foregroundColor};
     }
     .text-primary {
         color: ${({ skinColor }) => skinColor};
@@ -34,7 +34,7 @@ const GlobalStyle = createGlobalStyle<ThemeOptions>`
     }
     .bg_secondary--hover:hover,
     .bg_secondary--fade {
-        background: ${({mode}) => mode === "dark" ? "#bdbdbd0f" : "#0a0a0a0f"};
+        background: ${({ mode }) => (mode === 'dark' ? '#bdbdbd0f' : '#0a0a0a0f')};
     }
 
     button {
@@ -59,28 +59,28 @@ const GlobalStyle = createGlobalStyle<ThemeOptions>`
     }
 
     .apexcharts-gridline {
-        stroke: ${({mode}) => mode === "dark" ? "#9b9b9b30" : "#b1b4c338"}!important;
+        stroke: ${({ mode }) => (mode === 'dark' ? '#9b9b9b30' : '#b1b4c338')}!important;
     }
     .apexcharts-text > * {
-        color: ${({mode}) => mode === "dark" ? "#727272" : "#898989"};
-        fill: ${({mode}) => mode === "dark" ? "#727272" : "#898989"};
+        color: ${({ mode }) => (mode === 'dark' ? '#727272' : '#898989')};
+        fill: ${({ mode }) => (mode === 'dark' ? '#727272' : '#898989')};
         font-weight: 600;
     }
     .apexcharts-legend-text {
-        color: ${({mode}) => mode === "dark" ? "#a7a7a7" : "#898989"}!important;
+        color: ${({ mode }) => (mode === 'dark' ? '#a7a7a7' : '#898989')}!important;
     }
     .apexcharts-tooltip   { 
-        background-color: ${({foregroundColor}) => foregroundColor}!important;
+        background-color: ${({ foregroundColor }) => foregroundColor}!important;
         & .apexcharts-tooltip-text {
-           color: ${({mode}) => mode === "dark" ? "#c1c1c1" : "#919191"}!important;       
+           color: ${({ mode }) => (mode === 'dark' ? '#c1c1c1' : '#919191')}!important;       
         } 
 
         & > div {
-            background-color: ${({foregroundColor}) => foregroundColor}!important;
-            border-color: ${({mode}) => mode === "dark" ? "#5a5a5a" : "initial"};
+            background-color: ${({ foregroundColor }) => foregroundColor}!important;
+            border-color: ${({ mode }) => (mode === 'dark' ? '#5a5a5a' : 'initial')};
             box-shadow: unset;
         }
     }
-`;
+`
 
-export default GlobalStyle;
+export default GlobalStyle

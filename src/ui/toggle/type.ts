@@ -1,12 +1,12 @@
-type Size = "small" | "regular";
+type Size = 'small' | 'regular'
 export interface TogglerProps {
-    toggled?: boolean;
-    label?: string;
-    onToggle?: () => void;
-    label2?: string;
-    size?: Size;
+	toggled?: boolean
+	label?: string
+	onToggle?: () => void
+	label2?: string
+	size?: Size
 }
 export interface ToggleElProps {
-    toggled: boolean;
-    size?: Size;
+	toggled: boolean
+	size?: Size
 }

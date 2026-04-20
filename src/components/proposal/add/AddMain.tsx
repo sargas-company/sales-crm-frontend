@@ -1,5 +1,5 @@
-import ProposalForm from "../form/ProposalForm";
+import ProposalForm from '../form/ProposalForm'
 
-const AddMain = () => <ProposalForm mode="create" />;
+const AddMain = () => <ProposalForm mode='create' />
 
-export default AddMain;
+export default AddMain

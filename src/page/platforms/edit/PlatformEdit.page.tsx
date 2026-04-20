@@ -1,9 +1,9 @@
-import { useParams } from "react-router-dom";
-import PlatformForm from "../../../components/platforms/form/PlatformForm";
+import { useParams } from 'react-router-dom'
+import PlatformForm from '../../../components/platforms/form/PlatformForm'
 
 const PlatformEdit = () => {
-  const { id } = useParams<{ id: string }>();
-  return <PlatformForm id={id!} />;
-};
+	const { id } = useParams<{ id: string }>()
+	return <PlatformForm id={id!} />
+}
 
-export default PlatformEdit;
+export default PlatformEdit

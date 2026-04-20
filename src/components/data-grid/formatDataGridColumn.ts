@@ -1,5 +1,6 @@
-
 const formatDataGridColumn = (fieldId: string, label: string, width: string) => ({
-    fieldId, label, width
+	fieldId,
+	label,
+	width,
 })
-export default formatDataGridColumn;
+export default formatDataGridColumn

@@ -5,48 +5,48 @@ import { useAppSelector } from './index'
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'http://localhost:3001'
 
 interface Handlers {
-  onAnalysis: (data: { decision: string; reasoning: string }) => void
-  onChunk: (text: string) => void
-  onDone: () => void
-  onError?: (message: string) => void
+	onAnalysis: (data: { decision: string; reasoning: string }) => void
+	onChunk: (text: string) => void
+	onDone: () => void
+	onError?: (message: string) => void
 }
 
 export const usePanelSocket = (handlers: Handlers) => {
-  const accessToken = useAppSelector((state) => state.auth.accessToken)
-  const socketRef = useRef<Socket | null>(null)
-  // Keep handlers ref up-to-date so socket listeners always call the latest version
-  const handlersRef = useRef(handlers)
-  handlersRef.current = handlers
+	const accessToken = useAppSelector((state) => state.auth.accessToken)
+	const socketRef = useRef<Socket | null>(null)
+	// Keep handlers ref up-to-date so socket listeners always call the latest version
+	const handlersRef = useRef(handlers)
+	handlersRef.current = handlers
 
-  useEffect(() => {
-    if (!accessToken) return
+	useEffect(() => {
+		if (!accessToken) return
 
-    const socket = io(WS_URL, { auth: { token: accessToken } })
+		const socket = io(WS_URL, { auth: { token: accessToken } })
 
-    socket.on('analysis', (data: { decision: string; reasoning: string }) => {
-      handlersRef.current.onAnalysis(data)
-    })
-    socket.on('chunk', ({ text }: { text: string }) => {
-      handlersRef.current.onChunk(text)
-    })
-    socket.on('done', () => {
-      handlersRef.current.onDone()
-    })
-    socket.on('error', ({ message }: { message: string }) => {
-      handlersRef.current.onError?.(message)
-    })
+		socket.on('analysis', (data: { decision: string; reasoning: string }) => {
+			handlersRef.current.onAnalysis(data)
+		})
+		socket.on('chunk', ({ text }: { text: string }) => {
+			handlersRef.current.onChunk(text)
+		})
+		socket.on('done', () => {
+			handlersRef.current.onDone()
+		})
+		socket.on('error', ({ message }: { message: string }) => {
+			handlersRef.current.onError?.(message)
+		})
 
-    socketRef.current = socket
+		socketRef.current = socket
 
-    return () => {
-      socket.disconnect()
-      socketRef.current = null
-    }
-  }, [accessToken])
+		return () => {
+			socket.disconnect()
+			socketRef.current = null
+		}
+	}, [accessToken])
 
-  const sendMessage = useCallback((proposalId: string, content: string) => {
-    socketRef.current?.emit('send_message', { proposalId, content })
-  }, [])
+	const sendMessage = useCallback((proposalId: string, content: string) => {
+		socketRef.current?.emit('send_message', { proposalId, content })
+	}, [])
 
-  return { sendMessage }
+	return { sendMessage }
 }

@@ -1,9 +1,7 @@
-import AddMain from "../../../components/proposal/add/AddMain";
+import AddMain from '../../../components/proposal/add/AddMain'
 
 const ProposalAdd = () => {
-  return (
-      <AddMain />
-  );
-};
+	return <AddMain />
+}
 
-export default ProposalAdd;
+export default ProposalAdd

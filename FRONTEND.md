@@ -2,11 +2,11 @@
 
 ## Адреса
 
-| Назначение | URL |
-|---|---|
-| REST API | `http://localhost:3000` |
-| WebSocket (Socket.IO) | `http://localhost:3001` |
-| Swagger | `http://localhost:3000/swagger` |
+| Назначение            | URL                             |
+| --------------------- | ------------------------------- |
+| REST API              | `http://localhost:3000`         |
+| WebSocket (Socket.IO) | `http://localhost:3001`         |
+| Swagger               | `http://localhost:3000/swagger` |
 
 > Swagger доступен только при `NODE_ENV=development`. Авторизация через кнопку **Authorize** — вводишь токен один раз, применяется ко всем запросам.
 
@@ -30,8 +30,8 @@ Content-Type: application/json
 
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+	"accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+	"refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
@@ -57,8 +57,8 @@ Content-Type: application/json
 
 ```json
 {
-  "accessToken": "...",
-  "refreshToken": "..."
+	"accessToken": "...",
+	"refreshToken": "..."
 }
 ```
 
@@ -102,14 +102,14 @@ Authorization: Bearer <token>
 
 ```json
 [
-  {
-    "id": "uuid",
-    "title": "Upwork",
-    "slug": "upwork",
-    "imageUrl": "https://example.com/upwork.png",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  }
+	{
+		"id": "uuid",
+		"title": "Upwork",
+		"slug": "upwork",
+		"imageUrl": "https://example.com/upwork.png",
+		"createdAt": "2024-01-01T00:00:00.000Z",
+		"updatedAt": "2024-01-01T00:00:00.000Z"
+	}
 ]
 ```
 
@@ -129,11 +129,11 @@ Content-Type: application/json
 }
 ```
 
-| Поле | Тип | Обязательный | Описание |
-|---|---|---|---|
-| `title` | string | да | Название платформы |
-| `slug` | string | да | Уникальный идентификатор (латиница, без пробелов) |
-| `imageUrl` | string | нет | URL логотипа |
+| Поле       | Тип    | Обязательный | Описание                                          |
+| ---------- | ------ | ------------ | ------------------------------------------------- |
+| `title`    | string | да           | Название платформы                                |
+| `slug`     | string | да           | Уникальный идентификатор (латиница, без пробелов) |
+| `imageUrl` | string | нет          | URL логотипа                                      |
 
 **Ответ `201`:** объект платформы. `409` если `slug` уже занят.
 
@@ -194,21 +194,21 @@ Authorization: Bearer <token>
 
 ```json
 [
-  {
-    "id": "uuid",
-    "firstName": "Dmytro",
-    "lastName": "Sarafaniuk",
-    "platformId": "uuid",
-    "userId": "uuid",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z",
-    "platform": {
-      "id": "uuid",
-      "title": "Upwork",
-      "slug": "upwork",
-      "imageUrl": null
-    }
-  }
+	{
+		"id": "uuid",
+		"firstName": "Dmytro",
+		"lastName": "Sarafaniuk",
+		"platformId": "uuid",
+		"userId": "uuid",
+		"createdAt": "2024-01-01T00:00:00.000Z",
+		"updatedAt": "2024-01-01T00:00:00.000Z",
+		"platform": {
+			"id": "uuid",
+			"title": "Upwork",
+			"slug": "upwork",
+			"imageUrl": null
+		}
+	}
 ]
 ```
 
@@ -228,11 +228,11 @@ Content-Type: application/json
 }
 ```
 
-| Поле | Тип | Обязательный | Описание |
-|---|---|---|---|
-| `firstName` | string | да | Имя на платформе |
-| `lastName` | string | да | Фамилия на платформе |
-| `platformId` | string (uuid) | да | ID платформы |
+| Поле         | Тип           | Обязательный | Описание             |
+| ------------ | ------------- | ------------ | -------------------- |
+| `firstName`  | string        | да           | Имя на платформе     |
+| `lastName`   | string        | да           | Фамилия на платформе |
+| `platformId` | string (uuid) | да           | ID платформы         |
 
 **Ответ `201`:** объект аккаунта с вложенным `platform`. `409` если аккаунт для этой платформы уже существует.
 
@@ -282,18 +282,18 @@ Authorization: Bearer <token>
 
 ### Поля proposal (input)
 
-| Поле | Тип | Обязательный | Описание |
-|---|---|---|---|
-| `title` | string | да | Название proposal |
-| `accountId` | string (uuid) | да | ID аккаунта (`GET /accounts`) |
-| `platformId` | string (uuid) | да | ID платформы (`GET /platforms`) |
-| `proposalType` | enum | да | `Bid` \| `Invite` \| `DirectMessage` |
-| `jobUrl` | string | нет | Ссылка на вакансию |
-| `boosted` | boolean | нет | Буст (только для `Bid`, default: `false`) |
-| `connects` | number | нет | Коннекты (только для `Bid`, default: `0`) |
-| `boostedConnects` | number | нет | Коннекты за буст (только если `boosted: true`) |
-| `coverLetter` | string | нет | Сопроводительное письмо |
-| `vacancy` | string | нет | Текст вакансии |
+| Поле              | Тип           | Обязательный | Описание                                       |
+| ----------------- | ------------- | ------------ | ---------------------------------------------- |
+| `title`           | string        | да           | Название proposal                              |
+| `accountId`       | string (uuid) | да           | ID аккаунта (`GET /accounts`)                  |
+| `platformId`      | string (uuid) | да           | ID платформы (`GET /platforms`)                |
+| `proposalType`    | enum          | да           | `Bid` \| `Invite` \| `DirectMessage`           |
+| `jobUrl`          | string        | нет          | Ссылка на вакансию                             |
+| `boosted`         | boolean       | нет          | Буст (только для `Bid`, default: `false`)      |
+| `connects`        | number        | нет          | Коннекты (только для `Bid`, default: `0`)      |
+| `boostedConnects` | number        | нет          | Коннекты за буст (только если `boosted: true`) |
+| `coverLetter`     | string        | нет          | Сопроводительное письмо                        |
+| `vacancy`         | string        | нет          | Текст вакансии                                 |
 
 ---
 
@@ -353,10 +353,10 @@ GET /proposals?page=1&limit=10
 Authorization: Bearer <token>
 ```
 
-| Параметр | Тип | По умолчанию |
-|---|---|---|
-| `page` | number | `1` |
-| `limit` | number | `10` |
+| Параметр | Тип    | По умолчанию |
+| -------- | ------ | ------------ |
+| `page`   | number | `1`          |
+| `limit`  | number | `10`         |
 
 **Ответ `200`:**
 
@@ -424,24 +424,24 @@ Authorization: Bearer <token>
 
 ```json
 [
-  {
-    "id": "uuid",
-    "chatId": "uuid",
-    "role": "user",
-    "content": "Write a proposal",
-    "decision": null,
-    "reasoning": null,
-    "createdAt": "2024-01-01T00:00:00.000Z"
-  },
-  {
-    "id": "uuid",
-    "chatId": "uuid",
-    "role": "assistant",
-    "content": "...",
-    "decision": "bid",
-    "reasoning": "Client has strong rating, budget fits, requirements are clear.",
-    "createdAt": "2024-01-01T00:00:00.000Z"
-  }
+	{
+		"id": "uuid",
+		"chatId": "uuid",
+		"role": "user",
+		"content": "Write a proposal",
+		"decision": null,
+		"reasoning": null,
+		"createdAt": "2024-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid",
+		"chatId": "uuid",
+		"role": "assistant",
+		"content": "...",
+		"decision": "bid",
+		"reasoning": "Client has strong rating, budget fits, requirements are clear.",
+		"createdAt": "2024-01-01T00:00:00.000Z"
+	}
 ]
 ```
 
@@ -466,8 +466,8 @@ Content-Type: application/json
 
 ```json
 {
-  "decision": "bid",
-  "reasoning": "Client has strong rating (4.9), budget is realistic, requirements are clear."
+	"decision": "bid",
+	"reasoning": "Client has strong rating (4.9), budget is realistic, requirements are clear."
 }
 ```
 
@@ -479,21 +479,21 @@ Lead создаётся автоматически при переводе Propo
 
 ### Поля lead
 
-| Поле | Тип | Описание |
-|---|---|---|
-| `id` | string (uuid) | Уникальный идентификатор |
-| `number` | number | Порядковый номер (1, 2, 3...) |
-| `proposalId` | string \| null | ID связанного proposal (null если proposal удалён) |
-| `leadName` | string \| null | Имя лида |
-| `status` | enum | Статус (см. ниже) |
-| `clientType` | enum \| null | `individual` \| `company` |
-| `rate` | number \| null | Ставка в $ |
-| `location` | string \| null | Локация клиента |
-| `repliedAt` | datetime | Время получения ответа от клиента |
-| `acceptedAt` | datetime \| null | Проставляется при переходе в `accept_contract` |
-| `holdAt` | datetime \| null | Проставляется при переходе в `hold` |
-| `createdAt` | datetime | — |
-| `updatedAt` | datetime | — |
+| Поле         | Тип              | Описание                                           |
+| ------------ | ---------------- | -------------------------------------------------- |
+| `id`         | string (uuid)    | Уникальный идентификатор                           |
+| `number`     | number           | Порядковый номер (1, 2, 3...)                      |
+| `proposalId` | string \| null   | ID связанного proposal (null если proposal удалён) |
+| `leadName`   | string \| null   | Имя лида                                           |
+| `status`     | enum             | Статус (см. ниже)                                  |
+| `clientType` | enum \| null     | `individual` \| `company`                          |
+| `rate`       | number \| null   | Ставка в $                                         |
+| `location`   | string \| null   | Локация клиента                                    |
+| `repliedAt`  | datetime         | Время получения ответа от клиента                  |
+| `acceptedAt` | datetime \| null | Проставляется при переходе в `accept_contract`     |
+| `holdAt`     | datetime \| null | Проставляется при переходе в `hold`                |
+| `createdAt`  | datetime         | —                                                  |
+| `updatedAt`  | datetime         | —                                                  |
 
 **Статусы `LeadStatus`:** `conversation_ongoing` \| `trial` \| `hold` \| `contract_offer` \| `accept_contract` \| `start_contract` \| `suspended`
 
@@ -558,24 +558,24 @@ Authorization: Bearer <token>
 
 ```json
 [
-  {
-    "id": "uuid",
-    "chatId": "uuid",
-    "role": "user",
-    "content": "Write a proposal",
-    "decision": null,
-    "reasoning": null,
-    "createdAt": "2024-01-01T00:00:00.000Z"
-  },
-  {
-    "id": "uuid",
-    "chatId": "uuid",
-    "role": "assistant",
-    "content": "...",
-    "decision": "bid",
-    "reasoning": "...",
-    "createdAt": "2024-01-01T00:00:00.000Z"
-  }
+	{
+		"id": "uuid",
+		"chatId": "uuid",
+		"role": "user",
+		"content": "Write a proposal",
+		"decision": null,
+		"reasoning": null,
+		"createdAt": "2024-01-01T00:00:00.000Z"
+	},
+	{
+		"id": "uuid",
+		"chatId": "uuid",
+		"role": "assistant",
+		"content": "...",
+		"decision": "bid",
+		"reasoning": "...",
+		"createdAt": "2024-01-01T00:00:00.000Z"
+	}
 ]
 ```
 
@@ -629,54 +629,54 @@ GET /chats?limit=20&type=proposal
 Authorization: Bearer <token>
 ```
 
-| Параметр | Тип | По умолчанию | Ограничения | Описание |
-|---|---|---|---|---|
-| `limit` | number | `20` | 1–100 | Количество записей |
-| `cursor` | string | — | UUID | ID последнего элемента предыдущей страницы |
-| `type` | enum | — | `proposal` \| `lead` | Фильтр: `proposal` — только чаты с proposal, `lead` — только чаты с lead, без параметра — все |
+| Параметр | Тип    | По умолчанию | Ограничения          | Описание                                                                                      |
+| -------- | ------ | ------------ | -------------------- | --------------------------------------------------------------------------------------------- |
+| `limit`  | number | `20`         | 1–100                | Количество записей                                                                            |
+| `cursor` | string | —            | UUID                 | ID последнего элемента предыдущей страницы                                                    |
+| `type`   | enum   | —            | `proposal` \| `lead` | Фильтр: `proposal` — только чаты с proposal, `lead` — только чаты с lead, без параметра — все |
 
 **Ответ `200`:**
 
 ```json
 {
-  "data": [
-    {
-      "id": "uuid",
-      "proposalId": "uuid",
-      "leadId": "uuid",
-      "createdAt": "2024-01-01T00:00:00.000Z",
-      "proposal": {
-        "id": "uuid",
-        "title": "React Developer",
-        "status": "Replied",
-        "user": {
-          "id": "uuid",
-          "email": "manager@example.com"
-        }
-      },
-      "lead": {
-        "id": "uuid",
-        "number": 1,
-        "status": "conversation_ongoing",
-        "leadName": null
-      },
-      "_count": {
-        "messages": 5
-      },
-      "messages": [
-        {
-          "id": "uuid",
-          "chatId": "uuid",
-          "role": "assistant",
-          "content": "...",
-          "decision": "bid",
-          "reasoning": "...",
-          "createdAt": "2024-01-01T00:00:00.000Z"
-        }
-      ]
-    }
-  ],
-  "nextCursor": "uuid-of-last-item"
+	"data": [
+		{
+			"id": "uuid",
+			"proposalId": "uuid",
+			"leadId": "uuid",
+			"createdAt": "2024-01-01T00:00:00.000Z",
+			"proposal": {
+				"id": "uuid",
+				"title": "React Developer",
+				"status": "Replied",
+				"user": {
+					"id": "uuid",
+					"email": "manager@example.com"
+				}
+			},
+			"lead": {
+				"id": "uuid",
+				"number": 1,
+				"status": "conversation_ongoing",
+				"leadName": null
+			},
+			"_count": {
+				"messages": 5
+			},
+			"messages": [
+				{
+					"id": "uuid",
+					"chatId": "uuid",
+					"role": "assistant",
+					"content": "...",
+					"decision": "bid",
+					"reasoning": "...",
+					"createdAt": "2024-01-01T00:00:00.000Z"
+				}
+			]
+		}
+	],
+	"nextCursor": "uuid-of-last-item"
 }
 ```
 
@@ -686,20 +686,20 @@ Authorization: Bearer <token>
 **Пример итерации по всем страницам:**
 
 ```js
-let cursor;
-const allChats = [];
+let cursor
+const allChats = []
 
 do {
-  const params = new URLSearchParams({ limit: '20' });
-  if (cursor) params.set('cursor', cursor);
+	const params = new URLSearchParams({ limit: '20' })
+	if (cursor) params.set('cursor', cursor)
 
-  const { data, nextCursor } = await fetch(`/chats?${params}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  }).then(r => r.json());
+	const { data, nextCursor } = await fetch(`/chats?${params}`, {
+		headers: { Authorization: `Bearer ${accessToken}` },
+	}).then((r) => r.json())
 
-  allChats.push(...data);
-  cursor = nextCursor;
-} while (cursor);
+	allChats.push(...data)
+	cursor = nextCursor
+} while (cursor)
 ```
 
 ---
@@ -709,14 +709,14 @@ do {
 ### Подключение с авторизацией
 
 ```js
-import { io } from 'socket.io-client';
+import { io } from 'socket.io-client'
 
 const socket = io('http://localhost:3001', {
-  auth: { token: accessToken }
-});
+	auth: { token: accessToken },
+})
 
-socket.on('connect', () => console.log('Connected'));
-socket.on('error', ({ message }) => console.error('Error:', message));
+socket.on('connect', () => console.log('Connected'))
+socket.on('error', ({ message }) => console.error('Error:', message))
 ```
 
 > Без токена или с невалидным токеном соединение будет немедленно разорвано.
@@ -727,26 +727,26 @@ socket.on('error', ({ message }) => console.error('Error:', message));
 
 ```js
 socket.emit('send_message', {
-  proposalId: 'uuid',
-  content: 'Write a proposal',
-});
+	proposalId: 'uuid',
+	content: 'Write a proposal',
+})
 ```
 
-| Поле | Тип | Описание |
-|---|---|---|
-| `proposalId` | `string` | ID proposal (обязательный) |
-| `content` | `string` | Текст сообщения (обязательный) |
+| Поле         | Тип      | Описание                       |
+| ------------ | -------- | ------------------------------ |
+| `proposalId` | `string` | ID proposal (обязательный)     |
+| `content`    | `string` | Текст сообщения (обязательный) |
 
 ---
 
 ### Входящие события
 
-| Событие | Данные | Описание |
-|---|---|---|
+| Событие    | Данные                                    | Описание                                    |
+| ---------- | ----------------------------------------- | ------------------------------------------- |
 | `analysis` | `{ decision: string, reasoning: string }` | Решение AI — приходит **первым**, до текста |
-| `chunk` | `{ text: string }` | Фрагмент генерируемого текста |
-| `done` | — | Генерация завершена |
-| `error` | `{ message: string }` | Ошибка |
+| `chunk`    | `{ text: string }`                        | Фрагмент генерируемого текста               |
+| `done`     | —                                         | Генерация завершена                         |
+| `error`    | `{ message: string }`                     | Ошибка                                      |
 
 > Порядок событий всегда: `analysis` → `chunk` × N → `done`
 
@@ -755,57 +755,59 @@ socket.emit('send_message', {
 ### Пример полного подключения
 
 ```js
-import { io } from 'socket.io-client';
+import { io } from 'socket.io-client'
 
 // 1. Логин
 const { accessToken } = await fetch('http://localhost:3000/auth/login', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ email: 'admin@test.com', password: 'admin123' }),
-}).then(r => r.json());
+	method: 'POST',
+	headers: { 'Content-Type': 'application/json' },
+	body: JSON.stringify({ email: 'admin@test.com', password: 'admin123' }),
+}).then((r) => r.json())
 
 const headers = {
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${accessToken}`,
-};
+	'Content-Type': 'application/json',
+	Authorization: `Bearer ${accessToken}`,
+}
 
 // 2. Создать proposal
 const proposal = await fetch('http://localhost:3000/proposals', {
-  method: 'POST',
-  headers,
-  body: JSON.stringify({
-    title: 'Full Stack Developer — MVP Project',
-    accountId: 'uuid-of-account',
-    platformId: 'uuid-of-platform',
-    proposalType: 'Bid',
-    vacancy: 'Looking for React developer to build an admin dashboard.',
-    connects: 6,
-  }),
-}).then(r => r.json());
+	method: 'POST',
+	headers,
+	body: JSON.stringify({
+		title: 'Full Stack Developer — MVP Project',
+		accountId: 'uuid-of-account',
+		platformId: 'uuid-of-platform',
+		proposalType: 'Bid',
+		vacancy: 'Looking for React developer to build an admin dashboard.',
+		connects: 6,
+	}),
+}).then((r) => r.json())
 
 // 3. Подключиться к WebSocket
-const socket = io('http://localhost:3001', { auth: { token: accessToken } });
+const socket = io('http://localhost:3001', { auth: { token: accessToken } })
 
-let fullText = '';
+let fullText = ''
 
 socket.on('connect', () => {
-  // 4. Отправить сообщение
-  socket.emit('send_message', {
-    proposalId: proposal.id,
-    content: 'Write a proposal',
-  });
-});
+	// 4. Отправить сообщение
+	socket.emit('send_message', {
+		proposalId: proposal.id,
+		content: 'Write a proposal',
+	})
+})
 
 socket.on('analysis', ({ decision, reasoning }) => {
-  console.log('Decision:', decision);   // 'bid' | 'decline' | 'clarify'
-  console.log('Reasoning:', reasoning);
-});
+	console.log('Decision:', decision) // 'bid' | 'decline' | 'clarify'
+	console.log('Reasoning:', reasoning)
+})
 
-socket.on('chunk', ({ text }) => { fullText += text; });
+socket.on('chunk', ({ text }) => {
+	fullText += text
+})
 
 socket.on('done', () => {
-  console.log('Full response:', fullText);
-});
+	console.log('Full response:', fullText)
+})
 ```
 
 ---
@@ -839,10 +841,10 @@ GET /base-knowledge?page=1&limit=8
 Authorization: Bearer <token>
 ```
 
-| Параметр | Тип | По умолчанию | Описание |
-|---|---|---|---|
-| `page` | number | `1` | Номер страницы |
-| `limit` | number | `8` | Записей на странице |
+| Параметр | Тип    | По умолчанию | Описание            |
+| -------- | ------ | ------------ | ------------------- |
+| `page`   | number | `1`          | Номер страницы      |
+| `limit`  | number | `8`          | Записей на странице |
 
 **Ответ `200`:**
 
@@ -917,8 +919,8 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "id": "global",
-  "systemPrompt": "You are an expert sales manager..."
+	"id": "global",
+	"systemPrompt": "You are an expert sales manager..."
 }
 ```
 
@@ -938,20 +940,20 @@ Content-Type: application/json
 
 ## Коды ошибок
 
-| Код | Описание |
-|---|---|
-| `400` | Неверные данные запроса |
+| Код   | Описание                                                |
+| ----- | ------------------------------------------------------- |
+| `400` | Неверные данные запроса                                 |
 | `401` | Не авторизован / токен истёк / невалидный refresh token |
-| `404` | Ресурс не найден |
-| `500` | Внутренняя ошибка сервера |
+| `404` | Ресурс не найден                                        |
+| `500` | Внутренняя ошибка сервера                               |
 
 **Формат ошибки:**
 
 ```json
 {
-  "statusCode": 404,
-  "message": "Proposal not found",
-  "path": "/proposals/unknown-id",
-  "timestamp": "2024-01-01T00:00:00.000Z"
+	"statusCode": 404,
+	"message": "Proposal not found",
+	"path": "/proposals/unknown-id",
+	"timestamp": "2024-01-01T00:00:00.000Z"
 }
 ```

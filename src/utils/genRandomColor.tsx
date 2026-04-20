@@ -1,6 +1,5 @@
-import { colorPallets } from "../theme/colors";
+import { colorPallets } from '../theme/colors'
 
-const genRandomColor = () =>
-  colorPallets[Math.ceil(Math.random() * colorPallets.length - 1)].color;
+const genRandomColor = () => colorPallets[Math.ceil(Math.random() * colorPallets.length - 1)].color
 
-export default genRandomColor;
+export default genRandomColor

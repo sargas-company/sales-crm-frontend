@@ -1,5 +1,5 @@
-import AccountForm from "../../../components/accounts/form/AccountForm";
+import AccountForm from '../../../components/accounts/form/AccountForm'
 
-const AccountAdd = () => <AccountForm />;
+const AccountAdd = () => <AccountForm />
 
-export default AccountAdd;
+export default AccountAdd

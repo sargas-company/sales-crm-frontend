@@ -1,30 +1,30 @@
-import { FC, ReactNode } from "react";
-import styled from "styled-components";
-import useTheme from "../../theme/useTheme";
-import Card from "../card/Card";
+import { FC, ReactNode } from 'react'
+import styled from 'styled-components'
+import useTheme from '../../theme/useTheme'
+import Card from '../card/Card'
 const NavContent: FC<{ children: ReactNode }> = ({ children }) => {
-  const {
-    theme: {
-      menuStyle: { collapse },
-    },
-  } = useTheme();
-  return (
-    <StyledNavContent
-      height="100%"
-      position="fixed"
-      width={collapse ? "90px" : "260px"}
-      isCollapsed={collapse}
-    >
-      <NavInner>{children}</NavInner>
-    </StyledNavContent>
-  );
-};
+	const {
+		theme: {
+			menuStyle: { collapse },
+		},
+	} = useTheme()
+	return (
+		<StyledNavContent
+			height='100%'
+			position='fixed'
+			width={collapse ? '90px' : '260px'}
+			isCollapsed={collapse}
+		>
+			<NavInner>{children}</NavInner>
+		</StyledNavContent>
+	)
+}
 
 const NavInner = styled.div`
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-`;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+`
 
 const StyledNavContent = styled(Card)<{ isCollapsed: boolean }>`
   height: 100%;
@@ -36,23 +36,23 @@ const StyledNavContent = styled(Card)<{ isCollapsed: boolean }>`
   border-radius: 0;
   overflow: hidden;
   ${({ isCollapsed }) =>
-    !isCollapsed &&
-    `box-shadow: unset;
+		!isCollapsed &&
+		`box-shadow: unset;
   background: transparent !important;`}}
 
 
   & .nav-label {
     ${({ isCollapsed }) =>
-      isCollapsed &&
-      `opacity: 0;
+			isCollapsed &&
+			`opacity: 0;
       transition: 200ms;
     `}
   }
 
   & .nav-item-container {
     ${({ isCollapsed }) =>
-      isCollapsed &&
-      `
+			isCollapsed &&
+			`
       margin-top: 30px;
       transition: 200ms;
       position: absolute;
@@ -64,8 +64,8 @@ const StyledNavContent = styled(Card)<{ isCollapsed: boolean }>`
 
   &:hover .nav-item-container {
     ${({ isCollapsed }) =>
-      isCollapsed &&
-      `
+			isCollapsed &&
+			`
       margin-top: 0;
       z-index: 1;
       visibility: visible;
@@ -76,7 +76,7 @@ const StyledNavContent = styled(Card)<{ isCollapsed: boolean }>`
   }
 
   &:hover {
-    width: ${({ isCollapsed }) => (isCollapsed ? "260px" : "")};
+    width: ${({ isCollapsed }) => (isCollapsed ? '260px' : '')};
   }
   &:hover .nav-label {
     opacity: 1;
@@ -88,6 +88,6 @@ const StyledNavContent = styled(Card)<{ isCollapsed: boolean }>`
       left: -260px;
     }
   }
-`;
+`
 
-export default NavContent;
+export default NavContent

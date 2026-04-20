@@ -7,16 +7,15 @@ import proposalReducer from './proposals/proposalsSlice'
 import leadReducer from './leads/leadsSlice'
 
 export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    chat: chatReducer,
-    apiChat: apiChatReducer,
-    proposal: proposalReducer,
-    lead: leadReducer,
-    [baseApi.reducerPath]: baseApi.reducer,
-  },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(baseApi.middleware),
+	reducer: {
+		auth: authReducer,
+		chat: chatReducer,
+		apiChat: apiChatReducer,
+		proposal: proposalReducer,
+		lead: leadReducer,
+		[baseApi.reducerPath]: baseApi.reducer,
+	},
+	middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(baseApi.middleware),
 })
 
 export type RootState = ReturnType<typeof store.getState>

@@ -1,16 +1,11 @@
-import { Text } from "../../../ui";
+import { Text } from '../../../ui'
 
 const TimeStamp = ({ timestamp }: { timestamp: string }) => {
-  return (
-    <Text
-      varient="caption"
-      weight="medium"
-      textTransform="capitalize"
-      secondary
-    >
-      {timestamp}
-    </Text>
-  );
-};
+	return (
+		<Text varient='caption' weight='medium' textTransform='capitalize' secondary>
+			{timestamp}
+		</Text>
+	)
+}
 
-export default TimeStamp;
+export default TimeStamp

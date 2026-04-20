@@ -1,11 +1,11 @@
-import { memo } from "react";
-import { Button } from "../../../ui";
+import { memo } from 'react'
+import { Button } from '../../../ui'
 
 interface Props {
-  onClick: () => void;
+	onClick: () => void
 }
 
 const CreateKnowledgeButton = ({ onClick }: Props) => {
-  return <Button onClick={onClick}>Create Knowledge</Button>;
-};
-export default memo(CreateKnowledgeButton);
+	return <Button onClick={onClick}>Create Knowledge</Button>
+}
+export default memo(CreateKnowledgeButton)

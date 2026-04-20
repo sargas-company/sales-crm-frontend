@@ -1,8 +1,8 @@
-import { ReactNode } from "react";
+import { ReactNode } from 'react'
 
 export interface TabsProps {
-    children: ReactNode;
-    value: number;
-    varient?: "standard" | "regular";
-    direction?: "horizontal" | "vertical";
+	children: ReactNode
+	value: number
+	varient?: 'standard' | 'regular'
+	direction?: 'horizontal' | 'vertical'
 }

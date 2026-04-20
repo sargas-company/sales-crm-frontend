@@ -1,6 +1,6 @@
-import styled from 'styled-components';
+import styled from 'styled-components'
 
-const DropDownWrapper = styled("div")`
+const DropDownWrapper = styled('div')`
   position: relative;
 
   & .dropdown-items-container {
@@ -17,7 +17,7 @@ const DropDownWrapper = styled("div")`
     white-space: nowrap;
   }
   & .dropdown-item:hover {
-    background: ${({ theme }) => theme.mode.name === 'dark' ? "#6c6c6c24" : "#44444414"};
+    background: ${({ theme }) => (theme.mode.name === 'dark' ? '#6c6c6c24' : '#44444414')};
   }
   & .hide {
     visibility: hidden;
@@ -46,6 +46,6 @@ const DropDownWrapper = styled("div")`
       transform: scale(1);
     }
   }
-`;
+`
 
-export default DropDownWrapper;
+export default DropDownWrapper

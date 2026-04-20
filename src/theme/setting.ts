@@ -1,34 +1,36 @@
-import { ThemeModeName } from './type.d';
-import SettingType, { SettingThemeLocalstorage } from './type';
-import { BLUE_COLOR } from './colors';
+import { ThemeModeName } from './type.d'
+import SettingType, { SettingThemeLocalstorage } from './type'
+import { BLUE_COLOR } from './colors'
 
-const setting = JSON.parse(localStorage.getItem("triolo-settings") as string) as SettingThemeLocalstorage;
+const setting = JSON.parse(
+	localStorage.getItem('triolo-settings') as string
+) as SettingThemeLocalstorage
 
-const modeName: ThemeModeName = setting?.mode === "dark" ? "dark" : "light";
+const modeName: ThemeModeName = setting?.mode === 'dark' ? 'dark' : 'light'
 
 const themeSettings: SettingType = {
-    mode: {
-        name: modeName,
-        background: modeName === "light" ? "#f8f5ff" : "#1B2430",
-        foreground: modeName === "light" ? "#fffffd" : '#252d3a',
-        textColor: modeName === "light" ? "#3a3541de" : '#d3d3d3'
-    } as any,
-    layout: {
-        appBarBlur: setting?.hasOwnProperty('appbarBlur') ? setting.appbarBlur! : true,
-        appBarPosition: "fixed", // hardcoded: AppBar Type toggle hidden in Customizer
-        footerPosition: setting?.footerPosition ? setting.footerPosition : 'static'
-    },
-    primaryColor: {
-        name: setting?.primaryColor?.name ? setting.primaryColor.name : 'blue',
-        color: setting?.primaryColor?.color ? setting?.primaryColor.color : BLUE_COLOR
-    },
-    menuStyle: {
-        collapse: false, // hardcoded: navbar always expanded (toggle button hidden in NavHeading)
-        layout: setting?.menuLayout ? setting.menuLayout : "vertical",
-        openStyle: setting?.menuOpenStyle ? setting.menuOpenStyle : 'accordion',
-        visible: setting?.menuVisible ? setting.menuVisible : false
-    },
-    skin: setting?.skin ? setting.skin : "default"
+	mode: {
+		name: modeName,
+		background: modeName === 'light' ? '#f8f5ff' : '#1B2430',
+		foreground: modeName === 'light' ? '#fffffd' : '#252d3a',
+		textColor: modeName === 'light' ? '#3a3541de' : '#d3d3d3',
+	} as any,
+	layout: {
+		appBarBlur: setting?.hasOwnProperty('appbarBlur') ? setting.appbarBlur! : true,
+		appBarPosition: 'fixed', // hardcoded: AppBar Type toggle hidden in Customizer
+		footerPosition: setting?.footerPosition ? setting.footerPosition : 'static',
+	},
+	primaryColor: {
+		name: setting?.primaryColor?.name ? setting.primaryColor.name : 'blue',
+		color: setting?.primaryColor?.color ? setting?.primaryColor.color : BLUE_COLOR,
+	},
+	menuStyle: {
+		collapse: false, // hardcoded: navbar always expanded (toggle button hidden in NavHeading)
+		layout: setting?.menuLayout ? setting.menuLayout : 'vertical',
+		openStyle: setting?.menuOpenStyle ? setting.menuOpenStyle : 'accordion',
+		visible: setting?.menuVisible ? setting.menuVisible : false,
+	},
+	skin: setting?.skin ? setting.skin : 'default',
 }
 
-export default themeSettings;
+export default themeSettings

@@ -1,1 +1,1 @@
-export { default as ApexChartPlain } from './apex/ChartNoIteractive';
+export { default as ApexChartPlain } from './apex/ChartNoIteractive'
