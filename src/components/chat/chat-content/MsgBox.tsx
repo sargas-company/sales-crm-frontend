@@ -146,8 +146,8 @@ const MarkdownWrapper = styled.div`
 
 const StyledMsgBox = styled(ColorBox)`
 	max-width: calc(100% - 3rem);
-	border-radius: 8px;
-	border-top-left-radius: 4px;
+	border-radius: 4px 8px 8px 8px;
+
 	@media screen and (min-width: 600px) {
 		max-width: 65%;
 	}
