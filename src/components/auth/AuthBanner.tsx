@@ -35,22 +35,12 @@ const AuthBanner: FC<Props> = ({ children, bgDark, bgLight }) => {
       <model-viewer
           src="/snowflake.glb"
           alt="Snowflake"
-          // camera-controls
+          camera-controls
           auto-rotate
           shadow-intensity="1"
           style={{ display: "block", width: "100%", height: "400px" }}
       />
 
-      {/*<Box display="flex" flexDirection="column" space={0.6} my={32}>*/}
-      {/*  <Box display={'flex'}>*/}
-      {/*    <Text heading="h6" weight="light">*/}
-      {/*      Track deals, manage follow-ups, and keep your sales pipeline moving - all in one place*/}
-      {/*    </Text>*/}
-      {/*  </Box>*/}
-      {/*  /!*<Text varient="body2" weight="medium" paragraph secondary>*!/*/}
-      {/*  /!*  Clean, focused, under control*!/*/}
-      {/*  /!*</Text>*!/*/}
-      {/*</Box>*/}
 
       <h5 style={{fontWeight: 400}}>
 
