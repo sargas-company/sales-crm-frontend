@@ -18,10 +18,8 @@ const DropdownV2: FC<DropdownV2Props> = (props) => {
   useEffect(() => {
     if (shouldShow) {
       document.body.style.overflow = "hidden";
-      document.body.style.paddingRight = "15px";
     } else {
       document.body.style.overflowY = "auto";
-      document.body.style.paddingRight = "0";
     }
     return () => {
       document.body.style.overflowY = "auto";
