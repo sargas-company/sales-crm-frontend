@@ -4,15 +4,13 @@ import {
 	Button,
 	Card,
 	CardContent,
-	Chip,
 	Divider,
 	IconButton,
-	MenuItem,
 	Paper,
 	TextField,
 	Typography,
 } from '@mui/material'
-import { Add, ArrowBack, Close, Loop, RequestQuoteOutlined } from '@mui/icons-material'
+import { Add, ArrowBack, Close, Loop } from '@mui/icons-material'
 import logo from '../../../assets/logo.png'
 
 type PartyType = 'contractor' | 'client'
