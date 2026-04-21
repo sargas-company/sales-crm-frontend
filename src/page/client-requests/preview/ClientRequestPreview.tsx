@@ -43,7 +43,7 @@ const InfoRow = ({
   label: string
   children: React.ReactNode
 }) => (
-  <Box display="flex" align="flex-start" space={2} style={{ minHeight: 36 }}>
+  <Box display="flex" align="flex-start" space={2} style={{ minHeight: 36,  overflow: 'auto' }}>
     <Box
       display="flex"
       align="center"
