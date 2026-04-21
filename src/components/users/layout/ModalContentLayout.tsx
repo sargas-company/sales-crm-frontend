@@ -37,4 +37,5 @@ const ModalContentWrp = styled(Card)<{ maxWidth?: string }>`
 	margin: 1rem;
 	flex-direction: column;
 	overflow-y: hidden;
+	border-radius: 30px;
 `

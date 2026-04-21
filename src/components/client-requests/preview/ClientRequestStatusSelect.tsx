@@ -4,6 +4,7 @@ import { KeyboardArrowDownOutlined } from '@mui/icons-material'
 import { Chip } from '../../../ui'
 import { useUpdateClientRequestMutation } from '../../../store/clientRequests/clientRequestsApi'
 import type { ClientRequestStatus } from '../../../store/clientRequests/types/definition'
+import { useToast } from '../../../context/toast/ToastContext'
 
 const statusColor: Record<ClientRequestStatus, string> = {
   on_review:            'warning',
@@ -22,11 +23,15 @@ const ALL_STATUSES: ClientRequestStatus[] = ['on_review', 'conversation_ongoing'
 const ClientRequestStatusSelect = ({ id, status }: { id: string; status: ClientRequestStatus }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [updateRequest, { isLoading }] = useUpdateClientRequestMutation()
+  const { showToast } = useToast()
 
   const handleSelect = async (newStatus: ClientRequestStatus) => {
     setAnchorEl(null)
     if (newStatus !== status) {
-      await updateRequest({ id, body: { status: newStatus } })
+      const result = await updateRequest({ id, body: { status: newStatus } })
+      if (!('error' in result)) {
+        showToast(`Status updated to "${statusLabel[newStatus]}"`, 'success')
+      }
     }
   }
 

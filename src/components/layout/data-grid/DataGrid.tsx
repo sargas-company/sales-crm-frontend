@@ -51,9 +51,7 @@ const DataGrid = <T extends unknown>({
 	}, [sortOption, rows])
 
 	useEffect(() => {
-		if (sortedList.length > 0) {
-			setDataList(sortedList as T[])
-		}
+		setDataList(sortedList as T[])
 	}, [sortedList])
 
 	const handleSortBy = (sortOption: (state: SortOption) => void, dir: 'asc' | 'desc') => {

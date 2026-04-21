@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Snackbar, Alert } from '@mui/material'
 import { Tooltip } from '@mui/material'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { ContentCopy } from '@mui/icons-material'
 import { IconButton } from '../../../ui'
 
@@ -202,10 +204,10 @@ const ProposalTable = ({ items, isLoading, onDelete }: Props) => {
 					<ModalContentLayout maxWidth='600px'>
 						<Box display='flex' flexDirection='column' space={3}>
 							<Text heading='h6'>Cover Letter</Text>
-							<Box style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-								<Text varient='body2' paragraph>
+							<Box style={{ maxHeight: '70vh', overflowY: 'auto', fontSize: 14, lineHeight: '1.6' }}>
+								<ReactMarkdown remarkPlugins={[remarkGfm]}>
 									{coverLetterText}
-								</Text>
+								</ReactMarkdown>
 							</Box>
 						</Box>
 					</ModalContentLayout>

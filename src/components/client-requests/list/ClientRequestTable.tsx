@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Text } from '../../../ui'
 import DataGrid from '../../layout/data-grid/DataGrid'
 import Box from '../../box/Box'
@@ -17,10 +19,10 @@ const isoToFlag = (iso: string) =>
 
 const columns: DataGridColoumn[] = [
   { fieldId: 'index',     label: '#',         width: '70px'  },
-  { fieldId: 'name',      label: 'Name',      width: '180px' },
+  { fieldId: 'name',      label: 'Name',      width: '200px' },
   { fieldId: 'company',   label: 'Company',   width: '160px' },
-  { fieldId: 'phone',     label: 'Phone',     width: '160px' },
-  { fieldId: 'email',     label: 'Email',     width: '200px' },
+  { fieldId: 'phone',     label: 'Phone',     width: '220px' },
+  { fieldId: 'email',     label: 'Email',     width: '250px' },
   { fieldId: 'message',   label: 'Message',   width: '260px' },
   { fieldId: 'status',    label: 'Status',    width: '210px' },
   { fieldId: 'createdAt', label: 'Created At', width: '160px' },
@@ -102,10 +104,10 @@ const ClientRequestTable = ({ items, isLoading, onDelete }: ClientRequestTablePr
           <ModalContentLayout maxWidth='600px'>
             <Box display='flex' flexDirection='column' space={3}>
               <Text heading='h6'>Message</Text>
-              <Box style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                <Text varient='body2' paragraph>
+              <Box style={{ maxHeight: '70vh', overflowY: 'auto', fontSize: 14, lineHeight: '1.6' }}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {messageText}
-                </Text>
+                </ReactMarkdown>
               </Box>
             </Box>
           </ModalContentLayout>

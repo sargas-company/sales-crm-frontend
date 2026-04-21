@@ -195,7 +195,7 @@ const ClientRequestPreview = () => {
                   >
                     <Box display="flex" align="center" space={2}>
                       <InsertDriveFileOutlined style={{ fontSize: 22, color: '#8A8D93' }} />
-                      <Box>
+                      <Box display={'flex'} space={1} align={'center'}>
                         <Text varient="body2">{file.originalName}</Text>
                         <Text varient="caption" secondary>
                           {formatSize(file.size)}
