@@ -49,10 +49,10 @@
 		"@types/react-dom": "^18.0.6",
 		"@types/recharts": "^1.8.23",
 		"@types/styled-components": "^5.1.26",
-		"@vitejs/plugin-react": "^2.0.1",
+		"@vitejs/plugin-react": "^4.0.0",
 		"eslint-plugin-react-hooks": "^4.6.0",
 		"miragejs": "^0.1.45",
 		"typescript": "^4.6.4",
-		"vite": "^3.0.7"
+		"vite": "^5.0.0"
 	}
 }
