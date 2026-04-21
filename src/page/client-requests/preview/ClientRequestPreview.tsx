@@ -17,7 +17,7 @@ import Card from '../../../components/card/Card'
 import { Text, Divider, IconButton, Button } from '../../../ui'
 import { GridInnerContainer, GridItem } from '../../../components/layout'
 import { useGetClientRequestByIdQuery } from '../../../store/clientRequests/clientRequestsApi'
-import ClientRequestStatus from '../../../components/client-requests/list/ClientRequestStatus'
+import ClientRequestStatusSelect from '../../../components/client-requests/preview/ClientRequestStatusSelect'
 import { formatDate } from '../../../utils/formatDate'
 import { API_BASE_URL } from '../../../api/baseApi'
 import type { ClientRequestFile } from '../../../store/clientRequests/types/definition'
@@ -101,7 +101,7 @@ const ClientRequestPreview = () => {
       <Box style={{ maxWidth: 900, margin: '0 auto' }}>
 
         {/* Header */}
-        <Box display="flex" flexDirection="column" space={2} mb={4}>
+        <Box display="flex" flexDirection="column" space={2} mb={30}>
           <Box display="flex" align="center" space={3}>
             <IconButton varient="text" size={34} fontSize={20} onClick={() => navigate('/client-requests/list/')}>
               <ArrowBackOutlined />
@@ -115,7 +115,7 @@ const ClientRequestPreview = () => {
           </Box>
 
           <Box display="flex" align="center">
-            <ClientRequestStatus status={request.status} />
+            <ClientRequestStatusSelect id={request.id} status={request.status} />
           </Box>
         </Box>
 
