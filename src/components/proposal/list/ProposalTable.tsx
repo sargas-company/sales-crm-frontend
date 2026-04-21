@@ -204,10 +204,15 @@ const ProposalTable = ({ items, isLoading, onDelete }: Props) => {
 					<ModalContentLayout maxWidth='600px'>
 						<Box display='flex' flexDirection='column' space={3}>
 							<Text heading='h6'>Cover Letter</Text>
-							<Box style={{ maxHeight: '70vh', overflowY: 'auto', fontSize: 14, lineHeight: '1.6' }}>
-								<ReactMarkdown remarkPlugins={[remarkGfm]}>
-									{coverLetterText}
-								</ReactMarkdown>
+							<Box
+								style={{
+									maxHeight: '70vh',
+									overflowY: 'auto',
+									fontSize: 14,
+									lineHeight: '1.6',
+								}}
+							>
+								<ReactMarkdown remarkPlugins={[remarkGfm]}>{coverLetterText}</ReactMarkdown>
 							</Box>
 						</Box>
 					</ModalContentLayout>
