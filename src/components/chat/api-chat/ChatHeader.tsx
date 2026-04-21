@@ -1,6 +1,7 @@
 import Box from '../../box/Box'
 import { Divider, Text } from '../../../ui'
 import { useAppSelector } from '../../../hooks'
+import ModelSwitcher from './ModelSwitcher'
 
 const ChatHeader = () => {
 	const selectedId = useAppSelector((state) => state.apiChat.selectedChatId)
@@ -19,7 +20,13 @@ const ChatHeader = () => {
 
 	return (
 		<Box display='flex' flexDirection='column' style={{ zIndex: 900 }}>
-			<Box display='flex' align='center' px={16} py={12}>
+			<Box
+				display='flex'
+				align='center'
+				px={16}
+				py={12}
+				style={{ justifyContent: 'space-between' }}
+			>
 				<Box display='flex' flexDirection='column'>
 					<Text varient='body2' weight='bold'>
 						{title}
@@ -29,6 +36,9 @@ const ChatHeader = () => {
 							{subtitle}
 						</Text>
 					)}
+				</Box>
+				<Box display='flex' flexDirection='column'>
+					<ModelSwitcher />
 				</Box>
 			</Box>
 			<Divider />

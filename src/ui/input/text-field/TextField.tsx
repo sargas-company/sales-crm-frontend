@@ -89,12 +89,12 @@ const TextField = forwardRef<InputRef, Inputs>((props, ref) => {
 					varient={varient ? varient : 'regular'}
 					className='form-input body1'
 					theme={{ mode, primaryColor }}
-					hasLabel={label ? true : false}
+					hasLabel={!!label}
 					onChange={onChange}
 					onKeyDown={onKeyDown}
 				/>
 			)}
-			{label && <InputLabel label={label} isFloating={value || defaultValue ? true : false} />}
+			{label && <InputLabel label={label} isFloating={!!(value || defaultValue)} />}
 			<InputLabelBorder varient={varient || 'regular'} />
 			{hypertext && <span className='field-describe caption'>{hypertext}</span>}
 			{startAdornment && (

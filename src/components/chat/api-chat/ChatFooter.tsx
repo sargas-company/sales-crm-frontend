@@ -50,7 +50,7 @@ const ChatFooter = ({ onSend }: Props) => {
 							? 'Waiting for response…'
 							: !selectedProposalId
 								? 'Chat unavailable'
-								: 'Type your message here...'
+								: 'Type your message here...2'
 					}
 					endAdornment={
 						<Box mr={16} mt={6} onClick={handleSend} className='cursor-pointer'>

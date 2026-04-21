@@ -18,6 +18,7 @@ import ProposalListItemType from '../../../components/proposal/list/ProposalList
 import ProposalListItemBoosted from '../../../components/proposal/list/ProposalListItemBoosted'
 import { useGetProposalByIdQuery } from '../../../store/proposals/proposalsApi'
 import { shortUuid, formatDate } from '../../../utils/formatDate'
+import ModelSwitcher from '../../../components/chat/api-chat/ModelSwitcher'
 
 const ProposalPreview = () => {
 	const { id } = useParams<{ id: string }>()
@@ -59,7 +60,7 @@ const ProposalPreview = () => {
 		<Card py='2rem' px='2rem'>
 			<Box style={{ maxWidth: 900, margin: '0 auto' }}>
 				{/* ── Header ── */}
-				<Box display='flex' flexDirection='column' space={2} mb={4}>
+				<Box display='flex' flexDirection='column' space={2} mb={20}>
 					{/* Row 1: back button + title + subtitle */}
 					<Box display='flex' align='center' space={3}>
 						<IconButton
@@ -143,6 +144,9 @@ const ProposalPreview = () => {
 					</TabContent>
 
 					<TabContent tabIndex={2}>
+						<Box display='flex' align='center' style={{ marginBottom: 25 }}>
+							<ModelSwitcher />
+						</Box>
 						<ProposalChat proposalId={proposal.id} />
 					</TabContent>
 				</Tab>
