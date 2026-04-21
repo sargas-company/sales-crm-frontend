@@ -20,6 +20,7 @@ const columns: DataGridColoumn[] = [
   { fieldId: 'name',      label: 'Name',      width: '180px' },
   { fieldId: 'company',   label: 'Company',   width: '160px' },
   { fieldId: 'phone',     label: 'Phone',     width: '160px' },
+  { fieldId: 'email',     label: 'Email',     width: '200px' },
   { fieldId: 'message',   label: 'Message',   width: '260px' },
   { fieldId: 'status',    label: 'Status',    width: '210px' },
   { fieldId: 'createdAt', label: 'Created At', width: '160px' },
@@ -62,6 +63,7 @@ const ClientRequestTable = ({ items, isLoading, onDelete }: ClientRequestTablePr
                 <Text varient="body2">—</Text>
               )}
             </DataGridCell>
+            <DataGridCell width={field['email'].width} value={row.email || '—'} />
             <DataGridCell width={field['message'].width}>
               {row.message ? (
                 <span
