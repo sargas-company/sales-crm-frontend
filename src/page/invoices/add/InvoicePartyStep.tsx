@@ -1,17 +1,22 @@
 import { FC, useMemo, useState } from 'react'
 import {
+	Alert,
 	Box,
 	Button,
 	Card,
 	CardContent,
 	Chip,
-	InputAdornment,
+	CircularProgress,
 	Paper,
 	Stack,
 	TextField,
 	Typography,
 } from '@mui/material'
 import { BusinessOutlined, PeopleOutlined, Search, RequestQuoteOutlined } from '@mui/icons-material'
+import {
+	type CounterpartyItem,
+	useGetCounterpartiesQuery,
+} from '../../../store/counterparties/counterpartiesApi'
 
 type PartyType = 'contractor' | 'client'
 
@@ -23,36 +28,30 @@ type Party = {
 	invoiceBlock: string
 }
 
-const parties: Party[] = [
-	{
-		id: 'ctr_1',
-		type: 'contractor',
-		displayName: 'FILIPOVA VALERIIA',
+const COUNTERPARTY_LIMIT = 1000
+
+const getCounterpartyDisplayName = (counterparty: CounterpartyItem) => {
+	const fullName = [counterparty.firstName, counterparty.lastName].filter(Boolean).join(' ').trim()
+
+	return (
+		fullName ||
+		counterparty.info?.split('\n')[0]?.trim() ||
+		`Counterparty ${counterparty.id.slice(0, 8)}`
+	)
+}
+
+const mapCounterpartyToParty = (counterparty: CounterpartyItem): Party => {
+	const displayName = getCounterpartyDisplayName(counterparty)
+	const info = counterparty.info?.trim()
+
+	return {
+		id: counterparty.id,
+		type: counterparty.type,
+		displayName,
 		currency: 'USD',
-		invoiceBlock: 'FILIPOVA VALERIIA\nTax ID: 3624303560\n...',
-	},
-	{
-		id: 'ctr_2',
-		type: 'contractor',
-		displayName: 'Oleksii Bondarenko',
-		currency: 'USD',
-		invoiceBlock: 'Oleksii Bondarenko\nTax ID: 3012457788\n...',
-	},
-	{
-		id: 'cl_1',
-		type: 'client',
-		displayName: 'Northstar Labs LLC',
-		currency: 'USD',
-		invoiceBlock: 'Northstar Labs LLC\n204 Market Street\n...',
-	},
-	{
-		id: 'cl_2',
-		type: 'client',
-		displayName: 'PixelForge GmbH',
-		currency: 'EUR',
-		invoiceBlock: 'PixelForge GmbH\nInvalidenstraße 117\n...',
-	},
-]
+		invoiceBlock: [displayName, info].filter(Boolean).join('\n'),
+	}
+}
 
 type Props = {
 	onContinue?: (payload: { type: PartyType; party: Party }) => void
@@ -62,18 +61,37 @@ const InvoicePartyStep: FC<Props> = ({ onContinue }) => {
 	const [selectedType, setSelectedType] = useState<PartyType>('contractor')
 	const [search, setSearch] = useState('')
 	const [selectedPartyId, setSelectedPartyId] = useState('')
+	const { data, isLoading, isError } = useGetCounterpartiesQuery({
+		page: 1,
+		limit: COUNTERPARTY_LIMIT,
+	})
+
+	const parties = useMemo(() => {
+		return (data?.data ?? []).map(mapCounterpartyToParty)
+	}, [data?.data])
+
+	const contractorCount = useMemo(() => {
+		return parties.filter((party) => party.type === 'contractor').length
+	}, [parties])
+
+	const clientCount = useMemo(() => {
+		return parties.filter((party) => party.type === 'client').length
+	}, [parties])
 
 	const filteredParties = useMemo(() => {
+		const q = search.toLowerCase()
+
 		return parties.filter(
 			(party) =>
 				party.type === selectedType &&
-				party.displayName.toLowerCase().includes(search.toLowerCase())
+				(party.displayName.toLowerCase().includes(q) ||
+					party.invoiceBlock.toLowerCase().includes(q))
 		)
-	}, [selectedType, search])
+	}, [parties, selectedType, search])
 
 	const selectedParty = useMemo(() => {
 		return parties.find((party) => party.id === selectedPartyId) || null
-	}, [selectedPartyId])
+	}, [parties, selectedPartyId])
 
 	const handleContinue = () => {
 		if (!selectedParty) return
@@ -160,7 +178,7 @@ const InvoicePartyStep: FC<Props> = ({ onContinue }) => {
 										flex: 1,
 									}}
 								>
-									Contractors
+									Contractors ({contractorCount})
 								</Button>
 
 								<Button
@@ -177,9 +195,15 @@ const InvoicePartyStep: FC<Props> = ({ onContinue }) => {
 										flex: 1,
 									}}
 								>
-									Clients
+									Clients ({clientCount})
 								</Button>
 							</Stack>
+
+							{isError ? (
+								<Alert severity='error' sx={{ mb: 2 }}>
+									Failed to load counterparties.
+								</Alert>
+							) : null}
 
 							<Box
 								sx={{
@@ -220,53 +244,69 @@ const InvoicePartyStep: FC<Props> = ({ onContinue }) => {
 							</Box>
 
 							<Stack spacing={1.25} sx={{ maxHeight: 420, overflow: 'auto' }}>
-								{filteredParties.map((party) => {
-									const active = selectedPartyId === party.id
+								{isLoading ? (
+									<Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
+										<CircularProgress size={28} />
+									</Box>
+								) : null}
 
-									return (
-										<Paper
-											key={party.id}
-											onClick={() => setSelectedPartyId(party.id)}
-											variant='outlined'
-											sx={{
-												p: 2,
-												borderRadius: 3,
-												cursor: 'pointer',
-												borderColor: active ? 'primary.main' : 'divider',
-												backgroundColor: active ? 'rgba(25,118,210,0.04)' : '#fff',
-												transition: '0.2s ease',
-											}}
-										>
-											<Stack
-												direction='row'
-												spacing={2}
-												sx={{
-													justifyContent: 'space-between',
-													alignItems: 'center',
-												}}
-											>
-												<Box>
-													<Typography sx={{ fontWeight: 600 }}>
-														{party.displayName}
-													</Typography>
+								{!isLoading && filteredParties.length === 0 ? (
+									<Typography color='text.secondary' sx={{ py: 3, textAlign: 'center' }}>
+										No {selectedType === 'contractor' ? 'contractors' : 'clients'} found.
+									</Typography>
+								) : null}
 
-													<Typography variant='body2' color='text.secondary'>
-														{party.currency}
-													</Typography>
-												</Box>
+								{!isLoading
+									? filteredParties.map((party) => {
+											const active = selectedPartyId === party.id
 
-												<Chip size='small' label={party.type} />
-											</Stack>
-										</Paper>
-									)
-								})}
+											return (
+												<Paper
+													key={party.id}
+													onClick={() => setSelectedPartyId(party.id)}
+													variant='outlined'
+													sx={{
+														p: 2,
+														borderRadius: 3,
+														cursor: 'pointer',
+														borderColor: active ? 'primary.main' : 'divider',
+														backgroundColor: active
+															? 'rgba(25,118,210,0.04)'
+															: '#fff',
+														transition: '0.2s ease',
+													}}
+												>
+													<Stack
+														direction='row'
+														spacing={2}
+														sx={{
+															justifyContent: 'space-between',
+															alignItems: 'center',
+														}}
+													>
+														<Box>
+															<Typography sx={{ fontWeight: 600 }}>
+																{party.displayName}
+															</Typography>
+
+															<Typography variant='body2' color='text.secondary'>
+																{party.currency}
+															</Typography>
+														</Box>
+
+														<Chip size='small' label={party.type} />
+													</Stack>
+												</Paper>
+											)
+										})
+									: null}
 							</Stack>
 
 							<Button
 								fullWidth
 								variant='contained'
 								onClick={handleContinue}
-								disabled={!selectedParty}
+								disabled={isLoading || !selectedParty}
 								sx={{
 									mt: 3,
 									borderRadius: 3,
