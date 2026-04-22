@@ -10,6 +10,7 @@ import {
 	AccountCircleOutlined,
 	ReceiptLongOutlined,
 	AssignmentOutlined,
+	WorkOutlineOutlined,
 } from '@mui/icons-material'
 
 const navList: NavOptions[] = [
@@ -59,6 +60,11 @@ const navList: NavOptions[] = [
 		label: 'Invoices',
 		path: '/invoices/list',
 		icon: <ReceiptLongOutlined />,
+	},
+	{
+		label: 'Job Posts',
+		path: '/job-posts/list/',
+		icon: <WorkOutlineOutlined />,
 	},
 	{
 		label: 'Base Knowledge',

@@ -17,6 +17,7 @@ const Platforms = lazy(() => import('./platforms'))
 const Accounts = lazy(() => import('./accounts'))
 const ClientRequests = lazy(() => import('./client-requests'))
 const Invoices = lazy(() => import('./invoices'))
+const JobPosts = lazy(() => import('./job-posts'))
 
 const Home = () => {
 	return (
@@ -44,6 +45,7 @@ const Home = () => {
 							<Route path='/accounts/*' element={<Accounts />} />
 							<Route path='/client-requests/*' element={<ClientRequests />} />
 							<Route path='/invoices/*' element={<Invoices />} />
+							<Route path='/job-posts/*' element={<JobPosts />} />
 
 							<Route path='/*' element={<PageNotFound />} />
 						</Routes>

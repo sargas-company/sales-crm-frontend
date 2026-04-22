@@ -14,6 +14,7 @@ export const baseApi = createApi({
 		'Account',
 		'Platform',
 		'ClientRequest',
+		'JobPost',
 	],
 	endpoints: () => ({}),
 })
