@@ -729,13 +729,15 @@ socket.on('error', ({ message }) => console.error('Error:', message));
 socket.emit('send_message', {
   proposalId: 'uuid',
   content: 'Write a proposal',
+  model: 'claude-opus-4-6', // опционально
 });
 ```
 
-| Поле | Тип | Описание |
-|---|---|---|
-| `proposalId` | `string` | ID proposal (обязательный) |
-| `content` | `string` | Текст сообщения (обязательный) |
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `proposalId` | `string` | да | ID proposal |
+| `content` | `string` | да | Текст сообщения |
+| `model` | `string` | нет | Модель Claude: `claude-sonnet-4-6` \| `claude-opus-4-6`. Если не передан — используется модель из env (`CLAUDE_MODEL`). |
 
 ---
 
@@ -1074,6 +1076,73 @@ Authorization: Bearer <token>
 
 ---
 
+### POST /job-posts/:id/to-proposal — конвертировать в proposal
+
+Создаёт новый Proposal на основе данных JobPost и связывает их. Платформа подставляется автоматически (Upwork), `accountId` не заполняется.
+
+```http
+POST /job-posts/:id/to-proposal
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "proposalType": "Bid",
+  "boosted": false,
+  "connects": 6,
+  "boostedConnects": 0
+}
+```
+
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `proposalType` | enum | да | `Bid` \| `Invite` \| `DirectMessage` |
+| `boosted` | boolean | нет | Буст (только для `Bid`, default: `false`) |
+| `connects` | number | нет | Коннекты (только для `Bid`, default: `0`) |
+| `boostedConnects` | number | нет | Коннекты за буст (только если `boosted: true`) |
+
+**Маппинг полей из JobPost:**
+
+| JobPost | Proposal | Примечание |
+|---|---|---|
+| `title` | `title` | если `null` — берётся первые 100 символов `rawText` |
+| `jobUrl` | `jobUrl` | |
+| `rawText` | `vacancy` | полный текст поста |
+| `id` | `jobPostId` | связь между сущностями |
+| — | `source` | всегда `telegram` |
+| — | `platformId` | всегда Upwork |
+| — | `accountId` | всегда `null` |
+
+**Ответ `201`:** объект созданного Proposal.
+
+```json
+{
+  "id": "uuid",
+  "title": "Senior LLM Applications Engineer — Multi-Agent Pipelines",
+  "jobUrl": "https://www.upwork.com/jobs/~022046575121448151704",
+  "vacancy": "📡 New opportunity detected\nSenior LLM...",
+  "proposalType": "Bid",
+  "status": "Draft",
+  "source": "telegram",
+  "boosted": false,
+  "connects": 6,
+  "boostedConnects": 0,
+  "coverLetter": null,
+  "sentAt": null,
+  "accountId": null,
+  "platformId": "uuid-of-upwork",
+  "jobPostId": "uuid-of-job-post",
+  "userId": "uuid",
+  "createdAt": "2026-04-22T10:00:00.000Z",
+  "updatedAt": "2026-04-22T10:00:00.000Z",
+  "chat": { "id": "uuid", "proposalId": "uuid", "leadId": null, "createdAt": "..." }
+}
+```
+
+`404` если JobPost не найден.  
+`409` если для этого JobPost уже существует Proposal.
+
+---
+
 ## Settings
 
 ### GET /settings
@@ -1113,6 +1182,7 @@ Content-Type: application/json
 | `400` | Неверные данные запроса |
 | `401` | Не авторизован / токен истёк / невалидный refresh token |
 | `404` | Ресурс не найден |
+| `409` | Конфликт (например, proposal для этого JobPost уже существует) |
 | `500` | Внутренняя ошибка сервера |
 
 **Формат ошибки:**

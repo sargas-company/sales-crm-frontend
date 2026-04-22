@@ -71,6 +71,7 @@ interface ChatState {
 	streamingContent: string
 	streamingAnalysis: { decision: string; reasoning: string } | null
 	isStreaming: boolean
+	selectedModel: string
 }
 
 const initialState: ChatState = {
@@ -88,6 +89,7 @@ const initialState: ChatState = {
 	streamingContent: '',
 	streamingAnalysis: null,
 	isStreaming: false,
+	selectedModel: 'claude-sonnet-4-6',
 }
 
 export const fetchChats = createAsyncThunk(
@@ -168,6 +170,9 @@ const apiChatSlice = createSlice({
 		appendStreamingChunk: (state, action: PayloadAction<string>) => {
 			state.streamingContent += action.payload
 		},
+		setSelectedModel: (state, action: PayloadAction<string>) => {
+			state.selectedModel = action.payload
+		},
 		streamingDone: (state) => {
 			if (state.streamingContent) {
 				const msg: ChatMessage = {
@@ -243,6 +248,7 @@ export const {
 	setStreamingAnalysis,
 	appendStreamingChunk,
 	streamingDone,
+	setSelectedModel,
 } = apiChatSlice.actions
 
 export default apiChatSlice.reducer

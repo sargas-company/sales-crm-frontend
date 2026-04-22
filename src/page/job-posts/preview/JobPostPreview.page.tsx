@@ -1,10 +1,12 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowBackOutlined, OpenInNewOutlined } from '@mui/icons-material'
+import { ArrowBackOutlined, OpenInNewOutlined, RocketLaunchOutlined } from '@mui/icons-material'
 import { Chip } from '@mui/material'
 import Box from '../../../components/box/Box'
 import Card from '../../../components/card/Card'
 import JobPostDecisionChip from '../../../components/job-posts/list/JobPostDecisionChip'
 import JobPostPriorityChip from '../../../components/job-posts/list/JobPostPriorityChip'
+import JobPostToProposalModal from '../../../components/job-posts/JobPostToProposalModal'
 import { Button, Text, IconButton } from '../../../ui'
 import { useGetJobPostByIdQuery } from '../../../store/job-posts/jobPostsApi'
 import { formatDate } from '../../../utils/formatDate'
@@ -19,6 +21,7 @@ const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
 const JobPostPreview = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
+	const [showModal, setShowModal] = useState(false)
 
 	const { data: post, isLoading, isError } = useGetJobPostByIdQuery(id!, { skip: !id })
 
@@ -50,6 +53,17 @@ const JobPostPreview = () => {
 	return (
 		<Card py='2rem' px='2rem'>
 			<Box style={{ maxWidth: 900, margin: '0 auto' }}>
+				{/* Start Proposal button */}
+				<Box display='flex' justify='flex-end' mb={3}>
+					<Button
+						styles={{ display: 'flex', alignItems: 'center', gap: 6 }}
+						onClick={() => setShowModal(true)}
+					>
+						<RocketLaunchOutlined style={{ fontSize: 16 }} />
+						Start Proposal
+					</Button>
+				</Box>
+
 				{/* Header */}
 				<Box display='flex' flexDirection='column' space={2} mb={4}>
 					<Box display='flex' align='flex-start' space={3}>
@@ -163,6 +177,14 @@ const JobPostPreview = () => {
 					</Box>
 				)}
 			</Box>
+
+			{showModal && (
+				<JobPostToProposalModal
+					id={id!}
+					onClose={() => setShowModal(false)}
+					onSuccess={() => navigate('/proposals')}
+				/>
+			)}
 		</Card>
 	)
 }

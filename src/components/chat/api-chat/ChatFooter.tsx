@@ -7,19 +7,20 @@ import { useAppDispatch, useAppSelector } from '../../../hooks'
 import { addUserMessage } from '../../../store/chats/apiChatSlice'
 
 interface Props {
-	onSend: (proposalId: string, content: string) => void
+	onSend: (proposalId: string, content: string, model: string) => void
 }
 
 const ChatFooter = ({ onSend }: Props) => {
 	const dispatch = useAppDispatch()
 	const selectedProposalId = useAppSelector((state) => state.apiChat.selectedProposalId)
 	const isStreaming = useAppSelector((state) => state.apiChat.isStreaming)
+	const selectedModel = useAppSelector((state) => state.apiChat.selectedModel)
 	const [message, setMessage] = useState('')
 
 	const handleSend = () => {
 		if (!message.trim() || !selectedProposalId || isStreaming) return
 		dispatch(addUserMessage({ content: message }))
-		onSend(selectedProposalId, message)
+		onSend(selectedProposalId, message, selectedModel)
 		setMessage('')
 	}
 
@@ -50,7 +51,7 @@ const ChatFooter = ({ onSend }: Props) => {
 							? 'Waiting for response…'
 							: !selectedProposalId
 								? 'Chat unavailable'
-								: 'Type your message here...2'
+								: 'Type your message here...'
 					}
 					endAdornment={
 						<Box mr={16} mt={6} onClick={handleSend} className='cursor-pointer'>

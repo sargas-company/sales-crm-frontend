@@ -10,7 +10,7 @@ import { CustomAvatar, Text } from '../../../ui'
 import useTheme from '../../../theme/useTheme'
 
 interface Props {
-	sendMessage: (proposalId: string, content: string) => void
+	sendMessage: (proposalId: string, content: string, model: string) => void
 }
 
 const CHAT_HEIGHT = '85vh'

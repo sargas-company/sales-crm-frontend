@@ -24,13 +24,12 @@ interface StreamingState {
 }
 
 interface Props {
-	/** URL for loading chat history, e.g. /proposals/:id/chat or /leads/:id/chat */
 	historyUrl: string
-	/** Proposal ID passed to WebSocket send_message. null = read-only mode */
 	proposalId: string | null
+	model?: string
 }
 
-const ChatPanel = ({ historyUrl, proposalId }: Props) => {
+const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 	const [messages, setMessages] = useState<Message[]>([])
 	const [loading, setLoading] = useState(true)
 	const [inputValue, setInputValue] = useState('')
@@ -101,7 +100,7 @@ const ChatPanel = ({ historyUrl, proposalId }: Props) => {
 		}
 		setMessages((m) => [...m, msg])
 		setStreaming({ content: '', analysis: null, active: true })
-		sendMessage(proposalId, inputValue)
+		sendMessage(proposalId, inputValue, model)
 		setInputValue('')
 	}
 

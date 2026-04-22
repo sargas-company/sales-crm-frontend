@@ -145,7 +145,7 @@ const ProposalTable = ({ items, isLoading, onDelete }: Props) => {
 						/>
 						<DataGridCell
 							width={field['account'].width}
-							value={`${row.account.firstName} ${row.account.lastName}`}
+							value={row.account ? `${row.account.firstName} ${row.account.lastName}` : '—'}
 						/>
 						<DataGridCell
 							width={field['platform'].width}

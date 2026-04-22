@@ -24,6 +24,7 @@ const ProposalPreview = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
 	const [activeTab, setActiveTab] = useState(1)
+	const [model, setModel] = useState('claude-sonnet-4-6')
 
 	const { data: proposal, isLoading, isError } = useGetProposalByIdQuery(id!, { skip: !id })
 
@@ -145,9 +146,9 @@ const ProposalPreview = () => {
 
 					<TabContent tabIndex={2}>
 						<Box display='flex' align='center' style={{ marginBottom: 25 }}>
-							<ModelSwitcher />
+							<ModelSwitcher value={model} onChange={setModel} />
 						</Box>
-						<ProposalChat proposalId={proposal.id} />
+						<ProposalChat proposalId={proposal.id} model={model} />
 					</TabContent>
 				</Tab>
 			</Box>

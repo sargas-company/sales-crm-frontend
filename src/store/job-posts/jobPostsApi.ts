@@ -15,7 +15,15 @@ export const jobPostsApi = baseApi.injectEndpoints({
 			query: (id) => ({ url: `/job-posts/${id}` }),
 			providesTags: (_, __, id) => [{ type: 'JobPost', id }],
 		}),
+
+		convertJobPostToProposal: builder.mutation<unknown, string>({
+			query: (id) => ({
+				url: `/job-posts/${id}/to-proposal`,
+				method: 'POST',
+				body: { proposalType: 'Bid', boosted: false, connects: 0, boostedConnects: 0 },
+			}),
+		}),
 	}),
 })
 
-export const { useGetJobPostListQuery, useGetJobPostByIdQuery } = jobPostsApi
+export const { useGetJobPostListQuery, useGetJobPostByIdQuery, useConvertJobPostToProposalMutation } = jobPostsApi

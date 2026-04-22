@@ -86,7 +86,7 @@ const PreviewMain = ({ proposal }: Props) => {
 							label='Developer acc'
 						>
 							<Text varient='body2'>
-								{proposal.account.firstName} {proposal.account.lastName}
+								{proposal.account ? `${proposal.account.firstName} ${proposal.account.lastName}` : '—'}
 							</Text>
 						</InfoRow>
 					</GridItem>

@@ -4,50 +4,66 @@ import { Menu, MenuItem, Divider } from '@mui/material'
 
 import Box from '../../box/Box'
 import { Text } from '../../../ui'
+import { useAppDispatch, useAppSelector } from '../../../hooks'
+import { setSelectedModel } from '../../../store/chats/apiChatSlice'
 
 type ModelOption = {
 	id: string
 	label: string
 	description?: string
-	group?: 'latest' | 'other'
+	modelId: string
 }
 
-const modelOptions: ModelOption[] = [
+export const MODEL_OPTIONS: ModelOption[] = [
 	{
 		id: 'instant',
 		label: 'Claude Sonnet 4.6',
 		description: 'For everyday chats',
-		group: 'latest',
+		modelId: 'claude-sonnet-4-6',
 	},
 	{
 		id: 'thinking',
 		label: 'Claude Opus 4.6',
 		description: 'For complex questions',
-		group: 'latest',
+		modelId: 'claude-opus-4-6',
 	},
 ]
 
-const ModelSwitcher = () => {
+interface Props {
+	/** Controlled mode: current modelId (e.g. 'claude-sonnet-4-6') */
+	value?: string
+	/** Controlled mode: called with the new modelId */
+	onChange?: (modelId: string) => void
+}
+
+const ModelSwitcher = ({ value, onChange }: Props) => {
+	const dispatch = useAppDispatch()
+	const reduxModel = useAppSelector((state) => state.apiChat.selectedModel)
+
+	const isControlled = value !== undefined
+
+	// Uncontrolled: track by option.id; controlled: derive option.id from value
+	const [localId, setLocalId] = useState('instant')
 	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-	const [selectedModel, setSelectedModel] = useState('instant')
+
+	const activeId = isControlled
+		? (MODEL_OPTIONS.find((o) => o.modelId === value)?.id ?? 'instant')
+		: (MODEL_OPTIONS.find((o) => o.modelId === reduxModel)?.id ?? localId)
+
+	const selectedOption = useMemo(() => MODEL_OPTIONS.find((o) => o.id === activeId), [activeId])
 
 	const open = Boolean(anchorEl)
 
-	const selectedOption = useMemo(
-		() => modelOptions.find((option) => option.id === selectedModel),
-		[selectedModel]
-	)
+	const handleOpen = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget)
+	const handleClose = () => setAnchorEl(null)
 
-	const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
-		setAnchorEl(event.currentTarget)
-	}
-
-	const handleClose = () => {
-		setAnchorEl(null)
-	}
-
-	const handleSelect = (modelId: string) => {
-		setSelectedModel(modelId)
+	const handleSelect = (option: ModelOption) => {
+		if (isControlled) {
+			onChange?.(option.modelId)
+		} else {
+			setLocalId(option.id)
+			dispatch(setSelectedModel(option.modelId))
+		}
 		handleClose()
 	}
 
@@ -98,13 +114,13 @@ const ModelSwitcher = () => {
 					</Text>
 				</Box>
 
-				{modelOptions.map((option) => {
-					const isSelected = option.id === selectedModel
+				{MODEL_OPTIONS.map((option) => {
+					const isSelected = option.id === activeId
 
 					return (
 						<MenuItem
 							key={option.id}
-							onClick={() => handleSelect(option.id)}
+							onClick={() => handleSelect(option)}
 							style={{
 								borderRadius: 12,
 								margin: '4px 0',
