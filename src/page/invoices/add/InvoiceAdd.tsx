@@ -1,4 +1,5 @@
 import { FC, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import InvoicePartyStep from './InvoicePartyStep'
 import InvoiceFormStep from './InvoiceFormStep'
@@ -18,6 +19,7 @@ type Party = {
 }
 
 const InvoiceAddPage: FC = () => {
+	const navigate = useNavigate()
 	const [step, setStep] = useState<'select' | 'form'>('select')
 	const [selectedType, setSelectedType] = useState<PartyType | null>(null)
 	const [selectedParty, setSelectedParty] = useState<Party | null>(null)
@@ -41,6 +43,7 @@ const InvoiceAddPage: FC = () => {
 			selectedType={selectedType}
 			selectedParty={selectedParty}
 			onBack={() => setStep('select')}
+			onSaved={() => navigate('/invoices/list')}
 		/>
 	)
 }

@@ -27,6 +27,7 @@ export interface InvoiceLabels {
 }
 
 export interface InvoiceLineItemPayload {
+	id?: string
 	name: string
 	description?: string
 	quantity: number
@@ -62,17 +63,62 @@ export interface InvoiceCreatePayload {
 
 export interface InvoiceItem extends InvoiceCreatePayload {
 	id: string
+	counterparty?: {
+		id: string
+		firstName?: string
+		lastName?: string
+		displayName?: string
+		type?: string
+	}
 	createdAt?: string
 	updatedAt?: string
 }
 
+export interface InvoicePage {
+	data: InvoiceItem[]
+	total: number
+}
+
+export type InvoiceListResponse = InvoicePage | InvoiceItem[]
+
+export interface InvoiceListParams {
+	page: number
+	limit: number
+}
+
 export const invoicesApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
+		getInvoiceList: builder.query<InvoiceListResponse, InvoiceListParams>({
+			query: ({ page, limit }) => ({ url: '/invoices', params: { page, limit } }),
+			providesTags: ['Invoice'],
+		}),
+
+		getInvoiceById: builder.query<InvoiceItem, string>({
+			query: (id) => ({ url: `/invoices/${id}` }),
+			providesTags: (_, __, id) => [{ type: 'Invoice', id }],
+		}),
+
 		createInvoice: builder.mutation<InvoiceItem, InvoiceCreatePayload>({
 			query: (body) => ({ url: '/invoices', method: 'POST', body }),
+			invalidatesTags: ['Invoice'],
+		}),
+
+		updateInvoice: builder.mutation<InvoiceItem, { id: string; body: InvoiceCreatePayload }>({
+			query: ({ id, body }) => ({ url: `/invoices/${id}`, method: 'PATCH', body }),
+			invalidatesTags: (_, __, { id }) => ['Invoice', { type: 'Invoice', id }],
+		}),
+
+		deleteInvoice: builder.mutation<void, string>({
+			query: (id) => ({ url: `/invoices/${id}`, method: 'DELETE' }),
 			invalidatesTags: ['Invoice'],
 		}),
 	}),
 })
 
-export const { useCreateInvoiceMutation } = invoicesApi
+export const {
+	useGetInvoiceListQuery,
+	useGetInvoiceByIdQuery,
+	useCreateInvoiceMutation,
+	useUpdateInvoiceMutation,
+	useDeleteInvoiceMutation,
+} = invoicesApi

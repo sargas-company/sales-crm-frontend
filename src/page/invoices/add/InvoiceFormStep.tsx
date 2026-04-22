@@ -14,8 +14,10 @@ import { Add, ArrowBack, Close, Loop } from '@mui/icons-material'
 import logo from '../../../assets/logo.png'
 import {
 	type InvoiceCreatePayload,
+	type InvoiceItem as ApiInvoiceItem,
 	type InvoiceLabels,
 	useCreateInvoiceMutation,
+	useUpdateInvoiceMutation,
 } from '../../../store/invoices/invoicesApi'
 
 type PartyType = 'contractor' | 'client'
@@ -50,7 +52,9 @@ type EditableLabelProps = {
 type Props = {
 	selectedType: PartyType
 	selectedParty: Party
+	invoice?: ApiInvoiceItem
 	onBack?: () => void
+	onSaved?: (invoice: ApiInvoiceItem) => void
 }
 
 const companyProfile = {
@@ -88,6 +92,12 @@ const addDays = (dateValue: string, days: number) => {
 	return formatDateInputValue(date)
 }
 
+const normalizeDateInputValue = (dateValue: string | undefined, fallback: string) => {
+	if (!dateValue) return fallback
+
+	return dateValue.slice(0, 10)
+}
+
 const DEFAULT_LABELS: InvoiceLabels = {
 	from_title: '',
 	to_title: 'Bill To',
@@ -112,32 +122,34 @@ const DEFAULT_LABELS: InvoiceLabels = {
 	balance_title: 'Balance Due',
 }
 
-const buildInitialForm = (party: Party, selectedType: PartyType) => {
+const buildInitialForm = (party: Party, selectedType: PartyType, invoice?: ApiInvoiceItem) => {
 	const isContractor = selectedType === 'contractor'
 	const issueDate = formatDateInputValue(new Date())
 
 	return {
-		header: 'INVOICE',
-		number: '115',
-		currency: party.currency || companyProfile.currency,
-		date: issueDate,
-		paymentTerms: '',
-		dueDate: addDays(issueDate, 30),
-		poNumber: '',
-		fromValue: isContractor ? party.invoiceBlock : companyProfile.invoiceBlock,
-		toValue: isContractor ? companyProfile.invoiceBlock : party.invoiceBlock,
-		shipTo: party.defaultShipTo || '',
-		notes: '',
-		terms: '',
-		amountPaid: 0,
+		header: invoice?.header ?? 'INVOICE',
+		number: invoice?.number ?? '115',
+		currency: invoice?.currency ?? party.currency ?? companyProfile.currency,
+		date: normalizeDateInputValue(invoice?.date, issueDate),
+		paymentTerms: invoice?.paymentTerms ?? '',
+		dueDate: normalizeDateInputValue(invoice?.dueDate, addDays(issueDate, 30)),
+		poNumber: invoice?.poNumber ?? '',
+		fromValue:
+			invoice?.fromValue ?? (isContractor ? party.invoiceBlock : companyProfile.invoiceBlock),
+		toValue:
+			invoice?.toValue ?? (isContractor ? companyProfile.invoiceBlock : party.invoiceBlock),
+		shipTo: invoice?.shipTo ?? party.defaultShipTo ?? '',
+		notes: invoice?.notes ?? '',
+		terms: invoice?.terms ?? '',
+		amountPaid: invoice?.amountPaid ?? 0,
 		taxMode: 'percent' as 'percent' | 'fixed',
-		tax: 0,
-		discounts: 0,
-		shipping: 0,
-		showTax: true,
-		showDiscounts: false,
-		showShipping: false,
-		showShipTo: Boolean(party.defaultShipTo),
+		tax: invoice?.tax ?? 0,
+		discounts: invoice?.discounts ?? 0,
+		shipping: invoice?.shipping ?? 0,
+		showTax: invoice?.showTax ?? true,
+		showDiscounts: invoice?.showDiscounts ?? false,
+		showShipping: invoice?.showShipping ?? false,
+		showShipTo: invoice?.showShipTo ?? Boolean(party.defaultShipTo),
 	}
 }
 
@@ -196,16 +208,51 @@ const EditableLabel: FC<EditableLabelProps> = ({ value, onChange, sx, inputSx, a
 			htmlInput: { 'aria-label': ariaLabel },
 		}}
 		sx={{
+			position: 'relative',
 			width: '100%',
 			minWidth: 0,
+			cursor: 'text',
+			zIndex: 0,
 			...sx,
+			'&::before': {
+				content: '""',
+				position: 'absolute',
+				left: '-14px',
+				right: '-14px',
+				top: '50%',
+				height: 'max(44px, calc(100% + 20px))',
+				transform: 'translateY(-50%)',
+				border: '1px solid transparent',
+				borderRadius: '10px',
+				backgroundColor: 'transparent',
+				boxShadow: 'none',
+				pointerEvents: 'none',
+				transition:
+					'border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease',
+				zIndex: 0,
+			},
+			'&:hover::before': {
+				borderColor: '#d0d5dd',
+				backgroundColor: '#fff',
+			},
+			'&:focus-within::before': {
+				border: '2px solid #1c75d2',
+				borderColor: '#1c75d2',
+				backgroundColor: '#fff',
+				boxShadow: '0 0 0 3px rgba(28, 117, 210, 0.14)',
+			},
+			'&:hover .MuiInputBase-input, &:focus-within .MuiInputBase-input': {
+				color: '#101828',
+			},
 			'& .MuiInputBase-root': {
+				position: 'relative',
 				color: 'inherit',
 				fontFamily: 'inherit',
 				fontSize: 'inherit',
 				fontWeight: 'inherit',
 				letterSpacing: 'inherit',
 				lineHeight: 'inherit',
+				zIndex: 1,
 			},
 			'& .MuiInputBase-input': {
 				color: 'inherit',
@@ -222,14 +269,33 @@ const EditableLabel: FC<EditableLabelProps> = ({ value, onChange, sx, inputSx, a
 	/>
 )
 
-const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => {
-	const [form, setForm] = useState(() => buildInitialForm(selectedParty, selectedType))
-	const [labels, setLabels] = useState<InvoiceLabels>(DEFAULT_LABELS)
-	const [items, setItems] = useState<InvoiceItem[]>([
-		{ id: '1', name: 'Web Development services', quantity: 160, unitCost: 1.87 },
-		{ id: '2', name: 'Bonus', quantity: 1, unitCost: 252.8 },
-	])
+const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBack, onSaved }) => {
+	const [form, setForm] = useState(() => buildInitialForm(selectedParty, selectedType, invoice))
+	const [labels, setLabels] = useState<InvoiceLabels>(() => ({
+		...DEFAULT_LABELS,
+		...(invoice?.labels ?? {}),
+	}))
+	const [items, setItems] = useState<InvoiceItem[]>(() => {
+		if (invoice?.lineItems?.length) {
+			return invoice.lineItems
+				.slice()
+				.sort((a, b) => a.sortOrder - b.sortOrder)
+				.map((item, index) => ({
+					id: item.id ?? `${index}`,
+					name: item.name,
+					quantity: item.quantity,
+					unitCost: item.unitCost,
+				}))
+		}
+
+		return [
+			{ id: '1', name: 'Web Development services', quantity: 160, unitCost: 1.87 },
+			{ id: '2', name: 'Bonus', quantity: 1, unitCost: 252.8 },
+		]
+	})
 	const [createInvoice, { isLoading: isSaving }] = useCreateInvoiceMutation()
+	const [updateInvoice, { isLoading: isUpdating }] = useUpdateInvoiceMutation()
+	const saving = isSaving || isUpdating
 
 	const subtotal = useMemo(() => {
 		return items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0)
@@ -300,7 +366,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 
 	const handleCreateInvoice = async () => {
 		try {
-			await createInvoice(buildInvoicePayload()).unwrap()
+			const payload = buildInvoicePayload()
+			const savedInvoice = invoice
+				? await updateInvoice({ id: invoice.id, body: payload }).unwrap()
+				: await createInvoice(payload).unwrap()
+
+			onSaved?.(savedInvoice)
 		} catch (error) {
 			console.error('Failed to create invoice', error)
 		}
@@ -340,19 +411,11 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 					<Card sx={{ borderRadius: '12px' }}>
 						<CardContent>
 							<Box sx={{ display: 'flex', flexDirection: 'raw', gap: 1.5 }}>
-								<Button
-									variant='contained'
-									disabled={isSaving}
-									onClick={handleCreateInvoice}
-								>
+								<Button variant='contained' disabled={saving} onClick={handleCreateInvoice}>
 									Create PDF
 								</Button>
-								<Button
-									variant='outlined'
-									disabled={isSaving}
-									onClick={handleCreateInvoice}
-								>
-									Save Draft
+								<Button variant='outlined' disabled={saving} onClick={handleCreateInvoice}>
+									{invoice ? 'Save Changes' : 'Save Draft'}
 								</Button>
 							</Box>
 						</CardContent>
