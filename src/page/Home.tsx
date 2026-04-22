@@ -15,6 +15,7 @@ const Leads = lazy(() => import('./leads'))
 const BaseKnowledge = lazy(() => import('./base-knowledge'))
 const Platforms = lazy(() => import('./platforms'))
 const Accounts = lazy(() => import('./accounts'))
+const Counterparties = lazy(() => import('./counterparties'))
 const ClientRequests = lazy(() => import('./client-requests'))
 const Invoices = lazy(() => import('./invoices'))
 const JobPosts = lazy(() => import('./job-posts'))
@@ -43,6 +44,7 @@ const Home = () => {
 							<Route path='/knowledge/*' element={<BaseKnowledge />} />
 							<Route path='/platforms/*' element={<Platforms />} />
 							<Route path='/accounts/*' element={<Accounts />} />
+							<Route path='/counterparties/*' element={<Counterparties />} />
 							<Route path='/client-requests/*' element={<ClientRequests />} />
 							<Route path='/invoices/*' element={<Invoices />} />
 							<Route path='/job-posts/*' element={<JobPosts />} />

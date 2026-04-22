@@ -8,6 +8,7 @@ import {
 	RequestQuoteOutlined,
 	LayersOutlined,
 	AccountCircleOutlined,
+	ContactsOutlined,
 	ReceiptLongOutlined,
 	AssignmentOutlined,
 	WorkOutlineOutlined,
@@ -154,6 +155,11 @@ export const secondaryNavList: NavOptions[] = [
 		label: 'Accounts',
 		path: '/accounts/list/',
 		icon: <AccountCircleOutlined />,
+	},
+	{
+		label: 'Counterparties',
+		path: '/counterparties/list/',
+		icon: <ContactsOutlined />,
 	},
 ]
 

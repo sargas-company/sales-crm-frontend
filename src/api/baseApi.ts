@@ -13,6 +13,7 @@ export const baseApi = createApi({
 		'Lead',
 		'Account',
 		'Platform',
+		'Counterparty',
 		'ClientRequest',
 		'JobPost',
 	],
