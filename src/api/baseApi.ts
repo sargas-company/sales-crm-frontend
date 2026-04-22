@@ -16,6 +16,7 @@ export const baseApi = createApi({
 		'Counterparty',
 		'ClientRequest',
 		'JobPost',
+		'Invoice',
 	],
 	endpoints: () => ({}),
 })

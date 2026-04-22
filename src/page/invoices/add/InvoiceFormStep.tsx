@@ -12,6 +12,11 @@ import {
 } from '@mui/material'
 import { Add, ArrowBack, Close, Loop } from '@mui/icons-material'
 import logo from '../../../assets/logo.png'
+import {
+	type InvoiceCreatePayload,
+	type InvoiceLabels,
+	useCreateInvoiceMutation,
+} from '../../../store/invoices/invoicesApi'
 
 type PartyType = 'contractor' | 'client'
 
@@ -34,6 +39,14 @@ type InvoiceItem = {
 	unitCost: number
 }
 
+type EditableLabelProps = {
+	value: string
+	onChange: (value: string) => void
+	sx?: Record<string, unknown>
+	inputSx?: Record<string, unknown>
+	ariaLabel: string
+}
+
 type Props = {
 	selectedType: PartyType
 	selectedParty: Party
@@ -48,14 +61,6 @@ const companyProfile = {
 	defaultPaymentTerms: 'Due on receipt',
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
-
-const addDays = (base: string, days: number) => {
-	const date = new Date(base)
-	date.setDate(date.getDate() + days)
-	return date.toISOString().slice(0, 10)
-}
-
 const formatMoney = (value: number, currency: 'USD' | 'EUR' | 'UAH') => {
 	try {
 		return new Intl.NumberFormat('en-US', {
@@ -68,28 +73,85 @@ const formatMoney = (value: number, currency: 'USD' | 'EUR' | 'UAH') => {
 	}
 }
 
+const formatDateInputValue = (date: Date) => {
+	const year = date.getFullYear()
+	const month = `${date.getMonth() + 1}`.padStart(2, '0')
+	const day = `${date.getDate()}`.padStart(2, '0')
+
+	return `${year}-${month}-${day}`
+}
+
+const addDays = (dateValue: string, days: number) => {
+	const date = new Date(`${dateValue}T00:00:00`)
+	date.setDate(date.getDate() + days)
+
+	return formatDateInputValue(date)
+}
+
+const DEFAULT_LABELS: InvoiceLabels = {
+	from_title: '',
+	to_title: 'Bill To',
+	ship_to_title: 'Ship To',
+	notes_title: 'Notes',
+	terms_title: 'Terms',
+	invoice_number_title: '#',
+	date_title: 'Date',
+	due_date_title: 'Due Date',
+	payment_terms_title: 'Payment Terms',
+	purchase_order_title: 'Purchase Order',
+	item_header: 'Item',
+	quantity_header: 'Quantity',
+	unit_cost_header: 'Rate',
+	amount_header: 'Amount',
+	subtotal_title: 'Subtotal',
+	tax_title: 'Tax',
+	discounts_title: 'Discounts',
+	shipping_title: 'Shipping',
+	total_title: 'Total',
+	amount_paid_title: 'Amount Paid',
+	balance_title: 'Balance Due',
+}
+
 const buildInitialForm = (party: Party, selectedType: PartyType) => {
-	const issueDate = today()
 	const isContractor = selectedType === 'contractor'
+	const issueDate = formatDateInputValue(new Date())
 
 	return {
+		header: 'INVOICE',
 		number: '115',
 		currency: party.currency || companyProfile.currency,
-		date: '',
+		date: issueDate,
 		paymentTerms: '',
-		dueDate: '',
+		dueDate: addDays(issueDate, 30),
 		poNumber: '',
-		fromText: isContractor ? party.invoiceBlock : companyProfile.invoiceBlock,
-		toText: isContractor ? companyProfile.invoiceBlock : party.invoiceBlock,
-		shipToText: party.defaultShipTo || '',
+		fromValue: isContractor ? party.invoiceBlock : companyProfile.invoiceBlock,
+		toValue: isContractor ? companyProfile.invoiceBlock : party.invoiceBlock,
+		shipTo: party.defaultShipTo || '',
 		notes: '',
 		terms: '',
 		amountPaid: 0,
 		taxMode: 'percent' as 'percent' | 'fixed',
-		taxValue: 0,
-		discountValue: 0,
-		shippingValue: 0,
+		tax: 0,
+		discounts: 0,
+		shipping: 0,
+		showTax: true,
+		showDiscounts: false,
+		showShipping: false,
+		showShipTo: Boolean(party.defaultShipTo),
 	}
+}
+
+const buildChangedLabels = (labels: InvoiceLabels) => {
+	return (Object.keys(labels) as Array<keyof InvoiceLabels>).reduce<Partial<InvoiceLabels>>(
+		(acc, key) => {
+			if (labels[key] !== DEFAULT_LABELS[key]) {
+				acc[key] = labels[key]
+			}
+
+			return acc
+		},
+		{}
+	)
 }
 
 const outlinedSx = {
@@ -124,24 +186,67 @@ const labelSx = {
 	mb: 1,
 }
 
+const EditableLabel: FC<EditableLabelProps> = ({ value, onChange, sx, inputSx, ariaLabel }) => (
+	<TextField
+		variant='standard'
+		value={value}
+		onChange={(e) => onChange(e.target.value)}
+		slotProps={{
+			input: { disableUnderline: true },
+			htmlInput: { 'aria-label': ariaLabel },
+		}}
+		sx={{
+			width: '100%',
+			minWidth: 0,
+			...sx,
+			'& .MuiInputBase-root': {
+				color: 'inherit',
+				fontFamily: 'inherit',
+				fontSize: 'inherit',
+				fontWeight: 'inherit',
+				letterSpacing: 'inherit',
+				lineHeight: 'inherit',
+			},
+			'& .MuiInputBase-input': {
+				color: 'inherit',
+				fontFamily: 'inherit',
+				fontSize: 'inherit',
+				fontWeight: 'inherit',
+				letterSpacing: 'inherit',
+				lineHeight: 'inherit',
+				p: 0,
+				textAlign: 'inherit',
+				...inputSx,
+			},
+		}}
+	/>
+)
+
 const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => {
 	const [form, setForm] = useState(() => buildInitialForm(selectedParty, selectedType))
+	const [labels, setLabels] = useState<InvoiceLabels>(DEFAULT_LABELS)
 	const [items, setItems] = useState<InvoiceItem[]>([
 		{ id: '1', name: 'Web Development services', quantity: 160, unitCost: 1.87 },
 		{ id: '2', name: 'Bonus', quantity: 1, unitCost: 252.8 },
 	])
+	const [createInvoice, { isLoading: isSaving }] = useCreateInvoiceMutation()
 
 	const subtotal = useMemo(() => {
 		return items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0)
 	}, [items])
 
 	const taxAmount = useMemo(() => {
-		return form.taxMode === 'percent' ? subtotal * (form.taxValue / 100) : form.taxValue
-	}, [form.taxMode, form.taxValue, subtotal])
+		if (!form.showTax) return 0
+
+		return form.taxMode === 'percent' ? subtotal * (form.tax / 100) : form.tax
+	}, [form.showTax, form.taxMode, form.tax, subtotal])
 
 	const total = useMemo(() => {
-		return subtotal + taxAmount + form.shippingValue - form.discountValue
-	}, [subtotal, taxAmount, form.shippingValue, form.discountValue])
+		const discounts = form.showDiscounts ? form.discounts : 0
+		const shipping = form.showShipping ? form.shipping : 0
+
+		return subtotal + taxAmount + shipping - discounts
+	}, [subtotal, taxAmount, form.showDiscounts, form.discounts, form.showShipping, form.shipping])
 
 	const balanceDue = useMemo(() => {
 		return Math.max(total - form.amountPaid, 0)
@@ -151,6 +256,54 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 		setItems((current) =>
 			current.map((item) => (item.id === id ? { ...item, [key]: value } : item))
 		)
+	}
+
+	const updateLabel = (key: keyof InvoiceLabels, value: string) => {
+		setLabels((current) => ({ ...current, [key]: value }))
+	}
+
+	const buildInvoicePayload = (): InvoiceCreatePayload => {
+		const changedLabels = buildChangedLabels(labels)
+
+		return {
+			//counterpartyId: selectedParty.id,
+			counterpartyId: '7aa7310e-cfa3-4efd-9205-c963ad3b42d4',
+			number: form.number,
+			currency: form.currency,
+			date: form.date,
+			dueDate: form.dueDate,
+			paymentTerms: form.paymentTerms,
+			poNumber: form.poNumber,
+			header: form.header,
+			fromValue: form.fromValue,
+			toValue: form.toValue,
+			shipTo: form.shipTo,
+			notes: form.notes,
+			terms: form.terms,
+			tax: form.tax,
+			discounts: form.showDiscounts ? form.discounts : 0,
+			shipping: form.showShipping ? form.shipping : 0,
+			amountPaid: form.amountPaid,
+			showTax: form.showTax,
+			showDiscounts: form.showDiscounts,
+			showShipping: form.showShipping,
+			showShipTo: form.showShipTo,
+			lineItems: items.map((item, index) => ({
+				name: item.name,
+				quantity: item.quantity,
+				unitCost: item.unitCost,
+				sortOrder: index,
+			})),
+			...(Object.keys(changedLabels).length > 0 ? { labels: changedLabels } : {}),
+		}
+	}
+
+	const handleCreateInvoice = async () => {
+		try {
+			await createInvoice(buildInvoicePayload()).unwrap()
+		} catch (error) {
+			console.error('Failed to create invoice', error)
+		}
 	}
 
 	const addItem = () => {
@@ -187,8 +340,20 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 					<Card sx={{ borderRadius: '12px' }}>
 						<CardContent>
 							<Box sx={{ display: 'flex', flexDirection: 'raw', gap: 1.5 }}>
-								<Button variant='contained'>Create PDF</Button>
-								<Button variant='outlined'>Save Draft</Button>
+								<Button
+									variant='contained'
+									disabled={isSaving}
+									onClick={handleCreateInvoice}
+								>
+									Create PDF
+								</Button>
+								<Button
+									variant='outlined'
+									disabled={isSaving}
+									onClick={handleCreateInvoice}
+								>
+									Save Draft
+								</Button>
 							</Box>
 						</CardContent>
 					</Card>
@@ -219,7 +384,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 										width: '118px',
 										borderRadius: '12px',
 										overflow: 'hidden',
-										mb: '28px',
+										mb: '6px',
 									}}
 								>
 									<Box
@@ -235,13 +400,20 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 									/>
 								</Box>
 
+								<EditableLabel
+									value={labels.from_title}
+									onChange={(value) => updateLabel('from_title', value)}
+									ariaLabel='From label'
+									sx={{ ...labelSx, maxWidth: '448px', mb: '4px', height: '18px' }}
+								/>
+
 								<TextField
 									multiline
 									minRows={10}
 									fullWidth
-									value={form.fromText}
+									value={form.fromValue}
 									onChange={(e) =>
-										setForm((current) => ({ ...current, fromText: e.target.value }))
+										setForm((current) => ({ ...current, fromValue: e.target.value }))
 									}
 									sx={{
 										...areaSx,
@@ -260,8 +432,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 							</Box>
 
 							<Box>
-								<Typography
-									variant='h1'
+								<EditableLabel
+									value={form.header}
+									onChange={(value) =>
+										setForm((current) => ({ ...current, header: value }))
+									}
+									ariaLabel='Document title'
 									sx={{
 										fontSize: '52px',
 										lineHeight: 1,
@@ -271,9 +447,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 										color: '#0d1730',
 										mb: '22px',
 									}}
-								>
-									INVOICE
-								</Typography>
+								/>
 
 								<Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: '84px' }}>
 									<Box sx={{ width: '202px' }}>
@@ -283,7 +457,10 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 												width: '202px',
 											}}
 										>
-											<Box
+											<EditableLabel
+												value={labels.invoice_number_title}
+												onChange={(value) => updateLabel('invoice_number_title', value)}
+												ariaLabel='Invoice number label'
 												sx={{
 													position: 'absolute',
 													left: '14px',
@@ -293,11 +470,9 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 													fontSize: '18px',
 													lineHeight: 1,
 													zIndex: 1,
-													pointerEvents: 'none',
+													width: '32px',
 												}}
-											>
-												#
-											</Box>
+											/>
 
 											<TextField
 												fullWidth
@@ -335,8 +510,14 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 										pl: '72px',
 									}}
 								>
-									<Typography sx={{ fontSize: '13px', color: '#475467' }}>Date</Typography>
+									<EditableLabel
+										value={labels.date_title}
+										onChange={(value) => updateLabel('date_title', value)}
+										ariaLabel='Date label'
+										sx={{ fontSize: '13px', color: '#475467' }}
+									/>
 									<TextField
+										type='date'
 										fullWidth
 										value={form.date}
 										onChange={(e) =>
@@ -345,9 +526,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 										sx={outlinedSx}
 									/>
 
-									<Typography sx={{ fontSize: '13px', color: '#475467' }}>
-										Payment Terms
-									</Typography>
+									<EditableLabel
+										value={labels.payment_terms_title}
+										onChange={(value) => updateLabel('payment_terms_title', value)}
+										ariaLabel='Payment terms label'
+										sx={{ fontSize: '13px', color: '#475467' }}
+									/>
 									<TextField
 										fullWidth
 										value={form.paymentTerms}
@@ -360,10 +544,14 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 										sx={outlinedSx}
 									/>
 
-									<Typography sx={{ fontSize: '13px', color: '#475467' }}>
-										Due Date
-									</Typography>
+									<EditableLabel
+										value={labels.due_date_title}
+										onChange={(value) => updateLabel('due_date_title', value)}
+										ariaLabel='Due date label'
+										sx={{ fontSize: '13px', color: '#475467' }}
+									/>
 									<TextField
+										type='date'
 										fullWidth
 										value={form.dueDate}
 										onChange={(e) =>
@@ -372,9 +560,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 										sx={outlinedSx}
 									/>
 
-									<Typography sx={{ fontSize: '13px', color: '#475467' }}>
-										PO Number
-									</Typography>
+									<EditableLabel
+										value={labels.purchase_order_title}
+										onChange={(value) => updateLabel('purchase_order_title', value)}
+										ariaLabel='Purchase order label'
+										sx={{ fontSize: '13px', color: '#475467' }}
+									/>
 									<TextField
 										fullWidth
 										value={form.poNumber}
@@ -397,14 +588,19 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 							}}
 						>
 							<Box>
-								<Typography sx={labelSx}>Bill To</Typography>
+								<EditableLabel
+									value={labels.to_title}
+									onChange={(value) => updateLabel('to_title', value)}
+									ariaLabel='Bill to label'
+									sx={labelSx}
+								/>
 								<TextField
 									multiline
 									minRows={3}
 									fullWidth
-									value={form.toText}
+									value={form.toValue}
 									onChange={(e) =>
-										setForm((current) => ({ ...current, toText: e.target.value }))
+										setForm((current) => ({ ...current, toValue: e.target.value }))
 									}
 									sx={{
 										...areaSx,
@@ -422,16 +618,27 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 							</Box>
 
 							<Box>
-								<Typography sx={labelSx}>Ship To</Typography>
+								<EditableLabel
+									value={labels.ship_to_title}
+									onChange={(value) => updateLabel('ship_to_title', value)}
+									ariaLabel='Ship to label'
+									sx={labelSx}
+								/>
 								<TextField
 									multiline
 									minRows={3}
 									fullWidth
 									placeholder='(optional)'
-									value={form.shipToText}
-									onChange={(e) =>
-										setForm((current) => ({ ...current, shipToText: e.target.value }))
-									}
+									value={form.shipTo}
+									onChange={(e) => {
+										const shipTo = e.target.value
+
+										setForm((current) => ({
+											...current,
+											shipTo,
+											showShipTo: shipTo.trim().length > 0,
+										}))
+									}}
 									sx={{
 										...areaSx,
 										'& .MuiOutlinedInput-root': {
@@ -470,10 +677,29 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 									fontWeight: 700,
 								}}
 							>
-								<Box>Item</Box>
-								<Box sx={{ textAlign: 'center' }}>Quantity</Box>
-								<Box sx={{ textAlign: 'center' }}>Rate</Box>
-								<Box sx={{ textAlign: 'center' }}>Amount</Box>
+								<EditableLabel
+									value={labels.item_header}
+									onChange={(value) => updateLabel('item_header', value)}
+									ariaLabel='Item header'
+								/>
+								<EditableLabel
+									value={labels.quantity_header}
+									onChange={(value) => updateLabel('quantity_header', value)}
+									ariaLabel='Quantity header'
+									sx={{ textAlign: 'center' }}
+								/>
+								<EditableLabel
+									value={labels.unit_cost_header}
+									onChange={(value) => updateLabel('unit_cost_header', value)}
+									ariaLabel='Rate header'
+									sx={{ textAlign: 'center' }}
+								/>
+								<EditableLabel
+									value={labels.amount_header}
+									onChange={(value) => updateLabel('amount_header', value)}
+									ariaLabel='Amount header'
+									sx={{ textAlign: 'center' }}
+								/>
 								<Box />
 							</Box>
 
@@ -592,7 +818,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 							}}
 						>
 							<Box>
-								<Typography sx={{ ...labelSx, mb: '10px' }}>Notes</Typography>
+								<EditableLabel
+									value={labels.notes_title}
+									onChange={(value) => updateLabel('notes_title', value)}
+									ariaLabel='Notes label'
+									sx={{ ...labelSx, mb: '10px' }}
+								/>
 								<TextField
 									multiline
 									minRows={2}
@@ -615,7 +846,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 									}}
 								/>
 
-								<Typography sx={{ ...labelSx, mt: '34px', mb: '10px' }}>Terms</Typography>
+								<EditableLabel
+									value={labels.terms_title}
+									onChange={(value) => updateLabel('terms_title', value)}
+									ariaLabel='Terms label'
+									sx={{ ...labelSx, mt: '34px', mb: '10px' }}
+								/>
 								<TextField
 									multiline
 									minRows={2}
@@ -648,9 +884,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 										alignItems: 'center',
 									}}
 								>
-									<Typography sx={{ fontSize: '14px', color: '#475467' }}>
-										Subtotal
-									</Typography>
+									<EditableLabel
+										value={labels.subtotal_title}
+										onChange={(value) => updateLabel('subtotal_title', value)}
+										ariaLabel='Subtotal label'
+										sx={{ fontSize: '14px', color: '#475467' }}
+									/>
 									<Typography
 										sx={{
 											fontSize: '14px',
@@ -662,7 +901,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 										{formatMoney(subtotal, form.currency)}
 									</Typography>
 
-									<Typography sx={{ fontSize: '14px', color: '#475467' }}>Tax</Typography>
+									<EditableLabel
+										value={labels.tax_title}
+										onChange={(value) => updateLabel('tax_title', value)}
+										ariaLabel='Tax label'
+										sx={{ fontSize: '14px', color: '#475467' }}
+									/>
 									<Box
 										sx={{
 											display: 'grid',
@@ -673,11 +917,11 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 										}}
 									>
 										<TextField
-											value={form.taxValue}
+											value={form.tax}
 											onChange={(e) =>
 												setForm((current) => ({
 													...current,
-													taxValue: Number(e.target.value),
+													tax: Number(e.target.value),
 												}))
 											}
 											sx={{
@@ -722,36 +966,152 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 										</Box>
 									</Box>
 
-									<Box
-										sx={{
-											display: 'flex',
-											gap: '24px',
-											gridColumn: '1 / span 2',
-											mt: '-6px',
-											mb: '2px',
-										}}
-									>
-										<Typography
+									{form.showDiscounts ? (
+										<>
+											<EditableLabel
+												value={labels.discounts_title}
+												onChange={(value) => updateLabel('discounts_title', value)}
+												ariaLabel='Discounts label'
+												sx={{ fontSize: '14px', color: '#475467' }}
+											/>
+											<Box sx={{ justifySelf: 'end', width: '170px' }}>
+												<Box sx={{ position: 'relative', width: '170px' }}>
+													<Box
+														sx={{
+															position: 'absolute',
+															left: '12px',
+															top: '50%',
+															transform: 'translateY(-50%)',
+															color: '#667085',
+															fontSize: '14px',
+															lineHeight: 1,
+															zIndex: 1,
+															pointerEvents: 'none',
+														}}
+													>
+														$
+													</Box>
+
+													<TextField
+														fullWidth
+														value={form.discounts}
+														onChange={(e) =>
+															setForm((current) => ({
+																...current,
+																discounts: Number(e.target.value),
+															}))
+														}
+														sx={{
+															...outlinedSx,
+															'& .MuiOutlinedInput-input': {
+																padding: '11px 12px 11px 26px',
+																fontSize: '14px',
+																textAlign: 'right',
+															},
+														}}
+													/>
+												</Box>
+											</Box>
+										</>
+									) : null}
+
+									{form.showShipping ? (
+										<>
+											<EditableLabel
+												value={labels.shipping_title}
+												onChange={(value) => updateLabel('shipping_title', value)}
+												ariaLabel='Shipping label'
+												sx={{ fontSize: '14px', color: '#475467' }}
+											/>
+											<Box sx={{ justifySelf: 'end', width: '170px' }}>
+												<Box sx={{ position: 'relative', width: '170px' }}>
+													<Box
+														sx={{
+															position: 'absolute',
+															left: '12px',
+															top: '50%',
+															transform: 'translateY(-50%)',
+															color: '#667085',
+															fontSize: '14px',
+															lineHeight: 1,
+															zIndex: 1,
+															pointerEvents: 'none',
+														}}
+													>
+														$
+													</Box>
+
+													<TextField
+														fullWidth
+														value={form.shipping}
+														onChange={(e) =>
+															setForm((current) => ({
+																...current,
+																shipping: Number(e.target.value),
+															}))
+														}
+														sx={{
+															...outlinedSx,
+															'& .MuiOutlinedInput-input': {
+																padding: '11px 12px 11px 26px',
+																fontSize: '14px',
+																textAlign: 'right',
+															},
+														}}
+													/>
+												</Box>
+											</Box>
+										</>
+									) : null}
+
+									{!form.showDiscounts || !form.showShipping ? (
+										<Box
 											sx={{
-												fontSize: '14px',
-												fontWeight: 600,
-												color: '#1976d2',
-												cursor: 'pointer',
+												display: 'flex',
+												gap: '24px',
+												gridColumn: '1 / span 2',
+												mt: '-6px',
+												mb: '2px',
 											}}
 										>
-											+ Discount
-										</Typography>
-										<Typography
-											sx={{
-												fontSize: '14px',
-												fontWeight: 600,
-												color: '#1976d2',
-												cursor: 'pointer',
-											}}
-										>
-											+ Shipping
-										</Typography>
-									</Box>
+											{!form.showDiscounts ? (
+												<Typography
+													onClick={() =>
+														setForm((current) => ({
+															...current,
+															showDiscounts: true,
+														}))
+													}
+													sx={{
+														fontSize: '14px',
+														fontWeight: 600,
+														color: '#1976d2',
+														cursor: 'pointer',
+													}}
+												>
+													+ Discount
+												</Typography>
+											) : null}
+											{!form.showShipping ? (
+												<Typography
+													onClick={() =>
+														setForm((current) => ({
+															...current,
+															showShipping: true,
+														}))
+													}
+													sx={{
+														fontSize: '14px',
+														fontWeight: 600,
+														color: '#1976d2',
+														cursor: 'pointer',
+													}}
+												>
+													+ Shipping
+												</Typography>
+											) : null}
+										</Box>
+									) : null}
 								</Box>
 
 								<Divider sx={{ my: '16px', borderColor: '#d0d5dd' }} />
@@ -764,9 +1124,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 										alignItems: 'center',
 									}}
 								>
-									<Typography sx={{ fontSize: '18px', fontWeight: 700, color: '#101828' }}>
-										Total
-									</Typography>
+									<EditableLabel
+										value={labels.total_title}
+										onChange={(value) => updateLabel('total_title', value)}
+										ariaLabel='Total label'
+										sx={{ fontSize: '18px', fontWeight: 700, color: '#101828' }}
+									/>
 									<Typography
 										sx={{
 											fontSize: '18px',
@@ -778,9 +1141,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 										{formatMoney(total, form.currency)}
 									</Typography>
 
-									<Typography sx={{ fontSize: '14px', color: '#475467' }}>
-										Amount Paid
-									</Typography>
+									<EditableLabel
+										value={labels.amount_paid_title}
+										onChange={(value) => updateLabel('amount_paid_title', value)}
+										ariaLabel='Amount paid label'
+										sx={{ fontSize: '14px', color: '#475467' }}
+									/>
 									<Box sx={{ justifySelf: 'end', width: '170px' }}>
 										<Box
 											sx={{
@@ -835,9 +1201,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, onBack }) => 
 										alignItems: 'center',
 									}}
 								>
-									<Typography sx={{ fontSize: '26px', fontWeight: 800, color: '#101828' }}>
-										Balance Due
-									</Typography>
+									<EditableLabel
+										value={labels.balance_title}
+										onChange={(value) => updateLabel('balance_title', value)}
+										ariaLabel='Balance due label'
+										sx={{ fontSize: '26px', fontWeight: 800, color: '#101828' }}
+									/>
 									<Typography
 										sx={{
 											fontSize: '26px',
