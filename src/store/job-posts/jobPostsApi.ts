@@ -23,7 +23,17 @@ export const jobPostsApi = baseApi.injectEndpoints({
 				body: { proposalType: 'Bid', boosted: false, connects: 0, boostedConnects: 0 },
 			}),
 		}),
+
+		deleteJobPost: builder.mutation<void, string>({
+			query: (id) => ({ url: `/job-posts/${id}`, method: 'DELETE' }),
+			invalidatesTags: ['JobPost'],
+		}),
 	}),
 })
 
-export const { useGetJobPostListQuery, useGetJobPostByIdQuery, useConvertJobPostToProposalMutation } = jobPostsApi
+export const {
+	useGetJobPostListQuery,
+	useGetJobPostByIdQuery,
+	useConvertJobPostToProposalMutation,
+	useDeleteJobPostMutation,
+} = jobPostsApi

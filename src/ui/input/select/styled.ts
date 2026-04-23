@@ -50,7 +50,6 @@ const StyledSelectWrapper = styled(InputWrapper)<{ width?: string; containerWidt
         filter:blur(0);
         pointer-events:auto;
         transition: all .2s linear;
-        z-index: 3;
     }
 
     .select-option-item {

@@ -19,6 +19,7 @@ const Counterparties = lazy(() => import('./counterparties'))
 const ClientRequests = lazy(() => import('./client-requests'))
 const Invoices = lazy(() => import('./invoices'))
 const JobPosts = lazy(() => import('./job-posts'))
+const Prompts = lazy(() => import('./prompts'))
 
 const Home = () => {
 	return (
@@ -48,6 +49,7 @@ const Home = () => {
 							<Route path='/client-requests/*' element={<ClientRequests />} />
 							<Route path='/invoices/*' element={<Invoices />} />
 							<Route path='/job-posts/*' element={<JobPosts />} />
+							<Route path='/prompts/*' element={<Prompts />} />
 
 							<Route path='/*' element={<PageNotFound />} />
 						</Routes>

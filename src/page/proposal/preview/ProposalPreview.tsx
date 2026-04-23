@@ -19,6 +19,7 @@ import ProposalListItemBoosted from '../../../components/proposal/list/ProposalL
 import { useGetProposalByIdQuery } from '../../../store/proposals/proposalsApi'
 import { shortUuid, formatDate } from '../../../utils/formatDate'
 import ModelSwitcher from '../../../components/chat/api-chat/ModelSwitcher'
+import DetailsPopover from '../../../components/chat/api-chat/DetailsPopover'
 
 const ProposalPreview = () => {
 	const { id } = useParams<{ id: string }>()
@@ -145,7 +146,43 @@ const ProposalPreview = () => {
 					</TabContent>
 
 					<TabContent tabIndex={2}>
-						<Box display='flex' align='center' style={{ marginBottom: 25 }}>
+						<Box
+							display='flex'
+							align='center'
+							style={{
+								marginBottom: 25,
+								marginLeft: 'auto',
+								width: 'fit-content',
+							}}
+						>
+							<DetailsPopover
+								lead={{
+									name: 'Priyadarshan Joshi',
+									email: 'priyadarshan.joshi@cityneeds.app',
+									location: 'Greece 🇬🇷',
+									totalSpent: '$123,400',
+									avgRatePaid: '$50/h',
+									hireRate: '$40/h',
+									status: 'In Discussion',
+									source: 'Upwork',
+									company: 'CityNeeds',
+									notes: 'Client is still early-stage. Budget sensitivity is likely.',
+								}}
+								proposal={{
+									title: 'CityNeeds Mobile App - MVP Delivery',
+									status: 'Draft',
+									version: 'v3',
+									budget: '$6,000 - $8,000',
+								}}
+								jobPost={{
+									title: 'React Native / Mobile App Developer for City Services Platform',
+									description:
+										'React Native / Mobile App Developer for City Services Platform Native / Mobile App Developer for City Services Platform Native / Mobile App Developer for City Services Mobile App Developer for City Services Platform',
+									score: '87%',
+									budget: '$5k - $10k',
+									timeline: '6-8 weeks',
+								}}
+							/>
 							<ModelSwitcher value={model} onChange={setModel} />
 						</Box>
 						<ProposalChat proposalId={proposal.id} model={model} />

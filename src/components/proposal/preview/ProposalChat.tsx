@@ -6,7 +6,13 @@ interface Props {
 }
 
 const ProposalChat = ({ proposalId, model }: Props) => {
-	return <ChatPanel historyUrl={`/proposals/${proposalId}/chat`} proposalId={proposalId} model={model} />
+	return (
+		<ChatPanel
+			historyUrl={`/proposals/${proposalId}/chat`}
+			proposalId={proposalId}
+			model={model}
+		/>
+	)
 }
 
 export default ProposalChat

@@ -1,4 +1,3 @@
-import { OpenInNewOutlined } from '@mui/icons-material'
 import { Link } from 'react-router-dom'
 import { Text } from '../../../ui'
 import DataGrid from '../../layout/data-grid/DataGrid'
@@ -6,10 +5,10 @@ import Box from '../../box/Box'
 import DataGridCell from '../../data-grid-item/DataGridCell'
 import JobPostDecisionChip from './JobPostDecisionChip'
 import JobPostPriorityChip from './JobPostPriorityChip'
+import JobPostListAction from './JobPostListAction'
 import type { DataGridColoumn } from '../../layout/data-grid/type'
 import type { JobPostItem } from '../../../store/job-posts/types/definition'
 import { formatDate } from '../../../utils/formatDate'
-import { IconButton } from '../../../ui'
 
 const columns: DataGridColoumn[] = [
 	{ fieldId: 'title', label: 'Title', width: '280px' },
@@ -21,15 +20,16 @@ const columns: DataGridColoumn[] = [
 	{ fieldId: 'gigRadarScore', label: 'GigRadar', width: '100px' },
 	{ fieldId: 'scanner', label: 'Scanner', width: '160px' },
 	{ fieldId: 'createdAt', label: 'Created At', width: '150px' },
-	{ fieldId: 'actions', label: 'Actions', width: '80px' },
+	{ fieldId: 'actions', label: 'Actions', width: '90px' },
 ]
 
 interface JobPostTableProps {
 	items: JobPostItem[]
 	isLoading: boolean
+	onDelete: (id: string) => void
 }
 
-const JobPostTable = ({ items, isLoading }: JobPostTableProps) => {
+const JobPostTable = ({ items, isLoading, onDelete }: JobPostTableProps) => {
 	if (isLoading || !items) return <></>
 
 	return (
@@ -40,25 +40,22 @@ const JobPostTable = ({ items, isLoading }: JobPostTableProps) => {
 				gridDataKey={(item) => item.id}
 				renderGridData={(row, field) => (
 					<>
-						<DataGridCell
-							width={field['title'].width}
-							children={
-								<Link to={`/job-posts/preview/${row.id}`}>
-									<Text
-										skinColor
-										styles={{
-											display: '-webkit-box',
-											WebkitLineClamp: 2,
-											WebkitBoxOrient: 'vertical',
-											overflow: 'hidden',
-											lineHeight: '1.4',
-										}}
-									>
-										{row.title ?? '—'}
-									</Text>
-								</Link>
-							}
-						/>
+						<DataGridCell width={field['title'].width}>
+							<Link to={`/job-posts/preview/${row.id}`}>
+								<Text
+									skinColor
+									styles={{
+										display: '-webkit-box',
+										WebkitLineClamp: 2,
+										WebkitBoxOrient: 'vertical',
+										overflow: 'hidden',
+										lineHeight: '1.4',
+									}}
+								>
+									{row.title ?? '—'}
+								</Text>
+							</Link>
+						</DataGridCell>
 						<DataGridCell
 							width={field['decision'].width}
 							children={<JobPostDecisionChip decision={row.decision} />}
@@ -85,13 +82,7 @@ const JobPostTable = ({ items, isLoading }: JobPostTableProps) => {
 							value={formatDate(row.createdAt)}
 						/>
 						<DataGridCell width={field['actions'].width}>
-							{row.jobUrl && (
-								<a href={row.jobUrl} target='_blank' rel='noreferrer'>
-									<IconButton varient='text' size={30} fontSize={21} contentOpacity={5}>
-										<OpenInNewOutlined />
-									</IconButton>
-								</a>
-							)}
+							<JobPostListAction jobPostId={row.id} onDelete={onDelete} />
 						</DataGridCell>
 					</>
 				)}

@@ -1,0 +1,325 @@
+import { ReactNode } from 'react'
+
+import {
+	InfoOutlined,
+	BusinessOutlined,
+	PublicOutlined,
+	PaymentsOutlined,
+	QueryStatsOutlined,
+	WorkOutlineOutlined,
+	DescriptionOutlined,
+	SellOutlined,
+	ScheduleOutlined,
+	NotesOutlined,
+	PersonOutline,
+	EmailOutlined,
+} from '@mui/icons-material'
+
+type DetailField = {
+	label: string
+	value?: string | number | null
+	variant?: 'row' | 'stacked'
+	icon?: ReactNode
+	display?: 'default' | 'pill'
+	color?: 'green' | 'gray' | 'blue' | 'red'
+}
+
+const iconSize = { fontSize: 16 }
+
+const parseNumericValue = (value?: string | number | null): number | null => {
+	if (value === null || value === undefined || value === '') return null
+	if (typeof value === 'number') return Number.isNaN(value) ? null : value
+
+	const normalized = String(value).replace(/,/g, '').trim()
+	const match = normalized.match(/-?\d+(\.\d+)?/)
+	if (!match) return null
+
+	const numeric = Number(match[0])
+	return Number.isNaN(numeric) ? null : numeric
+}
+
+const parseMoneyToNumber = (value?: string | number | null): number | null => {
+	if (value === null || value === undefined || value === '') return null
+	if (typeof value === 'number') return Number.isNaN(value) ? null : value
+
+	const normalized = String(value).toLowerCase().replace(/,/g, '').replace(/\$/g, '').trim()
+
+	const match = normalized.match(/(\d+(\.\d+)?)/)
+	if (!match) return null
+
+	let numeric = Number(match[1])
+	if (Number.isNaN(numeric)) return null
+
+	if (normalized.includes('k')) numeric *= 1000
+	if (normalized.includes('m')) numeric *= 1000000
+
+	return numeric
+}
+
+const parseTimelineToWeeks = (value?: string | number | null): number | null => {
+	if (value === null || value === undefined || value === '') return null
+	if (typeof value === 'number') return Number.isNaN(value) ? null : value
+
+	const normalized = String(value).toLowerCase().trim()
+
+	const numbers = normalized.match(/\d+(\.\d+)?/g)
+	if (!numbers || numbers.length === 0) return null
+
+	const first = Number(numbers[0])
+	if (Number.isNaN(first)) return null
+
+	if (normalized.includes('month')) {
+		return first * 4
+	}
+
+	if (normalized.includes('day')) {
+		return first / 7
+	}
+
+	return first
+}
+
+const getLeadStatusColor = (status?: string | null): DetailField['color'] => {
+	if (!status) return 'gray'
+
+	const normalized = status.toLowerCase()
+
+	if (normalized.includes('discussion')) return 'green'
+	if (normalized.includes('new')) return 'blue'
+	if (normalized.includes('rejected')) return 'red'
+
+	return 'gray'
+}
+
+const getProposalStatusColor = (status?: string | null): DetailField['color'] => {
+	if (!status) return 'gray'
+
+	const normalized = status.toLowerCase()
+
+	if (normalized.includes('draft')) return 'blue'
+	if (normalized.includes('sent')) return 'green'
+	if (normalized.includes('rejected')) return 'red'
+
+	return 'gray'
+}
+
+const getJobPostScoreColor = (score?: string | number | null): DetailField['color'] => {
+	const numeric = parseNumericValue(score)
+
+	if (numeric === null) return 'gray'
+	if (numeric < 30) return 'red'
+	if (numeric < 50) return 'blue'
+	return 'green'
+}
+
+const getBudgetColor = (budget?: string | number | null): DetailField['color'] => {
+	const numeric = parseMoneyToNumber(budget)
+
+	if (numeric === null) return 'gray'
+	if (numeric < 5000) return 'red'
+	if (numeric <= 10000) return 'blue'
+	return 'green'
+}
+
+const getTimelineColor = (timeline?: string | number | null): DetailField['color'] => {
+	const weeks = parseTimelineToWeeks(timeline)
+
+	if (weeks === null) return 'gray'
+	if (weeks < 3) return 'red'
+	if (weeks < 6) return 'blue'
+	return 'green'
+}
+
+const getTotalSpentColor = (totalSpent?: string | number | null): DetailField['color'] => {
+	const numeric = parseMoneyToNumber(totalSpent)
+
+	if (numeric === null) return 'gray'
+	if (numeric < 10000) return 'red'
+	if (numeric < 30000) return 'blue'
+	return 'green'
+}
+
+const getAvgRatePaidColor = (avgRatePaid?: string | number | null): DetailField['color'] => {
+	const numeric = parseMoneyToNumber(avgRatePaid) ?? parseNumericValue(avgRatePaid)
+
+	if (numeric === null) return 'gray'
+	if (numeric < 20) return 'red'
+	if (numeric < 30) return 'blue'
+	return 'green'
+}
+
+const getHireRateColor = (hireRate?: string | number | null): DetailField['color'] => {
+	const numeric = parseMoneyToNumber(hireRate) ?? parseNumericValue(hireRate)
+
+	if (numeric === null) return 'gray'
+	if (numeric < 20) return 'red'
+	if (numeric < 30) return 'blue'
+	return 'green'
+}
+
+export const mapLeadToFields = (lead?: {
+	name?: string | null
+	email?: string | null
+	status?: string | null
+	location?: string | null
+	totalSpent?: string | number | null
+	avgRatePaid?: string | number | null
+	hireRate?: string | number | null
+	source?: string | null
+	company?: string | null
+	notes?: string | null
+}): DetailField[] => {
+	if (!lead) {
+		return [
+			{ label: 'Name', value: null, icon: <PersonOutline style={iconSize} /> },
+			{ label: 'Email', value: null, icon: <EmailOutlined style={iconSize} /> },
+			{ label: 'Status', value: null, icon: <InfoOutlined style={iconSize} /> },
+		]
+	}
+
+	return [
+		{
+			label: 'Name',
+			value: lead.name,
+			icon: <PersonOutline style={iconSize} />,
+		},
+		{
+			label: 'Email',
+			value: lead.email,
+			icon: <EmailOutlined style={iconSize} />,
+		},
+		{
+			label: 'Location',
+			value: lead.location,
+			icon: <PublicOutlined style={iconSize} />,
+		},
+		{
+			label: 'Total Spent',
+			value: lead.totalSpent,
+			display: 'pill',
+			color: getTotalSpentColor(lead.totalSpent),
+			icon: <PaymentsOutlined style={iconSize} />,
+		},
+		{
+			label: 'Avg Rate Paid',
+			value: lead.avgRatePaid,
+			display: 'pill',
+			color: getAvgRatePaidColor(lead.avgRatePaid),
+			icon: <QueryStatsOutlined style={iconSize} />,
+		},
+		{
+			label: 'Hire Rate',
+			value: lead.hireRate,
+			display: 'pill',
+			color: getHireRateColor(lead.hireRate),
+			icon: <WorkOutlineOutlined style={iconSize} />,
+		},
+		{
+			label: 'Status',
+			value: lead.status,
+			display: 'pill',
+			color: getLeadStatusColor(lead.status),
+			icon: <InfoOutlined style={iconSize} />,
+		},
+		{
+			label: 'Source',
+			value: lead.source,
+			icon: <SellOutlined style={iconSize} />,
+		},
+		{
+			label: 'Company',
+			value: lead.company,
+			icon: <BusinessOutlined style={iconSize} />,
+		},
+		{
+			label: 'Notes',
+			value: lead.notes,
+			variant: 'stacked',
+			icon: <NotesOutlined style={iconSize} />,
+		},
+	]
+}
+
+export const mapProposalToFields = (proposal?: {
+	title?: string | null
+	status?: string | null
+	version?: string | number | null
+	budget?: string | null
+	summary?: string | null
+}): DetailField[] => {
+	return [
+		{
+			label: 'Title',
+			value: proposal?.title,
+			icon: <DescriptionOutlined style={iconSize} />,
+		},
+		{
+			label: 'Status',
+			value: proposal?.status,
+			display: 'pill',
+			color: getProposalStatusColor(proposal?.status),
+			icon: <InfoOutlined style={iconSize} />,
+		},
+		{
+			label: 'Version',
+			value: proposal?.version,
+			icon: <DescriptionOutlined style={iconSize} />,
+		},
+		{
+			label: 'Budget',
+			value: proposal?.budget,
+			display: 'pill',
+			color: getBudgetColor(proposal?.budget),
+			icon: <PaymentsOutlined style={iconSize} />,
+		},
+		{
+			label: 'Summary',
+			value: proposal?.summary,
+			variant: 'stacked',
+			icon: <NotesOutlined style={iconSize} />,
+		},
+	]
+}
+
+export const mapJobPostToFields = (jobPost?: {
+	title?: string | null
+	description?: string | null
+	score?: string | number | null
+	budget?: string | null
+	timeline?: string | null
+}): DetailField[] => {
+	return [
+		{
+			label: 'Title',
+			value: jobPost?.title,
+			icon: <DescriptionOutlined style={iconSize} />,
+		},
+		{
+			label: 'Description',
+			value: jobPost?.description,
+			variant: 'stacked',
+			icon: <NotesOutlined style={iconSize} />,
+		},
+		{
+			label: 'Score',
+			value: jobPost?.score,
+			display: 'pill',
+			color: getJobPostScoreColor(jobPost?.score),
+			icon: <QueryStatsOutlined style={iconSize} />,
+		},
+		{
+			label: 'Budget',
+			value: jobPost?.budget,
+			display: 'pill',
+			color: getBudgetColor(jobPost?.budget),
+			icon: <PaymentsOutlined style={iconSize} />,
+		},
+		{
+			label: 'Timeline',
+			value: jobPost?.timeline,
+			display: 'pill',
+			color: getTimelineColor(jobPost?.timeline),
+			icon: <ScheduleOutlined style={iconSize} />,
+		},
+	]
+}
