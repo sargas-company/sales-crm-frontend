@@ -1078,6 +1078,17 @@ Authorization: Bearer <token>
 
 ---
 
+### DELETE /job-posts/:id — удалить
+
+```http
+DELETE /job-posts/:id
+Authorization: Bearer <token>
+```
+
+**Ответ `204`:** пустое тело. `404` если не найден.
+
+---
+
 ### POST /job-posts/:id/to-proposal — конвертировать в proposal
 
 Создаёт новый Proposal на основе данных JobPost и связывает их. Платформа подставляется автоматически (Upwork), `accountId` не заполняется.
@@ -1145,35 +1156,140 @@ Content-Type: application/json
 
 ---
 
-## Settings
+## Prompts
 
-### GET /settings
+Управление AI-промптами. Промпты хранятся в БД, AI-сервисы загружают их динамически. При отсутствии активного промпта используется встроенный хардкод.
+
+**Типы промптов (`PromptType`):** `JOB_GATEKEEPER` · `JOB_EVALUATION` · `CHAT_SYSTEM` · `CHAT_FALLBACK`
+
+**Объект Prompt:**
+
+```json
+{
+  "id": "uuid",
+  "type": "CHAT_SYSTEM",
+  "title": "Chat System",
+  "content": "You are an assistant...",
+  "isActive": true,
+  "version": 2,
+  "createdBy": "seed",
+  "updatedBy": null,
+  "createdAt": "2026-04-23T10:00:00.000Z",
+  "updatedAt": "2026-04-23T10:00:00.000Z"
+}
+```
+
+---
+
+### GET /prompts — список с пагинацией
 
 ```http
-GET /settings
+GET /prompts?type=CHAT_SYSTEM&isActive=true&page=1&limit=10
 Authorization: Bearer <token>
 ```
+
+| Параметр | Тип | По умолчанию | Описание |
+|---|---|---|---|
+| `type` | `PromptType` | — | Фильтр по типу |
+| `isActive` | `boolean` | — | Фильтр по активности |
+| `page` | number | `1` | Номер страницы |
+| `limit` | number | `10` | Записей на странице |
 
 **Ответ `200`:**
 
 ```json
 {
-	"id": "global",
-	"systemPrompt": "You are an expert sales manager..."
+  "data": [...],
+  "total": 12
 }
 ```
 
-### PUT /settings
+> Количество страниц: `Math.ceil(total / limit)`
+
+---
+
+### GET /prompts/:id — один промпт
 
 ```http
-PUT /settings
+GET /prompts/:id
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:** объект промпта. `404` если не найден.
+
+---
+
+### POST /prompts — создать
+
+Новый промпт всегда создаётся с `isActive: false` и `version: 1`.
+
+```http
+POST /prompts
 Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "systemPrompt": "You are an expert sales manager..."
+  "type": "CHAT_SYSTEM",
+  "title": "Chat System v2",
+  "content": "You are an expert sales manager..."
 }
 ```
+
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `type` | `PromptType` | да | Тип промпта |
+| `title` | string | да | Название промпта |
+| `content` | string | да | Текст промпта |
+
+**Ответ `201`:** объект созданного промпта. `400` если `content` пустой.
+
+---
+
+### PATCH /prompts/:id — редактировать
+
+Создаёт **новую версию** промпта на основе существующего (старая запись остаётся нетронутой):
+- Если оригинал был `isActive: true` → новый промпт становится активным, оригинал деактивируется
+- Если оригинал был `isActive: false` → новый промпт создаётся неактивным
+
+```http
+PATCH /prompts/:id
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "content": "You are an expert sales manager..."
+}
+```
+
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `content` | string | да | Новый текст промпта |
+
+**Ответ `200`:** объект нового промпта. `400` если `content` пустой. `404` если промпт не найден.
+
+---
+
+### PATCH /prompts/:id/activate — активировать
+
+Активирует промпт. Все остальные промпты того же типа автоматически деактивируются.
+
+```http
+PATCH /prompts/:id/activate
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:** обновлённый объект промпта. `404` если не найден.
+
+---
+
+### DELETE /prompts/:id — удалить
+
+```http
+DELETE /prompts/:id
+Authorization: Bearer <token>
+```
+
+**Ответ `204`:** пустое тело. `400` если промпт активен. `404` если не найден.
 
 ---
 

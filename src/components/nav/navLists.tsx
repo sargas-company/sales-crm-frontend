@@ -11,6 +11,7 @@ import {
 	ReceiptLongOutlined,
 	AssignmentOutlined,
 	WorkOutlineOutlined,
+	TuneOutlined,
 } from '@mui/icons-material'
 
 const navList: NavOptions[] = [
@@ -70,6 +71,11 @@ const navList: NavOptions[] = [
 		label: 'Base Knowledge',
 		path: '/knowledge/list',
 		icon: <MenuBookOutlined />,
+	},
+	{
+		label: 'Prompts',
+		path: '/prompts/list',
+		icon: <TuneOutlined />,
 	},
 	// {
 	//   parent: formatGroupButton("User", <PersonOutline />, "/user/"),

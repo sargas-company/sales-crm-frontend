@@ -66,17 +66,6 @@ const JobPostPreview = () => {
 	return (
 		<Card py='2rem' px='2rem'>
 			<Box style={{ maxWidth: 900, margin: '0 auto' }}>
-				{/* Start Proposal button */}
-				<Box display='flex' justify='flex-end' mb={3}>
-					<Button
-						styles={{ display: 'flex', alignItems: 'center', gap: 6 }}
-						onClick={() => setShowModal(true)}
-					>
-						<RocketLaunchOutlined style={{ fontSize: 16 }} />
-						Start Proposal
-					</Button>
-				</Box>
-
 				{/* Header */}
 				<Box display='flex' flexDirection='column' space={2} mb={4}>
 					<Box display='flex' align='flex-start' space={3}>
@@ -95,18 +84,23 @@ const JobPostPreview = () => {
 								{post.processedAt && ` · processed ${formatDate(post.processedAt)}`}
 							</Text>
 						</Box>
-						{post.jobUrl && (
-							<a href={post.jobUrl} target='_blank' rel='noreferrer'>
-								<Button
-									varient='outlined'
-									color='info'
-									styles={{ display: 'flex', alignItems: 'center', gap: 6 }}
-								>
-									<OpenInNewOutlined style={{ fontSize: 16 }} />
-									Open Job
-								</Button>
-							</a>
-						)}
+						<Box display='flex' align='center' space={1}>
+							{post.jobUrl && (
+								<a href={post.jobUrl} target='_blank' rel='noreferrer'>
+									<Button varient='outlined' color='info' styles={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+										<OpenInNewOutlined style={{ fontSize: 16 }} />
+										Open Job
+									</Button>
+								</a>
+							)}
+							<Button
+								styles={{ display: 'flex', alignItems: 'center', gap: 6 }}
+								onClick={() => setShowModal(true)}
+							>
+								<RocketLaunchOutlined style={{ fontSize: 16 }} />
+								Start Proposal
+							</Button>
+						</Box>
 					</Box>
 
 					<Box
