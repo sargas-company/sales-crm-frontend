@@ -73,14 +73,13 @@ const ModelSwitcher = ({ value, onChange }: Props) => {
 				display='flex'
 				align='center'
 				style={{
-					marginLeft: 'auto',
 					display: 'inline-flex',
 					alignItems: 'center',
 					gap: 8,
 					height: 40,
 					padding: '0 14px',
 					borderRadius: 12,
-					background: '#f5f9ff',
+					background: '#f8fafc',
 					border: '1px solid #cfe0ff',
 					cursor: 'pointer',
 				}}

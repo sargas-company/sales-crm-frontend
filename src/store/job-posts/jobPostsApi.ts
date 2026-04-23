@@ -26,4 +26,8 @@ export const jobPostsApi = baseApi.injectEndpoints({
 	}),
 })
 
-export const { useGetJobPostListQuery, useGetJobPostByIdQuery, useConvertJobPostToProposalMutation } = jobPostsApi
+export const {
+	useGetJobPostListQuery,
+	useGetJobPostByIdQuery,
+	useConvertJobPostToProposalMutation,
+} = jobPostsApi
