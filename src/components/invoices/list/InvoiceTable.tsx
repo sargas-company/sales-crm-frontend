@@ -24,9 +24,10 @@ interface InvoiceTableProps {
 	items: InvoiceItem[]
 	isLoading: boolean
 	onDelete: (id: string) => void
+	onMarkPaid: (id: string) => void
 }
 
-const InvoiceTable = ({ items, isLoading, onDelete }: InvoiceTableProps) => {
+const InvoiceTable = ({ items, isLoading, onDelete, onMarkPaid }: InvoiceTableProps) => {
 	if (isLoading || !items) return <></>
 
 	return (
@@ -59,7 +60,12 @@ const InvoiceTable = ({ items, isLoading, onDelete }: InvoiceTableProps) => {
 							value={formatInvoiceMoney(getInvoiceTotal(row), row.currency)}
 						/>
 						<DataGridCell width={field['actions'].width}>
-							<InvoiceListAction invoiceId={row.id} onDelete={onDelete} />
+							<InvoiceListAction
+								invoiceId={row.id}
+								status={row.status}
+								onDelete={onDelete}
+								onMarkPaid={onMarkPaid}
+							/>
 						</DataGridCell>
 					</>
 				)}

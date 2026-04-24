@@ -563,17 +563,6 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 					<Card sx={{ borderRadius: '12px' }}>
 						<CardContent>
 							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-								{invoice ? (
-									<Box
-										sx={{
-											display: 'flex',
-											justifyContent: 'flex-end',
-											alignItems: 'center',
-										}}
-									>
-										<InvoiceStatusSelect id={invoice.id} status={invoice.status} />
-									</Box>
-								) : null}
 								<Box sx={{ display: 'flex', gap: 1.5 }}>
 									<Button
 										variant='contained'

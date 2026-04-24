@@ -5,6 +5,7 @@ import DataGridFooter from '../../../components/data-grid-item/DataGridFooter'
 import { GridInnerContainer, GridItem } from '../../../components/layout'
 import CreateNewInvoice from '../../../components/invoices/list/CreateNewInvoice'
 import InvoiceDeleteModal from '../../../components/invoices/list/InvoiceDeleteModal'
+import InvoiceMarkPaidModal from '../../../components/invoices/list/InvoiceMarkPaidModal'
 import InvoiceTable from '../../../components/invoices/list/InvoiceTable'
 import {
 	formatInvoiceMoney,
@@ -26,6 +27,7 @@ const InvoiceList = () => {
 	const [limit, setLimit] = useState(LIMIT_OPTIONS[0])
 	const [search, setSearch] = useState('')
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+	const [paidTarget, setPaidTarget] = useState<DeleteTarget | null>(null)
 
 	const { data, isLoading, refetch } = useGetInvoiceListQuery({ page, limit })
 	const allItems = data ? (Array.isArray(data) ? data : data.data) : []
@@ -35,6 +37,16 @@ const InvoiceList = () => {
 		const item = allItems.find((i) => i.id === id)
 		if (item) {
 			setDeleteTarget({
+				id,
+				title: item.number ? `Invoice #${item.number}` : `Invoice ${item.id}`,
+			})
+		}
+	}
+
+	const handleMarkPaid = (id: string) => {
+		const item = allItems.find((i) => i.id === id)
+		if (item) {
+			setPaidTarget({
 				id,
 				title: item.number ? `Invoice #${item.number}` : `Invoice ${item.id}`,
 			})
@@ -92,7 +104,7 @@ const InvoiceList = () => {
 					</GridInnerContainer>
 				</Box>
 
-				<InvoiceTable items={items} isLoading={isLoading} onDelete={handleDelete} />
+				<InvoiceTable items={items} isLoading={isLoading} onDelete={handleDelete} onMarkPaid={handleMarkPaid} />
 
 				{total > 0 && (
 					<DataGridFooter
@@ -117,6 +129,15 @@ const InvoiceList = () => {
 						if (allItems.length === 1 && page > 1) setPage(page - 1)
 						else refetch()
 					}}
+				/>
+			)}
+
+			{paidTarget && (
+				<InvoiceMarkPaidModal
+					id={paidTarget.id}
+					title={paidTarget.title}
+					onClose={() => setPaidTarget(null)}
+					onSuccess={refetch}
 				/>
 			)}
 		</>
