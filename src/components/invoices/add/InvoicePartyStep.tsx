@@ -105,9 +105,8 @@ const InvoicePartyStep: FC<Props> = ({ onContinue }) => {
 	return (
 		<Box
 			sx={{
-				minHeight: '100vh',
 				background: 'transparent',
-				p: { xs: 2, md: 4 },
+				p: 0,
 			}}
 		>
 			<Box sx={{ maxWidth: 1200, mx: 'auto' }}>
@@ -243,7 +242,7 @@ const InvoicePartyStep: FC<Props> = ({ onContinue }) => {
 								/>
 							</Box>
 
-							<Stack spacing={1.25} sx={{ maxHeight: 420, overflow: 'auto' }}>
+							<Stack spacing={1.25} sx={{ maxHeight: 252, overflowY: 'auto', pr: 0.5 }}>
 								{isLoading ? (
 									<Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
 										<CircularProgress size={28} />

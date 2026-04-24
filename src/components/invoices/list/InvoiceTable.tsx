@@ -7,11 +7,13 @@ import type { DataGridColoumn } from '../../layout/data-grid/type'
 import type { InvoiceItem } from '../../../store/invoices/invoicesApi'
 import { formatDate } from '../../../utils/formatDate'
 import InvoiceListAction from './InvoiceListAction'
+import InvoiceListItemStatus from './InvoiceListItemStatus'
 import { formatInvoiceMoney, getCounterpartyName, getInvoiceTotal } from './utils'
 
 const columns: DataGridColoumn[] = [
 	{ fieldId: 'number', label: '#', width: '130px' },
 	{ fieldId: 'counterparty', label: 'Counterparty', width: '220px' },
+	{ fieldId: 'status', label: 'Status', width: '210px' },
 	{ fieldId: 'date', label: 'Date', width: '160px' },
 	{ fieldId: 'dueDate', label: 'Due Date', width: '160px' },
 	{ fieldId: 'total', label: 'Total', width: '150px' },
@@ -44,6 +46,10 @@ const InvoiceTable = ({ items, isLoading, onDelete }: InvoiceTableProps) => {
 						<DataGridCell
 							width={field['counterparty'].width}
 							value={getCounterpartyName(row)}
+						/>
+						<DataGridCell
+							width={field['status'].width}
+							children={<InvoiceListItemStatus itemStatus={row.status} />}
 						/>
 						<DataGridCell width={field['date'].width} value={formatDate(row.date)} />
 						<DataGridCell width={field['dueDate'].width} value={formatDate(row.dueDate)} />

@@ -1,6 +1,7 @@
 import { baseApi } from '../../api/baseApi'
 
 export type InvoiceCurrency = 'USD' | 'EUR' | 'UAH'
+export type InvoiceStatus = 'draft' | 'open' | 'paid'
 
 export interface InvoiceLabels {
 	from_title: string
@@ -63,6 +64,7 @@ export interface InvoiceCreatePayload {
 
 export interface InvoiceItem extends InvoiceCreatePayload {
 	id: string
+	status?: InvoiceStatus
 	counterparty?: {
 		id: string
 		firstName?: string

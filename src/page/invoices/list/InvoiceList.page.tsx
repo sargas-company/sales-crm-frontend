@@ -52,6 +52,7 @@ const InvoiceList = () => {
 				return (
 					item.number.toLowerCase().includes(q) ||
 					item.currency.toLowerCase().includes(q) ||
+					(item.status ?? '').toLowerCase().includes(q) ||
 					item.date.toLowerCase().includes(q) ||
 					item.dueDate.toLowerCase().includes(q) ||
 					getCounterpartyName(item).toLowerCase().includes(q) ||

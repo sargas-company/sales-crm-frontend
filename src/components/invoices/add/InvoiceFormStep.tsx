@@ -4,6 +4,7 @@ import {
 	Button,
 	Card,
 	CardContent,
+	Alert,
 	Divider,
 	IconButton,
 	Paper,
@@ -19,6 +20,7 @@ import {
 	useCreateInvoiceMutation,
 	useUpdateInvoiceMutation,
 } from '../../../store/invoices/invoicesApi'
+import parseServerError from '../../../utils/parseServerError'
 
 type PartyType = 'contractor' | 'client'
 
@@ -85,17 +87,23 @@ const formatDateInputValue = (date: Date) => {
 	return `${year}-${month}-${day}`
 }
 
-const addDays = (dateValue: string, days: number) => {
-	const date = new Date(`${dateValue}T00:00:00`)
-	date.setDate(date.getDate() + days)
-
-	return formatDateInputValue(date)
-}
-
 const normalizeDateInputValue = (dateValue: string | undefined, fallback: string) => {
 	if (!dateValue) return fallback
 
 	return dateValue.slice(0, 10)
+}
+
+const formatDisplayDate = (dateValue: string) => {
+	if (!dateValue) return ''
+
+	const date = new Date(`${dateValue.slice(0, 10)}T00:00:00`)
+	if (Number.isNaN(date.getTime())) return dateValue
+
+	return new Intl.DateTimeFormat('en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+	}).format(date)
 }
 
 const DEFAULT_LABELS: InvoiceLabels = {
@@ -132,7 +140,7 @@ const buildInitialForm = (party: Party, selectedType: PartyType, invoice?: ApiIn
 		currency: invoice?.currency ?? party.currency ?? companyProfile.currency,
 		date: normalizeDateInputValue(invoice?.date, issueDate),
 		paymentTerms: invoice?.paymentTerms ?? '',
-		dueDate: normalizeDateInputValue(invoice?.dueDate, addDays(issueDate, 30)),
+		dueDate: invoice?.dueDate ?? '',
 		poNumber: invoice?.poNumber ?? '',
 		fromValue:
 			invoice?.fromValue ?? (isContractor ? party.invoiceBlock : companyProfile.invoiceBlock),
@@ -275,6 +283,8 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 		...DEFAULT_LABELS,
 		...(invoice?.labels ?? {}),
 	}))
+	const [formError, setFormError] = useState('')
+	const [dateFocused, setDateFocused] = useState(false)
 	const [items, setItems] = useState<InvoiceItem[]>(() => {
 		if (invoice?.lineItems?.length) {
 			return invoice.lineItems
@@ -332,8 +342,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 		const changedLabels = buildChangedLabels(labels)
 
 		return {
-			//counterpartyId: selectedParty.id,
-			counterpartyId: '7aa7310e-cfa3-4efd-9205-c963ad3b42d4',
+			counterpartyId: selectedParty.id,
 			number: form.number,
 			currency: form.currency,
 			date: form.date,
@@ -366,6 +375,13 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 
 	const handleCreateInvoice = async () => {
 		try {
+			setFormError('')
+
+			if (!form.date.trim()) {
+				setFormError('Enter invoice date.')
+				return
+			}
+
 			const payload = buildInvoicePayload()
 			const savedInvoice = invoice
 				? await updateInvoice({ id: invoice.id, body: payload }).unwrap()
@@ -373,6 +389,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 
 			onSaved?.(savedInvoice)
 		} catch (error) {
+			setFormError(parseServerError(error))
 			console.error('Failed to create invoice', error)
 		}
 	}
@@ -410,13 +427,28 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 
 					<Card sx={{ borderRadius: '12px' }}>
 						<CardContent>
-							<Box sx={{ display: 'flex', flexDirection: 'raw', gap: 1.5 }}>
-								<Button variant='contained' disabled={saving} onClick={handleCreateInvoice}>
-									Create PDF
-								</Button>
-								<Button variant='outlined' disabled={saving} onClick={handleCreateInvoice}>
-									{invoice ? 'Save Changes' : 'Save Draft'}
-								</Button>
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+								<Box sx={{ display: 'flex', gap: 1.5 }}>
+									<Button
+										variant='contained'
+										disabled={saving}
+										onClick={handleCreateInvoice}
+									>
+										Create PDF
+									</Button>
+									<Button
+										variant='outlined'
+										disabled={saving}
+										onClick={handleCreateInvoice}
+									>
+										{invoice ? 'Save Changes' : 'Save Draft'}
+									</Button>
+								</Box>
+								{formError ? (
+									<Alert severity='error' sx={{ maxWidth: 360, whiteSpace: 'pre-line' }}>
+										{formError}
+									</Alert>
+								) : null}
 							</Box>
 						</CardContent>
 					</Card>
@@ -580,9 +612,11 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 										sx={{ fontSize: '13px', color: '#475467' }}
 									/>
 									<TextField
-										type='date'
+										type={dateFocused ? 'date' : 'text'}
 										fullWidth
-										value={form.date}
+										value={dateFocused ? form.date : formatDisplayDate(form.date)}
+										onFocus={() => setDateFocused(true)}
+										onBlur={() => setDateFocused(false)}
 										onChange={(e) =>
 											setForm((current) => ({ ...current, date: e.target.value }))
 										}
@@ -614,7 +648,6 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 										sx={{ fontSize: '13px', color: '#475467' }}
 									/>
 									<TextField
-										type='date'
 										fullWidth
 										value={form.dueDate}
 										onChange={(e) =>
