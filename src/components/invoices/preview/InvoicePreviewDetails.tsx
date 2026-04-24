@@ -21,7 +21,7 @@ import {
 	Typography,
 } from '@mui/material'
 import { type InvoiceItem, useGetInvoiceByIdQuery } from '../../../store/invoices/invoicesApi'
-import { shortUuid } from '../../../utils/formatDate'
+import { formatDate, shortUuid } from '../../../utils/formatDate'
 
 type Props = {
 	id: string
@@ -123,7 +123,7 @@ const InvoicePreviewDetails = ({ id }: Props) => {
 						</IconButton>
 						<Box>
 							<Typography variant='h5' sx={{ fontWeight: 700 }}>
-								{invoice.header || 'Invoice'} #{invoice.number}
+								{invoice.header || 'Invoice'} {invoice.number ? `#${invoice.number}` : ''}
 							</Typography>
 							<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
 								<Typography variant='body2' color='text.secondary'>
@@ -159,8 +159,10 @@ const InvoicePreviewDetails = ({ id }: Props) => {
 
 				<Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
 					<Chip label={invoice.currency} variant='outlined' />
-					<Chip label={`Date: ${invoice.date}`} variant='outlined' />
-					<Chip label={`Due: ${invoice.dueDate}`} variant='outlined' />
+					<Chip label={`Date: ${formatDate(invoice.date)}`} variant='outlined' />
+					{invoice.dueDate ? (
+						<Chip label={`Due: ${formatDate(invoice.dueDate)}`} variant='outlined' />
+					) : null}
 				</Box>
 
 				<Box

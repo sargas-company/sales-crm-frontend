@@ -18,9 +18,13 @@ import {
 	type InvoiceItem as ApiInvoiceItem,
 	type InvoiceLabels,
 	useCreateInvoiceMutation,
+	useGenerateInvoicePdfMutation,
 	useUpdateInvoiceMutation,
 } from '../../../store/invoices/invoicesApi'
+import { API_BASE_URL } from '../../../api/baseApi'
+import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
+import InvoiceStatusSelect from '../edit/InvoiceStatusSelect'
 
 type PartyType = 'contractor' | 'client'
 
@@ -57,6 +61,11 @@ type Props = {
 	invoice?: ApiInvoiceItem
 	onBack?: () => void
 	onSaved?: (invoice: ApiInvoiceItem) => void
+}
+
+type InvoiceFormLabels = InvoiceLabels & {
+	from_title: string
+	total_title: string
 }
 
 const companyProfile = {
@@ -106,24 +115,118 @@ const formatDisplayDate = (dateValue: string) => {
 	}).format(date)
 }
 
-const DEFAULT_LABELS: InvoiceLabels = {
+const normalizeOptionalString = (value: string) => {
+	const trimmedValue = value.trim()
+
+	return trimmedValue.length > 0 ? trimmedValue : undefined
+}
+
+const normalizeOptionalDate = (value: string) => {
+	return normalizeOptionalString(value)?.slice(0, 10)
+}
+
+const toNonNegativeNumber = (value: number) => {
+	const numberValue = Number(value)
+
+	if (!Number.isFinite(numberValue) || numberValue < 0) return 0
+
+	return numberValue
+}
+
+const getInvoiceLogoUrl = () => {
+	if (!logo) return undefined
+
+	if (typeof window === 'undefined') return logo
+
+	return new URL(logo, window.location.origin).toString()
+}
+
+const getGeneratedPdfUrl = (response: unknown) => {
+	if (!response || typeof response !== 'object') return null
+
+	const result = response as {
+		url?: unknown
+		pdfUrl?: unknown
+		downloadUrl?: unknown
+		path?: unknown
+		filePath?: unknown
+	}
+	const url = result.pdfUrl ?? result.downloadUrl ?? result.url ?? result.path ?? result.filePath
+
+	return typeof url === 'string' && url.trim() ? url : null
+}
+
+const resolveBackendUrl = (url: string) => {
+	if (/^https?:\/\//i.test(url)) return url
+
+	return new URL(url, API_BASE_URL).toString()
+}
+
+// const getFilenameFromUrl = (url: string) => {
+// 	const pathname = new URL(url).pathname
+// 	const filename = pathname.split('/').filter(Boolean).pop()
+//
+// 	return filename || 'invoice.pdf'
+// }
+//
+// const downloadPdfFile = async (url: string) => {
+// 	const pdfUrl = resolveBackendUrl(url)
+// 	const response = await axiosInstance.get<Blob>(pdfUrl, { responseType: 'blob' })
+// 	const objectUrl = URL.createObjectURL(response.data)
+// 	const link = document.createElement('a')
+//
+// 	link.href = objectUrl
+// 	link.download = getFilenameFromUrl(pdfUrl)
+// 	document.body.appendChild(link)
+// 	link.click()
+// 	link.remove()
+// 	URL.revokeObjectURL(objectUrl)
+// }
+
+const openPdfFile = (url: string) => {
+	window.open(resolveBackendUrl(url), '_blank', 'noopener,noreferrer')
+}
+
+const API_LABEL_KEYS: Array<keyof InvoiceLabels> = [
+	'to_title',
+	'ship_to_title',
+	'invoice_number_title',
+	'date_title',
+	'payment_terms_title',
+	'due_date_title',
+	'purchase_order_title',
+	'item_header',
+	'quantity_header',
+	'unit_cost_header',
+	'amount_header',
+	'subtotal_title',
+	'discounts_title',
+	'tax_title',
+	'shipping_title',
+	'amount_paid_title',
+	'balance_title',
+	'notes_title',
+	'terms_title',
+]
+
+const DEFAULT_LABELS: InvoiceFormLabels = {
 	from_title: '',
 	to_title: 'Bill To',
 	ship_to_title: 'Ship To',
 	notes_title: 'Notes',
-	terms_title: 'Terms',
-	invoice_number_title: '#',
+	terms_title: 'Terms & Conditions',
+	invoice_number_title: 'Invoice #',
 	date_title: 'Date',
 	due_date_title: 'Due Date',
 	payment_terms_title: 'Payment Terms',
-	purchase_order_title: 'Purchase Order',
-	item_header: 'Item',
-	quantity_header: 'Quantity',
-	unit_cost_header: 'Rate',
-	amount_header: 'Amount',
+	purchase_order_title: 'PO Number',
+	item_header: 'Description',
+	quantity_header: 'Qty',
+	unit_cost_header: 'Price',
+	amount_header: 'Total',
 	subtotal_title: 'Subtotal',
 	tax_title: 'Tax',
-	discounts_title: 'Discounts',
+	discounts_title: 'Discount',
 	shipping_title: 'Shipping',
 	total_title: 'Total',
 	amount_paid_title: 'Amount Paid',
@@ -136,11 +239,11 @@ const buildInitialForm = (party: Party, selectedType: PartyType, invoice?: ApiIn
 
 	return {
 		header: invoice?.header ?? 'INVOICE',
-		number: invoice?.number ?? '115',
+		number: invoice?.number ?? '',
 		currency: invoice?.currency ?? party.currency ?? companyProfile.currency,
 		date: normalizeDateInputValue(invoice?.date, issueDate),
 		paymentTerms: invoice?.paymentTerms ?? '',
-		dueDate: invoice?.dueDate ?? '',
+		dueDate: normalizeDateInputValue(invoice?.dueDate, ''),
 		poNumber: invoice?.poNumber ?? '',
 		fromValue:
 			invoice?.fromValue ?? (isContractor ? party.invoiceBlock : companyProfile.invoiceBlock),
@@ -154,24 +257,21 @@ const buildInitialForm = (party: Party, selectedType: PartyType, invoice?: ApiIn
 		tax: invoice?.tax ?? 0,
 		discounts: invoice?.discounts ?? 0,
 		shipping: invoice?.shipping ?? 0,
-		showTax: invoice?.showTax ?? true,
+		showTax: invoice?.showTax ?? false,
 		showDiscounts: invoice?.showDiscounts ?? false,
 		showShipping: invoice?.showShipping ?? false,
 		showShipTo: invoice?.showShipTo ?? Boolean(party.defaultShipTo),
 	}
 }
 
-const buildChangedLabels = (labels: InvoiceLabels) => {
-	return (Object.keys(labels) as Array<keyof InvoiceLabels>).reduce<Partial<InvoiceLabels>>(
-		(acc, key) => {
-			if (labels[key] !== DEFAULT_LABELS[key]) {
-				acc[key] = labels[key]
-			}
+const buildChangedLabels = (labels: InvoiceFormLabels) => {
+	return API_LABEL_KEYS.reduce<Partial<InvoiceLabels>>((acc, key) => {
+		if (labels[key] !== DEFAULT_LABELS[key]) {
+			acc[key] = labels[key]
+		}
 
-			return acc
-		},
-		{}
-	)
+		return acc
+	}, {})
 }
 
 const outlinedSx = {
@@ -278,8 +378,9 @@ const EditableLabel: FC<EditableLabelProps> = ({ value, onChange, sx, inputSx, a
 )
 
 const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBack, onSaved }) => {
+	const { showToast } = useToast()
 	const [form, setForm] = useState(() => buildInitialForm(selectedParty, selectedType, invoice))
-	const [labels, setLabels] = useState<InvoiceLabels>(() => ({
+	const [labels, setLabels] = useState<InvoiceFormLabels>(() => ({
 		...DEFAULT_LABELS,
 		...(invoice?.labels ?? {}),
 	}))
@@ -292,40 +393,44 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 				.sort((a, b) => a.sortOrder - b.sortOrder)
 				.map((item, index) => ({
 					id: item.id ?? `${index}`,
-					name: item.name,
-					quantity: item.quantity,
-					unitCost: item.unitCost,
+					name: item.name ?? '',
+					quantity: toNonNegativeNumber(item.quantity),
+					unitCost: toNonNegativeNumber(item.unitCost),
 				}))
 		}
 
-		return [
-			{ id: '1', name: 'Web Development services', quantity: 160, unitCost: 1.87 },
-			{ id: '2', name: 'Bonus', quantity: 1, unitCost: 252.8 },
-		]
+		return [{ id: '1', name: '', quantity: 1, unitCost: 0 }]
 	})
 	const [createInvoice, { isLoading: isSaving }] = useCreateInvoiceMutation()
 	const [updateInvoice, { isLoading: isUpdating }] = useUpdateInvoiceMutation()
-	const saving = isSaving || isUpdating
+	const [generateInvoicePdf, { isLoading: isGenerating }] = useGenerateInvoicePdfMutation()
+	const saving = isSaving || isUpdating || isGenerating
 
 	const subtotal = useMemo(() => {
-		return items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0)
+		return items.reduce(
+			(sum, item) =>
+				sum + toNonNegativeNumber(item.quantity) * toNonNegativeNumber(item.unitCost),
+			0
+		)
 	}, [items])
 
 	const taxAmount = useMemo(() => {
 		if (!form.showTax) return 0
 
-		return form.taxMode === 'percent' ? subtotal * (form.tax / 100) : form.tax
+		const tax = toNonNegativeNumber(form.tax)
+
+		return form.taxMode === 'percent' ? subtotal * (tax / 100) : tax
 	}, [form.showTax, form.taxMode, form.tax, subtotal])
 
 	const total = useMemo(() => {
-		const discounts = form.showDiscounts ? form.discounts : 0
-		const shipping = form.showShipping ? form.shipping : 0
+		const discounts = form.showDiscounts ? toNonNegativeNumber(form.discounts) : 0
+		const shipping = form.showShipping ? toNonNegativeNumber(form.shipping) : 0
 
 		return subtotal + taxAmount + shipping - discounts
 	}, [subtotal, taxAmount, form.showDiscounts, form.discounts, form.showShipping, form.shipping])
 
 	const balanceDue = useMemo(() => {
-		return Math.max(total - form.amountPaid, 0)
+		return Math.max(total - toNonNegativeNumber(form.amountPaid), 0)
 	}, [total, form.amountPaid])
 
 	const updateItem = (id: string, key: keyof InvoiceItem, value: string | number) => {
@@ -334,46 +439,70 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 		)
 	}
 
-	const updateLabel = (key: keyof InvoiceLabels, value: string) => {
+	const updateLabel = (key: keyof InvoiceFormLabels, value: string) => {
 		setLabels((current) => ({ ...current, [key]: value }))
 	}
 
 	const buildInvoicePayload = (): InvoiceCreatePayload => {
 		const changedLabels = buildChangedLabels(labels)
+		const dueDate = normalizeOptionalDate(form.dueDate)
+		const logoUrl = invoice ? undefined : getInvoiceLogoUrl()
+		const tax = toNonNegativeNumber(form.tax)
+		const discounts = toNonNegativeNumber(form.discounts)
+		const shipping = toNonNegativeNumber(form.shipping)
+		const amountPaid = toNonNegativeNumber(form.amountPaid)
+		const lineItems = items
+			.map((item, index) => ({
+				name: normalizeOptionalString(item.name),
+				quantity: toNonNegativeNumber(item.quantity),
+				unitCost: toNonNegativeNumber(item.unitCost),
+				sortOrder: index,
+			}))
+			.filter((item) => item.name || (item.quantity > 0 && item.unitCost > 0))
 
 		return {
 			counterpartyId: selectedParty.id,
-			number: form.number,
+			...(normalizeOptionalString(form.number)
+				? { number: normalizeOptionalString(form.number) }
+				: {}),
 			currency: form.currency,
 			date: form.date,
-			dueDate: form.dueDate,
-			paymentTerms: form.paymentTerms,
-			poNumber: form.poNumber,
+			...(dueDate ? { dueDate } : {}),
+			...(normalizeOptionalString(form.paymentTerms)
+				? { paymentTerms: normalizeOptionalString(form.paymentTerms) }
+				: {}),
+			...(normalizeOptionalString(form.poNumber)
+				? { poNumber: normalizeOptionalString(form.poNumber) }
+				: {}),
 			header: form.header,
+			...(logoUrl ? { logoUrl } : {}),
 			fromValue: form.fromValue,
 			toValue: form.toValue,
-			shipTo: form.shipTo,
-			notes: form.notes,
-			terms: form.terms,
-			tax: form.tax,
-			discounts: form.showDiscounts ? form.discounts : 0,
-			shipping: form.showShipping ? form.shipping : 0,
-			amountPaid: form.amountPaid,
+			...(normalizeOptionalString(form.shipTo) ? { shipTo: form.shipTo } : {}),
+			...(normalizeOptionalString(form.notes) ? { notes: form.notes } : {}),
+			...(normalizeOptionalString(form.terms) ? { terms: form.terms } : {}),
+			tax,
+			discounts: form.showDiscounts ? discounts : 0,
+			shipping: form.showShipping ? shipping : 0,
+			amountPaid,
 			showTax: form.showTax,
 			showDiscounts: form.showDiscounts,
 			showShipping: form.showShipping,
-			showShipTo: form.showShipTo,
-			lineItems: items.map((item, index) => ({
-				name: item.name,
-				quantity: item.quantity,
-				unitCost: item.unitCost,
-				sortOrder: index,
-			})),
+			showShipTo: form.showShipTo && Boolean(normalizeOptionalString(form.shipTo)),
+			lineItems,
 			...(Object.keys(changedLabels).length > 0 ? { labels: changedLabels } : {}),
 		}
 	}
 
-	const handleCreateInvoice = async () => {
+	const saveInvoice = async () => {
+		const payload = buildInvoicePayload()
+
+		return invoice
+			? await updateInvoice({ id: invoice.id, body: payload }).unwrap()
+			: await createInvoice(payload).unwrap()
+	}
+
+	const handleSaveInvoice = async (shouldGeneratePdf = false) => {
 		try {
 			setFormError('')
 
@@ -382,10 +511,23 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 				return
 			}
 
-			const payload = buildInvoicePayload()
-			const savedInvoice = invoice
-				? await updateInvoice({ id: invoice.id, body: payload }).unwrap()
-				: await createInvoice(payload).unwrap()
+			const savedInvoice = await saveInvoice()
+
+			if (shouldGeneratePdf) {
+				const generatedPdf = await generateInvoicePdf(savedInvoice.id).unwrap()
+				const pdfUrl = getGeneratedPdfUrl(generatedPdf)
+
+				if (pdfUrl) {
+					openPdfFile(pdfUrl)
+				}
+
+				showToast('Invoice PDF generated successfully', 'success')
+			} else {
+				showToast(
+					invoice ? 'Invoice updated successfully' : 'Invoice created successfully',
+					'success'
+				)
+			}
 
 			onSaved?.(savedInvoice)
 		} catch (error) {
@@ -428,18 +570,29 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 					<Card sx={{ borderRadius: '12px' }}>
 						<CardContent>
 							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+								{invoice ? (
+									<Box
+										sx={{
+											display: 'flex',
+											justifyContent: 'flex-end',
+											alignItems: 'center',
+										}}
+									>
+										<InvoiceStatusSelect id={invoice.id} status={invoice.status} />
+									</Box>
+								) : null}
 								<Box sx={{ display: 'flex', gap: 1.5 }}>
 									<Button
 										variant='contained'
 										disabled={saving}
-										onClick={handleCreateInvoice}
+										onClick={() => handleSaveInvoice(true)}
 									>
 										Create PDF
 									</Button>
 									<Button
 										variant='outlined'
 										disabled={saving}
-										onClick={handleCreateInvoice}
+										onClick={() => handleSaveInvoice(false)}
 									>
 										{invoice ? 'Save Changes' : 'Save Draft'}
 									</Button>
@@ -565,7 +718,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 													fontSize: '18px',
 													lineHeight: 1,
 													zIndex: 1,
-													width: '32px',
+													width: '82px',
 												}}
 											/>
 
@@ -582,7 +735,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 												sx={{
 													...outlinedSx,
 													'& .MuiOutlinedInput-input': {
-														padding: '11px 14px 11px 34px',
+														padding: '11px 14px 11px 104px',
 														fontSize: '14px',
 														textAlign: 'right',
 													},
@@ -648,6 +801,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 										sx={{ fontSize: '13px', color: '#475467' }}
 									/>
 									<TextField
+										type='date'
 										fullWidth
 										value={form.dueDate}
 										onChange={(e) =>
@@ -801,7 +955,9 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 
 							<Box sx={{ p: '10px 0 0 0' }}>
 								{items.map((item) => {
-									const amount = item.quantity * item.unitCost
+									const amount =
+										toNonNegativeNumber(item.quantity) *
+										toNonNegativeNumber(item.unitCost)
 									return (
 										<Box
 											key={item.id}
@@ -1014,12 +1170,15 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 									>
 										<TextField
 											value={form.tax}
-											onChange={(e) =>
+											onChange={(e) => {
+												const tax = Number(e.target.value)
+
 												setForm((current) => ({
 													...current,
-													tax: Number(e.target.value),
+													tax,
+													showTax: toNonNegativeNumber(tax) > 0,
 												}))
-											}
+											}}
 											sx={{
 												...outlinedSx,
 												'& .MuiOutlinedInput-root': {

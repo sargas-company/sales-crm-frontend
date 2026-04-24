@@ -39,7 +39,7 @@ const InvoiceTable = ({ items, isLoading, onDelete }: InvoiceTableProps) => {
 							width={field['number'].width}
 							children={
 								<Link to={`/invoices/preview/${row.id}`}>
-									<Text skinColor>#{row.number}</Text>
+									<Text skinColor>{row.number ? `#${row.number}` : 'No number'}</Text>
 								</Link>
 							}
 						/>

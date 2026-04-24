@@ -4,7 +4,6 @@ export type InvoiceCurrency = 'USD' | 'EUR' | 'UAH'
 export type InvoiceStatus = 'draft' | 'open' | 'paid'
 
 export interface InvoiceLabels {
-	from_title: string
 	to_title: string
 	ship_to_title: string
 	notes_title: string
@@ -22,12 +21,25 @@ export interface InvoiceLabels {
 	tax_title: string
 	discounts_title: string
 	shipping_title: string
-	total_title: string
 	amount_paid_title: string
 	balance_title: string
 }
 
+export interface InvoiceCustomField {
+	name: string
+	value: string
+}
+
 export interface InvoiceLineItemPayload {
+	id?: string
+	name?: string
+	description?: string
+	quantity?: number
+	unitCost?: number
+	sortOrder?: number
+}
+
+export interface InvoiceLineItem {
 	id?: string
 	name: string
 	description?: string
@@ -38,18 +50,50 @@ export interface InvoiceLineItemPayload {
 
 export interface InvoiceCreatePayload {
 	counterpartyId: string
-	number: string
+	status?: InvoiceStatus
+	header?: string
+	logoUrl?: string | null
+	number?: string
+	currency?: InvoiceCurrency
+	date?: string
+	dueDate?: string
+	paymentTerms?: string
+	poNumber?: string
+	fromValue?: string
+	toValue?: string
+	shipTo?: string
+	notes?: string
+	terms?: string
+	tax?: number
+	discounts?: number
+	shipping?: number
+	amountPaid?: number
+	showTax?: boolean
+	showDiscounts?: boolean
+	showShipping?: boolean
+	showShipTo?: boolean
+	labels?: Partial<InvoiceLabels>
+	customFields?: InvoiceCustomField[]
+	lineItems?: InvoiceLineItemPayload[]
+}
+
+export type InvoiceUpdatePayload = Partial<InvoiceCreatePayload>
+
+export interface InvoiceItem extends Omit<InvoiceCreatePayload, 'lineItems'> {
+	id: string
+	counterpartyId: string
+	header: string
+	number?: string
 	currency: InvoiceCurrency
 	date: string
-	dueDate: string
-	paymentTerms: string
-	poNumber: string
-	header: string
+	dueDate?: string
+	paymentTerms?: string
+	poNumber?: string
 	fromValue: string
 	toValue: string
-	shipTo: string
-	notes: string
-	terms: string
+	shipTo?: string
+	notes?: string
+	terms?: string
 	tax: number
 	discounts: number
 	shipping: number
@@ -58,12 +102,7 @@ export interface InvoiceCreatePayload {
 	showDiscounts: boolean
 	showShipping: boolean
 	showShipTo: boolean
-	labels?: Partial<InvoiceLabels>
-	lineItems: InvoiceLineItemPayload[]
-}
-
-export interface InvoiceItem extends InvoiceCreatePayload {
-	id: string
+	lineItems: InvoiceLineItem[]
 	status?: InvoiceStatus
 	counterparty?: {
 		id: string
@@ -74,6 +113,13 @@ export interface InvoiceItem extends InvoiceCreatePayload {
 	}
 	createdAt?: string
 	updatedAt?: string
+}
+
+export interface InvoiceGenerateResponse {
+	url?: string
+	pdfUrl?: string
+	downloadUrl?: string
+	[key: string]: unknown
 }
 
 export interface InvoicePage {
@@ -105,9 +151,14 @@ export const invoicesApi = baseApi.injectEndpoints({
 			invalidatesTags: ['Invoice'],
 		}),
 
-		updateInvoice: builder.mutation<InvoiceItem, { id: string; body: InvoiceCreatePayload }>({
+		updateInvoice: builder.mutation<InvoiceItem, { id: string; body: InvoiceUpdatePayload }>({
 			query: ({ id, body }) => ({ url: `/invoices/${id}`, method: 'PATCH', body }),
 			invalidatesTags: (_, __, { id }) => ['Invoice', { type: 'Invoice', id }],
+		}),
+
+		generateInvoicePdf: builder.mutation<InvoiceGenerateResponse, string>({
+			query: (id) => ({ url: `/invoices/${id}/generate`, method: 'POST' }),
+			invalidatesTags: (_, __, id) => ['Invoice', { type: 'Invoice', id }],
 		}),
 
 		deleteInvoice: builder.mutation<void, string>({
@@ -122,5 +173,6 @@ export const {
 	useGetInvoiceByIdQuery,
 	useCreateInvoiceMutation,
 	useUpdateInvoiceMutation,
+	useGenerateInvoicePdfMutation,
 	useDeleteInvoiceMutation,
 } = invoicesApi
