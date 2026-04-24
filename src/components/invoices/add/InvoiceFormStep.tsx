@@ -71,7 +71,8 @@ type InvoiceFormLabels = InvoiceLabels & {
 const companyProfile = {
 	displayName: 'Sargas Agency OÜ',
 	invoiceBlock:
-		'Sargas Agency OÜ, 17146771\nHarju maakond, Tallinn, Kesklinna\nlinnaosa, Narva mnt 7, 10117',
+		// 'Sargas Agency OÜ, 17146771\nHarju maakond, Tallinn, Kesklinna\nlinnaosa, Narva mnt 7, 10117', для контрктора, а vat nomer для клиента
+		'Sargas Agency OÜ\nNarva mnt 7\nTallinn, Kesklinna linnaosa\nHarju maakond, 10117\nEstonia\nID: 17146771\nVAT EE102840485',
 	currency: 'USD' as const,
 	defaultPaymentTerms: 'Due on receipt',
 }
@@ -212,18 +213,18 @@ const API_LABEL_KEYS: Array<keyof InvoiceLabels> = [
 const DEFAULT_LABELS: InvoiceFormLabels = {
 	from_title: '',
 	to_title: 'Bill To',
-	ship_to_title: 'Ship To',
-	notes_title: 'Notes',
-	terms_title: 'Terms & Conditions',
-	invoice_number_title: 'Invoice #',
+	ship_to_title: '',
+	notes_title: '',
+	terms_title: 'Reverse charge – Customer is liable to account for VAT.:',
+	invoice_number_title: '#',
 	date_title: 'Date',
 	due_date_title: 'Due Date',
-	payment_terms_title: 'Payment Terms',
-	purchase_order_title: 'PO Number',
+	payment_terms_title: '',
+	purchase_order_title: '',
 	item_header: 'Description',
-	quantity_header: 'Qty',
-	unit_cost_header: 'Price',
-	amount_header: 'Total',
+	quantity_header: 'Quantity',
+	unit_cost_header: 'Rate',
+	amount_header: 'Amount',
 	subtotal_title: 'Subtotal',
 	tax_title: 'Tax',
 	discounts_title: 'Discount',
@@ -251,7 +252,13 @@ const buildInitialForm = (party: Party, selectedType: PartyType, invoice?: ApiIn
 			invoice?.toValue ?? (isContractor ? companyProfile.invoiceBlock : party.invoiceBlock),
 		shipTo: invoice?.shipTo ?? party.defaultShipTo ?? '',
 		notes: invoice?.notes ?? '',
-		terms: invoice?.terms ?? '',
+		terms: invoice?.terms ?? 'Citibank\n' +
+			'111 Wall Street New York, NY 10043 USA\n' +
+			'031100209\n' +
+			'CITIUS33\n' +
+			'70582800001644814\n' +
+			'Beneficiary name:\n' +
+			'Sargas Agency OU',
 		amountPaid: invoice?.amountPaid ?? 0,
 		taxMode: 'percent' as 'percent' | 'fixed',
 		tax: invoice?.tax ?? 0,
@@ -687,10 +694,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 												width: '202px',
 											}}
 										>
-											<EditableLabel
-												value={labels.invoice_number_title}
-												onChange={(value) => updateLabel('invoice_number_title', value)}
-												ariaLabel='Invoice number label'
+											<Box
 												sx={{
 													position: 'absolute',
 													left: '14px',
@@ -700,9 +704,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 													fontSize: '18px',
 													lineHeight: 1,
 													zIndex: 1,
-													width: '82px',
+													userSelect: 'none',
+													pointerEvents: 'none',
 												}}
-											/>
+											>
+												#
+											</Box>
 
 											<TextField
 												fullWidth
@@ -713,11 +720,10 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 														number: e.target.value,
 													}))
 												}
-												placeholder='115'
 												sx={{
 													...outlinedSx,
 													'& .MuiOutlinedInput-input': {
-														padding: '11px 14px 11px 104px',
+														padding: '11px 14px 11px 40px',
 														fontSize: '14px',
 														textAlign: 'right',
 													},
