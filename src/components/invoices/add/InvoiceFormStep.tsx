@@ -445,7 +445,6 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 
 	const buildInvoicePayload = (): InvoiceCreatePayload => {
 		const changedLabels = buildChangedLabels(labels)
-		const dueDate = normalizeOptionalDate(form.dueDate)
 		const logoUrl = invoice ? undefined : getInvoiceLogoUrl()
 		const tax = toNonNegativeNumber(form.tax)
 		const discounts = toNonNegativeNumber(form.discounts)
@@ -462,25 +461,19 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 
 		return {
 			counterpartyId: selectedParty.id,
-			...(normalizeOptionalString(form.number)
-				? { number: normalizeOptionalString(form.number) }
-				: {}),
+			number: form.number.trim(),
 			currency: form.currency,
 			date: form.date,
-			...(dueDate ? { dueDate } : {}),
-			...(normalizeOptionalString(form.paymentTerms)
-				? { paymentTerms: normalizeOptionalString(form.paymentTerms) }
-				: {}),
-			...(normalizeOptionalString(form.poNumber)
-				? { poNumber: normalizeOptionalString(form.poNumber) }
-				: {}),
+			dueDate: form.dueDate.slice(0, 10),
+			paymentTerms: form.paymentTerms.trim(),
+			poNumber: form.poNumber.trim(),
 			header: form.header,
 			...(logoUrl ? { logoUrl } : {}),
 			fromValue: form.fromValue,
 			toValue: form.toValue,
-			...(normalizeOptionalString(form.shipTo) ? { shipTo: form.shipTo } : {}),
-			...(normalizeOptionalString(form.notes) ? { notes: form.notes } : {}),
-			...(normalizeOptionalString(form.terms) ? { terms: form.terms } : {}),
+			shipTo: form.shipTo.trim(),
+			notes: form.notes.trim(),
+			terms: form.terms.trim(),
 			tax,
 			discounts: form.showDiscounts ? discounts : 0,
 			shipping: form.showShipping ? shipping : 0,
