@@ -1146,82 +1146,113 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 										{formatMoney(subtotal, form.currency)}
 									</Typography>
 
-									<EditableLabel
-										value={labels.tax_title}
-										onChange={(value) => updateLabel('tax_title', value)}
-										ariaLabel='Tax label'
-										sx={{ fontSize: '14px', color: '#475467' }}
-									/>
-									<Box
-										sx={{
-											display: 'grid',
-											gridTemplateColumns: '1fr 48px 40px',
-											gap: '0px',
-											justifySelf: 'end',
-											width: '170px',
-										}}
-									>
-										<TextField
-											value={form.tax}
-											onChange={(e) => {
-												const tax = Number(e.target.value)
-
-												setForm((current) => ({
-													...current,
-													tax,
-													showTax: toNonNegativeNumber(tax) > 0,
-												}))
-											}}
-											sx={{
-												...outlinedSx,
-												'& .MuiOutlinedInput-root': {
-													...outlinedSx['& .MuiOutlinedInput-root'],
-													borderTopRightRadius: 0,
-													borderBottomRightRadius: 0,
-												},
-											}}
-										/>
-										<Box
-											sx={{
-												border: '1px solid #d0d5dd',
-												borderLeft: 'none',
-												height: '44px',
-												display: 'flex',
-												alignItems: 'center',
-												justifyContent: 'center',
-												fontSize: '14px',
-												color: '#475467',
-												background: '#fff',
-											}}
-										>
-											%
-										</Box>
-										<Box
-											sx={{
-												border: '1px solid #d0d5dd',
-												borderLeft: 'none',
-												borderTopRightRadius: '10px',
-												borderBottomRightRadius: '10px',
-												height: '44px',
-												display: 'flex',
-												alignItems: 'center',
-												justifyContent: 'center',
-												color: '#667085',
-												background: '#fff',
-											}}
-										>
-											<Loop fontSize='small' />
-										</Box>
-									</Box>
+									{form.showTax ? (
+										<>
+											<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+												<EditableLabel
+													value={labels.tax_title}
+													onChange={(value) => updateLabel('tax_title', value)}
+													ariaLabel='Tax label'
+													sx={{ fontSize: '14px', color: '#475467', flex: 1, minWidth: 0 }}
+												/>
+												<IconButton
+													size='small'
+													onClick={() =>
+														setForm((current) => ({
+															...current,
+															showTax: false,
+															tax: 0,
+														}))
+													}
+													sx={{ color: '#98a2b3', p: 0.25, flexShrink: 0 }}
+												>
+													<Close sx={{ fontSize: 14 }} />
+												</IconButton>
+											</Box>
+											<Box
+												sx={{
+													display: 'grid',
+													gridTemplateColumns: '1fr 48px 40px',
+													gap: '0px',
+													justifySelf: 'end',
+													width: '170px',
+												}}
+											>
+												<TextField
+													value={form.tax}
+													onChange={(e) =>
+														setForm((current) => ({
+															...current,
+															tax: Number(e.target.value),
+														}))
+													}
+													sx={{
+														...outlinedSx,
+														'& .MuiOutlinedInput-root': {
+															...outlinedSx['& .MuiOutlinedInput-root'],
+															borderTopRightRadius: 0,
+															borderBottomRightRadius: 0,
+														},
+													}}
+												/>
+												<Box
+													sx={{
+														border: '1px solid #d0d5dd',
+														borderLeft: 'none',
+														height: '44px',
+														display: 'flex',
+														alignItems: 'center',
+														justifyContent: 'center',
+														fontSize: '14px',
+														color: '#475467',
+														background: '#fff',
+													}}
+												>
+													%
+												</Box>
+												<Box
+													sx={{
+														border: '1px solid #d0d5dd',
+														borderLeft: 'none',
+														borderTopRightRadius: '10px',
+														borderBottomRightRadius: '10px',
+														height: '44px',
+														display: 'flex',
+														alignItems: 'center',
+														justifyContent: 'center',
+														color: '#667085',
+														background: '#fff',
+													}}
+												>
+													<Loop fontSize='small' />
+												</Box>
+											</Box>
+										</>
+									) : null}
 
 									{form.showDiscounts ? (
 										<>
-											<EditableLabel
-												value={labels.discounts_title}
-												onChange={(value) => updateLabel('discounts_title', value)}
-												ariaLabel='Discounts label'
-												sx={{ fontSize: '14px', color: '#475467' }}
-											/>
+											<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+												<EditableLabel
+													value={labels.discounts_title}
+													onChange={(value) => updateLabel('discounts_title', value)}
+													ariaLabel='Discounts label'
+													sx={{ fontSize: '14px', color: '#475467', flex: 1, minWidth: 0 }}
+												/>
+												<IconButton
+													size='small'
+													onClick={() =>
+														setForm((current) => ({
+															...current,
+															showDiscounts: false,
+															discounts: 0,
+														}))
+													}
+													sx={{ color: '#98a2b3', p: 0.25, flexShrink: 0 }}
+												>
+													<Close sx={{ fontSize: 14 }} />
+												</IconButton>
+											</Box>
 											<Box sx={{ justifySelf: 'end', width: '170px' }}>
 												<Box sx={{ position: 'relative', width: '170px' }}>
 													<Box
@@ -1265,12 +1296,27 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 
 									{form.showShipping ? (
 										<>
-											<EditableLabel
-												value={labels.shipping_title}
-												onChange={(value) => updateLabel('shipping_title', value)}
-												ariaLabel='Shipping label'
-												sx={{ fontSize: '14px', color: '#475467' }}
-											/>
+											<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+												<EditableLabel
+													value={labels.shipping_title}
+													onChange={(value) => updateLabel('shipping_title', value)}
+													ariaLabel='Shipping label'
+													sx={{ fontSize: '14px', color: '#475467', flex: 1, minWidth: 0 }}
+												/>
+												<IconButton
+													size='small'
+													onClick={() =>
+														setForm((current) => ({
+															...current,
+															showShipping: false,
+															shipping: 0,
+														}))
+													}
+													sx={{ color: '#98a2b3', p: 0.25, flexShrink: 0 }}
+												>
+													<Close sx={{ fontSize: 14 }} />
+												</IconButton>
+											</Box>
 											<Box sx={{ justifySelf: 'end', width: '170px' }}>
 												<Box sx={{ position: 'relative', width: '170px' }}>
 													<Box
@@ -1312,7 +1358,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 										</>
 									) : null}
 
-									{!form.showDiscounts || !form.showShipping ? (
+									{!form.showTax || !form.showDiscounts || !form.showShipping ? (
 										<Box
 											sx={{
 												display: 'flex',
@@ -1322,6 +1368,21 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 												mb: '2px',
 											}}
 										>
+											{!form.showTax ? (
+												<Typography
+													onClick={() =>
+														setForm((current) => ({ ...current, showTax: true }))
+													}
+													sx={{
+														fontSize: '14px',
+														fontWeight: 600,
+														color: '#1976d2',
+														cursor: 'pointer',
+													}}
+												>
+													+ Tax
+												</Typography>
+											) : null}
 											{!form.showDiscounts ? (
 												<Typography
 													onClick={() =>
