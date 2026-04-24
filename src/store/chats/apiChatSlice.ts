@@ -110,16 +110,16 @@ export const fetchChats = createAsyncThunk(
 export const fetchProposalHistory = createAsyncThunk(
 	'apiChat/fetchHistory',
 	async (proposalId: string) => {
-		const { data } = await axiosInstance.get<ChatMessage[]>(`/proposals/${proposalId}/chat`)
-		return data
+		const { data } = await axiosInstance.get<{ messages: ChatMessage[]; context: unknown }>(`/proposals/${proposalId}/chat`)
+		return data.messages
 	}
 )
 
 export const fetchLeadHistory = createAsyncThunk(
 	'apiChat/fetchLeadHistory',
 	async (leadId: string) => {
-		const { data } = await axiosInstance.get<ChatMessage[]>(`/leads/${leadId}/chat`)
-		return data
+		const { data } = await axiosInstance.get<{ messages: ChatMessage[]; context: unknown }>(`/leads/${leadId}/chat`)
+		return data.messages
 	}
 )
 

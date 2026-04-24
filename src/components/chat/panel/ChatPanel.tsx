@@ -46,9 +46,9 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 		setLoading(true)
 		setMessages([])
 		axiosInstance
-			.get<Message[]>(historyUrl)
+			.get<{ messages: Message[]; context: unknown }>(historyUrl)
 			.then(({ data }) => {
-				if (!cancelled) setMessages(data)
+				if (!cancelled) setMessages(data.messages)
 			})
 			.catch(() => {})
 			.finally(() => {
