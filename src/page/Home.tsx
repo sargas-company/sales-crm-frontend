@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import AppBar from '../components/appbar/AppBar'
-// import Footer from "../components/footer/Footer";
 import { Flex } from '../components/layout'
 import AppLayout from '../components/layout/AppLayout'
 import PageLoading from '../components/loading/PageLoading'
@@ -20,6 +19,8 @@ const ClientRequests = lazy(() => import('./client-requests'))
 const Invoices = lazy(() => import('./invoices'))
 const JobPosts = lazy(() => import('./job-posts'))
 const Prompts = lazy(() => import('./prompts'))
+const ClientCalls = lazy(() => import('./client-calls'))
+const Settings = lazy(() => import('./settings'))
 
 const Home = () => {
 	return (
@@ -50,7 +51,8 @@ const Home = () => {
 							<Route path='/invoices/*' element={<Invoices />} />
 							<Route path='/job-posts/*' element={<JobPosts />} />
 							<Route path='/prompts/*' element={<Prompts />} />
-
+							<Route path='/client-calls/*' element={<ClientCalls />} />
+							<Route path='/settings' element={<Settings />} />
 							<Route path='/*' element={<PageNotFound />} />
 						</Routes>
 					</Suspense>

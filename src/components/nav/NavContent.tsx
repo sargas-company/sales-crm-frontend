@@ -39,14 +39,13 @@ const StyledNavContent = styled(Card)<{ isCollapsed: boolean }>`
 		!isCollapsed &&
 		`box-shadow: unset;
   background: transparent !important;`}}
-
-
   & .nav-label {
     ${({ isCollapsed }) =>
 			isCollapsed &&
 			`opacity: 0;
       transition: 200ms;
     `}
+	font-size: 15px;
   }
 
   & .nav-item-container {

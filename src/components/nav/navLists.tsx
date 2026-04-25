@@ -13,6 +13,7 @@ import {
 	AssignmentOutlined,
 	WorkOutlineOutlined,
 	TuneOutlined,
+	PhoneOutlined
 } from '@mui/icons-material'
 
 const navList: NavOptions[] = [
@@ -74,9 +75,15 @@ const navList: NavOptions[] = [
 		icon: <MenuBookOutlined />,
 	},
 	{
+
 		label: 'Prompts',
 		path: '/prompts/list',
-		icon: <TuneOutlined />,
+		icon: <TuneOutlined />
+	},
+	{
+		label: 'Client Calls',
+		path: '/client-calls/list',
+		icon: <PhoneOutlined />
 	},
 	// {
 	//   parent: formatGroupButton("User", <PersonOutline />, "/user/"),
