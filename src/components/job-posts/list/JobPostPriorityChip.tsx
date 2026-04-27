@@ -21,7 +21,7 @@ const JobPostPriorityChip = ({ priority }: { priority: JobPostPriority | null })
 			skin='light'
 			size='small'
 			color={priorityColor[priority]}
-			styles={{ whiteSpace: 'nowrap' }}
+			styles={{ whiteSpace: 'nowrap', color: '#000000' }}
 		/>
 	)
 }

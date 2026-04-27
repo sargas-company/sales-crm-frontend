@@ -21,7 +21,7 @@ const JobPostDecisionChip = ({ decision }: { decision: JobPostDecision | null })
 			skin='light'
 			size='small'
 			color={decisionColor[decision]}
-			styles={{ whiteSpace: 'nowrap' }}
+			styles={{ whiteSpace: 'nowrap', color: '#000000' }}
 		/>
 	)
 }

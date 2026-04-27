@@ -11,14 +11,14 @@ import type { JobPostItem } from '../../../store/job-posts/types/definition'
 import { formatDate } from '../../../utils/formatDate'
 
 const columns: DataGridColoumn[] = [
+	{ fieldId: 'number', label: '#', width: '90px' },
 	{ fieldId: 'title', label: 'Title', width: '280px' },
-	{ fieldId: 'decision', label: 'Decision', width: '120px' },
 	{ fieldId: 'matchScore', label: 'Score', width: '80px' },
-	{ fieldId: 'priority', label: 'Priority', width: '110px' },
+	{ fieldId: 'gigRadarScore', label: 'GigRadar', width: '100px' },
+	{ fieldId: 'decision', label: 'Decision', width: '140px' },
+	{ fieldId: 'priority', label: 'Priority', width: '130px' },
 	{ fieldId: 'budget', label: 'Budget', width: '160px' },
 	{ fieldId: 'location', label: 'Location', width: '150px' },
-	{ fieldId: 'gigRadarScore', label: 'GigRadar', width: '100px' },
-	{ fieldId: 'scanner', label: 'Scanner', width: '160px' },
 	{ fieldId: 'createdAt', label: 'Created At', width: '150px' },
 	{ fieldId: 'actions', label: 'Actions', width: '90px' },
 ]
@@ -38,8 +38,16 @@ const JobPostTable = ({ items, isLoading, onDelete }: JobPostTableProps) => {
 				rows={items}
 				columns={columns}
 				gridDataKey={(item) => item.id}
-				renderGridData={(row, field) => (
+				renderGridData={(row, field, index) => (
 					<>
+						<DataGridCell
+							width={field['number'].width}
+							children={
+								<Link to={`/job-posts/preview/${row.id}`}>
+									<Text skinColor>#{index + 1}</Text>
+								</Link>
+							}
+						/>
 						<DataGridCell width={field['title'].width}>
 							<Link to={`/job-posts/preview/${row.id}`}>
 								<Text
@@ -57,26 +65,27 @@ const JobPostTable = ({ items, isLoading, onDelete }: JobPostTableProps) => {
 							</Link>
 						</DataGridCell>
 						<DataGridCell
-							width={field['decision'].width}
-							children={<JobPostDecisionChip decision={row.decision} />}
-						/>
-						<DataGridCell
 							width={field['matchScore'].width}
 							justify='center'
 							value={row.matchScore != null ? `${row.matchScore}` : '—'}
 						/>
 						<DataGridCell
-							width={field['priority'].width}
-							children={<JobPostPriorityChip priority={row.priority} />}
-						/>
-						<DataGridCell width={field['budget'].width} value={row.budget ?? '—'} />
-						<DataGridCell width={field['location'].width} value={row.location ?? '—'} />
-						<DataGridCell
 							width={field['gigRadarScore'].width}
 							justify='center'
 							value={row.gigRadarScore != null ? `${row.gigRadarScore}` : '—'}
 						/>
-						<DataGridCell width={field['scanner'].width} value={row.scanner ?? '—'} />
+						<DataGridCell
+							width={field['decision'].width}
+							justify='center'
+							children={<JobPostDecisionChip decision={row.decision} />}
+						/>
+						<DataGridCell
+							width={field['priority'].width}
+							justify='center'
+							children={<JobPostPriorityChip priority={row.priority} />}
+						/>
+						<DataGridCell width={field['budget'].width} value={row.budget ?? '—'} />
+						<DataGridCell width={field['location'].width} value={row.location ?? '—'} />
 						<DataGridCell
 							width={field['createdAt'].width}
 							value={formatDate(row.createdAt)}
