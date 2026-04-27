@@ -158,32 +158,40 @@ const ProposalPreview = () => {
 
 					<TabContent tabIndex={2}>
 						<Box
-							display='flex'
-							align='center'
 							style={{
-								marginBottom: 25,
-								marginLeft: 'auto',
-								width: 'fit-content',
+								border: '1px solid #dbe3ef',
+								borderRadius: 25,
+								padding: 15,
 							}}
 						>
-							<DetailsPopover
-								proposal={{
-									title: proposal.title,
-									status: proposal.status,
-									proposalType: proposal.proposalType,
-									boosted: proposal.boosted,
-									connects: proposal.connects,
-									boostedConnects: proposal.boostedConnects,
-									platform: { id: proposal.platform.id, name: proposal.platform.title },
-									vacancy: proposal.vacancy,
-									coverLetter: proposal.coverLetter,
+							<Box
+								display='flex'
+								align='center'
+								style={{
+									marginBottom: 25,
+									marginLeft: 'auto',
+									width: 'fit-content',
 								}}
-								jobPost={chatContext?.jobPost ?? undefined}
-								lead={chatContext?.lead ?? undefined}
-							/>
-							<ModelSwitcher value={model} onChange={setModel} />
+							>
+								<DetailsPopover
+									proposal={{
+										title: proposal.title,
+										status: proposal.status,
+										proposalType: proposal.proposalType,
+										boosted: proposal.boosted,
+										connects: proposal.connects,
+										boostedConnects: proposal.boostedConnects,
+										platform: { id: proposal.platform.id, name: proposal.platform.title },
+										vacancy: proposal.vacancy,
+										coverLetter: proposal.coverLetter,
+									}}
+									jobPost={chatContext?.jobPost ?? undefined}
+									lead={chatContext?.lead ?? undefined}
+								/>
+								<ModelSwitcher value={model} onChange={setModel} />
+							</Box>
+							<ProposalChat proposalId={proposal.id} model={model} />
 						</Box>
-						<ProposalChat proposalId={proposal.id} model={model} />
 					</TabContent>
 				</Tab>
 			</Box>

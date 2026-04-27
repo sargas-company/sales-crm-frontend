@@ -157,28 +157,36 @@ const LeadPreview = () => {
 
 					<TabContent tabIndex={2}>
 						<Box
-							display='flex'
-							align='center'
 							style={{
-								marginBottom: 25,
-								marginLeft: 'auto',
-								width: 'fit-content',
+								border: '1px solid #dbe3ef',
+								borderRadius: 25,
+								padding: 15,
 							}}
 						>
-							<DetailsPopover
-								lead={{
-									name: [lead.firstName, lead.lastName].filter(Boolean).join(' ') || null,
-									companyName: lead.companyName,
-									status: lead.status,
-									clientType: lead.clientType,
-									location: lead.location,
+							<Box
+								display='flex'
+								align='center'
+								style={{
+									marginBottom: 25,
+									marginLeft: 'auto',
+									width: 'fit-content',
 								}}
-								proposal={chatContext?.proposal ?? undefined}
-								jobPost={chatContext?.jobPost ?? undefined}
-							/>
-							<ModelSwitcher value={model} onChange={setModel} />
+							>
+								<DetailsPopover
+									lead={{
+										name: [lead.firstName, lead.lastName].filter(Boolean).join(' ') || null,
+										companyName: lead.companyName,
+										status: lead.status,
+										clientType: lead.clientType,
+										location: lead.location,
+									}}
+									proposal={chatContext?.proposal ?? undefined}
+									jobPost={chatContext?.jobPost ?? undefined}
+								/>
+								<ModelSwitcher value={model} onChange={setModel} />
+							</Box>
+							<LeadChat leadId={lead.id} proposalId={lead.proposalId} model={model} />
 						</Box>
-						<LeadChat leadId={lead.id} proposalId={lead.proposalId} model={model} />
 					</TabContent>
 				</Tab>
 			</Box>
