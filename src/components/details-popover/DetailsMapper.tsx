@@ -20,6 +20,7 @@ type DetailField = {
 	icon?: ReactNode
 	display?: 'default' | 'pill'
 	color?: 'green' | 'gray' | 'blue' | 'red'
+	truncate?: boolean
 }
 
 const iconSize = { fontSize: 16 }
@@ -237,12 +238,6 @@ export const mapProposalToFields = (proposal?: {
 			icon: <BusinessOutlined style={iconSize} />,
 		},
 		{
-			label: 'Vacancy',
-			value: proposal?.vacancy,
-			variant: 'stacked',
-			icon: <NotesOutlined style={iconSize} />,
-		},
-		{
 			label: 'Cover Letter',
 			value: proposal?.coverLetter,
 			variant: 'stacked',
@@ -273,6 +268,7 @@ export const mapJobPostToFields = (jobPost?: {
 			label: 'Description',
 			value: jobPost?.description,
 			variant: 'stacked',
+			truncate: true,
 			icon: <NotesOutlined style={iconSize} />,
 		},
 		{

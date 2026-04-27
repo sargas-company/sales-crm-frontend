@@ -19,6 +19,7 @@ type DetailField = {
 	icon?: ReactNode
 	display?: 'default' | 'pill'
 	color?: 'green' | 'gray' | 'blue' | 'red'
+	truncate?: boolean
 }
 
 type DetailSection = {
@@ -69,6 +70,8 @@ const getDisplayValue = (value?: string | number | null) => {
 }
 
 const SectionBlock = ({ title, fields }: DetailSection) => {
+	const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+
 	const renderValue = (field: DetailField) => {
 		const value = getDisplayValue(field.value)
 
@@ -174,10 +177,34 @@ const SectionBlock = ({ title, fields }: DetailSection) => {
 										wordBreak: 'break-word',
 										whiteSpace: 'pre-wrap',
 										lineHeight: 1.5,
+										...(field.truncate && !expanded[field.label]
+											? {
+													display: '-webkit-box',
+													WebkitLineClamp: 4,
+													WebkitBoxOrient: 'vertical',
+													overflow: 'hidden',
+													whiteSpace: 'normal',
+												}
+											: {}),
 									}}
 								>
 									<Text varient='body2'>{getDisplayValue(field.value)}</Text>
 								</Box>
+								{field.truncate && (
+									<Box
+										style={{ cursor: 'pointer', marginTop: 6, textAlign: 'end' }}
+										onClick={() =>
+											setExpanded((prev) => ({
+												...prev,
+												[field.label]: !prev[field.label],
+											}))
+										}
+									>
+										<Text varient='caption' styles={{ color: '#2563eb' }}>
+											{expanded[field.label] ? 'Show less' : 'Show more'}
+										</Text>
+									</Box>
+								)}
 							</Box>
 						)
 					}
