@@ -127,29 +127,29 @@ const JobPostPreview = () => {
 				</Box>
 
 				{/* Main info */}
-				<Box mb={4}>
+				<Box mb={15}>
 					<Text heading='h6' styles={{ marginBottom: 8 }}>
 						Details
 					</Text>
-					<Row label='Location' value={<Text>{post.location ?? '—'}</Text>} />
-					<Row label='Budget' value={<Text>{post.budget ?? '—'}</Text>} />
-					<Row label='Scanner' value={<Text>{post.scanner ?? '—'}</Text>} />
-					<Row label='GigRadar Score' value={<Text>{post.gigRadarScore ?? '—'}</Text>} />
+					<Row label='Location' value={<Text varient='body2'>{post.location ?? '—'}</Text>} />
+					<Row label='Budget' value={<Text varient='body2'>{post.budget ?? '—'}</Text>} />
+					<Row label='Scanner' value={<Text varient='body2'>{post.scanner ?? '—'}</Text>} />
+					<Row label='GigRadar Score' value={<Text varient='body2'>{post.gigRadarScore ?? '—'}</Text>} />
 					<Row
 						label='Total Spent'
 						value={
-							<Text>
+							<Text varient='body2'>
 								{post.totalSpent != null ? `$${post.totalSpent.toLocaleString()}` : '—'}
 							</Text>
 						}
 					/>
 					<Row
 						label='Avg Rate Paid'
-						value={<Text>{post.avgRatePaid != null ? `$${post.avgRatePaid}/hr` : '—'}</Text>}
+						value={<Text varient='body2'>{post.avgRatePaid != null ? `$${post.avgRatePaid}/hr` : '—'}</Text>}
 					/>
 					<Row
 						label='Hire Rate'
-						value={<Text>{post.hireRate != null ? `${post.hireRate}%` : '—'}</Text>}
+						value={<Text varient='body2'>{post.hireRate != null ? `${post.hireRate}%` : '—'}</Text>}
 					/>
 					{post.hSkillsKeywords.length > 0 && (
 						<Row
@@ -167,14 +167,16 @@ const JobPostPreview = () => {
 
 				{/* AI Analysis */}
 				{ai && (
-					<Box mb={4}>
+					<Box mb={20}>
 						<Text heading='h6' styles={{ marginBottom: 8 }}>
 							AI Analysis
 						</Text>
 						{ai.short_summary && (
 							<Row
 								label='Summary'
-								value={<Text>{ai.short_summary}</Text>}
+								value={<Text varient='body2' styles={{ whiteSpace: 'pre-wrap', lineHeight: '1.75' }}>
+									{ai.short_summary}
+								</Text>}
 							/>
 						)}
 						{ai.subscores && (
@@ -188,12 +190,13 @@ const JobPostPreview = () => {
 												display='flex'
 												align='center'
 												justify='space-between'
+												space={2}
 												style={{ padding: '2px 0' }}
 											>
-												<Text styles={{ textTransform: 'capitalize' }}>
+												<Text varient='body2' styles={{ textTransform: 'capitalize', whiteSpace: 'pre-wrap', lineHeight: '1.75' }} >
 													{key.replace(/_/g, ' ')}
 												</Text>
-												<Text>{String(val)}</Text>
+												<Text varient='body2' styles={{ whiteSpace: 'pre-wrap', lineHeight: '1.75' }}>{String(val)}</Text>
 											</Box>
 										))}
 									</Box>
@@ -206,9 +209,9 @@ const JobPostPreview = () => {
 								value={
 									<ul style={{ margin: 0, paddingLeft: 0 }}>
 										{ai.reasons.map((r: string, i: number) => (
-											<li key={i}>
-												<Text>{r}</Text>
-											</li>
+											<Text varient='body2' styles={{ whiteSpace: 'pre-wrap', lineHeight: '1.75' }}>
+												{r}
+											</Text>
 										))}
 									</ul>
 								}
@@ -220,9 +223,9 @@ const JobPostPreview = () => {
 								value={
 									<ul style={{ margin: 0, paddingLeft: 0 }}>
 										{ai.red_flags.map((r: string, i: number) => (
-											<li key={i}>
-												<Text>{r}</Text>
-											</li>
+											<Text varient='body2' styles={{ whiteSpace: 'pre-wrap', lineHeight: '1.75' }}>
+												{r}
+											</Text>
 										))}
 									</ul>
 								}
@@ -234,7 +237,7 @@ const JobPostPreview = () => {
 				{/* Raw text */}
 				{post.rawText && (
 					<Box>
-						<Text heading='h6' styles={{ marginBottom: 8 }}>
+						<Text heading='h6' styles={{ marginBottom: 20 }}>
 							Raw Text
 						</Text>
 
