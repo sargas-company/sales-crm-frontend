@@ -54,6 +54,32 @@ export interface ChatMessage {
 	createdAt: string
 }
 
+export interface ChatContext {
+	proposal: {
+		title?: string | null
+		status?: string | null
+		vacancy?: string | null
+		coverLetter?: string | null
+	} | null
+	jobPost: {
+		title?: string | null
+		description?: string | null
+		score?: string | number | null
+		budget?: string | null
+		source?: string | null
+		totalSpent?: string | number | null
+		avgRatePaid?: string | number | null
+		hireRate?: string | number | null
+		location?: string | null
+	} | null
+	lead: {
+		name?: string | null
+		company?: string | null
+		status?: string | null
+		location?: string | null
+	} | null
+}
+
 export type ChatTabType = 'proposal' | 'lead'
 
 interface ChatState {
@@ -72,6 +98,7 @@ interface ChatState {
 	streamingAnalysis: { decision: string; reasoning: string } | null
 	isStreaming: boolean
 	selectedModel: string
+	chatContext: ChatContext | null
 }
 
 const initialState: ChatState = {
@@ -90,6 +117,7 @@ const initialState: ChatState = {
 	streamingAnalysis: null,
 	isStreaming: false,
 	selectedModel: 'claude-sonnet-4-6',
+	chatContext: null,
 }
 
 export const fetchChats = createAsyncThunk(
@@ -110,16 +138,16 @@ export const fetchChats = createAsyncThunk(
 export const fetchProposalHistory = createAsyncThunk(
 	'apiChat/fetchHistory',
 	async (proposalId: string) => {
-		const { data } = await axiosInstance.get<{ messages: ChatMessage[]; context: unknown }>(`/proposals/${proposalId}/chat`)
-		return data.messages
+		const { data } = await axiosInstance.get<{ messages: ChatMessage[]; context: ChatContext }>(`/proposals/${proposalId}/chat`)
+		return { messages: data.messages, context: data.context }
 	}
 )
 
 export const fetchLeadHistory = createAsyncThunk(
 	'apiChat/fetchLeadHistory',
 	async (leadId: string) => {
-		const { data } = await axiosInstance.get<{ messages: ChatMessage[]; context: unknown }>(`/leads/${leadId}/chat`)
-		return data.messages
+		const { data } = await axiosInstance.get<{ messages: ChatMessage[]; context: ChatContext }>(`/leads/${leadId}/chat`)
+		return { messages: data.messages, context: data.context }
 	}
 )
 
@@ -142,6 +170,7 @@ const apiChatSlice = createSlice({
 			state.selectedChatId = action.payload.chatId
 			state.selectedProposalId = action.payload.proposalId
 			state.chatHistory = []
+			state.chatContext = null
 			state.streamingContent = ''
 			state.streamingAnalysis = null
 			state.isStreaming = false
@@ -221,7 +250,8 @@ const apiChatSlice = createSlice({
 				state.chatHistory = []
 			})
 			.addCase(fetchProposalHistory.fulfilled, (state, action) => {
-				state.chatHistory = action.payload
+				state.chatHistory = action.payload.messages
+				state.chatContext = action.payload.context ?? null
 				state.loadingHistory = false
 			})
 			.addCase(fetchProposalHistory.rejected, (state) => {
@@ -232,7 +262,8 @@ const apiChatSlice = createSlice({
 				state.chatHistory = []
 			})
 			.addCase(fetchLeadHistory.fulfilled, (state, action) => {
-				state.chatHistory = action.payload
+				state.chatHistory = action.payload.messages
+				state.chatContext = action.payload.context ?? null
 				state.loadingHistory = false
 			})
 			.addCase(fetchLeadHistory.rejected, (state) => {
