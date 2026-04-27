@@ -77,6 +77,17 @@ export interface ChatContext {
 		avgRatePaid?: string | number | null
 		hireRate?: string | number | null
 		location?: string | null
+		aiResponse?: {
+			short_summary?: string | null
+			decision?: string | null
+			priority?: string | null
+			hard_stop?: boolean | null
+			hard_stop_reason?: string | null
+			match_score?: number | null
+			reasons?: string[]
+			red_flags?: string[]
+			subscores?: Record<string, number>
+		} | null
 	} | null
 	lead: {
 		name?: string | null

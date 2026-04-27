@@ -27,6 +27,18 @@ type DetailSection = {
 	fields: DetailField[]
 }
 
+type AiResponse = {
+	short_summary?: string | null
+	decision?: string | null
+	priority?: string | null
+	hard_stop?: boolean | null
+	hard_stop_reason?: string | null
+	match_score?: number | null
+	reasons?: string[]
+	red_flags?: string[]
+	subscores?: Record<string, number>
+}
+
 type DetailsPopoverProps = {
 	lead?: {
 		name?: string | null
@@ -57,6 +69,7 @@ type DetailsPopoverProps = {
 		avgRatePaid?: string | number | null
 		hireRate?: string | number | null
 		location?: string | null
+		aiResponse?: AiResponse | null
 	}
 	label?: string
 }
@@ -265,6 +278,133 @@ const SectionBlock = ({ title, fields }: DetailSection) => {
 	)
 }
 
+const decisionColor: Record<string, string> = {
+	approve: '#16a34a',
+	reject: '#dc2626',
+	review: '#d97706',
+}
+
+const priorityColor: Record<string, string> = {
+	high: '#16a34a',
+	medium: '#d97706',
+	low: '#667085',
+}
+
+const AiSectionBlock = ({ ai }: { ai: AiResponse }) => (
+	<Box display='flex' flexDirection='column' style={{ padding: '14px 26px', gap: 14 }}>
+		<Text varient='body2' weight='bold'>
+			AI Analysis
+		</Text>
+
+		{ai.short_summary && (
+			<Box display='flex' flexDirection='column' style={{ gap: 4 }}>
+				<Text varient='caption' secondary>
+					Summary
+				</Text>
+				<Text varient='body2'>{ai.short_summary}</Text>
+			</Box>
+		)}
+
+		<Box display='flex' style={{ gap: 8, flexWrap: 'wrap' }}>
+			{ai.decision && (
+				<Box
+					style={{
+						padding: '4px 14px',
+						borderRadius: 999,
+						background: decisionColor[ai.decision] ?? '#e5e7eb',
+						color: '#fff',
+						fontSize: 12,
+						fontWeight: 600,
+					}}
+				>
+					{ai.decision.charAt(0).toUpperCase() + ai.decision.slice(1)}
+				</Box>
+			)}
+			{ai.priority && (
+				<Box
+					style={{
+						padding: '4px 14px',
+						borderRadius: 999,
+						background: priorityColor[ai.priority] ?? '#e5e7eb',
+						color: '#fff',
+						fontSize: 12,
+						fontWeight: 600,
+					}}
+				>
+					{ai.priority.charAt(0).toUpperCase() + ai.priority.slice(1)} Priority
+				</Box>
+			)}
+			{ai.hard_stop && (
+				<Box
+					style={{
+						padding: '4px 14px',
+						borderRadius: 999,
+						background: '#dc2626',
+						color: '#fff',
+						fontSize: 12,
+						fontWeight: 600,
+					}}
+				>
+					Hard Stop
+				</Box>
+			)}
+		</Box>
+
+		{ai.subscores && Object.keys(ai.subscores).length > 0 && (
+			<Box display='flex' flexDirection='column' style={{ gap: 4 }}>
+				<Text varient='caption' secondary>
+					Subscores
+				</Text>
+				{Object.entries(ai.subscores).map(([key, val]) => (
+					<Box
+						key={key}
+						display='flex'
+						align='center'
+						style={{ justifyContent: 'space-between', padding: '3px 0' }}
+					>
+						<Text varient='body2' styles={{ textTransform: 'capitalize' }}>
+							{key.replace(/_/g, ' ')}
+						</Text>
+						<Text varient='body2' weight='bold'>
+							{String(val)}
+						</Text>
+					</Box>
+				))}
+			</Box>
+		)}
+
+		{ai.reasons && ai.reasons.length > 0 && (
+			<Box display='flex' flexDirection='column' style={{ gap: 4 }}>
+				<Text varient='caption' secondary>
+					Reasons
+				</Text>
+				<ul style={{ margin: 0, paddingLeft: 18 }}>
+					{ai.reasons.map((r, i) => (
+						<li key={i} style={{ marginBottom: 4 }}>
+							<Text varient='body2'>{r}</Text>
+						</li>
+					))}
+				</ul>
+			</Box>
+		)}
+
+		{ai.red_flags && ai.red_flags.length > 0 && (
+			<Box display='flex' flexDirection='column' style={{ gap: 4 }}>
+				<Text varient='caption' styles={{ color: '#dc2626' }}>
+					Red Flags
+				</Text>
+				<ul style={{ margin: 0, paddingLeft: 18 }}>
+					{ai.red_flags.map((r, i) => (
+						<li key={i} style={{ marginBottom: 4 }}>
+							<Text varient='body2'>{r}</Text>
+						</li>
+					))}
+				</ul>
+			</Box>
+		)}
+	</Box>
+)
+
 const DetailsPopover = ({ lead, proposal, jobPost, label = 'Details' }: DetailsPopoverProps) => {
 	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
@@ -395,9 +535,10 @@ const DetailsPopover = ({ lead, proposal, jobPost, label = 'Details' }: DetailsP
 						{sections.map((section, index) => (
 							<React.Fragment key={section.title}>
 								<SectionBlock title={section.title} fields={section.fields} />
-								{index !== sections.length - 1 && <Divider />}
+								{(index !== sections.length - 1 || jobPost?.aiResponse) && <Divider />}
 							</React.Fragment>
 						))}
+						{jobPost?.aiResponse && <AiSectionBlock ai={jobPost.aiResponse} />}
 					</Box>
 				</Box>
 			</Menu>
