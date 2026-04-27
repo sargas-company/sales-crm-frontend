@@ -11,6 +11,7 @@ import { Button, Text, IconButton } from '../../../ui'
 import { useGetJobPostByIdQuery } from '../../../store/job-posts/jobPostsApi'
 import { formatDate } from '../../../utils/formatDate'
 
+
 const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
 	<Box
 		display='flex'
@@ -31,6 +32,14 @@ const JobPostPreview = () => {
 	const [showModal, setShowModal] = useState(false)
 
 	const { data: post, isLoading, isError } = useGetJobPostByIdQuery(id!, { skip: !id })
+
+	const TextBlock = ({ children }: { children: string }) => (
+		<Box style={{ borderLeft: '3px solid #e0e0e0', paddingLeft: 14, marginTop: 8 }}>
+			<Text varient='body2' styles={{ whiteSpace: 'pre-wrap', lineHeight: '1.75' }}>
+				{children}
+			</Text>
+		</Box>
+	)
 
 	if (isLoading) {
 		return (
@@ -163,64 +172,61 @@ const JobPostPreview = () => {
 							AI Analysis
 						</Text>
 						{ai.short_summary && (
-							<Box mb={3}>
-								<Text secondary styles={{ marginBottom: 4 }}>
-									Summary
-								</Text>
-								<Text>{ai.short_summary}</Text>
-							</Box>
+							<Row
+								label='Summary'
+								value={<Text>{ai.short_summary}</Text>}
+							/>
 						)}
-
 						{ai.subscores && (
-							<Box mb={3}>
-								<Text secondary styles={{ marginBottom: 8 }}>
-									Subscores
-								</Text>
-								{Object.entries(ai.subscores).map(([key, val]) => (
-									<Box
-										key={key}
-										display='flex'
-										align='center'
-										justify='space-between'
-										style={{ padding: '4px 0' }}
-									>
-										<Text styles={{ textTransform: 'capitalize' }}>
-											{key.replace(/_/g, ' ')}
-										</Text>
-										<Text>{String(val)}</Text>
+							<Row
+								label='Subscores'
+								value={
+									<Box>
+										{Object.entries(ai.subscores).map(([key, val]) => (
+											<Box
+												key={key}
+												display='flex'
+												align='center'
+												justify='space-between'
+												style={{ padding: '2px 0' }}
+											>
+												<Text styles={{ textTransform: 'capitalize' }}>
+													{key.replace(/_/g, ' ')}
+												</Text>
+												<Text>{String(val)}</Text>
+											</Box>
+										))}
 									</Box>
-								))}
-							</Box>
+								}
+							/>
 						)}
-
 						{ai.reasons && ai.reasons.length > 0 && (
-							<Box mb={3}>
-								<Text secondary styles={{ marginBottom: 4 }}>
-									Reasons
-								</Text>
-								<ul style={{ margin: 0, paddingLeft: 20 }}>
-									{ai.reasons.map((r: string, i: number) => (
-										<li key={i}>
-											<Text>{r}</Text>
-										</li>
-									))}
-								</ul>
-							</Box>
+							<Row
+								label='Reasons'
+								value={
+									<ul style={{ margin: 0, paddingLeft: 0 }}>
+										{ai.reasons.map((r: string, i: number) => (
+											<li key={i}>
+												<Text>{r}</Text>
+											</li>
+										))}
+									</ul>
+								}
+							/>
 						)}
-
 						{ai.red_flags && ai.red_flags.length > 0 && (
-							<Box mb={3}>
-								<Text secondary styles={{ marginBottom: 4 }}>
-									Red Flags
-								</Text>
-								<ul style={{ margin: 0, paddingLeft: 20 }}>
-									{ai.red_flags.map((r: string, i: number) => (
-										<li key={i}>
-											<Text>{r}</Text>
-										</li>
-									))}
-								</ul>
-							</Box>
+							<Row
+								label='Red Flags'
+								value={
+									<ul style={{ margin: 0, paddingLeft: 0 }}>
+										{ai.red_flags.map((r: string, i: number) => (
+											<li key={i}>
+												<Text>{r}</Text>
+											</li>
+										))}
+									</ul>
+								}
+							/>
 						)}
 					</Box>
 				)}
@@ -231,9 +237,9 @@ const JobPostPreview = () => {
 						<Text heading='h6' styles={{ marginBottom: 8 }}>
 							Raw Text
 						</Text>
-						<Box style={{ background: 'rgba(0,0,0,0.04)', borderRadius: 8, padding: 16 }}>
-							<Text styles={{ whiteSpace: 'pre-wrap', fontSize: 13 }}>{post.rawText}</Text>
-						</Box>
+
+							<TextBlock>{post.rawText}</TextBlock>
+
 					</Box>
 				)}
 			</Box>
