@@ -11,7 +11,6 @@ import {
 	SellOutlined,
 	NotesOutlined,
 	PersonOutline,
-	EmailOutlined,
 } from '@mui/icons-material'
 
 type DetailField = {
@@ -150,83 +149,38 @@ const getHireRateColor = (hireRate?: string | number | null): DetailField['color
 
 export const mapLeadToFields = (lead?: {
 	name?: string | null
-	email?: string | null
+	companyName?: string | null
 	status?: string | null
+	clientType?: string | null
 	location?: string | null
-	totalSpent?: string | number | null
-	avgRatePaid?: string | number | null
-	hireRate?: string | number | null
-	source?: string | null
-	company?: string | null
-	notes?: string | null
 }): DetailField[] => {
-	if (!lead) {
-		return [
-			{ label: 'Name', value: null, icon: <PersonOutline style={iconSize} /> },
-			{ label: 'Email', value: null, icon: <EmailOutlined style={iconSize} /> },
-			{ label: 'Status', value: null, icon: <InfoOutlined style={iconSize} /> },
-		]
-	}
-
 	return [
 		{
 			label: 'Name',
-			value: lead.name,
+			value: lead?.name,
 			icon: <PersonOutline style={iconSize} />,
 		},
 		{
-			label: 'Email',
-			value: lead.email,
-			icon: <EmailOutlined style={iconSize} />,
-		},
-		{
-			label: 'Location',
-			value: lead.location,
-			icon: <PublicOutlined style={iconSize} />,
-		},
-		{
-			label: 'Total Spent',
-			value: formatMoney(lead.totalSpent),
-			display: 'pill',
-			color: getTotalSpentColor(lead.totalSpent),
-			icon: <PaymentsOutlined style={iconSize} />,
-		},
-		{
-			label: 'Avg Rate Paid',
-			value: formatRate(lead.avgRatePaid),
-			display: 'pill',
-			color: getAvgRatePaidColor(lead.avgRatePaid),
-			icon: <QueryStatsOutlined style={iconSize} />,
-		},
-		{
-			label: 'Hire Rate',
-			value: lead.hireRate,
-			display: 'pill',
-			color: getHireRateColor(lead.hireRate),
-			icon: <WorkOutlineOutlined style={iconSize} />,
-		},
-		{
-			label: 'Status',
-			value: lead.status,
-			display: 'pill',
-			color: getLeadStatusColor(lead.status),
-			icon: <InfoOutlined style={iconSize} />,
-		},
-		{
-			label: 'Source',
-			value: lead.source,
-			icon: <SellOutlined style={iconSize} />,
-		},
-		{
 			label: 'Company',
-			value: lead.company,
+			value: lead?.companyName,
 			icon: <BusinessOutlined style={iconSize} />,
 		},
 		{
-			label: 'Notes',
-			value: lead.notes,
-			variant: 'stacked',
-			icon: <NotesOutlined style={iconSize} />,
+			label: 'Status',
+			value: lead?.status,
+			display: 'pill',
+			color: getLeadStatusColor(lead?.status),
+			icon: <InfoOutlined style={iconSize} />,
+		},
+		{
+			label: 'Client Type',
+			value: lead?.clientType,
+			icon: <PersonOutline style={iconSize} />,
+		},
+		{
+			label: 'Location',
+			value: lead?.location,
+			icon: <PublicOutlined style={iconSize} />,
 		},
 	]
 }
@@ -234,9 +188,13 @@ export const mapLeadToFields = (lead?: {
 export const mapProposalToFields = (proposal?: {
 	title?: string | null
 	status?: string | null
-	version?: string | number | null
-	budget?: string | null
-	summary?: string | null
+	proposalType?: string | null
+	boosted?: boolean | null
+	connects?: number | null
+	boostedConnects?: number | null
+	platform?: { id: string; name: string } | null
+	vacancy?: string | null
+	coverLetter?: string | null
 }): DetailField[] => {
 	return [
 		{
@@ -252,20 +210,41 @@ export const mapProposalToFields = (proposal?: {
 			icon: <InfoOutlined style={iconSize} />,
 		},
 		{
-			label: 'Version',
-			value: proposal?.version,
+			label: 'Type',
+			value: proposal?.proposalType,
+			icon: <WorkOutlineOutlined style={iconSize} />,
+		},
+		{
+			label: 'Boosted',
+			value: proposal?.boosted == null ? null : proposal.boosted ? 'Yes' : 'No',
+			display: 'pill',
+			color: proposal?.boosted ? 'green' : 'gray',
+			icon: <InfoOutlined style={iconSize} />,
+		},
+		{
+			label: 'Connects',
+			value: proposal?.connects,
 			icon: <DescriptionOutlined style={iconSize} />,
 		},
 		{
-			label: 'Budget',
-			value: proposal?.budget,
-			display: 'pill',
-			color: getBudgetColor(proposal?.budget),
-			icon: <PaymentsOutlined style={iconSize} />,
+			label: 'Boosted Connects',
+			value: proposal?.boostedConnects,
+			icon: <DescriptionOutlined style={iconSize} />,
 		},
 		{
-			label: 'Summary',
-			value: proposal?.summary,
+			label: 'Platform',
+			value: proposal?.platform?.name,
+			icon: <BusinessOutlined style={iconSize} />,
+		},
+		{
+			label: 'Vacancy',
+			value: proposal?.vacancy,
+			variant: 'stacked',
+			icon: <NotesOutlined style={iconSize} />,
+		},
+		{
+			label: 'Cover Letter',
+			value: proposal?.coverLetter,
 			variant: 'stacked',
 			icon: <NotesOutlined style={iconSize} />,
 		},

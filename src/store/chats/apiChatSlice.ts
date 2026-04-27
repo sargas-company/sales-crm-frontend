@@ -58,6 +58,11 @@ export interface ChatContext {
 	proposal: {
 		title?: string | null
 		status?: string | null
+		proposalType?: string | null
+		boosted?: boolean | null
+		connects?: number | null
+		boostedConnects?: number | null
+		platform?: { id: string; name: string } | null
 		vacancy?: string | null
 		coverLetter?: string | null
 	} | null
@@ -75,8 +80,9 @@ export interface ChatContext {
 	} | null
 	lead: {
 		name?: string | null
-		company?: string | null
+		companyName?: string | null
 		status?: string | null
+		clientType?: string | null
 		location?: string | null
 	} | null
 }

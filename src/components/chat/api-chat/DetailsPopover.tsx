@@ -29,22 +29,21 @@ type DetailSection = {
 type DetailsPopoverProps = {
 	lead?: {
 		name?: string | null
-		email?: string | null
+		companyName?: string | null
 		status?: string | null
-		source?: string | null
-		company?: string | null
-		notes?: string | null
+		clientType?: string | null
 		location?: string | null
-		totalSpent?: string | number | null
-		avgRatePaid?: string | number | null
-		hireRate?: string | number | null
 	}
 	proposal?: {
 		title?: string | null
 		status?: string | null
-		version?: string | number | null
-		budget?: string | null
-		summary?: string | null
+		proposalType?: string | null
+		boosted?: boolean | null
+		connects?: number | null
+		boostedConnects?: number | null
+		platform?: { id: string; name: string } | null
+		vacancy?: string | null
+		coverLetter?: string | null
 	}
 	jobPost?: {
 		title?: string | null
@@ -254,10 +253,9 @@ const DetailsPopover = ({ lead, proposal, jobPost, label = 'Details' }: DetailsP
 				title: 'Proposal',
 				fields: mapProposalToFields(proposal),
 			},
-			{
-				title: 'Lead',
-				fields: mapLeadToFields(lead),
-			},
+			...(lead
+				? [{ title: 'Lead', fields: mapLeadToFields(lead) }]
+				: []),
 		],
 		[lead, proposal, jobPost]
 	)

@@ -20,8 +20,6 @@ const ChatHeader = () => {
 
 	const subtitle = chat?.proposal?.user?.email ?? chat?.lead?.user?.email ?? ''
 
-	const email = chat?.lead?.user?.email ?? chat?.proposal?.user?.email ?? null
-
 	return (
 		<Box display='flex' flexDirection='column' style={{ zIndex: 900 }}>
 			<Box
@@ -43,29 +41,9 @@ const ChatHeader = () => {
 				</Box>
 				<Box display='flex'>
 					<DetailsPopover
-						lead={{
-							name: chatContext?.lead?.name,
-							email,
-							location: chatContext?.lead?.location,
-							status: chatContext?.lead?.status,
-							company: chatContext?.lead?.company,
-						}}
-						proposal={{
-							title: chatContext?.proposal?.title,
-							status: chatContext?.proposal?.status,
-						}}
-						jobPost={{
-							title: chatContext?.jobPost?.title,
-							description: chatContext?.jobPost?.description,
-							score: chatContext?.jobPost?.score,
-							gigRadarScore: chatContext?.jobPost?.gigRadarScore,
-							budget: chatContext?.jobPost?.budget,
-							source: chatContext?.jobPost?.source,
-							totalSpent: chatContext?.jobPost?.totalSpent,
-							avgRatePaid: chatContext?.jobPost?.avgRatePaid,
-							hireRate: chatContext?.jobPost?.hireRate,
-							location: chatContext?.jobPost?.location,
-						}}
+						lead={chatContext?.lead ?? undefined}
+						proposal={chatContext?.proposal ?? undefined}
+						jobPost={chatContext?.jobPost ?? undefined}
 					/>
 					<ModelSwitcher />
 				</Box>
