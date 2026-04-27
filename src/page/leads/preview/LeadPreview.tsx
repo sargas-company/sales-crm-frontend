@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
 	InfoOutlined,
@@ -17,13 +17,27 @@ import LeadListItemClientType from '../../../components/leads/list/LeadListItemC
 import { Button, Tab, TabList, TabItem, TabContent, Text, IconButton } from '../../../ui'
 import { useGetLeadByIdQuery } from '../../../store/leads/leadsApi'
 import { formatDate, shortUuid } from '../../../utils/formatDate'
+import ModelSwitcher from '../../../components/chat/api-chat/ModelSwitcher'
+import DetailsPopover from '../../../components/chat/api-chat/DetailsPopover'
+import { useAppDispatch, useAppSelector } from '../../../hooks'
+import { fetchProposalHistory } from '../../../store/chats/apiChatSlice'
 
 const LeadPreview = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
 	const [activeTab, setActiveTab] = useState(1)
+	const [model, setModel] = useState('claude-sonnet-4-6')
+
+	const dispatch = useAppDispatch()
+	const chatContext = useAppSelector((state) => state.apiChat.chatContext)
 
 	const { data: lead, isLoading, isError } = useGetLeadByIdQuery(id!, { skip: !id })
+
+	useEffect(() => {
+		if (lead?.proposalId) {
+			dispatch(fetchProposalHistory(lead.proposalId))
+		}
+	}, [lead?.proposalId, dispatch])
 
 	if (isLoading) {
 		return (
@@ -142,7 +156,29 @@ const LeadPreview = () => {
 					</TabContent>
 
 					<TabContent tabIndex={2}>
-						<LeadChat leadId={lead.id} proposalId={lead.proposalId} />
+						<Box
+							display='flex'
+							align='center'
+							style={{
+								marginBottom: 25,
+								marginLeft: 'auto',
+								width: 'fit-content',
+							}}
+						>
+							<DetailsPopover
+								lead={{
+									name: [lead.firstName, lead.lastName].filter(Boolean).join(' ') || null,
+									companyName: lead.companyName,
+									status: lead.status,
+									clientType: lead.clientType,
+									location: lead.location,
+								}}
+								proposal={chatContext?.proposal ?? undefined}
+								jobPost={chatContext?.jobPost ?? undefined}
+							/>
+							<ModelSwitcher value={model} onChange={setModel} />
+						</Box>
+						<LeadChat leadId={lead.id} proposalId={lead.proposalId} model={model} />
 					</TabContent>
 				</Tab>
 			</Box>
