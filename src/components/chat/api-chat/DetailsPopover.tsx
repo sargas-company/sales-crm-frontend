@@ -282,14 +282,14 @@ const SectionBlock = ({ title, fields, extra }: DetailSection) => {
 
 const decisionColor: Record<string, string> = {
 	approve: '#16a34a',
-	reject: '#dc2626',
-	review: '#d97706',
+	maybe: '#f5c407',
+	decline: '#dc2626',
 }
 
 const priorityColor: Record<string, string> = {
 	high: '#16a34a',
 	medium: '#d97706',
-	low: '#667085',
+	low: '#dc2626',
 }
 
 const AiSectionBlock = ({ ai }: { ai: AiResponse }) => (
@@ -298,16 +298,7 @@ const AiSectionBlock = ({ ai }: { ai: AiResponse }) => (
 			AI Analysis
 		</Text>
 
-		{ai.short_summary && (
-			<Box display='flex' flexDirection='column' style={{ gap: 4 }}>
-				<Text varient='caption' secondary>
-					Summary
-				</Text>
-				<Text varient='body2'>{ai.short_summary}</Text>
-			</Box>
-		)}
-
-		<Box display='flex' style={{ gap: 8, flexWrap: 'wrap' }}>
+		<Box display='flex' flexDirection='column' style={{ alignItems: 'flex-end', gap: 10 }}>
 			{ai.decision && (
 				<Box
 					style={{
@@ -352,6 +343,15 @@ const AiSectionBlock = ({ ai }: { ai: AiResponse }) => (
 			)}
 		</Box>
 
+		{ai.short_summary && (
+			<Box display='flex' flexDirection='column' style={{ gap: 4 }}>
+				<Text varient='caption' secondary>
+					Summary
+				</Text>
+				<Text varient='body2'>{ai.short_summary}</Text>
+			</Box>
+		)}
+
 		{ai.subscores && Object.keys(ai.subscores).length > 0 && (
 			<Box display='flex' flexDirection='column' style={{ gap: 4 }}>
 				<Text varient='caption' secondary>
@@ -392,7 +392,7 @@ const AiSectionBlock = ({ ai }: { ai: AiResponse }) => (
 
 		{ai.red_flags && ai.red_flags.length > 0 && (
 			<Box display='flex' flexDirection='column' style={{ gap: 4 }}>
-				<Text varient='caption' styles={{ color: '#dc2626' }}>
+				<Text varient='caption' secondary>
 					Red Flags
 				</Text>
 				<ul style={{ margin: 0, paddingLeft: 18 }}>
