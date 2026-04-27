@@ -10,11 +10,12 @@ import PromptActiveChip from './PromptActiveChip'
 import PromptListAction from './PromptListAction'
 
 const columns: DataGridColoumn[] = [
-	{ fieldId: 'title', label: 'Title', width: '220px' },
-	{ fieldId: 'type', label: 'Type', width: '160px' },
-	{ fieldId: 'version', label: 'Version', width: '80px' },
-	{ fieldId: 'isActive', label: 'Status', width: '100px' },
-	{ fieldId: 'createdBy', label: 'Created By', width: '130px' },
+	{ fieldId: 'seq', label: '#', width: '90px' },
+	{ fieldId: 'title', label: 'Title', width: '250px' },
+	{ fieldId: 'type', label: 'Type', width: '180px' },
+	{ fieldId: 'version', label: 'Version', width: '110px' },
+	{ fieldId: 'isActive', label: 'Status', width: '120px' },
+	{ fieldId: 'createdBy', label: 'Created By', width: '160px' },
 	{ fieldId: 'createdAt', label: 'Created At', width: '150px' },
 	{ fieldId: 'updatedAt', label: 'Updated At', width: '150px' },
 	{ fieldId: 'actions', label: 'Actions', width: '90px' },
@@ -40,8 +41,16 @@ const PromptTable = ({ items, isLoading, onDelete }: Props) => {
 				rows={items}
 				columns={columns}
 				gridDataKey={(item: PromptItem) => item.id}
-				renderGridData={(row: PromptItem, field) => (
+				renderGridData={(row: PromptItem, field, index) => (
 					<>
+						<DataGridCell
+							width={field['seq'].width}
+							children={
+								<Link to={`/prompts/preview/${row.id}`}>
+									<Text skinColor>#{index + 1}</Text>
+								</Link>
+							}
+						/>
 						<DataGridCell width={field['title'].width}>
 							<Link to={`/prompts/preview/${row.id}`}>
 								<Text
@@ -58,13 +67,13 @@ const PromptTable = ({ items, isLoading, onDelete }: Props) => {
 								</Text>
 							</Link>
 						</DataGridCell>
-						<DataGridCell width={field['type'].width}>
+						<DataGridCell width={field['type'].width} justify='center'>
 							<Chip
 								label={row.type}
 								skin='light'
 								size='small'
 								color='info'
-								styles={{ whiteSpace: 'nowrap', fontSize: '11px' }}
+								styles={{ whiteSpace: 'nowrap', fontSize: '11px', color: '#000000' }}
 							/>
 						</DataGridCell>
 						<DataGridCell
@@ -72,7 +81,7 @@ const PromptTable = ({ items, isLoading, onDelete }: Props) => {
 							justify='center'
 							value={`v${row.version}`}
 						/>
-						<DataGridCell width={field['isActive'].width}>
+						<DataGridCell width={field['isActive'].width} justify='center'>
 							<PromptActiveChip isActive={row.isActive} />
 						</DataGridCell>
 						<DataGridCell width={field['createdBy'].width} value={row.createdBy} />

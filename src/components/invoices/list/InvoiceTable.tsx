@@ -11,7 +11,8 @@ import InvoiceListItemStatus from './InvoiceListItemStatus'
 import { formatInvoiceMoney, getCounterpartyName, getInvoiceTotal } from './utils'
 
 const columns: DataGridColoumn[] = [
-	{ fieldId: 'number', label: '#', width: '130px' },
+	{ fieldId: 'seq', label: '#', width: '90px' },
+	{ fieldId: 'number', label: 'Invoice', width: '130px' },
 	{ fieldId: 'counterparty', label: 'Counterparty', width: '220px' },
 	{ fieldId: 'status', label: 'Status', width: '210px' },
 	{ fieldId: 'date', label: 'Date', width: '160px' },
@@ -34,8 +35,16 @@ const InvoiceTable = ({ items, isLoading, onDelete, onMarkPaid }: InvoiceTablePr
 		<Box padding={24} pl={40}>
 			<DataGrid
 				rows={items}
-				renderGridData={(row, field) => (
+				renderGridData={(row, field, index) => (
 					<>
+						<DataGridCell
+							width={field['seq'].width}
+							children={
+								<Link to={`/invoices/preview/${row.id}`}>
+									<Text skinColor>#{index + 1}</Text>
+								</Link>
+							}
+						/>
 						<DataGridCell
 							width={field['number'].width}
 							children={

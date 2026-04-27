@@ -8,11 +8,12 @@ import { BaseKnowledgeItem } from '../../../store/baseKnowledge/baseKnowledgeApi
 import BaseKnowledgeListAction from './BaseKnowledgeListAction'
 
 const columns: DataGridColoumn[] = [
-	{ fieldId: 'title', label: 'Title', width: '35%' },
-	{ fieldId: 'category', label: 'Category', width: '15%' },
-	{ fieldId: 'createdAt', label: 'Created', width: '20%' },
-	{ fieldId: 'updatedAt', label: 'Updated', width: '20%' },
-	{ fieldId: 'actions', label: 'Actions', width: '10%' },
+	{ fieldId: 'seq', label: '#', width: '90px' },
+	{ fieldId: 'title', label: 'Title', width: '400px' },
+	{ fieldId: 'category', label: 'Category', width: '160px' },
+	{ fieldId: 'createdAt', label: 'Created At', width: '150px' },
+	{ fieldId: 'updatedAt', label: 'Updated At', width: '150px' },
+	{ fieldId: 'actions', label: 'Actions', width: '120px' },
 ]
 
 const formatDate = (iso: string) =>
@@ -43,8 +44,16 @@ const BaseKnowledgeTable = ({ items, isLoading, onEdit, onDelete }: Props) => {
 				rows={items}
 				columns={columns}
 				gridDataKey={(item: BaseKnowledgeItem) => item.id}
-				renderGridData={(row: BaseKnowledgeItem, field) => (
+				renderGridData={(row: BaseKnowledgeItem, field, index) => (
 					<>
+						<DataGridCell
+							width={field['seq'].width}
+							children={
+								<Link to={`/knowledge/preview/${row.id}`}>
+									<Text skinColor>#{index + 1}</Text>
+								</Link>
+							}
+						/>
 						<DataGridCell width={field['title'].width}>
 							<Link to={`/knowledge/preview/${row.id}`}>
 								<Text skinColor>{row.title}</Text>
@@ -52,7 +61,7 @@ const BaseKnowledgeTable = ({ items, isLoading, onEdit, onDelete }: Props) => {
 						</DataGridCell>
 						<DataGridCell width={field['category'].width}>
 							{row.category ? (
-								<Chip label={row.category} skin='light' size='small' color='info' />
+								<Chip label={row.category} skin='light' size='small' color='info' styles={{ color: '#000000' }} />
 							) : (
 								<Text>—</Text>
 							)}

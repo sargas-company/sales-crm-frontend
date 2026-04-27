@@ -7,6 +7,7 @@ import type { PlatformItem } from '../../../store/platforms/platformsApi'
 import PlatformListAction from './PlatformListAction'
 
 const columns: DataGridColoumn[] = [
+	{ fieldId: 'seq', label: '#', width: '90px' },
 	{ fieldId: 'title', label: 'Title', width: '200px' },
 	{ fieldId: 'imageUrl', label: 'Logo', width: '100px' },
 	{ fieldId: 'createdAt', label: 'Created', width: '180px' },
@@ -31,8 +32,9 @@ const PlatformTable = ({ items, isLoading, onDelete }: PlatformTableProps) => {
 				pagination
 				rowPerPage={10}
 				rowPerPageOption={[10, 25, 50]}
-				renderGridData={(row, field) => (
+				renderGridData={(row, field, index) => (
 					<>
+						<DataGridCell width={field['seq'].width} value={`#${index + 1}`} />
 						<DataGridCell width={field['title'].width} value={row.title} />
 						<DataGridCell
 							width={field['imageUrl'].width}

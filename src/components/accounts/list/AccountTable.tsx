@@ -7,6 +7,7 @@ import type { AccountItem } from '../../../store/accounts/accountsApi'
 import AccountListAction from './AccountListAction'
 
 const columns: DataGridColoumn[] = [
+	{ fieldId: 'seq', label: '#', width: '90px' },
 	{ fieldId: 'firstName', label: 'First Name', width: '160px' },
 	{ fieldId: 'lastName', label: 'Last Name', width: '160px' },
 	{ fieldId: 'platform', label: 'Platform', width: '160px' },
@@ -32,8 +33,9 @@ const AccountTable = ({ items, isLoading, onDelete }: AccountTableProps) => {
 				pagination
 				rowPerPage={10}
 				rowPerPageOption={[10, 25, 50]}
-				renderGridData={(row, field) => (
+				renderGridData={(row, field, index) => (
 					<>
+						<DataGridCell width={field['seq'].width} value={`#${index + 1}`} />
 						<DataGridCell width={field['firstName'].width} value={row.firstName} />
 						<DataGridCell width={field['lastName'].width} value={row.lastName} />
 						<DataGridCell

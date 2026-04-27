@@ -6,7 +6,7 @@ const PromptActiveChip = ({ isActive }: { isActive: boolean }) => (
 		skin='light'
 		size='small'
 		color={isActive ? 'success' : 'secondary'}
-		styles={{ whiteSpace: 'nowrap' }}
+		styles={{ whiteSpace: 'nowrap', color: '#000000' }}
 	/>
 )
 

@@ -7,6 +7,7 @@ import CounterpartyListAction from './CounterpartyListAction'
 import CounterpartyTypeChip from './CounterpartyTypeChip'
 
 const columns: DataGridColoumn[] = [
+	{ fieldId: 'seq', label: '#', width: '90px' },
 	{ fieldId: 'firstName', label: 'First Name', width: '150px' },
 	{ fieldId: 'lastName', label: 'Last Name', width: '150px' },
 	{ fieldId: 'type', label: 'Type', width: '130px' },
@@ -30,8 +31,9 @@ const CounterpartyTable = ({ items, isLoading, onDelete }: CounterpartyTableProp
 				rows={items}
 				columns={columns}
 				gridDataKey={(item) => item.id}
-				renderGridData={(row, field) => (
+				renderGridData={(row, field, index) => (
 					<>
+						<DataGridCell width={field['seq'].width} value={`#${index + 1}`} />
 						<DataGridCell width={field['firstName'].width} value={row.firstName} />
 						<DataGridCell width={field['lastName'].width} value={row.lastName} />
 						<DataGridCell
