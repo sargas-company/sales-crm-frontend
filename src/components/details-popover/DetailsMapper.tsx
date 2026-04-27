@@ -25,6 +25,30 @@ type DetailField = {
 
 const iconSize = { fontSize: 16 }
 
+const formatPercent = (value?: string | number | null): string | null => {
+	if (value === null || value === undefined || value === '') return null
+	const str = String(value)
+	return str.endsWith('%') ? str : `${str}%`
+}
+
+const formatRate = (value?: string | number | null): string | null => {
+	if (value === null || value === undefined || value === '') return null
+	const str = String(value)
+	if (str.includes('/hr')) return str.replace(/\/hr/g, '/h')
+	const numeric = typeof value === 'number' ? value : Number(str.replace(/[^0-9.]/g, ''))
+	if (Number.isNaN(numeric)) return str
+	return `$${numeric}/h`
+}
+
+const formatMoney = (value?: string | number | null): string | null => {
+	if (value === null || value === undefined || value === '') return null
+	const str = String(value)
+	if (str.startsWith('$')) return str
+	const numeric = typeof value === 'number' ? value : Number(str.replace(/[^0-9.]/g, ''))
+	if (Number.isNaN(numeric)) return str
+	return `$${numeric.toLocaleString()}`
+}
+
 const parseNumericValue = (value?: string | number | null): number | null => {
 	if (value === null || value === undefined || value === '') return null
 	if (typeof value === 'number') return Number.isNaN(value) ? null : value
@@ -162,14 +186,14 @@ export const mapLeadToFields = (lead?: {
 		},
 		{
 			label: 'Total Spent',
-			value: lead.totalSpent,
+			value: formatMoney(lead.totalSpent),
 			display: 'pill',
 			color: getTotalSpentColor(lead.totalSpent),
 			icon: <PaymentsOutlined style={iconSize} />,
 		},
 		{
 			label: 'Avg Rate Paid',
-			value: lead.avgRatePaid,
+			value: formatRate(lead.avgRatePaid),
 			display: 'pill',
 			color: getAvgRatePaidColor(lead.avgRatePaid),
 			icon: <QueryStatsOutlined style={iconSize} />,
@@ -274,14 +298,14 @@ export const mapJobPostToFields = (jobPost?: {
 		},
 		{
 			label: 'Budget',
-			value: jobPost?.budget,
+			value: formatRate(jobPost?.budget),
 			display: 'pill',
 			color: getBudgetColor(jobPost?.budget),
 			icon: <PaymentsOutlined style={iconSize} />,
 		},
 		{
 			label: 'Match Score',
-			value: jobPost?.score,
+			value: formatPercent(jobPost?.score),
 			display: 'pill',
 			color: getJobPostScoreColor(jobPost?.score),
 			icon: <QueryStatsOutlined style={iconSize} />,
@@ -305,14 +329,14 @@ export const mapJobPostToFields = (jobPost?: {
 		},
 		{
 			label: 'Total Spent',
-			value: jobPost?.totalSpent,
+			value: formatMoney(jobPost?.totalSpent),
 			display: 'pill',
 			color: getTotalSpentColor(jobPost?.totalSpent),
 			icon: <PaymentsOutlined style={iconSize} />,
 		},
 		{
 			label: 'Avg Rate Paid',
-			value: jobPost?.avgRatePaid,
+			value: formatRate(jobPost?.avgRatePaid),
 			display: 'pill',
 			color: getAvgRatePaidColor(jobPost?.avgRatePaid),
 			icon: <QueryStatsOutlined style={iconSize} />,
