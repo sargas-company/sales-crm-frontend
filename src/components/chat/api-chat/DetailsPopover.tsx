@@ -25,6 +25,7 @@ type DetailField = {
 type DetailSection = {
 	title: string
 	fields: DetailField[]
+	extra?: ReactNode
 }
 
 type AiResponse = {
@@ -82,7 +83,7 @@ const getDisplayValue = (value?: string | number | null) => {
 	return String(value)
 }
 
-const SectionBlock = ({ title, fields }: DetailSection) => {
+const SectionBlock = ({ title, fields, extra }: DetailSection) => {
 	const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
 	const renderValue = (field: DetailField) => {
@@ -274,6 +275,7 @@ const SectionBlock = ({ title, fields }: DetailSection) => {
 					)
 				})}
 			</Box>
+			{extra}
 		</Box>
 	)
 }
@@ -291,7 +293,7 @@ const priorityColor: Record<string, string> = {
 }
 
 const AiSectionBlock = ({ ai }: { ai: AiResponse }) => (
-	<Box display='flex' flexDirection='column' style={{ padding: '14px 26px', gap: 14 }}>
+	<Box display='flex' flexDirection='column' style={{ gap: 14, marginTop: 4 }}>
 		<Text varient='body2' weight='bold'>
 			AI Analysis
 		</Text>
@@ -415,6 +417,7 @@ const DetailsPopover = ({ lead, proposal, jobPost, label = 'Details' }: DetailsP
 			{
 				title: 'Job Post',
 				fields: mapJobPostToFields(jobPost),
+				extra: jobPost?.aiResponse ? <AiSectionBlock ai={jobPost.aiResponse} /> : undefined,
 			},
 			{
 				title: 'Proposal',
@@ -534,11 +537,10 @@ const DetailsPopover = ({ lead, proposal, jobPost, label = 'Details' }: DetailsP
 					>
 						{sections.map((section, index) => (
 							<React.Fragment key={section.title}>
-								<SectionBlock title={section.title} fields={section.fields} />
-								{(index !== sections.length - 1 || jobPost?.aiResponse) && <Divider />}
+								<SectionBlock title={section.title} fields={section.fields} extra={section.extra} />
+								{index !== sections.length - 1 && <Divider />}
 							</React.Fragment>
 						))}
-						{jobPost?.aiResponse && <AiSectionBlock ai={jobPost.aiResponse} />}
 					</Box>
 				</Box>
 			</Menu>
