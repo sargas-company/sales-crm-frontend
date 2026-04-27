@@ -76,8 +76,9 @@ const JobPostPreview = () => {
 		<Card py='2rem' px='2rem'>
 			<Box style={{ maxWidth: 900, margin: '0 auto' }}>
 				{/* Header */}
-				<Box display='flex' flexDirection='column' space={2} mb={4}>
-					<Box display='flex' align='flex-start' space={3}>
+				<Box display='flex' flexDirection='column' space={2} mb={20}>
+					{/* Row 1: back button + title + subtitle */}
+					<Box display='flex' align='center' space={3}>
 						<IconButton
 							varient='text'
 							size={34}
@@ -86,12 +87,25 @@ const JobPostPreview = () => {
 						>
 							<ArrowBackOutlined />
 						</IconButton>
-						<Box style={{ flex: 1 }}>
+						<Box>
 							<Text heading='h5'>{post.title ?? 'Job Post'}</Text>
-							<Text varient='caption' secondary styles={{ marginTop: 4, display: 'block' }}>
-								{formatDate(post.createdAt)}
-								{post.processedAt && ` · processed ${formatDate(post.processedAt)}`}
-							</Text>
+							<Box display='flex' align='center' space={1} style={{ marginTop: 2 }}>
+								<Text varient='caption' secondary>
+									{formatDate(post.createdAt)}
+									{post.processedAt && ` · processed ${formatDate(post.processedAt)}`}
+								</Text>
+							</Box>
+						</Box>
+					</Box>
+
+					{/* Row 2: chips left, action buttons right */}
+					<Box display='flex' align='center' justify='space-between'>
+						<Box display='flex' align='center' space={2} style={{ flexWrap: 'wrap', gap: 8 }}>
+							<JobPostDecisionChip decision={post.decision} />
+							<JobPostPriorityChip priority={post.priority} />
+							{post.matchScore != null && (
+								<Chip label={`Score: ${post.matchScore}`} size='small' variant='outlined' />
+							)}
 						</Box>
 						<Box display='flex' align='center' space={1}>
 							{post.jobUrl && (
@@ -110,19 +124,6 @@ const JobPostPreview = () => {
 								Start Proposal
 							</Button>
 						</Box>
-					</Box>
-
-					<Box
-						display='flex'
-						align='center'
-						space={2}
-						style={{ flexWrap: 'wrap', gap: 8, paddingLeft: 46 }}
-					>
-						<JobPostDecisionChip decision={post.decision} />
-						<JobPostPriorityChip priority={post.priority} />
-						{post.matchScore != null && (
-							<Chip label={`Score: ${post.matchScore}`} size='small' variant='outlined' />
-						)}
 					</Box>
 				</Box>
 
