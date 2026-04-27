@@ -89,7 +89,7 @@ const SectionBlock = ({ title, fields, extra }: DetailSection) => {
 	const renderValue = (field: DetailField) => {
 		const value = getDisplayValue(field.value)
 
-		if (field.display === 'pill') {
+		if (field.display === 'pill' || value === 'N/A') {
 			const bgMap = {
 				green: '#16a34a',
 				gray: '#e5e7eb',
