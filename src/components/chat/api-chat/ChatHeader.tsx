@@ -46,12 +46,8 @@ const ChatHeader = () => {
 						lead={{
 							name: chatContext?.lead?.name,
 							email,
-							location: chatContext?.lead?.location ?? chatContext?.jobPost?.location,
-							totalSpent: chatContext?.jobPost?.totalSpent,
-							avgRatePaid: chatContext?.jobPost?.avgRatePaid,
-							hireRate: chatContext?.jobPost?.hireRate,
+							location: chatContext?.lead?.location,
 							status: chatContext?.lead?.status,
-							source: chatContext?.jobPost?.source,
 							company: chatContext?.lead?.company,
 						}}
 						proposal={{
@@ -62,7 +58,13 @@ const ChatHeader = () => {
 							title: chatContext?.jobPost?.title,
 							description: chatContext?.jobPost?.description,
 							score: chatContext?.jobPost?.score,
+							gigRadarScore: chatContext?.jobPost?.gigRadarScore,
 							budget: chatContext?.jobPost?.budget,
+							source: chatContext?.jobPost?.source,
+							totalSpent: chatContext?.jobPost?.totalSpent,
+							avgRatePaid: chatContext?.jobPost?.avgRatePaid,
+							hireRate: chatContext?.jobPost?.hireRate,
+							location: chatContext?.jobPost?.location,
 						}}
 					/>
 					<ModelSwitcher />

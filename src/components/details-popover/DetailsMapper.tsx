@@ -9,7 +9,6 @@ import {
 	WorkOutlineOutlined,
 	DescriptionOutlined,
 	SellOutlined,
-	ScheduleOutlined,
 	NotesOutlined,
 	PersonOutline,
 	EmailOutlined,
@@ -56,29 +55,6 @@ const parseMoneyToNumber = (value?: string | number | null): number | null => {
 	return numeric
 }
 
-const parseTimelineToWeeks = (value?: string | number | null): number | null => {
-	if (value === null || value === undefined || value === '') return null
-	if (typeof value === 'number') return Number.isNaN(value) ? null : value
-
-	const normalized = String(value).toLowerCase().trim()
-
-	const numbers = normalized.match(/\d+(\.\d+)?/g)
-	if (!numbers || numbers.length === 0) return null
-
-	const first = Number(numbers[0])
-	if (Number.isNaN(first)) return null
-
-	if (normalized.includes('month')) {
-		return first * 4
-	}
-
-	if (normalized.includes('day')) {
-		return first / 7
-	}
-
-	return first
-}
-
 const getLeadStatusColor = (status?: string | null): DetailField['color'] => {
 	if (!status) return 'gray'
 
@@ -118,15 +94,6 @@ const getBudgetColor = (budget?: string | number | null): DetailField['color'] =
 	if (numeric === null) return 'gray'
 	if (numeric < 5000) return 'red'
 	if (numeric <= 10000) return 'blue'
-	return 'green'
-}
-
-const getTimelineColor = (timeline?: string | number | null): DetailField['color'] => {
-	const weeks = parseTimelineToWeeks(timeline)
-
-	if (weeks === null) return 'gray'
-	if (weeks < 3) return 'red'
-	if (weeks < 6) return 'blue'
 	return 'green'
 }
 
@@ -285,8 +252,13 @@ export const mapJobPostToFields = (jobPost?: {
 	title?: string | null
 	description?: string | null
 	score?: string | number | null
+	gigRadarScore?: string | number | null
 	budget?: string | null
-	timeline?: string | null
+	source?: string | null
+	totalSpent?: string | number | null
+	avgRatePaid?: string | number | null
+	hireRate?: string | number | null
+	location?: string | null
 }): DetailField[] => {
 	return [
 		{
@@ -301,13 +273,6 @@ export const mapJobPostToFields = (jobPost?: {
 			icon: <NotesOutlined style={iconSize} />,
 		},
 		{
-			label: 'Score',
-			value: jobPost?.score,
-			display: 'pill',
-			color: getJobPostScoreColor(jobPost?.score),
-			icon: <QueryStatsOutlined style={iconSize} />,
-		},
-		{
 			label: 'Budget',
 			value: jobPost?.budget,
 			display: 'pill',
@@ -315,11 +280,49 @@ export const mapJobPostToFields = (jobPost?: {
 			icon: <PaymentsOutlined style={iconSize} />,
 		},
 		{
-			label: 'Timeline',
-			value: jobPost?.timeline,
+			label: 'Match Score',
+			value: jobPost?.score,
 			display: 'pill',
-			color: getTimelineColor(jobPost?.timeline),
-			icon: <ScheduleOutlined style={iconSize} />,
+			color: getJobPostScoreColor(jobPost?.score),
+			icon: <QueryStatsOutlined style={iconSize} />,
+		},
+		{
+			label: 'GigRadar Score',
+			value: jobPost?.gigRadarScore,
+			display: 'pill',
+			color: getJobPostScoreColor(jobPost?.gigRadarScore),
+			icon: <QueryStatsOutlined style={iconSize} />,
+		},
+		{
+			label: 'Location',
+			value: jobPost?.location,
+			icon: <PublicOutlined style={iconSize} />,
+		},
+		{
+			label: 'Source',
+			value: jobPost?.source,
+			icon: <SellOutlined style={iconSize} />,
+		},
+		{
+			label: 'Total Spent',
+			value: jobPost?.totalSpent,
+			display: 'pill',
+			color: getTotalSpentColor(jobPost?.totalSpent),
+			icon: <PaymentsOutlined style={iconSize} />,
+		},
+		{
+			label: 'Avg Rate Paid',
+			value: jobPost?.avgRatePaid,
+			display: 'pill',
+			color: getAvgRatePaidColor(jobPost?.avgRatePaid),
+			icon: <QueryStatsOutlined style={iconSize} />,
+		},
+		{
+			label: 'Hire Rate',
+			value: jobPost?.hireRate,
+			display: 'pill',
+			color: getHireRateColor(jobPost?.hireRate),
+			icon: <WorkOutlineOutlined style={iconSize} />,
 		},
 	]
 }

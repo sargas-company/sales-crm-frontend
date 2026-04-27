@@ -65,6 +65,7 @@ export interface ChatContext {
 		title?: string | null
 		description?: string | null
 		score?: string | number | null
+		gigRadarScore?: string | number | null
 		budget?: string | null
 		source?: string | null
 		totalSpent?: string | number | null

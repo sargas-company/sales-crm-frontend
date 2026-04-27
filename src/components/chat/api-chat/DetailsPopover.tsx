@@ -50,8 +50,13 @@ type DetailsPopoverProps = {
 		title?: string | null
 		description?: string | null
 		score?: string | number | null
+		gigRadarScore?: string | number | null
 		budget?: string | null
-		timeline?: string | null
+		source?: string | null
+		totalSpent?: string | number | null
+		avgRatePaid?: string | number | null
+		hireRate?: string | number | null
+		location?: string | null
 	}
 	label?: string
 }
