@@ -6,6 +6,7 @@ import {
 	ArrowBackOutlined,
 	EditOutlined,
 	ContentCopy,
+	PhoneInTalkOutlined,
 } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
 import Box from '../../../components/box/Box'
@@ -122,15 +123,30 @@ const LeadPreview = () => {
 							<LeadListItemStatus itemStatus={lead.status} />
 							{lead.clientType && <LeadListItemClientType clientType={lead.clientType} />}
 						</Box>
-						<Button
-							varient='outlined'
-							color='info'
-							onClick={() => navigate(`/leads/edit/${lead.id}`)}
-							styles={{ display: 'flex', alignItems: 'center', gap: 6 }}
-						>
-							<EditOutlined style={{ fontSize: 16 }} />
-							Edit
-						</Button>
+						<Box display='flex' align='center' space={2}>
+							<Button
+								varient='outlined'
+								color='info'
+								onClick={() =>
+									navigate(
+										`/client-calls/add/?clientType=lead&clientId=${lead.id}`
+									)
+								}
+								styles={{ display: 'flex', alignItems: 'center', gap: 6 }}
+							>
+								<PhoneInTalkOutlined style={{ fontSize: 16 }} />
+								Book a Call
+							</Button>
+							<Button
+								varient='outlined'
+								color='info'
+								onClick={() => navigate(`/leads/edit/${lead.id}`)}
+								styles={{ display: 'flex', alignItems: 'center', gap: 6 }}
+							>
+								<EditOutlined style={{ fontSize: 16 }} />
+								Edit
+							</Button>
+						</Box>
 					</Box>
 				</Box>
 

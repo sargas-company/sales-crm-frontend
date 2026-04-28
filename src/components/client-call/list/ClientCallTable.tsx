@@ -8,11 +8,15 @@ import { Text } from '../../../ui'
 import type { DataGridColoumn } from '../../layout/data-grid/type'
 import { formatDate } from '../../../utils/formatDate'
 import ClientCallListAction from './ClientCallListAction'
+import ClientCallStatusChip from './ClientCallStatusChip'
+import ClientCallSourceChip from './ClientCallSourceChip'
 
 type ClientCallItem = {
 	id: string
 	clientType: 'lead' | 'client_request'
 	clientName: string
+	leadId: string | null
+	clientRequestId: string | null
 	callTitle: string
 	clientDateTime: string
 	kyivDateTime: string
@@ -24,14 +28,14 @@ type ClientCallItem = {
 
 const columns: DataGridColoumn[] = [
 	{ fieldId: 'id', label: '#', width: '90px' },
-	{ fieldId: 'clientType', label: 'Source', width: '150px' },
+	{ fieldId: 'clientType', label: 'Source', width: '170px' },
 	{ fieldId: 'clientName', label: 'Client', width: '200px' },
 	{ fieldId: 'callTitle', label: 'Call Title', width: '220px' },
 	{ fieldId: 'clientDateTime', label: 'Client Time', width: '220px' },
 	{ fieldId: 'kyivDateTime', label: 'Kyiv Time', width: '220px' },
 	{ fieldId: 'clientTimezone', label: 'Timezone', width: '130px' },
 	{ fieldId: 'duration', label: 'Duration', width: '130px' },
-	{ fieldId: 'status', label: 'Status', width: '130px' },
+	{ fieldId: 'status', label: 'Status', width: '150px' },
 	{ fieldId: 'createdAt', label: 'Created At', width: '160px' },
 	{ fieldId: 'actions', label: 'Actions', width: '160px' },
 ]
@@ -65,12 +69,23 @@ const ClientCallTable = ({ items, isLoading, onDelete }: Props) => {
 							}
 						/>
 
-						<DataGridCell
-							width={field['clientType'].width}
-							value={row.clientType === 'lead' ? 'Lead' : 'Client Request'}
-						/>
+						<DataGridCell width={field['clientType'].width}>
+							<ClientCallSourceChip clientType={row.clientType} />
+						</DataGridCell>
 
-						<DataGridCell width={field['clientName'].width} value={row.clientName} />
+						<DataGridCell width={field['clientName'].width}>
+							{row.clientType === 'lead' && row.leadId ? (
+								<Link to={`/leads/preview/${row.leadId}`}>
+									<Text skinColor varient={'body2'} >{row.clientName}</Text>
+								</Link>
+							) : row.clientType === 'client_request' && row.clientRequestId ? (
+								<Link to={`/client-requests/preview/${row.clientRequestId}`}>
+									<Text skinColor varient={'body2'}>{row.clientName}</Text>
+								</Link>
+							) : (
+								<Text>{row.clientName}</Text>
+							)}
+						</DataGridCell>
 
 						<DataGridCell width={field['callTitle'].width} value={row.callTitle} />
 
@@ -90,10 +105,9 @@ const ClientCallTable = ({ items, isLoading, onDelete }: Props) => {
 							value={`${row.duration} min`}
 						/>
 
-						<DataGridCell
-							width={field['status'].width}
-							value={row.status}
-						/>
+						<DataGridCell width={field['status'].width}>
+							<ClientCallStatusChip status={row.status} />
+						</DataGridCell>
 
 						<DataGridCell
 							width={field['createdAt'].width}

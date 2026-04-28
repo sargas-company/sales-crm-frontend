@@ -46,6 +46,8 @@ const ClientCallList = () => {
 		id: call.id,
 		clientType: call.clientType,
 		clientName: getClientName(call),
+		leadId: call.leadId,
+		clientRequestId: call.clientRequestId,
 		callTitle: call.callTitle,
 		clientDateTime: call.clientDateTime,
 		kyivDateTime: call.kyivDateTime,

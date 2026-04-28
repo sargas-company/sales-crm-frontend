@@ -11,6 +11,7 @@ import {
 	InsertDriveFileOutlined,
 	VisibilityOutlined,
 	FileDownloadOutlined,
+	PhoneInTalkOutlined,
 } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
 import Box from '../../../components/box/Box'
@@ -128,8 +129,21 @@ const ClientRequestPreview = () => {
 						</Box>
 					</Box>
 
-					<Box display='flex' align='center'>
+					<Box display='flex' align='center' justify='space-between'>
 						<ClientRequestStatusSelect id={request.id} status={request.status} />
+						<Button
+							varient='outlined'
+							color='info'
+							onClick={() =>
+								navigate(
+									`/client-calls/add/?clientType=client_request&clientId=${request.id}`
+								)
+							}
+							styles={{ display: 'flex', alignItems: 'center', gap: 6 }}
+						>
+							<PhoneInTalkOutlined style={{ fontSize: 16 }} />
+							Book a Call
+						</Button>
 					</Box>
 				</Box>
 

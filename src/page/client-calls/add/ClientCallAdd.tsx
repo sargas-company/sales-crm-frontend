@@ -27,7 +27,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useGetLeadListQuery } from '../../../store/leads/leadsApi'
 import { useGetClientRequestListQuery } from '../../../store/clientRequests/clientRequestsApi'
 import { useCreateClientCallMutation } from '../../../store/clientCalls/clientCallsApi'
@@ -74,9 +74,13 @@ const fieldSx = {
 }
 
 const CreateCallPage = () => {
+	const [searchParams] = useSearchParams()
+	const initialClientType = (searchParams.get('clientType') as ClientType | null) ?? 'lead'
+	const initialClientId = searchParams.get('clientId') ?? ''
+
 	const [submitAttempted, setSubmitAttempted] = useState(false)
-	const [clientType, setClientType] = useState<ClientType>('lead')
-	const [selectedClientId, setSelectedClientId] = useState<string>('')
+	const [clientType, setClientType] = useState<ClientType>(initialClientType)
+	const [selectedClientId, setSelectedClientId] = useState<string>(initialClientId)
 	const [callTitle, setCallTitle] = useState('Discovery call')
 	const [date, setDate] = useState('')
 	const [time, setTime] = useState('')
