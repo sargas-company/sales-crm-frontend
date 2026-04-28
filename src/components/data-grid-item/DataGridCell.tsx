@@ -19,9 +19,9 @@ const DataGridCell: FC<Props> = ({ value, width, flex, hidden, children, justify
 			padding={24}
 		>
 			{value && !children && (
-				<Text varient='body2' textOverflow='ellipsis' paragraph>
-					{value}
-				</Text>
+				typeof value === 'string' || typeof value === 'number'
+					? <Text varient='body2' textOverflow='ellipsis' paragraph>{value}</Text>
+					: <>{value}</>
 			)}
 			{children && children}
 		</Box>
@@ -29,7 +29,7 @@ const DataGridCell: FC<Props> = ({ value, width, flex, hidden, children, justify
 }
 export default memo(DataGridCell)
 interface Props {
-	value?: string | number
+	value?: string | number | ReactNode
 	width: number | string
 	flex?: number
 	hidden?: boolean

@@ -1,3 +1,8 @@
+import React from 'react'
+import {Chip} from '../ui'
+import Box from '../components/box/Box'
+import Text from '../ui/text/Text'
+
 /**
  * Formats an ISO 8601 date string to a human-readable format.
  * Example: "2026-04-15T12:35:40.981Z" → "15 Apr 2026"
@@ -31,7 +36,7 @@ export const formatDateTime = (iso: string | null | undefined): string => {
  * Uses 12-hour clock with AM/PM.
  * Example: "2026-05-01 08:00" → "May 1, 2026 · 08:00 AM"
  */
-export const formatClientDateTime = (str: string | null | undefined): string => {
+export const formatClientDateTime = (str: string | null | undefined): React.ReactElement | string => {
 	if (!str) return '—'
 	const [datePart, timePart] = str.split(' ')
 	if (!datePart || !timePart) return str
@@ -40,7 +45,18 @@ export const formatClientDateTime = (str: string | null | undefined): string => 
 	const date = new Date(year, month - 1, day, hour, minute)
 	const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 	const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-	return `${dateStr} · ${timeStr}`
+	return (
+		<Box display={'flex'} justify={'center'} align={'center'} space={0.5}>
+			<Text varient={'body2'}>{dateStr}</Text>
+			<Chip
+				label={timeStr}
+				skin='light'
+				size='small'
+				color={'green'}
+				styles={{ whiteSpace: 'nowrap', color: '#000000' }}
+			/>
+		</Box>
+	)
 }
 
 /**
@@ -48,7 +64,7 @@ export const formatClientDateTime = (str: string | null | undefined): string => 
  * Uses 24-hour clock.
  * Example: "2026-05-01 15:00" → "May 1, 2026 · 15:00"
  */
-export const formatKyivDateTime = (str: string | null | undefined): string => {
+export const formatKyivDateTime = (str: string | null | undefined): React.ReactElement | string  => {
 	if (!str) return '—'
 	const [datePart, timePart] = str.split(' ')
 	if (!datePart || !timePart) return str
@@ -57,7 +73,18 @@ export const formatKyivDateTime = (str: string | null | undefined): string => {
 	const date = new Date(year, month - 1, day, hour, minute)
 	const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 	const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
-	return `${dateStr} · ${timeStr}`
+	return (
+		<Box display={'flex'} justify={'center'} align={'center'} space={0.5}>
+			<Text varient={'body2'}>{dateStr}</Text>
+			<Chip
+				label={timeStr}
+				skin='light'
+				size='small'
+				color={'green'}
+				styles={{ whiteSpace: 'nowrap', color: '#000000' }}
+			/>
+		</Box>
+	)
 }
 
 /**

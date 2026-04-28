@@ -30,12 +30,12 @@ const columns: DataGridColoumn[] = [
 	{ fieldId: 'id', label: '#', width: '90px' },
 	{ fieldId: 'clientType', label: 'Source', width: '170px' },
 	{ fieldId: 'clientName', label: 'Client', width: '200px' },
-	{ fieldId: 'callTitle', label: 'Call Title', width: '220px' },
-	{ fieldId: 'clientDateTime', label: 'Client Time', width: '220px' },
+	{ fieldId: 'status', label: 'Status', width: '150px' },
+	{ fieldId: 'clientDateTime', label: 'Client Time', width: '240px' },
 	{ fieldId: 'kyivDateTime', label: 'Kyiv Time', width: '220px' },
+	{ fieldId: 'callTitle', label: 'Call Title', width: '220px' },
 	{ fieldId: 'clientTimezone', label: 'Timezone', width: '130px' },
 	{ fieldId: 'duration', label: 'Duration', width: '130px' },
-	{ fieldId: 'status', label: 'Status', width: '150px' },
 	{ fieldId: 'createdAt', label: 'Created At', width: '160px' },
 	{ fieldId: 'actions', label: 'Actions', width: '160px' },
 ]
@@ -73,6 +73,8 @@ const ClientCallTable = ({ items, isLoading, onDelete }: Props) => {
 							<ClientCallSourceChip clientType={row.clientType} />
 						</DataGridCell>
 
+
+
 						<DataGridCell width={field['clientName'].width}>
 							{row.clientType === 'lead' && row.leadId ? (
 								<Link to={`/leads/preview/${row.leadId}`}>
@@ -87,11 +89,15 @@ const ClientCallTable = ({ items, isLoading, onDelete }: Props) => {
 							)}
 						</DataGridCell>
 
-						<DataGridCell width={field['callTitle'].width} value={row.callTitle} />
+						<DataGridCell width={field['status'].width}>
+							<ClientCallStatusChip status={row.status} />
+						</DataGridCell>
 
 						<DataGridCell width={field['clientDateTime'].width} value={formatClientDateTime(row.clientDateTime)} />
 
 						<DataGridCell width={field['kyivDateTime'].width} value={formatKyivDateTime(row.kyivDateTime)} />
+
+						<DataGridCell width={field['callTitle'].width} value={row.callTitle} />
 
 						<DataGridCell
 							width={field['clientTimezone'].width}
@@ -105,9 +111,7 @@ const ClientCallTable = ({ items, isLoading, onDelete }: Props) => {
 							value={`${row.duration} min`}
 						/>
 
-						<DataGridCell width={field['status'].width}>
-							<ClientCallStatusChip status={row.status} />
-						</DataGridCell>
+
 
 						<DataGridCell
 							width={field['createdAt'].width}
