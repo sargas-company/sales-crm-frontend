@@ -18,9 +18,9 @@ import {
 	PublicOutlined,
 } from '@mui/icons-material'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useGetClientCallByIdQuery, useUpdateClientCallMutation } from '../../../store/clientCalls/clientCallsApi'
+import { useGetClientCallByIdQuery } from '../../../store/clientCalls/clientCallsApi'
 import ClientCallDeleteModal from '../../../components/client-call/list/ProposalDeleteModal'
-import { useToast } from '../../../context/toast/ToastContext'
+import ClientCallCancelModal from '../../../components/client-call/preview/ClientCallCancelModal'
 import { formatDate } from '../../../utils/formatDate'
 
 const statusColors: Record<string, string> = {
@@ -32,21 +32,10 @@ const statusColors: Record<string, string> = {
 const CallDetailsPage = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
-	const { showToast } = useToast()
 	const [showDeleteModal, setShowDeleteModal] = useState(false)
+	const [showCancelModal, setShowCancelModal] = useState(false)
 
 	const { data: call, isLoading } = useGetClientCallByIdQuery(id ?? '', { skip: !id })
-	const [updateClientCall, { isLoading: isCancelling }] = useUpdateClientCallMutation()
-
-	const handleCancel = async () => {
-		if (!id) return
-		try {
-			await updateClientCall({ id, body: { status: 'cancelled' } }).unwrap()
-			showToast('Client call cancelled', 'success')
-		} catch {
-			showToast('Failed to cancel client call', 'error')
-		}
-	}
 
 	if (isLoading) {
 		return (
@@ -148,11 +137,10 @@ const CallDetailsPage = () => {
 										variant="outlined"
 										color="error"
 										startIcon={<CancelOutlined />}
-										disabled={isCancelling}
 										sx={{ height: 46, borderRadius: '14px' }}
-										onClick={handleCancel}
+										onClick={() => setShowCancelModal(true)}
 									>
-										{isCancelling ? <CircularProgress size={18} color="inherit" /> : 'Cancel call'}
+										Cancel call
 									</Button>
 								</>
 							)}
@@ -241,6 +229,15 @@ const CallDetailsPage = () => {
 					title={call.callTitle}
 					onClose={() => setShowDeleteModal(false)}
 					onSuccess={() => navigate('/client-calls/list/')}
+				/>
+			)}
+
+			{showCancelModal && (
+				<ClientCallCancelModal
+					id={call.id}
+					title={call.callTitle}
+					onClose={() => setShowCancelModal(false)}
+					onSuccess={() => {}}
 				/>
 			)}
 		</Box>

@@ -115,7 +115,7 @@ const ClientCallTable = ({ items, isLoading, onDelete }: Props) => {
 						/>
 
 						<DataGridCell width={field['actions'].width}>
-							<ClientCallListAction clientCallId={row.id} onDelete={onDelete} />
+							<ClientCallListAction clientCallId={row.id} status={row.status} onDelete={onDelete} />
 						</DataGridCell>
 					</>
 				)}
