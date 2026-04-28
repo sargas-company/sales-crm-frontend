@@ -21,7 +21,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useGetClientCallByIdQuery } from '../../../store/clientCalls/clientCallsApi'
 import ClientCallDeleteModal from '../../../components/client-call/list/ProposalDeleteModal'
 import ClientCallCancelModal from '../../../components/client-call/preview/ClientCallCancelModal'
-import { formatDate } from '../../../utils/formatDate'
+import { formatDate, formatClientDateTime, formatKyivDateTime } from '../../../utils/formatDate'
 
 const statusColors: Record<string, string> = {
 	scheduled: '#2f80ed',
@@ -185,7 +185,7 @@ const CallDetailsPage = () => {
 								<Typography>
 									Client:{' '}
 									<Box component="span" sx={{ fontWeight: 800 }}>
-										{call.clientDateTime} {call.clientTimezone}
+										{formatClientDateTime(call.clientDateTime)} · {call.clientTimezone}
 									</Box>
 								</Typography>
 							</Box>
@@ -195,7 +195,7 @@ const CallDetailsPage = () => {
 								<Typography>
 									You:{' '}
 									<Box component="span" sx={{ fontWeight: 800 }}>
-										{call.kyivDateTime} Kyiv
+										{formatKyivDateTime(call.kyivDateTime)} · Kyiv
 									</Box>
 								</Typography>
 							</Box>

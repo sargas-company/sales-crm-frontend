@@ -6,7 +6,7 @@ import DataGridCell from '../../data-grid-item/DataGridCell'
 import { Text } from '../../../ui'
 
 import type { DataGridColoumn } from '../../layout/data-grid/type'
-import { formatDate } from '../../../utils/formatDate'
+import { formatDate, formatClientDateTime, formatKyivDateTime } from '../../../utils/formatDate'
 import ClientCallListAction from './ClientCallListAction'
 import ClientCallStatusChip from './ClientCallStatusChip'
 import ClientCallSourceChip from './ClientCallSourceChip'
@@ -89,9 +89,9 @@ const ClientCallTable = ({ items, isLoading, onDelete }: Props) => {
 
 						<DataGridCell width={field['callTitle'].width} value={row.callTitle} />
 
-						<DataGridCell width={field['clientDateTime'].width} value={row.clientDateTime} />
+						<DataGridCell width={field['clientDateTime'].width} value={formatClientDateTime(row.clientDateTime)} />
 
-						<DataGridCell width={field['kyivDateTime'].width} value={row.kyivDateTime} />
+						<DataGridCell width={field['kyivDateTime'].width} value={formatKyivDateTime(row.kyivDateTime)} />
 
 						<DataGridCell
 							width={field['clientTimezone'].width}
