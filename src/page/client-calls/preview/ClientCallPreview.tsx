@@ -1,10 +1,11 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import {
 	Box,
 	Button,
 	Card,
 	CardContent,
 	Chip,
+	CircularProgress,
 	Divider,
 	Typography,
 } from '@mui/material'
@@ -16,11 +17,58 @@ import {
 	PhoneInTalkOutlined,
 	PublicOutlined,
 } from '@mui/icons-material'
-import {useNavigate} from "react-router-dom";
-import ProposalDeleteModal from "../../../components/proposal/list/ProposalDeleteModal";
+import { useNavigate, useParams } from 'react-router-dom'
+import { useGetClientCallByIdQuery, useUpdateClientCallMutation } from '../../../store/clientCalls/clientCallsApi'
+import ClientCallDeleteModal from '../../../components/client-call/list/ProposalDeleteModal'
+import { useToast } from '../../../context/toast/ToastContext'
+import { formatDate } from '../../../utils/formatDate'
+
+const statusColors: Record<string, string> = {
+	scheduled: '#2f80ed',
+	completed: '#27ae60',
+	cancelled: '#eb5757',
+}
 
 const CallDetailsPage = () => {
+	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
+	const { showToast } = useToast()
+	const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+	const { data: call, isLoading } = useGetClientCallByIdQuery(id ?? '', { skip: !id })
+	const [updateClientCall, { isLoading: isCancelling }] = useUpdateClientCallMutation()
+
+	const handleCancel = async () => {
+		if (!id) return
+		try {
+			await updateClientCall({ id, body: { status: 'cancelled' } }).unwrap()
+			showToast('Client call cancelled', 'success')
+		} catch {
+			showToast('Failed to cancel client call', 'error')
+		}
+	}
+
+	if (isLoading) {
+		return (
+			<Box sx={{ display: 'flex', justifyContent: 'center', pt: 10 }}>
+				<CircularProgress />
+			</Box>
+		)
+	}
+
+	if (!call) {
+		return (
+			<Box sx={{ px: { xs: 2, md: 10 }, py: 8 }}>
+				<Typography>Client call not found.</Typography>
+			</Box>
+		)
+	}
+
+	const clientName = call.lead
+		? [call.lead.firstName, call.lead.lastName].filter(Boolean).join(' ') || call.lead.companyName || '—'
+		: call.clientRequest?.name ?? '—'
+
+	const statusColor = statusColors[call.status] ?? '#2f80ed'
 
 	return (
 		<Box
@@ -48,16 +96,15 @@ const CallDetailsPage = () => {
 
 				<Chip
 					icon={<PhoneInTalkOutlined />}
-					label="Scheduled"
+					label={call.status}
 					variant="outlined"
 					sx={{
-						borderColor: '#2f80ed',
-						color: '#2f80ed',
+						borderColor: statusColor,
+						color: statusColor,
 						px: 1,
 						fontWeight: 500,
-						'& .MuiChip-icon': {
-							color: '#2f80ed',
-						},
+						textTransform: 'capitalize',
+						'& .MuiChip-icon': { color: statusColor },
 					}}
 				/>
 			</Box>
@@ -75,31 +122,47 @@ const CallDetailsPage = () => {
 					>
 						<Box>
 							<Typography variant="h5" sx={{ fontWeight: 800 }}>
-								Discovery call
+								{call.callTitle}
 							</Typography>
 
 							<Typography sx={{ color: '#625c68', mt: 1 }}>
-								John Smith · Lead
+								{clientName} · {call.clientType === 'lead' ? 'Lead' : 'Client Request'}
 							</Typography>
 						</Box>
 
 						<Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-							<Button
-								variant="outlined"
-								startIcon={<EditCalendarOutlined />}
-								sx={{ height: 46, borderRadius: '14px' }}
-								onClick={() => navigate('/client-calls/edit/1')}
-							>
-								Reschedule call
-							</Button>
+							{call.status === 'scheduled' && (
+								<>
+									<Button
+										variant="outlined"
+										startIcon={<EditCalendarOutlined />}
+										sx={{ height: 46, borderRadius: '14px' }}
+										onClick={() => navigate(`/client-calls/edit/${id}`)}
+									>
+										Reschedule call
+									</Button>
+
+									<Button
+										variant="outlined"
+										color="error"
+										startIcon={<CancelOutlined />}
+										disabled={isCancelling}
+										sx={{ height: 46, borderRadius: '14px' }}
+										onClick={handleCancel}
+									>
+										{isCancelling ? <CircularProgress size={18} color="inherit" /> : 'Cancel call'}
+									</Button>
+								</>
+							)}
 
 							<Button
 								variant="outlined"
 								color="error"
 								startIcon={<CancelOutlined />}
 								sx={{ height: 46, borderRadius: '14px' }}
+								onClick={() => setShowDeleteModal(true)}
 							>
-								Cancel call
+								Delete
 							</Button>
 						</Box>
 					</Box>
@@ -132,7 +195,7 @@ const CallDetailsPage = () => {
 								<Typography>
 									Client:{' '}
 									<Box component="span" sx={{ fontWeight: 800 }}>
-										17 Apr 2026 - 01:00 EST
+										{call.clientDateTime} {call.clientTimezone}
 									</Box>
 								</Typography>
 							</Box>
@@ -142,7 +205,7 @@ const CallDetailsPage = () => {
 								<Typography>
 									You:{' '}
 									<Box component="span" sx={{ fontWeight: 800 }}>
-										17 Apr 2026 - 08:00 Kyiv
+										{call.kyivDateTime} Kyiv
 									</Box>
 								</Typography>
 							</Box>
@@ -151,22 +214,33 @@ const CallDetailsPage = () => {
 						<Box sx={{ display: 'grid', gap: 2 }}>
 							<Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
 								<CalendarMonthOutlined fontSize="small" />
-								<Typography>Created: 15 Apr 2026</Typography>
+								<Typography>Created: {formatDate(call.createdAt)}</Typography>
 							</Box>
 
 							<Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
 								<PublicOutlined fontSize="small" />
-								<Typography>Duration: 30 minutes</Typography>
+								<Typography>Duration: {call.duration} minutes</Typography>
 							</Box>
 
 							<Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
 								<PhoneInTalkOutlined fontSize="small" />
-								<Typography>Call type: Upwork call</Typography>
+								<Typography>
+									Source: {call.clientType === 'lead' ? 'Lead' : 'Client Request'}
+								</Typography>
 							</Box>
 						</Box>
 					</Box>
 				</CardContent>
 			</Card>
+
+			{showDeleteModal && (
+				<ClientCallDeleteModal
+					id={call.id}
+					title={call.callTitle}
+					onClose={() => setShowDeleteModal(false)}
+					onSuccess={() => navigate('/client-calls/list/')}
+				/>
+			)}
 		</Box>
 	)
 }

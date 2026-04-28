@@ -3,10 +3,10 @@ import Box from '../../../components/box/Box'
 import Card from '../../../components/card/Card'
 import CreateNewClientCall from '../../../components/client-call/list/CreateNewCall'
 import ClientCallTable from '../../../components/client-call/list/ClientCallTable'
-import ClientCallDeleteModal from '../../../components/proposal/list/ProposalDeleteModal'
+import ClientCallDeleteModal from '../../../components/client-call/list/ProposalDeleteModal'
 import DataGridFooter from '../../../components/data-grid-item/DataGridFooter'
 import { GridInnerContainer, GridItem } from '../../../components/layout'
-import { useGetProposalListQuery } from '../../../store/proposals/proposalsApi'
+import { useGetClientCallListQuery } from '../../../store/clientCalls/clientCallsApi'
 
 interface DeleteTarget {
 	id: string
@@ -15,31 +15,44 @@ interface DeleteTarget {
 
 const LIMIT_OPTIONS = [8, 20]
 
+const getClientName = (call: {
+	clientType: string
+	lead: { firstName: string | null; lastName: string | null; companyName: string | null } | null
+	clientRequest: { name: string } | null
+}): string => {
+	if (call.clientType === 'lead' && call.lead) {
+		const name = [call.lead.firstName, call.lead.lastName].filter(Boolean).join(' ')
+		return name || call.lead.companyName || '—'
+	}
+	if (call.clientRequest) return call.clientRequest.name
+	return '—'
+}
+
 const ClientCallList = () => {
 	const [page, setPage] = useState(1)
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
 	const [limit, setLimit] = useState(LIMIT_OPTIONS[0])
-	const [search, setSearch] = useState('')
 
-	const { data, isLoading, refetch } = useGetProposalListQuery({ page, limit });
+	const { data, isLoading, refetch } = useGetClientCallListQuery({ page, limit })
 
-	const allItems = []; // data?.data ??
-	const total = data?.total ?? 0;
+	const allItems = data?.data ?? []
+	const total = data?.total ?? 0
 
 	const passed = (page - 1) * limit + 1
 	const next = Math.min(page * limit, total)
 
-	const items = search
-		? allItems.filter((item) => {
-				const q = search.toLowerCase();
-				return (
-					item.id.toString().includes(q) ||
-					`${item.user.firstName} ${item.user.lastName}`.toLowerCase().includes(q) ||
-					`${item.account.firstName} ${item.account.lastName}`.toLowerCase().includes(q) ||
-					item.status.toLowerCase().includes(q)
-				)
-			})
-		: allItems
+	const items = allItems.map((call) => ({
+		id: call.id,
+		clientType: call.clientType,
+		clientName: getClientName(call),
+		callTitle: call.callTitle,
+		clientDateTime: call.clientDateTime,
+		kyivDateTime: call.kyivDateTime,
+		clientTimezone: call.clientTimezone,
+		duration: call.duration,
+		status: call.status,
+		createdAt: call.createdAt,
+	}))
 
 	const handleLimitChange = (newLimit: number) => {
 		setLimit(newLimit)
@@ -48,7 +61,7 @@ const ClientCallList = () => {
 
 	const handleDelete = (id: string) => {
 		const item = allItems.find((i) => i.id === id)
-		if (item) setDeleteTarget({ id, title: item.title })
+		if (item) setDeleteTarget({ id, title: item.callTitle })
 	}
 
 	return (

@@ -5,6 +5,7 @@ import {
 	Card,
 	CardContent,
 	Chip,
+	CircularProgress,
 	FormControl,
 	InputLabel,
 	MenuItem,
@@ -26,7 +27,11 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from 'react-router-dom'
+import { useGetLeadListQuery } from '../../../store/leads/leadsApi'
+import { useGetClientRequestListQuery } from '../../../store/clientRequests/clientRequestsApi'
+import { useCreateClientCallMutation } from '../../../store/clientCalls/clientCallsApi'
+import { useToast } from '../../../context/toast/ToastContext'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -43,36 +48,23 @@ type TimezoneOption = {
 const timezones: TimezoneOption[] = [
 	{ label: 'EST - Eastern Standard Time', value: 'EST', timezone: 'America/New_York' },
 	{ label: 'EDT - Eastern Daylight Time', value: 'EDT', timezone: 'America/New_York' },
-
 	{ label: 'CST - Central Standard Time', value: 'CST', timezone: 'America/Chicago' },
 	{ label: 'CDT - Central Daylight Time', value: 'CDT', timezone: 'America/Chicago' },
-
 	{ label: 'MST - Mountain Standard Time', value: 'MST', timezone: 'America/Denver' },
 	{ label: 'MDT - Mountain Daylight Time', value: 'MDT', timezone: 'America/Denver' },
-
 	{ label: 'PST - Pacific Standard Time', value: 'PST', timezone: 'America/Los_Angeles' },
 	{ label: 'PDT - Pacific Daylight Time', value: 'PDT', timezone: 'America/Los_Angeles' },
-
 	{ label: 'GMT - Greenwich Mean Time', value: 'GMT', offset: '+00:00' },
-
 	...Array.from({ length: 27 }, (_, index) => {
 		const hour = index - 12
 		const sign = hour >= 0 ? '+' : '-'
 		const absHour = Math.abs(hour)
-
 		return {
 			label: `GMT${sign}${absHour}`,
 			value: `GMT${sign}${absHour}`,
 			offset: `${sign}${String(absHour).padStart(2, '0')}:00`,
 		}
 	}),
-]
-
-const clients = [
-	{ id: 1, name: 'John Smith', type: 'lead' },
-	{ id: 2, name: 'Michael Brown', type: 'lead' },
-	{ id: 3, name: 'Upwork SaaS MVP', type: 'client_request' },
-	{ id: 4, name: 'CRM Automation Request', type: 'client_request' },
 ]
 
 const fieldSx = {
@@ -84,46 +76,51 @@ const fieldSx = {
 const CreateCallPage = () => {
 	const [submitAttempted, setSubmitAttempted] = useState(false)
 	const [clientType, setClientType] = useState<ClientType>('lead')
-	const [selectedClientId, setSelectedClientId] = useState<number | null>(1)
+	const [selectedClientId, setSelectedClientId] = useState<string>('')
 	const [callTitle, setCallTitle] = useState('Discovery call')
 	const [date, setDate] = useState('')
 	const [time, setTime] = useState('')
 	const [duration, setDuration] = useState('30')
 	const [clientTimezone, setClientTimezone] = useState('EST')
 
-	const selectedTimezone = timezones.find((tz) => tz.value === clientTimezone)
-	const filteredClients = clients.filter((client) => client.type === clientType)
-	const selectedClient = clients.find((client) => client.id === selectedClientId)
-
 	const navigate = useNavigate()
+	const { showToast } = useToast()
+
+	const { data: leadsData, isLoading: leadsLoading } = useGetLeadListQuery({ page: 1, limit: 100 })
+	const { data: clientRequestsData, isLoading: crLoading } = useGetClientRequestListQuery({ page: 1, limit: 100 })
+	const [createClientCall, { isLoading: isSubmitting }] = useCreateClientCallMutation()
+
+	const leads = leadsData?.data ?? []
+	const clientRequests = clientRequestsData?.data ?? []
+
+	const clientOptions = clientType === 'lead'
+		? leads.map((l) => ({
+				id: l.id,
+				name: [l.firstName, l.lastName].filter(Boolean).join(' ') || l.companyName || l.id,
+		  }))
+		: clientRequests.map((cr) => ({ id: cr.id, name: cr.name || cr.company || cr.id }))
+
+	const selectedTimezone = timezones.find((tz) => tz.value === clientTimezone)
+	const selectedClient = clientOptions.find((c) => c.id === selectedClientId)
+
 	const handleClientTypeChange = (type: ClientType) => {
 		setClientType(type)
-
-		const firstClient = clients.find((client) => client.type === type)
-		setSelectedClientId(firstClient?.id || null)
+		setSelectedClientId('')
 	}
 
 	const clientDateTime = useMemo(() => {
 		if (!date || !time || !selectedTimezone) return null
-
 		if (selectedTimezone.timezone) {
-			return dayjs.tz(
-				`${date} ${time}`,
-				'YYYY-MM-DD HH:mm',
-				selectedTimezone.timezone
-			)
+			return dayjs.tz(`${date} ${time}`, 'YYYY-MM-DD HH:mm', selectedTimezone.timezone)
 		}
-
 		if (selectedTimezone.offset) {
 			return dayjs(`${date}T${time}${selectedTimezone.offset}`)
 		}
-
 		return null
 	}, [date, time, selectedTimezone])
 
 	const kyivDateTime = useMemo(() => {
 		if (!clientDateTime) return null
-
 		return clientDateTime.tz('Europe/Kyiv')
 	}, [clientDateTime])
 
@@ -140,13 +137,31 @@ const CreateCallPage = () => {
 
 	const hasErrors = Object.values(errors).some(Boolean)
 
-	const handleCreateCall = () => {
+	const handleCreateCall = async () => {
 		setSubmitAttempted(true)
+		if (hasErrors || !clientDateTime) return
 
-		if (hasErrors) return
+		const clientTimezoneForApi = selectedTimezone?.timezone ?? selectedTimezone?.offset ?? clientTimezone
 
-		navigate('/client-calls/preview/1')
+		const body = {
+			clientType,
+			callTitle: callTitle.trim(),
+			scheduledAt: clientDateTime.toISOString(),
+			clientTimezone: clientTimezoneForApi,
+			duration: Number(duration),
+			...(clientType === 'lead' ? { leadId: selectedClientId } : { clientRequestId: selectedClientId }),
+		}
+
+		try {
+			const result = await createClientCall(body).unwrap()
+			showToast('Client call created successfully', 'success')
+			navigate(`/client-calls/preview/${result.id}`)
+		} catch {
+			showToast('Failed to create client call. Please try again.', 'error')
+		}
 	}
+
+	const isLoadingClients = clientType === 'lead' ? leadsLoading : crLoading
 
 	return (
 		<Box
@@ -181,9 +196,7 @@ const CreateCallPage = () => {
 						color: '#2f80ed',
 						px: 1,
 						fontWeight: 500,
-						'& .MuiChip-icon': {
-							color: '#2f80ed',
-						},
+						'& .MuiChip-icon': { color: '#2f80ed' },
 					}}
 				/>
 			</Box>
@@ -215,12 +228,7 @@ const CreateCallPage = () => {
 								variant={clientType === 'lead' ? 'contained' : 'outlined'}
 								startIcon={<ContactPhoneOutlined />}
 								onClick={() => handleClientTypeChange('lead')}
-								sx={{
-									height: 56,
-									borderRadius: '14px',
-									justifyContent: 'flex-start',
-									px: 3,
-								}}
+								sx={{ height: 56, borderRadius: '14px', justifyContent: 'flex-start', px: 3 }}
 							>
 								Leads
 							</Button>
@@ -229,12 +237,7 @@ const CreateCallPage = () => {
 								variant={clientType === 'client_request' ? 'contained' : 'outlined'}
 								startIcon={<WorkOutlineOutlined />}
 								onClick={() => handleClientTypeChange('client_request')}
-								sx={{
-									height: 56,
-									borderRadius: '14px',
-									justifyContent: 'flex-start',
-									px: 3,
-								}}
+								sx={{ height: 56, borderRadius: '14px', justifyContent: 'flex-start', px: 3 }}
 							>
 								Client Requests
 							</Button>
@@ -244,11 +247,13 @@ const CreateCallPage = () => {
 							<FormControl fullWidth sx={fieldSx} error={submitAttempted && errors.selectedClientId}>
 								<InputLabel>Select client</InputLabel>
 								<Select
-									value={selectedClientId || ''}
+									value={selectedClientId}
 									label="Select client"
-									onChange={(e) => setSelectedClientId(Number(e.target.value))}
+									onChange={(e) => setSelectedClientId(e.target.value)}
+									disabled={isLoadingClients}
+									endAdornment={isLoadingClients ? <CircularProgress size={20} sx={{ mr: 2 }} /> : undefined}
 								>
-									{filteredClients.map((client) => (
+									{clientOptions.map((client) => (
 										<MenuItem key={client.id} value={client.id}>
 											{client.name}
 										</MenuItem>
@@ -284,12 +289,8 @@ const CreateCallPage = () => {
 									error={submitAttempted && errors.date}
 									helperText={submitAttempted && errors.date ? 'Date is required' : ''}
 									slotProps={{
-										inputLabel: {
-											shrink: true,
-										},
-										htmlInput: {
-											min: dayjs().format('YYYY-MM-DD'),
-										},
+										inputLabel: { shrink: true },
+										htmlInput: { min: dayjs().format('YYYY-MM-DD') },
 									}}
 									fullWidth
 									sx={fieldSx}
@@ -301,11 +302,7 @@ const CreateCallPage = () => {
 										value={time ? dayjs(`${date}T${time}`) : null}
 										disabled={!date}
 										onChange={(newValue) => {
-											if (!newValue) {
-												setTime('')
-												return
-											}
-
+											if (!newValue) { setTime(''); return }
 											setTime(newValue.format('HH:mm'))
 										}}
 										minutesStep={5}
@@ -315,9 +312,7 @@ const CreateCallPage = () => {
 												error: submitAttempted && errors.time,
 												helperText: submitAttempted && errors.time
 													? 'Call time must be at least 30 minutes from now'
-													: !date
-														? 'Select date first'
-														: '',
+													: !date ? 'Select date first' : '',
 												sx: {
 													...fieldSx,
 													'& .MuiOutlinedInput-root.Mui-disabled': {
@@ -370,6 +365,7 @@ const CreateCallPage = () => {
 							<Button
 								variant="contained"
 								size="large"
+								disabled={isSubmitting}
 								sx={{
 									mt: 2,
 									height: 54,
@@ -380,7 +376,7 @@ const CreateCallPage = () => {
 								}}
 								onClick={handleCreateCall}
 							>
-								Create call
+								{isSubmitting ? <CircularProgress size={22} color="inherit" /> : 'Create call'}
 							</Button>
 						</Box>
 					</CardContent>
@@ -394,25 +390,19 @@ const CreateCallPage = () => {
 
 						<Box sx={{ display: 'grid', gap: 3 }}>
 							<Box>
-								<Typography sx={{ fontSize: 14, color: '#3f3a44' }}>
-									Selected source
-								</Typography>
+								<Typography sx={{ fontSize: 14, color: '#3f3a44' }}>Selected source</Typography>
 								<Typography sx={{ fontSize: 18 }}>
 									{clientType === 'lead' ? 'Lead' : 'Client Request'}
 								</Typography>
 							</Box>
 
 							<Box>
-								<Typography sx={{ fontSize: 14, color: '#3f3a44' }}>
-									Selected client
-								</Typography>
+								<Typography sx={{ fontSize: 14, color: '#3f3a44' }}>Selected client</Typography>
 								<Typography sx={{ fontSize: 18 }}>{selectedClient?.name || '—'}</Typography>
 							</Box>
 
 							<Box>
-								<Typography sx={{ fontSize: 14, color: '#3f3a44' }}>
-									Call title
-								</Typography>
+								<Typography sx={{ fontSize: 14, color: '#3f3a44' }}>Call title</Typography>
 								<Typography sx={{ fontSize: 18 }}>{callTitle || '—'}</Typography>
 							</Box>
 
@@ -470,12 +460,13 @@ const CreateCallPage = () => {
 								sx={{ height: 46, borderRadius: '14px' }}
 								onClick={() => {
 									setClientType('lead')
-									setSelectedClientId(1)
+									setSelectedClientId('')
 									setCallTitle('Discovery call')
 									setDate('')
 									setTime('')
 									setDuration('30')
 									setClientTimezone('EST')
+									setSubmitAttempted(false)
 								}}
 							>
 								Reset

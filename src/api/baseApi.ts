@@ -15,6 +15,7 @@ export const baseApi = createApi({
 		'Platform',
 		'Counterparty',
 		'ClientRequest',
+		'ClientCall',
 		'JobPost',
 		'Invoice',
 		'Prompt',

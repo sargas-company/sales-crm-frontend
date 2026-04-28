@@ -1,10 +1,11 @@
-import { memo, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import {
 	Box,
 	Button,
 	Card,
 	CardContent,
 	Chip,
+	CircularProgress,
 	FormControl,
 	InputLabel,
 	MenuItem,
@@ -26,7 +27,9 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
-import {useNavigate} from "react-router-dom";
+import { useNavigate, useParams } from 'react-router-dom'
+import { useGetClientCallByIdQuery, useUpdateClientCallMutation } from '../../../store/clientCalls/clientCallsApi'
+import { useToast } from '../../../context/toast/ToastContext'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -43,23 +46,17 @@ type TimezoneOption = {
 const timezones: TimezoneOption[] = [
 	{ label: 'EST - Eastern Standard Time', value: 'EST', timezone: 'America/New_York' },
 	{ label: 'EDT - Eastern Daylight Time', value: 'EDT', timezone: 'America/New_York' },
-
 	{ label: 'CST - Central Standard Time', value: 'CST', timezone: 'America/Chicago' },
 	{ label: 'CDT - Central Daylight Time', value: 'CDT', timezone: 'America/Chicago' },
-
 	{ label: 'MST - Mountain Standard Time', value: 'MST', timezone: 'America/Denver' },
 	{ label: 'MDT - Mountain Daylight Time', value: 'MDT', timezone: 'America/Denver' },
-
 	{ label: 'PST - Pacific Standard Time', value: 'PST', timezone: 'America/Los_Angeles' },
 	{ label: 'PDT - Pacific Daylight Time', value: 'PDT', timezone: 'America/Los_Angeles' },
-
 	{ label: 'GMT - Greenwich Mean Time', value: 'GMT', offset: '+00:00' },
-
 	...Array.from({ length: 27 }, (_, index) => {
 		const hour = index - 12
 		const sign = hour >= 0 ? '+' : '-'
 		const absHour = Math.abs(hour)
-
 		return {
 			label: `GMT${sign}${absHour}`,
 			value: `GMT${sign}${absHour}`,
@@ -68,12 +65,13 @@ const timezones: TimezoneOption[] = [
 	}),
 ]
 
-const clients = [
-	{ id: 1, name: 'John Smith', type: 'lead' },
-	{ id: 2, name: 'Michael Brown', type: 'lead' },
-	{ id: 3, name: 'Upwork SaaS MVP', type: 'client_request' },
-	{ id: 4, name: 'CRM Automation Request', type: 'client_request' },
-]
+const findTimezoneValue = (apiTimezone: string): string => {
+	const byTimezone = timezones.find((tz) => tz.timezone === apiTimezone)
+	if (byTimezone) return byTimezone.value
+	const byOffset = timezones.find((tz) => tz.offset === apiTimezone)
+	if (byOffset) return byOffset.value
+	return 'EST'
+}
 
 const fieldSx = {
 	'& .MuiOutlinedInput-root': {
@@ -81,58 +79,64 @@ const fieldSx = {
 	},
 }
 
-const CreateCallPage = () => {
+const ClientCallEdit = () => {
+	const { id } = useParams<{ id: string }>()
+	const navigate = useNavigate()
+	const { showToast } = useToast()
+
+	const { data: call, isLoading: isLoadingCall } = useGetClientCallByIdQuery(id ?? '', { skip: !id })
+	const [updateClientCall, { isLoading: isSubmitting }] = useUpdateClientCallMutation()
+
 	const [submitAttempted, setSubmitAttempted] = useState(false)
-	const [clientType, setClientType] = useState<ClientType>('lead')
-	const [selectedClientId, setSelectedClientId] = useState<number | null>(1)
-	const [callTitle, setCallTitle] = useState('Discovery call')
+	const [callTitle, setCallTitle] = useState('')
 	const [date, setDate] = useState('')
 	const [time, setTime] = useState('')
 	const [duration, setDuration] = useState('30')
 	const [clientTimezone, setClientTimezone] = useState('EST')
 
+	useEffect(() => {
+		if (!call) return
+
+		const tzValue = findTimezoneValue(call.clientTimezone)
+		const selectedTz = timezones.find((tz) => tz.value === tzValue)
+		setClientTimezone(tzValue)
+
+		let clientDt: dayjs.Dayjs
+		if (selectedTz?.timezone) {
+			clientDt = dayjs(call.scheduledAt).tz(selectedTz.timezone)
+		} else if (selectedTz?.offset) {
+			clientDt = dayjs(call.scheduledAt).utcOffset(selectedTz.offset)
+		} else {
+			clientDt = dayjs(call.scheduledAt)
+		}
+
+		setCallTitle(call.callTitle)
+		setDate(clientDt.format('YYYY-MM-DD'))
+		setTime(clientDt.format('HH:mm'))
+		setDuration(String(call.duration))
+	}, [call])
+
 	const selectedTimezone = timezones.find((tz) => tz.value === clientTimezone)
-	const filteredClients = clients.filter((client) => client.type === clientType)
-	const selectedClient = clients.find((client) => client.id === selectedClientId)
-
-	const navigate = useNavigate()
-	const handleClientTypeChange = (type: ClientType) => {
-		setClientType(type)
-
-		const firstClient = clients.find((client) => client.type === type)
-		setSelectedClientId(firstClient?.id || null)
-	}
-
-	const isRescheduleMode = true
 
 	const clientDateTime = useMemo(() => {
 		if (!date || !time || !selectedTimezone) return null
-
 		if (selectedTimezone.timezone) {
-			return dayjs.tz(
-				`${date} ${time}`,
-				'YYYY-MM-DD HH:mm',
-				selectedTimezone.timezone
-			)
+			return dayjs.tz(`${date} ${time}`, 'YYYY-MM-DD HH:mm', selectedTimezone.timezone)
 		}
-
 		if (selectedTimezone.offset) {
 			return dayjs(`${date}T${time}${selectedTimezone.offset}`)
 		}
-
 		return null
 	}, [date, time, selectedTimezone])
 
 	const kyivDateTime = useMemo(() => {
 		if (!clientDateTime) return null
-
 		return clientDateTime.tz('Europe/Kyiv')
 	}, [clientDateTime])
 
 	const minAllowedDateTime = dayjs().add(30, 'minute')
 
 	const errors = {
-		selectedClientId: !selectedClientId,
 		callTitle: !callTitle.trim(),
 		date: !date,
 		time: !time || (clientDateTime ? clientDateTime.isBefore(minAllowedDateTime) : false),
@@ -142,12 +146,39 @@ const CreateCallPage = () => {
 
 	const hasErrors = Object.values(errors).some(Boolean)
 
-	const handleEditCall = () => {
+	const handleEditCall = async () => {
 		setSubmitAttempted(true)
+		if (hasErrors || !clientDateTime || !id) return
 
-		if (hasErrors) return
+		const clientTimezoneForApi = selectedTimezone?.timezone ?? selectedTimezone?.offset ?? clientTimezone
 
-		navigate('/client-calls/preview/1')
+		try {
+			await updateClientCall({
+				id,
+				body: {
+					callTitle: callTitle.trim(),
+					scheduledAt: clientDateTime.toISOString(),
+					clientTimezone: clientTimezoneForApi,
+					duration: Number(duration),
+				},
+			}).unwrap()
+			showToast('Client call rescheduled successfully', 'success')
+			navigate(`/client-calls/preview/${id}`)
+		} catch {
+			showToast('Failed to reschedule client call. Please try again.', 'error')
+		}
+	}
+
+	const clientName = call?.lead
+		? [call.lead.firstName, call.lead.lastName].filter(Boolean).join(' ') || call.lead.companyName || '—'
+		: call?.clientRequest?.name ?? '—'
+
+	if (isLoadingCall) {
+		return (
+			<Box sx={{ display: 'flex', justifyContent: 'center', pt: 10 }}>
+				<CircularProgress />
+			</Box>
+		)
 	}
 
 	return (
@@ -176,16 +207,14 @@ const CreateCallPage = () => {
 
 				<Chip
 					icon={<PhoneInTalkOutlined />}
-					label="Select source"
+					label={call?.status ?? 'scheduled'}
 					variant="outlined"
 					sx={{
 						borderColor: '#2f80ed',
 						color: '#2f80ed',
 						px: 1,
 						fontWeight: 500,
-						'& .MuiChip-icon': {
-							color: '#2f80ed',
-						},
+						'& .MuiChip-icon': { color: '#2f80ed' },
 					}}
 				/>
 			</Box>
@@ -210,52 +239,32 @@ const CreateCallPage = () => {
 							}}
 						>
 							<Button
-								disabled={isRescheduleMode}
-								variant={clientType === 'lead' ? 'contained' : 'outlined'}
+								disabled
+								variant={call?.clientType === 'lead' ? 'contained' : 'outlined'}
 								startIcon={<ContactPhoneOutlined />}
-								onClick={() => handleClientTypeChange('lead')}
-								sx={{
-									height: 56,
-									borderRadius: '14px',
-									justifyContent: 'flex-start',
-									px: 3,
-								}}
+								sx={{ height: 56, borderRadius: '14px', justifyContent: 'flex-start', px: 3 }}
 							>
 								Leads
 							</Button>
 
 							<Button
-								disabled={isRescheduleMode}
-								variant={clientType === 'client_request' ? 'contained' : 'outlined'}
+								disabled
+								variant={call?.clientType === 'client_request' ? 'contained' : 'outlined'}
 								startIcon={<WorkOutlineOutlined />}
-								onClick={() => handleClientTypeChange('client_request')}
-								sx={{
-									height: 56,
-									borderRadius: '14px',
-									justifyContent: 'flex-start',
-									px: 3,
-								}}
+								sx={{ height: 56, borderRadius: '14px', justifyContent: 'flex-start', px: 3 }}
 							>
 								Client Requests
 							</Button>
 						</Box>
 
 						<Box sx={{ display: 'grid', gap: 3 }}>
-							<FormControl fullWidth sx={fieldSx}>
-								<InputLabel>Select client</InputLabel>
-								<Select
-									disabled={isRescheduleMode}
-									value={selectedClientId || ''}
-									label="Select client"
-									onChange={(e) => setSelectedClientId(Number(e.target.value))}
-								>
-									{filteredClients.map((client) => (
-										<MenuItem key={client.id} value={client.id}>
-											{client.name}
-										</MenuItem>
-									))}
-								</Select>
-							</FormControl>
+							<TextField
+								label="Client"
+								value={clientName}
+								disabled
+								fullWidth
+								sx={fieldSx}
+							/>
 
 							<TextField
 								label="Call title"
@@ -285,12 +294,8 @@ const CreateCallPage = () => {
 									error={submitAttempted && errors.date}
 									helperText={submitAttempted && errors.date ? 'Date is required' : ''}
 									slotProps={{
-										inputLabel: {
-											shrink: true,
-										},
-										htmlInput: {
-											min: dayjs().format('YYYY-MM-DD'),
-										},
+										inputLabel: { shrink: true },
+										htmlInput: { min: dayjs().format('YYYY-MM-DD') },
 									}}
 									fullWidth
 									sx={fieldSx}
@@ -302,11 +307,7 @@ const CreateCallPage = () => {
 										value={time ? dayjs(`${date}T${time}`) : null}
 										disabled={!date}
 										onChange={(newValue) => {
-											if (!newValue) {
-												setTime('')
-												return
-											}
-
+											if (!newValue) { setTime(''); return }
 											setTime(newValue.format('HH:mm'))
 										}}
 										minutesStep={5}
@@ -316,9 +317,7 @@ const CreateCallPage = () => {
 												error: submitAttempted && errors.time,
 												helperText: submitAttempted && errors.time
 													? 'Call time must be at least 30 minutes from now'
-													: !date
-														? 'Select date first'
-														: '',
+													: !date ? 'Select date first' : '',
 												sx: {
 													...fieldSx,
 													'& .MuiOutlinedInput-root.Mui-disabled': {
@@ -371,6 +370,7 @@ const CreateCallPage = () => {
 							<Button
 								variant="contained"
 								size="large"
+								disabled={isSubmitting}
 								sx={{
 									mt: 2,
 									height: 54,
@@ -381,7 +381,7 @@ const CreateCallPage = () => {
 								}}
 								onClick={handleEditCall}
 							>
-								Reschedule call
+								{isSubmitting ? <CircularProgress size={22} color="inherit" /> : 'Reschedule call'}
 							</Button>
 						</Box>
 					</CardContent>
@@ -395,25 +395,19 @@ const CreateCallPage = () => {
 
 						<Box sx={{ display: 'grid', gap: 3 }}>
 							<Box>
-								<Typography sx={{ fontSize: 14, color: '#3f3a44' }}>
-									Selected source
-								</Typography>
+								<Typography sx={{ fontSize: 14, color: '#3f3a44' }}>Selected source</Typography>
 								<Typography sx={{ fontSize: 18 }}>
-									{clientType === 'lead' ? 'Lead' : 'Client Request'}
+									{call?.clientType === 'lead' ? 'Lead' : 'Client Request'}
 								</Typography>
 							</Box>
 
 							<Box>
-								<Typography sx={{ fontSize: 14, color: '#3f3a44' }}>
-									Selected client
-								</Typography>
-								<Typography sx={{ fontSize: 18 }}>{selectedClient?.name || '—'}</Typography>
+								<Typography sx={{ fontSize: 14, color: '#3f3a44' }}>Selected client</Typography>
+								<Typography sx={{ fontSize: 18 }}>{clientName}</Typography>
 							</Box>
 
 							<Box>
-								<Typography sx={{ fontSize: 14, color: '#3f3a44' }}>
-									Call title
-								</Typography>
+								<Typography sx={{ fontSize: 14, color: '#3f3a44' }}>Call title</Typography>
 								<Typography sx={{ fontSize: 18 }}>{callTitle || '—'}</Typography>
 							</Box>
 
@@ -465,20 +459,6 @@ const CreateCallPage = () => {
 									</Typography>
 								</Box>
 							</Box>
-
-							<Button
-								variant="outlined"
-								sx={{ height: 46, borderRadius: '14px' }}
-								onClick={() => {
-									setCallTitle('Discovery call')
-									setDate('')
-									setTime('')
-									setDuration('30')
-									setClientTimezone('EST')
-								}}
-							>
-								Reset
-							</Button>
 						</Box>
 					</CardContent>
 				</Card>
@@ -487,4 +467,4 @@ const CreateCallPage = () => {
 	)
 }
 
-export default memo(CreateCallPage)
+export default memo(ClientCallEdit)

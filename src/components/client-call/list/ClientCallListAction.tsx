@@ -26,7 +26,7 @@ const ClientCallListAction = ({ clientCallId, onDelete }: Props) => (
 			</IconButton>
 		</Link>
 
-		<Link to={`/client-calls/reschedule/${clientCallId}`}>
+		<Link to={`/client-calls/edit/${clientCallId}`}>
 			<IconButton varient='text' size={30} fontSize={21} contentOpacity={5}>
 				<EditCalendarOutlined />
 			</IconButton>

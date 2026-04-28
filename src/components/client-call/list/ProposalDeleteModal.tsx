@@ -3,7 +3,7 @@ import Modal from '../../modal/Modal'
 import ModalContentLayout from '../../users/layout/ModalContentLayout'
 import Box from '../../box/Box'
 import { Text, Button, Divider } from '../../../ui'
-import { useDeleteProposalMutation } from '../../../store/proposals/proposalsApi'
+import { useDeleteClientCallMutation } from '../../../store/clientCalls/clientCallsApi'
 import { useToast } from '../../../context/toast/ToastContext'
 
 interface Props {
@@ -13,18 +13,18 @@ interface Props {
 	onSuccess: () => void
 }
 
-const ProposalDeleteModal = ({ id, title, onClose, onSuccess }: Props) => {
-	const [deleteProposal, { isLoading }] = useDeleteProposalMutation()
+const ClientCallDeleteModal = ({ id, title, onClose, onSuccess }: Props) => {
+	const [deleteClientCall, { isLoading }] = useDeleteClientCallMutation()
 	const { showToast } = useToast()
 
 	const handleDelete = async () => {
 		try {
-			await deleteProposal(id).unwrap()
-			showToast('Proposal deleted successfully', 'success')
+			await deleteClientCall(id).unwrap()
+			showToast('Client call deleted successfully', 'success')
 			onSuccess()
 			onClose()
 		} catch {
-			showToast('Failed to delete proposal. Please try again.', 'error')
+			showToast('Failed to delete client call. Please try again.', 'error')
 		}
 	}
 
@@ -48,7 +48,7 @@ const ProposalDeleteModal = ({ id, title, onClose, onSuccess }: Props) => {
 
 					<Box display='flex' flexDirection='column' align='center' space={1}>
 						<Text heading='h5' align='center'>
-							Delete proposal?
+							Delete client call?
 						</Text>
 						<Text varient='body2' secondary align='center'>
 							Are you sure you want to delete <strong>"{title}"</strong>? This action cannot
@@ -72,4 +72,4 @@ const ProposalDeleteModal = ({ id, title, onClose, onSuccess }: Props) => {
 	)
 }
 
-export default ProposalDeleteModal
+export default ClientCallDeleteModal
