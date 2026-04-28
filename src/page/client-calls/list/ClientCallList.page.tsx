@@ -21,8 +21,9 @@ const getClientName = (call: {
 	clientRequest: { name: string } | null
 }): string => {
 	if (call.clientType === 'lead' && call.lead) {
-		const name = [call.lead.firstName, call.lead.lastName].filter(Boolean).join(' ')
-		return name || call.lead.companyName || '—'
+		return call.lead.firstName
+			? `${call.lead.firstName} ${call.lead.lastName ?? ''}`.trim()
+			: call.lead.companyName ?? '—'
 	}
 	if (call.clientRequest) return call.clientRequest.name
 	return '—'

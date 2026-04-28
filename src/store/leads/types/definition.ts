@@ -21,10 +21,16 @@ export type ApiLeadStatus =
 
 export type ApiClientType = 'individual' | 'company'
 
+export interface LeadProposal {
+	id: string
+	title: string
+}
+
 export interface LeadItem {
 	id: string
 	number: number
 	proposalId: string | null
+	proposal: LeadProposal | null
 	firstName: string | null
 	lastName: string | null
 	companyName: string | null

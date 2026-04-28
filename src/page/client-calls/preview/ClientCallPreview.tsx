@@ -65,7 +65,9 @@ const CallDetailsPage = () => {
 	}
 
 	const clientName = call.lead
-		? [call.lead.firstName, call.lead.lastName].filter(Boolean).join(' ') || call.lead.companyName || '—'
+		? call.lead.firstName
+			? `${call.lead.firstName} ${call.lead.lastName ?? ''}`.trim()
+			: call.lead.companyName ?? '—'
 		: call.clientRequest?.name ?? '—'
 
 	const statusColor = statusColors[call.status] ?? '#2f80ed'

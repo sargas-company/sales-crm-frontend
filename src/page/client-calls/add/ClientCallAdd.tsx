@@ -96,7 +96,9 @@ const CreateCallPage = () => {
 	const clientOptions = clientType === 'lead'
 		? leads.map((l) => ({
 				id: l.id,
-				name: [l.firstName, l.lastName].filter(Boolean).join(' ') || l.companyName || l.id,
+				name: l.firstName
+					? `${l.firstName} ${l.lastName ?? ''}`.trim()
+					: l.proposal?.title ?? l.id,
 		  }))
 		: clientRequests.map((cr) => ({ id: cr.id, name: cr.name || cr.company || cr.id }))
 
