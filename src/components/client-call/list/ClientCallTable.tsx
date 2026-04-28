@@ -7,6 +7,7 @@ import { Text } from '../../../ui'
 
 import type { DataGridColoumn } from '../../layout/data-grid/type'
 import { formatDate, formatClientDateTime, formatKyivDateTime } from '../../../utils/formatDate'
+import { getTimezoneLabel } from '../../../utils/timezones'
 import ClientCallListAction from './ClientCallListAction'
 import ClientCallStatusChip from './ClientCallStatusChip'
 import ClientCallSourceChip from './ClientCallSourceChip'
@@ -101,8 +102,8 @@ const ClientCallTable = ({ items, isLoading, onDelete }: Props) => {
 
 						<DataGridCell
 							width={field['clientTimezone'].width}
-							justify='center'
-							value={row.clientTimezone}
+							justify='flex-start'
+							value={getTimezoneLabel(row.clientTimezone)}
 						/>
 
 						<DataGridCell

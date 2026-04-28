@@ -42,6 +42,7 @@ export interface ProposalItem {
 	platform: PlatformItem
 	lead?: { id: string } | null
 	chat: ProposalChat | null
+	jobPostId: string | null
 }
 
 export interface ProposalPage {

@@ -151,6 +151,42 @@ const PreviewMain = ({ proposal }: Props) => {
 						</InfoRow>
 					</GridItem>
 
+					{proposal.jobPostId && (
+						<GridItem xs={12}>
+							<InfoRow icon={<LinkOutlined style={{ fontSize: 18 }} />} label='Job Post'>
+								<Box display='flex' align='center' space={1}>
+									<a
+										href={`${import.meta.env.VITE_APP_URL}/job-posts/preview/${proposal.jobPostId}`}
+										target='_blank'
+										rel='noopener noreferrer'
+										style={{ wordBreak: 'break-all' }}
+									>
+										<Text varient='body2' skinColor>
+											{`${import.meta.env.VITE_APP_URL}/job-posts/preview/${proposal.jobPostId}`}
+										</Text>
+									</a>
+									<Tooltip title='Copy URL'>
+										<span>
+											<IconButton
+												varient='text'
+												size={26}
+												fontSize={16}
+												contentOpacity={5}
+												onClick={() =>
+													copy(
+														`${import.meta.env.VITE_APP_URL}/job-posts/preview/${proposal.jobPostId}`
+													)
+												}
+											>
+												<ContentCopy style={{ fontSize: 14 }} />
+											</IconButton>
+										</span>
+									</Tooltip>
+								</Box>
+							</InfoRow>
+						</GridItem>
+					)}
+
 					{proposal.jobUrl && (
 						<GridItem xs={12}>
 							<InfoRow icon={<LinkOutlined style={{ fontSize: 18 }} />} label='Job URL'>
@@ -214,15 +250,6 @@ const PreviewMain = ({ proposal }: Props) => {
 											</IconButton>
 										</span>
 									</Tooltip>
-									<a
-										href={`${import.meta.env.VITE_APP_URL}/leads/preview/${proposal.lead?.id}`}
-										target='_blank'
-										rel='noopener noreferrer'
-									>
-										<IconButton varient='text' size={26} fontSize={16} contentOpacity={5}>
-											<OpenInNew style={{ fontSize: 14 }} />
-										</IconButton>
-									</a>
 								</Box>
 							</InfoRow>
 						</GridItem>

@@ -37,6 +37,7 @@ export interface JobPostItem {
 	rawText?: string
 	rawPayload?: Record<string, unknown>
 	aiResponse?: JobPostAiResponse
+	proposal?: { id: string } | null
 }
 
 export interface JobPostMeta {

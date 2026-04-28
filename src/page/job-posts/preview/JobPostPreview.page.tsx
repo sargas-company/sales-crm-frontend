@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowBackOutlined, OpenInNewOutlined, RocketLaunchOutlined } from '@mui/icons-material'
-import { Chip } from '@mui/material'
+import { ArrowBackOutlined, OpenInNewOutlined, RocketLaunchOutlined, ContentCopy } from '@mui/icons-material'
+import { Chip, Tooltip } from '@mui/material'
 import Box from '../../../components/box/Box'
 import Card from '../../../components/card/Card'
 import JobPostDecisionChip from '../../../components/job-posts/list/JobPostDecisionChip'
@@ -116,13 +116,15 @@ const JobPostPreview = () => {
 									</Button>
 								</a>
 							)}
-							<Button
-								styles={{ display: 'flex', alignItems: 'center', gap: 6 }}
-								onClick={() => setShowModal(true)}
-							>
-								<RocketLaunchOutlined style={{ fontSize: 16 }} />
-								Start Proposal
-							</Button>
+							{!post.proposal?.id && (
+								<Button
+									styles={{ display: 'flex', alignItems: 'center', gap: 6 }}
+									onClick={() => setShowModal(true)}
+								>
+									<RocketLaunchOutlined style={{ fontSize: 16 }} />
+									Start Proposal
+								</Button>
+							)}
 						</Box>
 					</Box>
 				</Box>
@@ -152,6 +154,42 @@ const JobPostPreview = () => {
 						label='Hire Rate'
 						value={<Text varient='body2'>{post.hireRate != null ? `${post.hireRate}%` : '—'}</Text>}
 					/>
+					{post.proposal?.id && (
+						<Row
+							label='Proposal'
+							value={
+								<Box display='flex' align='center' space={1}>
+									<a
+										href={`${import.meta.env.VITE_APP_URL}/proposals/preview/${post.proposal.id}`}
+										target='_blank'
+										rel='noopener noreferrer'
+										style={{ wordBreak: 'break-all' }}
+									>
+										<Text varient='body2' skinColor>
+											{`${import.meta.env.VITE_APP_URL}/proposals/preview/${post.proposal.id}`}
+										</Text>
+									</a>
+									<Tooltip title='Copy URL'>
+										<span>
+											<IconButton
+												varient='text'
+												size={26}
+												fontSize={16}
+												contentOpacity={5}
+												onClick={() =>
+													navigator.clipboard.writeText(
+														`${import.meta.env.VITE_APP_URL}/proposals/preview/${post.proposal!.id}`
+													)
+												}
+											>
+												<ContentCopy style={{ fontSize: 14 }} />
+											</IconButton>
+										</span>
+									</Tooltip>
+								</Box>
+							}
+						/>
+					)}
 					{post.hSkillsKeywords.length > 0 && (
 						<Row
 							label='Keywords'
