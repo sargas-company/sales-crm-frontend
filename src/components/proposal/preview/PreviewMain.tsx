@@ -98,12 +98,15 @@ const PreviewMain = ({ proposal }: Props) => {
 							icon={<CalendarTodayOutlined style={{ fontSize: 18 }} />}
 							label='PLatform'
 						>
-							<Text varient='body2'>{proposal.platform.title}</Text>
-							<img
-								src={proposal.platform.imageUrl}
-								alt='platformIcon'
-								style={{ maxWidth: 25 }}
-							/>
+							<Box display={'flex'} space={0.5} justify={'center'} align={'center'}>
+								<Text varient='body2'>{proposal.platform.title}</Text>
+								<img
+									src={proposal.platform.imageUrl}
+									alt='platformIcon'
+									style={{ maxWidth: 25 }}
+								/>
+							</Box>
+
 						</InfoRow>
 					</GridItem>
 

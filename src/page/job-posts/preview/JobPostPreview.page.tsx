@@ -160,13 +160,13 @@ const JobPostPreview = () => {
 							value={
 								<Box display='flex' align='center' space={1}>
 									<a
-										href={`${import.meta.env.VITE_APP_URL}/proposals/preview/${post.proposal.id}`}
+										href={`${import.meta.env.VITE_APP_URL}/proposal/preview/${post.proposal.id}`}
 										target='_blank'
 										rel='noopener noreferrer'
 										style={{ wordBreak: 'break-all' }}
 									>
 										<Text varient='body2' skinColor>
-											{`${import.meta.env.VITE_APP_URL}/proposals/preview/${post.proposal.id}`}
+											{`${import.meta.env.VITE_APP_URL}/proposal/preview/${post.proposal.id}`}
 										</Text>
 									</a>
 									<Tooltip title='Copy URL'>
