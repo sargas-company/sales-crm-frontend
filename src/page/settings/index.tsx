@@ -1,7 +1,6 @@
 import { memo, useState, useEffect } from 'react'
 import {
 	Box,
-	Button,
 	Card,
 	Chip,
 	CircularProgress,
@@ -26,6 +25,7 @@ import {
 	Visibility,
 	VisibilityOff,
 } from '@mui/icons-material'
+import { Button as UiButton } from '../../ui'
 import { useGetSettingsQuery, useUpdateSettingMutation } from '../../store/settings/settingsApi'
 import {
 	useStartTelegramAuthMutation,
@@ -112,13 +112,14 @@ const SettingsPage = () => {
 	}
 
 	return (
-		<Box sx={{ minHeight: '100vh', background: '#f7f2fb', p: { xs: 2, md: 5 } }}>
+		<Box>
 			<Card
 				sx={{
 					borderRadius: '28px',
 					boxShadow: '0 12px 35px rgba(39, 36, 45, 0.06)',
 					overflow: 'hidden',
 					background: '#fff',
+					padding: '20px 10px 30px 10px',
 				}}
 			>
 				<Box sx={{ display: 'grid', gridTemplateColumns: '260px 1fr' }}>
@@ -201,14 +202,9 @@ const SettingsPage = () => {
 
 								{hasPendingChanges && (
 									<Box sx={{ p: 3, display: 'flex', justifyContent: 'flex-end' }}>
-										<Button
-											variant="contained"
-											onClick={handleSave}
-											disabled={isSaving}
-											sx={{ height: 46, borderRadius: '14px', px: 4 }}
-										>
+										<UiButton onClick={handleSave} disabled={isSaving}>
 											{isSaving ? 'Saving…' : 'Save changes'}
-										</Button>
+										</UiButton>
 									</Box>
 								)}
 							</>
@@ -424,7 +420,7 @@ const TelegramStatusChip = ({ connected }: { connected: boolean }) => (
 		label={connected ? 'Connected' : 'Disconnected'}
 		color={connected ? 'success' : 'default'}
 		size="small"
-		sx={{ borderRadius: '8px', fontWeight: 600 }}
+		sx={{ borderRadius: '8px', fontWeight: 600, py: 3 }}
 	/>
 )
 
@@ -458,8 +454,6 @@ const TelegramAuthBlock = () => {
 		setCode('')
 	}
 
-	const btnSx = { borderRadius: '10px', height: 36, textTransform: 'none' }
-
 	if (step === 'code') {
 		return (
 			<Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
@@ -468,20 +462,14 @@ const TelegramAuthBlock = () => {
 					value={code}
 					onChange={(e) => setCode(e.target.value)}
 					placeholder="Code from Telegram"
-					sx={{ ...fieldSx, width: 200 }}
+					sx={{ ...fieldSx, width: 200, '& input::placeholder': { fontSize: 13 } }}
 				/>
-				<Button
-					variant="contained"
-					size="small"
-					onClick={handleVerify}
-					disabled={isVerifying || !code.trim()}
-					sx={btnSx}
-				>
+				<UiButton onClick={handleVerify} disabled={isVerifying || !code.trim()}>
 					{isVerifying ? 'Verifying…' : 'Verify'}
-				</Button>
-				<Button variant="text" size="small" onClick={handleCancel} sx={btnSx}>
+				</UiButton>
+				<UiButton varient="text" onClick={handleCancel}>
 					Cancel
-				</Button>
+				</UiButton>
 			</Box>
 		)
 	}
@@ -490,36 +478,17 @@ const TelegramAuthBlock = () => {
 		<Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
 			{isConnected ? (
 				<>
-					<Button
-						variant="outlined"
-						size="small"
-						onClick={handleStart}
-						disabled={isStarting || isLoggingOut}
-						sx={btnSx}
-					>
+					<UiButton varient="outlined" onClick={handleStart} disabled={isStarting || isLoggingOut}>
 						{isStarting ? 'Sending code…' : 'Refresh session'}
-					</Button>
-					<Button
-						variant="outlined"
-						color="error"
-						size="small"
-						onClick={() => logoutAuth()}
-						disabled={isLoggingOut || isStarting}
-						sx={btnSx}
-					>
+					</UiButton>
+					<UiButton varient="outlined" color="error" onClick={() => logoutAuth()} disabled={isLoggingOut || isStarting}>
 						{isLoggingOut ? 'Disconnecting…' : 'Disconnect'}
-					</Button>
+					</UiButton>
 				</>
 			) : (
-				<Button
-					variant="contained"
-					size="small"
-					onClick={handleStart}
-					disabled={isStarting}
-					sx={btnSx}
-				>
+				<UiButton onClick={handleStart} disabled={isStarting}>
 					{isStarting ? 'Sending code…' : 'Connect Telegram'}
-				</Button>
+				</UiButton>
 			)}
 		</Box>
 	)
