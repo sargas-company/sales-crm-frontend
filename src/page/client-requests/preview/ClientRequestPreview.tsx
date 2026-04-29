@@ -4,25 +4,30 @@ import {
 	PersonOutlined,
 	BusinessOutlined,
 	PhoneOutlined,
-	EmailOutlined,
 	MessageOutlined,
 	CalendarTodayOutlined,
 	BuildOutlined,
 	InsertDriveFileOutlined,
+	PictureAsPdfOutlined,
+	ImageOutlined,
+	DescriptionOutlined,
+	TableChartOutlined,
 	VisibilityOutlined,
 	FileDownloadOutlined,
 	PhoneInTalkOutlined,
 } from '@mui/icons-material'
-import { Tooltip } from '@mui/material'
+import { CircularProgress, Tooltip } from '@mui/material'
 import Box from '../../../components/box/Box'
 import Card from '../../../components/card/Card'
 import { Text, Divider, IconButton, Button } from '../../../ui'
 import { GridInnerContainer, GridItem } from '../../../components/layout'
-import { useGetClientRequestByIdQuery } from '../../../store/clientRequests/clientRequestsApi'
+import {
+	useGetClientRequestByIdQuery,
+	useGetClientRequestFilesQuery,
+} from '../../../store/clientRequests/clientRequestsApi'
+import type { ClientRequestSignedFile } from '../../../store/clientRequests/types/definition'
 import ClientRequestStatusSelect from '../../../components/client-requests/preview/ClientRequestStatusSelect'
 import { formatDate } from '../../../utils/formatDate'
-import { API_BASE_URL } from '../../../api/baseApi'
-import type { ClientRequestFile } from '../../../store/clientRequests/types/definition'
 
 const SectionLabel = ({ children }: { children: string }) => (
 	<Text
@@ -60,7 +65,23 @@ const InfoRow = ({
 	</Box>
 )
 
-const fileUrl = (file: ClientRequestFile) => `${API_BASE_URL}/${file.path}`
+const getFileIcon = (mimetype: string) => {
+	if (mimetype === 'application/pdf') return <PictureAsPdfOutlined style={{ fontSize: 22, color: '#8A8D93' }} />
+	if (mimetype.startsWith('image/')) return <ImageOutlined style={{ fontSize: 22, color: '#8A8D93' }} />
+	if (mimetype.includes('word')) return <DescriptionOutlined style={{ fontSize: 22, color: '#8A8D93' }} />
+	if (mimetype.includes('sheet') || mimetype.includes('excel')) return <TableChartOutlined style={{ fontSize: 22, color: '#8A8D93' }} />
+	return <InsertDriveFileOutlined style={{ fontSize: 22, color: '#8A8D93' }} />
+}
+
+const downloadFile = (url: string, name: string) => {
+	const a = document.createElement('a')
+
+	a.href = url
+	a.download = name
+	document.body.appendChild(a)
+	a.click()
+	a.remove()
+}
 
 const formatSize = (bytes: number) => {
 	if (bytes < 1024) return `${bytes} B`
@@ -73,6 +94,15 @@ const ClientRequestPreview = () => {
 	const navigate = useNavigate()
 
 	const { data: request, isLoading, isError } = useGetClientRequestByIdQuery(id!, { skip: !id })
+
+	const hasFiles = (request?.files?.length ?? 0) > 0
+	const {
+		data: signedFiles,
+		isLoading: isLoadingFiles,
+	} = useGetClientRequestFilesQuery(id!, {
+		skip: !id || !hasFiles,
+		refetchOnMountOrArgChange: 3540,
+	})
 
 	if (isLoading) {
 		return (
@@ -205,7 +235,7 @@ const ClientRequestPreview = () => {
 				</Box>
 
 				{/* Files */}
-				{request.files?.length > 0 && (
+				{hasFiles && (
 					<>
 						<Box mx={5} my={30}>
 							<Divider />
@@ -213,67 +243,69 @@ const ClientRequestPreview = () => {
 
 						<Box display='flex' flexDirection='column' space={2}>
 							<SectionLabel>Files</SectionLabel>
-							<Box display='flex' flexDirection='column' space={2}>
-								{request.files.map((file) => (
-									<Box
-										key={file.fileName}
-										display='flex'
-										align='center'
-										justify='space-between'
-										style={{
-											padding: '10px 14px',
-											borderRadius: 8,
-											border: '1px solid var(--border-color, #E0E0E0)',
-										}}
-									>
-										<Box display='flex' align='center' space={2}>
-											<InsertDriveFileOutlined
-												style={{ fontSize: 22, color: '#8A8D93' }}
-											/>
-											<Box display={'flex'} space={1} align={'center'}>
-												<Text varient='body2'>{file.originalName}</Text>
-												<Text varient='caption' secondary>
-													{formatSize(file.size)}
-												</Text>
+
+							{isLoadingFiles ? (
+								<Box display='flex' align='center' space={2}>
+									<CircularProgress size={18} />
+									<Text varient='body2' secondary>Loading files…</Text>
+								</Box>
+							) : (
+								<Box display='flex' flexDirection='column' space={2}>
+									{(signedFiles ?? [] as ClientRequestSignedFile[]).map((file) => (
+										<Box
+											key={file.originalName}
+											display='flex'
+											align='center'
+											justify='space-between'
+											style={{
+												padding: '10px 14px',
+												borderRadius: 8,
+												border: '1px solid var(--border-color, #E0E0E0)',
+											}}
+										>
+											<Box display='flex' align='center' space={2}>
+												{getFileIcon(file.mimetype)}
+												<Box display='flex' space={1} align='center'>
+													<Text varient='body2'>{file.originalName}</Text>
+													<Text varient='caption' secondary>
+														{formatSize(file.size)}
+													</Text>
+												</Box>
+											</Box>
+
+											<Box display='flex' align='center' space={1}>
+												<Tooltip title='View' placement='top'>
+													<span>
+														<IconButton
+															varient='text'
+															size={32}
+															fontSize={18}
+															onClick={() =>
+																window.open(file.url, '_blank', 'noopener,noreferrer')
+															}
+														>
+															<VisibilityOutlined style={{ fontSize: 18 }} />
+														</IconButton>
+													</span>
+												</Tooltip>
+
+												<Tooltip title='Download' placement='top'>
+													<span>
+														<IconButton
+															varient='text'
+															size={32}
+															fontSize={18}
+															onClick={() => downloadFile(file.url, file.originalName)}
+														>
+															<FileDownloadOutlined style={{ fontSize: 18 }} />
+														</IconButton>
+													</span>
+												</Tooltip>
 											</Box>
 										</Box>
-
-										<Box display='flex' align='center' space={1}>
-											<Tooltip title='View' placement='top'>
-												<span>
-													<IconButton
-														varient='text'
-														size={32}
-														fontSize={18}
-														onClick={() =>
-															window.open(
-																fileUrl(file),
-																'_blank',
-																'noopener,noreferrer'
-															)
-														}
-													>
-														<VisibilityOutlined style={{ fontSize: 18 }} />
-													</IconButton>
-												</span>
-											</Tooltip>
-
-											<Tooltip title='Download' placement='top'>
-												<a
-													href={fileUrl(file)}
-													download={file.originalName}
-													target='_blank'
-													rel='noopener noreferrer'
-												>
-													<IconButton varient='text' size={32} fontSize={18}>
-														<FileDownloadOutlined style={{ fontSize: 18 }} />
-													</IconButton>
-												</a>
-											</Tooltip>
-										</Box>
-									</Box>
-								))}
-							</Box>
+									))}
+								</Box>
+							)}
 						</Box>
 					</>
 				)}

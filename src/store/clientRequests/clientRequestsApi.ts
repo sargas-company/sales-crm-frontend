@@ -3,6 +3,7 @@ import type {
 	ClientRequestItem,
 	ClientRequestPage,
 	ClientRequestListParams,
+	ClientRequestSignedFile,
 	UpdateClientRequestBody,
 } from './types/definition'
 
@@ -30,6 +31,10 @@ export const clientRequestsApi = baseApi.injectEndpoints({
 			query: (id) => ({ url: `/client-requests/${id}`, method: 'DELETE' }),
 			invalidatesTags: ['ClientRequest'],
 		}),
+
+		getClientRequestFiles: builder.query<ClientRequestSignedFile[], string>({
+			query: (id) => ({ url: `/client-requests/${id}/files` }),
+		}),
 	}),
 })
 
@@ -38,4 +43,5 @@ export const {
 	useGetClientRequestByIdQuery,
 	useUpdateClientRequestMutation,
 	useDeleteClientRequestMutation,
+	useGetClientRequestFilesQuery,
 } = clientRequestsApi

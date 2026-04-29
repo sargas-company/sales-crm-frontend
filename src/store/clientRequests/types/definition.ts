@@ -8,6 +8,13 @@ export interface ClientRequestFile {
 	size: number
 }
 
+export interface ClientRequestSignedFile {
+	originalName: string
+	url: string
+	mimetype: string
+	size: number
+}
+
 export interface ClientRequestItem {
 	id: string
 	name: string
