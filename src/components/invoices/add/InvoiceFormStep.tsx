@@ -19,9 +19,9 @@ import {
 	type InvoiceLabels,
 	useCreateInvoiceMutation,
 	useGenerateInvoicePdfMutation,
+	useLazyGetInvoicePdfQuery,
 	useUpdateInvoiceMutation,
 } from '../../../store/invoices/invoicesApi'
-import { API_BASE_URL } from '../../../api/baseApi'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
 import InvoiceStatusSelect from '../edit/InvoiceStatusSelect'
@@ -142,27 +142,6 @@ const getInvoiceLogoUrl = () => {
 	return new URL(logo, window.location.origin).toString()
 }
 
-const getGeneratedPdfUrl = (response: unknown) => {
-	if (!response || typeof response !== 'object') return null
-
-	const result = response as {
-		url?: unknown
-		pdfUrl?: unknown
-		downloadUrl?: unknown
-		path?: unknown
-		filePath?: unknown
-	}
-	const url = result.pdfUrl ?? result.downloadUrl ?? result.url ?? result.path ?? result.filePath
-
-	return typeof url === 'string' && url.trim() ? url : null
-}
-
-const resolveBackendUrl = (url: string) => {
-	if (/^https?:\/\//i.test(url)) return url
-
-	return new URL(url, API_BASE_URL).toString()
-}
-
 // const getFilenameFromUrl = (url: string) => {
 // 	const pathname = new URL(url).pathname
 // 	const filename = pathname.split('/').filter(Boolean).pop()
@@ -183,10 +162,6 @@ const resolveBackendUrl = (url: string) => {
 // 	link.remove()
 // 	URL.revokeObjectURL(objectUrl)
 // }
-
-const openPdfFile = (url: string) => {
-	window.open(resolveBackendUrl(url), '_blank', 'noopener,noreferrer')
-}
 
 const API_LABEL_KEYS: Array<keyof InvoiceLabels> = [
 	'to_title',
@@ -411,7 +386,8 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 	const [createInvoice, { isLoading: isSaving }] = useCreateInvoiceMutation()
 	const [updateInvoice, { isLoading: isUpdating }] = useUpdateInvoiceMutation()
 	const [generateInvoicePdf, { isLoading: isGenerating }] = useGenerateInvoicePdfMutation()
-	const saving = isSaving || isUpdating || isGenerating
+	const [getInvoicePdf, { isLoading: isOpeningPdf }] = useLazyGetInvoicePdfQuery()
+	const saving = isSaving || isUpdating || isGenerating || isOpeningPdf
 
 	const subtotal = useMemo(() => {
 		return items.reduce(
@@ -514,13 +490,10 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 			const savedInvoice = await saveInvoice()
 
 			if (shouldGeneratePdf) {
-				const generatedPdf = await generateInvoicePdf(savedInvoice.id).unwrap()
-				const pdfUrl = getGeneratedPdfUrl(generatedPdf)
+				await generateInvoicePdf(savedInvoice.id).unwrap()
+				const { url } = await getInvoicePdf(savedInvoice.id).unwrap()
 
-				if (pdfUrl) {
-					openPdfFile(pdfUrl)
-				}
-
+				window.open(url, '_blank')
 				showToast('Invoice PDF generated successfully', 'success')
 			} else {
 				showToast(
@@ -533,6 +506,16 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 		} catch (error) {
 			setFormError(parseServerError(error))
 			console.error('Failed to create invoice', error)
+		}
+	}
+
+	const handleOpenPdf = async () => {
+		try {
+			const { url } = await getInvoicePdf(invoice!.id).unwrap()
+
+			window.open(url, '_blank')
+		} catch (error) {
+			showToast(parseServerError(error), 'error')
 		}
 	}
 
@@ -571,6 +554,15 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 						<CardContent>
 							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
 								<Box sx={{ display: 'flex', gap: 1.5 }}>
+									{invoice?.pdfUrl ? (
+										<Button
+											variant='outlined'
+											disabled={saving}
+											onClick={handleOpenPdf}
+										>
+											Open PDF
+										</Button>
+									) : null}
 									<Button
 										variant='contained'
 										disabled={saving}

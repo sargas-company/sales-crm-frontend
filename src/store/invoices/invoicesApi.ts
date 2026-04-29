@@ -104,6 +104,7 @@ export interface InvoiceItem extends Omit<InvoiceCreatePayload, 'lineItems'> {
 	showShipTo: boolean
 	lineItems: InvoiceLineItem[]
 	status?: InvoiceStatus
+	pdfUrl?: string | null
 	counterparty?: {
 		id: string
 		firstName?: string
@@ -161,6 +162,10 @@ export const invoicesApi = baseApi.injectEndpoints({
 			invalidatesTags: (_, __, id) => ['Invoice', { type: 'Invoice', id }],
 		}),
 
+		getInvoicePdf: builder.query<{ url: string }, string>({
+			query: (id) => ({ url: `/invoices/${id}/pdf` }),
+		}),
+
 		deleteInvoice: builder.mutation<void, string>({
 			query: (id) => ({ url: `/invoices/${id}`, method: 'DELETE' }),
 			invalidatesTags: ['Invoice'],
@@ -174,5 +179,7 @@ export const {
 	useCreateInvoiceMutation,
 	useUpdateInvoiceMutation,
 	useGenerateInvoicePdfMutation,
+	useGetInvoicePdfQuery,
+	useLazyGetInvoicePdfQuery,
 	useDeleteInvoiceMutation,
 } = invoicesApi

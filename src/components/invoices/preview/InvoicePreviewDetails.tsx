@@ -20,7 +20,14 @@ import {
 	Tooltip,
 	Typography,
 } from '@mui/material'
-import { type InvoiceItem, useGetInvoiceByIdQuery } from '../../../store/invoices/invoicesApi'
+import {
+	type InvoiceItem,
+	useGenerateInvoicePdfMutation,
+	useGetInvoiceByIdQuery,
+	useLazyGetInvoicePdfQuery,
+} from '../../../store/invoices/invoicesApi'
+import { useToast } from '../../../context/toast/ToastContext'
+import parseServerError from '../../../utils/parseServerError'
 import { formatDate, shortUuid } from '../../../utils/formatDate'
 
 type Props = {
@@ -53,7 +60,32 @@ const getSubtotal = (invoice: InvoiceItem) => {
 
 const InvoicePreviewDetails = ({ id }: Props) => {
 	const navigate = useNavigate()
+	const { showToast } = useToast()
 	const { data: invoice, isLoading, isError } = useGetInvoiceByIdQuery(id, { skip: !id })
+	const [getInvoicePdf, { isLoading: isOpeningPdf }] = useLazyGetInvoicePdfQuery()
+	const [generateInvoicePdf, { isLoading: isGenerating }] = useGenerateInvoicePdfMutation()
+
+	const handleOpenPdf = async () => {
+		try {
+			const { url } = await getInvoicePdf(id).unwrap()
+
+			window.open(url, '_blank')
+		} catch (error) {
+			showToast(parseServerError(error), 'error')
+		}
+	}
+
+	const handleGeneratePdf = async () => {
+		try {
+			await generateInvoicePdf(id).unwrap()
+			const { url } = await getInvoicePdf(id).unwrap()
+
+			window.open(url, '_blank')
+			showToast('Invoice PDF generated successfully', 'success')
+		} catch (error) {
+			showToast(parseServerError(error), 'error')
+		}
+	}
 
 	const totals = useMemo(() => {
 		if (!invoice) {
@@ -148,13 +180,32 @@ const InvoicePreviewDetails = ({ id }: Props) => {
 						</Box>
 					</Box>
 
-					<Button
-						variant='outlined'
-						startIcon={<EditOutlined />}
-						onClick={() => navigate(`/invoices/edit/${invoice.id}`)}
-					>
-						Edit
-					</Button>
+					<Box sx={{ display: 'flex', gap: 1 }}>
+						{invoice.pdfUrl ? (
+							<Button
+								variant='contained'
+								disabled={isOpeningPdf}
+								onClick={handleOpenPdf}
+							>
+								Open PDF
+							</Button>
+						) : (
+							<Button
+								variant='outlined'
+								disabled={isGenerating || isOpeningPdf}
+								onClick={handleGeneratePdf}
+							>
+								Generate PDF
+							</Button>
+						)}
+						<Button
+							variant='outlined'
+							startIcon={<EditOutlined />}
+							onClick={() => navigate(`/invoices/edit/${invoice.id}`)}
+						>
+							Edit
+						</Button>
+					</Box>
 				</Box>
 
 				<Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
