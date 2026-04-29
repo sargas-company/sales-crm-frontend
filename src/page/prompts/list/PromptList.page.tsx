@@ -71,8 +71,8 @@ const PromptList = () => {
 				<Box display='flex' justify='space-between' padding={20}>
 					<GridInnerContainer alignItems='center' justifyContent='space-between'>
 						<GridItem xs={12} md={8}>
-							<GridInnerContainer alignItems='center' columnSpacing={2}>
-								<GridItem xs={12} md={5}>
+							<Box display='flex' align='center' style={{ gap: '16px' }}>
+								<Box style={{ minWidth: '180px', maxWidth: '220px', flex: 1 }}>
 									<Select
 										label='Type'
 										defaultValue={typeFilter}
@@ -85,8 +85,8 @@ const PromptList = () => {
 											<SelectItem key={value} label={label} value={value} />
 										))}
 									</Select>
-								</GridItem>
-								<GridItem xs={12} md={5}>
+								</Box>
+								<Box style={{ minWidth: '180px', maxWidth: '220px', flex: 1 }}>
 									<Select
 										label='Status'
 										defaultValue={activeFilter}
@@ -98,8 +98,8 @@ const PromptList = () => {
 										<SelectItem label='Active' value='true' />
 										<SelectItem label='Inactive' value='false' />
 									</Select>
-								</GridItem>
-							</GridInnerContainer>
+								</Box>
+							</Box>
 						</GridItem>
 						<GridItem xs={12} md={4}>
 							<Box display='flex' justify='flex-end'>
