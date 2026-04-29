@@ -2,11 +2,11 @@
 
 ## Адреса
 
-| Назначение            | URL                             |
-| --------------------- | ------------------------------- |
-| REST API              | `http://localhost:3000`         |
-| WebSocket (Socket.IO) | `http://localhost:3001`         |
-| Swagger               | `http://localhost:3000/swagger` |
+| Назначение | URL |
+|---|---|
+| REST API | `http://localhost:3000` |
+| WebSocket (Socket.IO) | `http://localhost:3001` |
+| Swagger | `http://localhost:3000/swagger` |
 
 > Swagger доступен только при `NODE_ENV=development`. Авторизация через кнопку **Authorize** — вводишь токен один раз, применяется ко всем запросам.
 
@@ -30,8 +30,8 @@ Content-Type: application/json
 
 ```json
 {
-	"accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-	"refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
@@ -57,8 +57,8 @@ Content-Type: application/json
 
 ```json
 {
-	"accessToken": "...",
-	"refreshToken": "..."
+  "accessToken": "...",
+  "refreshToken": "..."
 }
 ```
 
@@ -102,14 +102,14 @@ Authorization: Bearer <token>
 
 ```json
 [
-	{
-		"id": "uuid",
-		"title": "Upwork",
-		"slug": "upwork",
-		"imageUrl": "https://example.com/upwork.png",
-		"createdAt": "2024-01-01T00:00:00.000Z",
-		"updatedAt": "2024-01-01T00:00:00.000Z"
-	}
+  {
+    "id": "uuid",
+    "title": "Upwork",
+    "slug": "upwork",
+    "imageUrl": "https://example.com/upwork.png",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
 ]
 ```
 
@@ -129,11 +129,11 @@ Content-Type: application/json
 }
 ```
 
-| Поле       | Тип    | Обязательный | Описание                                          |
-| ---------- | ------ | ------------ | ------------------------------------------------- |
-| `title`    | string | да           | Название платформы                                |
-| `slug`     | string | да           | Уникальный идентификатор (латиница, без пробелов) |
-| `imageUrl` | string | нет          | URL логотипа                                      |
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `title` | string | да | Название платформы |
+| `slug` | string | да | Уникальный идентификатор (латиница, без пробелов) |
+| `imageUrl` | string | нет | URL логотипа |
 
 **Ответ `201`:** объект платформы. `409` если `slug` уже занят.
 
@@ -194,21 +194,21 @@ Authorization: Bearer <token>
 
 ```json
 [
-	{
-		"id": "uuid",
-		"firstName": "Dmytro",
-		"lastName": "Sarafaniuk",
-		"platformId": "uuid",
-		"userId": "uuid",
-		"createdAt": "2024-01-01T00:00:00.000Z",
-		"updatedAt": "2024-01-01T00:00:00.000Z",
-		"platform": {
-			"id": "uuid",
-			"title": "Upwork",
-			"slug": "upwork",
-			"imageUrl": null
-		}
-	}
+  {
+    "id": "uuid",
+    "firstName": "Dmytro",
+    "lastName": "Sarafaniuk",
+    "platformId": "uuid",
+    "userId": "uuid",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "platform": {
+      "id": "uuid",
+      "title": "Upwork",
+      "slug": "upwork",
+      "imageUrl": null
+    }
+  }
 ]
 ```
 
@@ -228,11 +228,11 @@ Content-Type: application/json
 }
 ```
 
-| Поле         | Тип           | Обязательный | Описание             |
-| ------------ | ------------- | ------------ | -------------------- |
-| `firstName`  | string        | да           | Имя на платформе     |
-| `lastName`   | string        | да           | Фамилия на платформе |
-| `platformId` | string (uuid) | да           | ID платформы         |
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `firstName` | string | да | Имя на платформе |
+| `lastName` | string | да | Фамилия на платформе |
+| `platformId` | string (uuid) | да | ID платформы |
 
 **Ответ `201`:** объект аккаунта с вложенным `platform`. `409` если аккаунт для этой платформы уже существует.
 
@@ -282,18 +282,18 @@ Authorization: Bearer <token>
 
 ### Поля proposal (input)
 
-| Поле              | Тип           | Обязательный | Описание                                       |
-| ----------------- | ------------- | ------------ | ---------------------------------------------- |
-| `title`           | string        | да           | Название proposal                              |
-| `accountId`       | string (uuid) | да           | ID аккаунта (`GET /accounts`)                  |
-| `platformId`      | string (uuid) | да           | ID платформы (`GET /platforms`)                |
-| `proposalType`    | enum          | да           | `Bid` \| `Invite` \| `DirectMessage`           |
-| `jobUrl`          | string        | нет          | Ссылка на вакансию                             |
-| `boosted`         | boolean       | нет          | Буст (только для `Bid`, default: `false`)      |
-| `connects`        | number        | нет          | Коннекты (только для `Bid`, default: `0`)      |
-| `boostedConnects` | number        | нет          | Коннекты за буст (только если `boosted: true`) |
-| `coverLetter`     | string        | нет          | Сопроводительное письмо                        |
-| `vacancy`         | string        | нет          | Текст вакансии                                 |
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `title` | string | да | Название proposal |
+| `accountId` | string (uuid) | да | ID аккаунта (`GET /accounts`) |
+| `platformId` | string (uuid) | да | ID платформы (`GET /platforms`) |
+| `proposalType` | enum | да | `Bid` \| `Invite` \| `DirectMessage` |
+| `jobUrl` | string | нет | Ссылка на вакансию |
+| `boosted` | boolean | нет | Буст (только для `Bid`, default: `false`) |
+| `connects` | number | нет | Коннекты (только для `Bid`, default: `0`) |
+| `boostedConnects` | number | нет | Коннекты за буст (только если `boosted: true`) |
+| `coverLetter` | string | нет | Сопроводительное письмо |
+| `vacancy` | string | нет | Текст вакансии |
 
 ---
 
@@ -353,10 +353,10 @@ GET /proposals?page=1&limit=10
 Authorization: Bearer <token>
 ```
 
-| Параметр | Тип    | По умолчанию |
-| -------- | ------ | ------------ |
-| `page`   | number | `1`          |
-| `limit`  | number | `10`         |
+| Параметр | Тип | По умолчанию |
+|---|---|---|
+| `page` | number | `1` |
+| `limit` | number | `10` |
 
 **Ответ `200`:**
 
@@ -424,28 +424,27 @@ Authorization: Bearer <token>
 
 ```json
 [
-	{
-		"id": "uuid",
-		"chatId": "uuid",
-		"role": "user",
-		"content": "Write a proposal",
-		"decision": null,
-		"reasoning": null,
-		"createdAt": "2024-01-01T00:00:00.000Z"
-	},
-	{
-		"id": "uuid",
-		"chatId": "uuid",
-		"role": "assistant",
-		"content": "...",
-		"decision": "bid",
-		"reasoning": "Client has strong rating, budget fits, requirements are clear.",
-		"createdAt": "2024-01-01T00:00:00.000Z"
-	}
+  {
+    "id": "uuid",
+    "chatId": "uuid",
+    "role": "user",
+    "content": "Write a proposal",
+    "decision": null,
+    "reasoning": null,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "uuid",
+    "chatId": "uuid",
+    "role": "assistant",
+    "content": "...",
+    "decision": null,
+    "reasoning": null,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
 ]
 ```
 
-> `decision` и `reasoning` заполнены только у сообщений с `role: "assistant"`.  
 > Сообщения принадлежат объекту `Chat`, который может быть связан и с proposal, и с lead — поэтому поле называется `chatId`, а не `proposalId`.
 
 ---
@@ -466,8 +465,8 @@ Content-Type: application/json
 
 ```json
 {
-	"decision": "bid",
-	"reasoning": "Client has strong rating (4.9), budget is realistic, requirements are clear."
+  "decision": "bid",
+  "reasoning": "Client has strong rating (4.9), budget is realistic, requirements are clear."
 }
 ```
 
@@ -479,21 +478,21 @@ Lead создаётся автоматически при переводе Propo
 
 ### Поля lead
 
-| Поле         | Тип              | Описание                                           |
-| ------------ | ---------------- | -------------------------------------------------- |
-| `id`         | string (uuid)    | Уникальный идентификатор                           |
-| `number`     | number           | Порядковый номер (1, 2, 3...)                      |
-| `proposalId` | string \| null   | ID связанного proposal (null если proposal удалён) |
-| `leadName`   | string \| null   | Имя лида                                           |
-| `status`     | enum             | Статус (см. ниже)                                  |
-| `clientType` | enum \| null     | `individual` \| `company`                          |
-| `rate`       | number \| null   | Ставка в $                                         |
-| `location`   | string \| null   | Локация клиента                                    |
-| `repliedAt`  | datetime         | Время получения ответа от клиента                  |
-| `acceptedAt` | datetime \| null | Проставляется при переходе в `accept_contract`     |
-| `holdAt`     | datetime \| null | Проставляется при переходе в `hold`                |
-| `createdAt`  | datetime         | —                                                  |
-| `updatedAt`  | datetime         | —                                                  |
+| Поле | Тип | Описание |
+|---|---|---|
+| `id` | string (uuid) | Уникальный идентификатор |
+| `number` | number | Порядковый номер (1, 2, 3...) |
+| `proposalId` | string \| null | ID связанного proposal (null если proposal удалён) |
+| `leadName` | string \| null | Имя лида |
+| `status` | enum | Статус (см. ниже) |
+| `clientType` | enum \| null | `individual` \| `company` |
+| `rate` | number \| null | Ставка в $ |
+| `location` | string \| null | Локация клиента |
+| `repliedAt` | datetime | Время получения ответа от клиента |
+| `acceptedAt` | datetime \| null | Проставляется при переходе в `accept_contract` |
+| `holdAt` | datetime \| null | Проставляется при переходе в `hold` |
+| `createdAt` | datetime | — |
+| `updatedAt` | datetime | — |
 
 **Статусы `LeadStatus`:** `conversation_ongoing` \| `trial` \| `hold` \| `contract_offer` \| `accept_contract` \| `start_contract` \| `suspended`
 
@@ -558,24 +557,24 @@ Authorization: Bearer <token>
 
 ```json
 [
-	{
-		"id": "uuid",
-		"chatId": "uuid",
-		"role": "user",
-		"content": "Write a proposal",
-		"decision": null,
-		"reasoning": null,
-		"createdAt": "2024-01-01T00:00:00.000Z"
-	},
-	{
-		"id": "uuid",
-		"chatId": "uuid",
-		"role": "assistant",
-		"content": "...",
-		"decision": "bid",
-		"reasoning": "...",
-		"createdAt": "2024-01-01T00:00:00.000Z"
-	}
+  {
+    "id": "uuid",
+    "chatId": "uuid",
+    "role": "user",
+    "content": "Write a proposal",
+    "decision": null,
+    "reasoning": null,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "uuid",
+    "chatId": "uuid",
+    "role": "assistant",
+    "content": "...",
+    "decision": null,
+    "reasoning": null,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
 ]
 ```
 
@@ -629,54 +628,54 @@ GET /chats?limit=20&type=proposal
 Authorization: Bearer <token>
 ```
 
-| Параметр | Тип    | По умолчанию | Ограничения          | Описание                                                                                      |
-| -------- | ------ | ------------ | -------------------- | --------------------------------------------------------------------------------------------- |
-| `limit`  | number | `20`         | 1–100                | Количество записей                                                                            |
-| `cursor` | string | —            | UUID                 | ID последнего элемента предыдущей страницы                                                    |
-| `type`   | enum   | —            | `proposal` \| `lead` | Фильтр: `proposal` — только чаты с proposal, `lead` — только чаты с lead, без параметра — все |
+| Параметр | Тип | По умолчанию | Ограничения | Описание |
+|---|---|---|---|---|
+| `limit` | number | `20` | 1–100 | Количество записей |
+| `cursor` | string | — | UUID | ID последнего элемента предыдущей страницы |
+| `type` | enum | — | `proposal` \| `lead` | Фильтр: `proposal` — только чаты с proposal, `lead` — только чаты с lead, без параметра — все |
 
 **Ответ `200`:**
 
 ```json
 {
-	"data": [
-		{
-			"id": "uuid",
-			"proposalId": "uuid",
-			"leadId": "uuid",
-			"createdAt": "2024-01-01T00:00:00.000Z",
-			"proposal": {
-				"id": "uuid",
-				"title": "React Developer",
-				"status": "Replied",
-				"user": {
-					"id": "uuid",
-					"email": "manager@example.com"
-				}
-			},
-			"lead": {
-				"id": "uuid",
-				"number": 1,
-				"status": "conversation_ongoing",
-				"leadName": null
-			},
-			"_count": {
-				"messages": 5
-			},
-			"messages": [
-				{
-					"id": "uuid",
-					"chatId": "uuid",
-					"role": "assistant",
-					"content": "...",
-					"decision": "bid",
-					"reasoning": "...",
-					"createdAt": "2024-01-01T00:00:00.000Z"
-				}
-			]
-		}
-	],
-	"nextCursor": "uuid-of-last-item"
+  "data": [
+    {
+      "id": "uuid",
+      "proposalId": "uuid",
+      "leadId": "uuid",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "proposal": {
+        "id": "uuid",
+        "title": "React Developer",
+        "status": "Replied",
+        "user": {
+          "id": "uuid",
+          "email": "manager@example.com"
+        }
+      },
+      "lead": {
+        "id": "uuid",
+        "number": 1,
+        "status": "conversation_ongoing",
+        "leadName": null
+      },
+      "_count": {
+        "messages": 5
+      },
+      "messages": [
+        {
+          "id": "uuid",
+          "chatId": "uuid",
+          "role": "assistant",
+          "content": "...",
+          "decision": null,
+          "reasoning": null,
+          "createdAt": "2024-01-01T00:00:00.000Z"
+        }
+      ]
+    }
+  ],
+  "nextCursor": "uuid-of-last-item"
 }
 ```
 
@@ -686,20 +685,20 @@ Authorization: Bearer <token>
 **Пример итерации по всем страницам:**
 
 ```js
-let cursor
-const allChats = []
+let cursor;
+const allChats = [];
 
 do {
-	const params = new URLSearchParams({ limit: '20' })
-	if (cursor) params.set('cursor', cursor)
+  const params = new URLSearchParams({ limit: '20' });
+  if (cursor) params.set('cursor', cursor);
 
-	const { data, nextCursor } = await fetch(`/chats?${params}`, {
-		headers: { Authorization: `Bearer ${accessToken}` },
-	}).then((r) => r.json())
+  const { data, nextCursor } = await fetch(`/chats?${params}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  }).then(r => r.json());
 
-	allChats.push(...data)
-	cursor = nextCursor
-} while (cursor)
+  allChats.push(...data);
+  cursor = nextCursor;
+} while (cursor);
 ```
 
 ---
@@ -709,14 +708,14 @@ do {
 ### Подключение с авторизацией
 
 ```js
-import { io } from 'socket.io-client'
+import { io } from 'socket.io-client';
 
 const socket = io('http://localhost:3001', {
-	auth: { token: accessToken },
-})
+  auth: { token: accessToken }
+});
 
-socket.on('connect', () => console.log('Connected'))
-socket.on('error', ({ message }) => console.error('Error:', message))
+socket.on('connect', () => console.log('Connected'));
+socket.on('error', ({ message }) => console.error('Error:', message));
 ```
 
 > Без токена или с невалидным токеном соединение будет немедленно разорвано.
@@ -727,89 +726,81 @@ socket.on('error', ({ message }) => console.error('Error:', message))
 
 ```js
 socket.emit('send_message', {
-	proposalId: 'uuid',
-	content: 'Write a proposal',
-	model: 'claude-opus-4-6', // опционально
-})
+  proposalId: 'uuid',
+  content: 'Write a proposal',
+  model: 'claude-opus-4-6', // опционально
+});
 ```
 
-| Поле         | Тип      | Обязательный | Описание                                                                                                                |
-| ------------ | -------- | ------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `proposalId` | `string` | да           | ID proposal                                                                                                             |
-| `content`    | `string` | да           | Текст сообщения                                                                                                         |
-| `model`      | `string` | нет          | Модель Claude: `claude-sonnet-4-6` \| `claude-opus-4-6`. Если не передан — используется модель из env (`CLAUDE_MODEL`). |
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `proposalId` | `string` | да | ID proposal |
+| `content` | `string` | да | Текст сообщения |
+| `model` | `string` | нет | Модель Claude: `claude-sonnet-4-6` \| `claude-opus-4-6`. Если не передан — используется модель из env (`CLAUDE_MODEL`). |
 
 ---
 
 ### Входящие события
 
-| Событие    | Данные                                    | Описание                                    |
-| ---------- | ----------------------------------------- | ------------------------------------------- |
-| `analysis` | `{ decision: string, reasoning: string }` | Решение AI — приходит **первым**, до текста |
-| `chunk`    | `{ text: string }`                        | Фрагмент генерируемого текста               |
-| `done`     | —                                         | Генерация завершена                         |
-| `error`    | `{ message: string }`                     | Ошибка                                      |
+| Событие | Данные | Описание |
+|---|---|---|
+| `chunk` | `{ text: string }` | Фрагмент генерируемого текста |
+| `done` | — | Генерация завершена |
+| `error` | `{ message: string }` | Ошибка |
 
-> Порядок событий всегда: `analysis` → `chunk` × N → `done`
+> Порядок событий всегда: `chunk` × N → `done`
 
 ---
 
 ### Пример полного подключения
 
 ```js
-import { io } from 'socket.io-client'
+import { io } from 'socket.io-client';
 
 // 1. Логин
 const { accessToken } = await fetch('http://localhost:3000/auth/login', {
-	method: 'POST',
-	headers: { 'Content-Type': 'application/json' },
-	body: JSON.stringify({ email: 'admin@test.com', password: 'admin123' }),
-}).then((r) => r.json())
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'admin@test.com', password: 'admin123' }),
+}).then(r => r.json());
 
 const headers = {
-	'Content-Type': 'application/json',
-	Authorization: `Bearer ${accessToken}`,
-}
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${accessToken}`,
+};
 
 // 2. Создать proposal
 const proposal = await fetch('http://localhost:3000/proposals', {
-	method: 'POST',
-	headers,
-	body: JSON.stringify({
-		title: 'Full Stack Developer — MVP Project',
-		accountId: 'uuid-of-account',
-		platformId: 'uuid-of-platform',
-		proposalType: 'Bid',
-		vacancy: 'Looking for React developer to build an admin dashboard.',
-		connects: 6,
-	}),
-}).then((r) => r.json())
+  method: 'POST',
+  headers,
+  body: JSON.stringify({
+    title: 'Full Stack Developer — MVP Project',
+    accountId: 'uuid-of-account',
+    platformId: 'uuid-of-platform',
+    proposalType: 'Bid',
+    vacancy: 'Looking for React developer to build an admin dashboard.',
+    connects: 6,
+  }),
+}).then(r => r.json());
 
 // 3. Подключиться к WebSocket
-const socket = io('http://localhost:3001', { auth: { token: accessToken } })
+const socket = io('http://localhost:3001', { auth: { token: accessToken } });
 
-let fullText = ''
+let fullText = '';
 
 socket.on('connect', () => {
-	// 4. Отправить сообщение
-	socket.emit('send_message', {
-		proposalId: proposal.id,
-		content: 'Write a proposal',
-	})
-})
+  // 4. Отправить сообщение
+  socket.emit('send_message', {
+    proposalId: proposal.id,
+    content: 'Write a proposal',
+  });
+});
 
-socket.on('analysis', ({ decision, reasoning }) => {
-	console.log('Decision:', decision) // 'bid' | 'decline' | 'clarify'
-	console.log('Reasoning:', reasoning)
-})
-
-socket.on('chunk', ({ text }) => {
-	fullText += text
-})
+socket.on('chunk', ({ text }) => { fullText += text; });
 
 socket.on('done', () => {
-	console.log('Full response:', fullText)
-})
+  console.log('Full response:', fullText);
+});
 ```
 
 ---
@@ -843,10 +834,10 @@ GET /base-knowledge?page=1&limit=8
 Authorization: Bearer <token>
 ```
 
-| Параметр | Тип    | По умолчанию | Описание            |
-| -------- | ------ | ------------ | ------------------- |
-| `page`   | number | `1`          | Номер страницы      |
-| `limit`  | number | `8`          | Записей на странице |
+| Параметр | Тип | По умолчанию | Описание |
+|---|---|---|---|
+| `page` | number | `1` | Номер страницы |
+| `limit` | number | `8` | Записей на странице |
 
 **Ответ `200`:**
 
@@ -908,6 +899,77 @@ Authorization: Bearer <token>
 
 ---
 
+## Telegram Auth
+
+Управление авторизацией Telegram-клиента. Все эндпоинты требуют JWT.  
+Сессия хранится в Settings (`job_scanner.telegram.session`), нигде в файловой системе.
+
+### POST /telegram/auth/start — отправить код на номер
+
+Отправляет код авторизации на номер `TG_PHONE` из ENV.
+
+```http
+POST /telegram/auth/start
+Authorization: Bearer <token>
+```
+
+**Ответ `204`:** пустое тело. После этого Telegram пришлёт код на указанный номер.
+
+---
+
+### POST /telegram/auth/verify — подтвердить код
+
+```http
+POST /telegram/auth/verify
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "code": "12345"
+}
+```
+
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `code` | string | да | Код из Telegram (5–6 символов) |
+
+**Ответ `204`:** пустое тело. Сессия сохранена, listener запущен.  
+**`400`:** если код неверный или `start` не был вызван.
+
+---
+
+### POST /telegram/auth/logout — выйти из Telegram
+
+```http
+POST /telegram/auth/logout
+Authorization: Bearer <token>
+```
+
+**Ответ `204`:** пустое тело. Сессия очищена, listener остановлен.
+
+---
+
+### Типичный flow авторизации
+
+```js
+// 1. Запросить код
+await fetch('/telegram/auth/start', { method: 'POST', headers });
+
+// 2. Пользователь получает код в Telegram → вводит в интерфейсе
+await fetch('/telegram/auth/verify', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify({ code: '54321' }),
+});
+
+// 3. Готово — listener активен, job posts начинают поступать автоматически
+
+// 4. При необходимости — разлогиниться
+await fetch('/telegram/auth/logout', { method: 'POST', headers });
+```
+
+---
+
 ## Job Posts
 
 Job Posts — посты с вакансиями из Telegram, обработанные AI. Создаются автоматически через Telegram listener. Ручного создания нет.
@@ -919,51 +981,51 @@ GET /job-posts?decision=approve&sortBy=matchScore&limit=20&offset=0
 Authorization: Bearer <token>
 ```
 
-| Параметр      | Тип                                        | По умолчанию | Описание                 |
-| ------------- | ------------------------------------------ | ------------ | ------------------------ |
-| `status`      | `NEW \| PROCESSING \| PROCESSED \| FAILED` | `PROCESSED`  | Статус обработки         |
-| `decision`    | `approve \| maybe \| decline`              | —            | Решение AI               |
-| `priority`    | `high \| medium \| low`                    | —            | Приоритет                |
-| `minScore`    | `0–100`                                    | —            | Минимальный matchScore   |
-| `maxScore`    | `0–100`                                    | —            | Максимальный matchScore  |
-| `createdFrom` | ISO date                                   | —            | От даты создания         |
-| `createdTo`   | ISO date                                   | —            | До даты создания         |
-| `sortBy`      | `createdAt \| matchScore`                  | `createdAt`  | Сортировка (всегда desc) |
-| `limit`       | `1–100`                                    | `20`         | Количество записей       |
-| `offset`      | `0+`                                       | `0`          | Смещение                 |
+| Параметр | Тип | По умолчанию | Описание |
+|---|---|---|---|
+| `status` | `NEW \| PROCESSING \| PROCESSED \| FAILED` | `PROCESSED` | Статус обработки |
+| `decision` | `approve \| maybe \| decline` | — | Решение AI |
+| `priority` | `high \| medium \| low` | — | Приоритет |
+| `minScore` | `0–100` | — | Минимальный matchScore |
+| `maxScore` | `0–100` | — | Максимальный matchScore |
+| `createdFrom` | ISO date | — | От даты создания |
+| `createdTo` | ISO date | — | До даты создания |
+| `sortBy` | `createdAt \| matchScore` | `createdAt` | Сортировка (всегда desc) |
+| `limit` | `1–100` | `20` | Количество записей |
+| `offset` | `0+` | `0` | Смещение |
 
 **Ответ `200`:**
 
 ```json
 {
-	"data": [
-		{
-			"id": "uuid",
-			"chatId": "5188602584",
-			"messageId": 22863,
-			"status": "PROCESSED",
-			"decision": "approve",
-			"matchScore": 78,
-			"priority": "high",
-			"createdAt": "2026-04-21T18:11:12.000Z",
-			"processedAt": "2026-04-21T18:11:22.000Z",
-			"title": "Senior LLM Applications Engineer — Multi-Agent Pipelines",
-			"jobUrl": "https://www.upwork.com/jobs/~022046575121448151704",
-			"scanner": "web & mobile bases",
-			"gigRadarScore": 89,
-			"location": "Canada 🇨🇦",
-			"budget": "$25/hr - $95/hr",
-			"totalSpent": 258740.26,
-			"avgRatePaid": 37.01,
-			"hireRate": 72.68,
-			"hSkillsKeywords": []
-		}
-	],
-	"meta": {
-		"total": 42,
-		"limit": 20,
-		"offset": 0
-	}
+  "data": [
+    {
+      "id": "uuid",
+      "chatId": "5188602584",
+      "messageId": 22863,
+      "status": "PROCESSED",
+      "decision": "approve",
+      "matchScore": 78,
+      "priority": "high",
+      "createdAt": "2026-04-21T18:11:12.000Z",
+      "processedAt": "2026-04-21T18:11:22.000Z",
+      "title": "Senior LLM Applications Engineer — Multi-Agent Pipelines",
+      "jobUrl": "https://www.upwork.com/jobs/~022046575121448151704",
+      "scanner": "web & mobile bases",
+      "gigRadarScore": 89,
+      "location": "Canada 🇨🇦",
+      "budget": "$25/hr - $95/hr",
+      "totalSpent": 258740.26,
+      "avgRatePaid": 37.01,
+      "hireRate": 72.68,
+      "hSkillsKeywords": []
+    }
+  ],
+  "meta": {
+    "total": 42,
+    "limit": 20,
+    "offset": 0
+  }
 }
 ```
 
@@ -976,46 +1038,46 @@ GET /job-posts/stats?from=2026-04-01T00:00:00.000Z&to=2026-04-30T23:59:59.000Z
 Authorization: Bearer <token>
 ```
 
-| Параметр | Тип      | Описание                     |
-| -------- | -------- | ---------------------------- |
-| `from`   | ISO date | Начало периода (опционально) |
-| `to`     | ISO date | Конец периода (опционально)  |
+| Параметр | Тип | Описание |
+|---|---|---|
+| `from` | ISO date | Начало периода (опционально) |
+| `to` | ISO date | Конец периода (опционально) |
 
 **Ответ `200`:**
 
 ```json
 {
-	"period": { "from": "2026-04-01T00:00:00.000Z", "to": "2026-04-30T23:59:59.000Z" },
-	"total": 150,
-	"byStatus": {
-		"NEW": 2,
-		"PROCESSING": 1,
-		"PROCESSED": 145,
-		"FAILED": 2
-	},
-	"decisions": {
-		"approve": 40,
-		"maybe": 55,
-		"decline": 50
-	},
-	"priority": {
-		"high": 15,
-		"medium": 45,
-		"low": 35
-	},
-	"score": {
-		"avg": 62,
-		"median": 60,
-		"min": 12,
-		"max": 94
-	},
-	"scoreRanges": {
-		"85_100": 8,
-		"70_84": 20,
-		"55_69": 45,
-		"40_54": 50,
-		"0_39": 22
-	}
+  "period": { "from": "2026-04-01T00:00:00.000Z", "to": "2026-04-30T23:59:59.000Z" },
+  "total": 150,
+  "byStatus": {
+    "NEW": 2,
+    "PROCESSING": 1,
+    "PROCESSED": 145,
+    "FAILED": 2
+  },
+  "decisions": {
+    "approve": 40,
+    "maybe": 55,
+    "decline": 50
+  },
+  "priority": {
+    "high": 15,
+    "medium": 45,
+    "low": 35
+  },
+  "score": {
+    "avg": 62,
+    "median": 60,
+    "min": 12,
+    "max": 94
+  },
+  "scoreRanges": {
+    "85_100": 8,
+    "70_84": 20,
+    "55_69": 45,
+    "40_54": 50,
+    "0_39": 22
+  }
 }
 ```
 
@@ -1032,45 +1094,45 @@ Authorization: Bearer <token>
 
 ```json
 {
-	"id": "uuid",
-	"chatId": "5188602584",
-	"messageId": 22863,
-	"rawText": "📡 New opportunity detected\nSenior LLM...",
-	"rawPayload": {},
-	"status": "PROCESSED",
-	"decision": "approve",
-	"matchScore": 78,
-	"priority": "high",
-	"aiResponse": {
-		"decision": "approve",
-		"match_score": 78,
-		"priority": "high",
-		"hard_stop": false,
-		"hard_stop_reason": "",
-		"subscores": {
-			"core_fit": 28,
-			"project_type_complexity": 15,
-			"rate_budget_signal": 17,
-			"client_money_quality": 15,
-			"strategic_upside": 10,
-			"risk_friction_penalty": 7
-		},
-		"reasons": ["..."],
-		"red_flags": ["..."],
-		"short_summary": "..."
-	},
-	"createdAt": "2026-04-21T18:11:12.000Z",
-	"processedAt": "2026-04-21T18:11:22.000Z",
-	"title": "Senior LLM Applications Engineer — Multi-Agent Pipelines",
-	"jobUrl": "https://www.upwork.com/jobs/~022046575121448151704",
-	"scanner": "web & mobile bases",
-	"gigRadarScore": 89,
-	"location": "Canada 🇨🇦",
-	"budget": "$25/hr - $95/hr",
-	"totalSpent": 258740.26,
-	"avgRatePaid": 37.01,
-	"hireRate": 72.68,
-	"hSkillsKeywords": []
+  "id": "uuid",
+  "chatId": "5188602584",
+  "messageId": 22863,
+  "rawText": "📡 New opportunity detected\nSenior LLM...",
+  "rawPayload": {},
+  "status": "PROCESSED",
+  "decision": "approve",
+  "matchScore": 78,
+  "priority": "high",
+  "aiResponse": {
+    "decision": "approve",
+    "match_score": 78,
+    "priority": "high",
+    "hard_stop": false,
+    "hard_stop_reason": "",
+    "subscores": {
+      "core_fit": 28,
+      "project_type_complexity": 15,
+      "rate_budget_signal": 17,
+      "client_money_quality": 15,
+      "strategic_upside": 10,
+      "risk_friction_penalty": 7
+    },
+    "reasons": ["..."],
+    "red_flags": ["..."],
+    "short_summary": "..."
+  },
+  "createdAt": "2026-04-21T18:11:12.000Z",
+  "processedAt": "2026-04-21T18:11:22.000Z",
+  "title": "Senior LLM Applications Engineer — Multi-Agent Pipelines",
+  "jobUrl": "https://www.upwork.com/jobs/~022046575121448151704",
+  "scanner": "web & mobile bases",
+  "gigRadarScore": 89,
+  "location": "Canada 🇨🇦",
+  "budget": "$25/hr - $95/hr",
+  "totalSpent": 258740.26,
+  "avgRatePaid": 37.01,
+  "hireRate": 72.68,
+  "hSkillsKeywords": []
 }
 ```
 
@@ -1106,48 +1168,48 @@ Content-Type: application/json
 }
 ```
 
-| Поле              | Тип     | Обязательный | Описание                                       |
-| ----------------- | ------- | ------------ | ---------------------------------------------- |
-| `proposalType`    | enum    | да           | `Bid` \| `Invite` \| `DirectMessage`           |
-| `boosted`         | boolean | нет          | Буст (только для `Bid`, default: `false`)      |
-| `connects`        | number  | нет          | Коннекты (только для `Bid`, default: `0`)      |
-| `boostedConnects` | number  | нет          | Коннекты за буст (только если `boosted: true`) |
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `proposalType` | enum | да | `Bid` \| `Invite` \| `DirectMessage` |
+| `boosted` | boolean | нет | Буст (только для `Bid`, default: `false`) |
+| `connects` | number | нет | Коннекты (только для `Bid`, default: `0`) |
+| `boostedConnects` | number | нет | Коннекты за буст (только если `boosted: true`) |
 
 **Маппинг полей из JobPost:**
 
-| JobPost   | Proposal     | Примечание                                          |
-| --------- | ------------ | --------------------------------------------------- |
-| `title`   | `title`      | если `null` — берётся первые 100 символов `rawText` |
-| `jobUrl`  | `jobUrl`     |                                                     |
-| `rawText` | `vacancy`    | полный текст поста                                  |
-| `id`      | `jobPostId`  | связь между сущностями                              |
-| —         | `source`     | всегда `telegram`                                   |
-| —         | `platformId` | всегда Upwork                                       |
-| —         | `accountId`  | всегда `null`                                       |
+| JobPost | Proposal | Примечание |
+|---|---|---|
+| `title` | `title` | если `null` — берётся первые 100 символов `rawText` |
+| `jobUrl` | `jobUrl` | |
+| `rawText` | `vacancy` | полный текст поста |
+| `id` | `jobPostId` | связь между сущностями |
+| — | `source` | всегда `telegram` |
+| — | `platformId` | всегда Upwork |
+| — | `accountId` | всегда `null` |
 
 **Ответ `201`:** объект созданного Proposal.
 
 ```json
 {
-	"id": "uuid",
-	"title": "Senior LLM Applications Engineer — Multi-Agent Pipelines",
-	"jobUrl": "https://www.upwork.com/jobs/~022046575121448151704",
-	"vacancy": "📡 New opportunity detected\nSenior LLM...",
-	"proposalType": "Bid",
-	"status": "Draft",
-	"source": "telegram",
-	"boosted": false,
-	"connects": 6,
-	"boostedConnects": 0,
-	"coverLetter": null,
-	"sentAt": null,
-	"accountId": null,
-	"platformId": "uuid-of-upwork",
-	"jobPostId": "uuid-of-job-post",
-	"userId": "uuid",
-	"createdAt": "2026-04-22T10:00:00.000Z",
-	"updatedAt": "2026-04-22T10:00:00.000Z",
-	"chat": { "id": "uuid", "proposalId": "uuid", "leadId": null, "createdAt": "..." }
+  "id": "uuid",
+  "title": "Senior LLM Applications Engineer — Multi-Agent Pipelines",
+  "jobUrl": "https://www.upwork.com/jobs/~022046575121448151704",
+  "vacancy": "📡 New opportunity detected\nSenior LLM...",
+  "proposalType": "Bid",
+  "status": "Draft",
+  "source": "telegram",
+  "boosted": false,
+  "connects": 6,
+  "boostedConnects": 0,
+  "coverLetter": null,
+  "sentAt": null,
+  "accountId": null,
+  "platformId": "uuid-of-upwork",
+  "jobPostId": "uuid-of-job-post",
+  "userId": "uuid",
+  "createdAt": "2026-04-22T10:00:00.000Z",
+  "updatedAt": "2026-04-22T10:00:00.000Z",
+  "chat": { "id": "uuid", "proposalId": "uuid", "leadId": null, "createdAt": "..." }
 }
 ```
 
@@ -1293,23 +1355,239 @@ Authorization: Bearer <token>
 
 ---
 
+## Client Requests
+
+Входящие заявки с контактной формы сайта. Создаются публично (без авторизации), управляются через JWT.
+
+### POST /client-requests — создать заявку (публичный)
+
+```http
+POST /client-requests
+Content-Type: multipart/form-data
+```
+
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `name` | string | да | Имя отправителя |
+| `email` | string | да | Email |
+| `company` | string | нет | Компания |
+| `phone` | string | нет | Телефон |
+| `phoneCountry` | string | нет | Код страны (например: `us`) |
+| `message` | string | нет | Сообщение |
+| `services` | JSON string array | нет | Список услуг, например `["Web Development","MVP"]` |
+| `files` | file[] | нет | До 20 файлов, суммарно до 100 МБ |
+
+**Ответ `201`:** созданный объект заявки.
+
+> При создании автоматически отправляется уведомление в Discord.
+
+---
+
+### GET /client-requests — список с пагинацией
+
+```http
+GET /client-requests?page=1&limit=10
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:**
+
+```json
+{
+  "data": [...],
+  "total": 12
+}
+```
+
+---
+
+### GET /client-requests/:id — одна заявка
+
+```http
+GET /client-requests/:id
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:** объект заявки. `404` если не найдена.
+
+---
+
+### PATCH /client-requests/:id — обновить
+
+```http
+PATCH /client-requests/:id
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "status": "conversation_ongoing"
+}
+```
+
+**Статусы (`ClientRequestStatus`):** `on_review` · `conversation_ongoing` · `archived`
+
+**Ответ `200`:** обновлённый объект.
+
+---
+
+### DELETE /client-requests/:id — удалить
+
+```http
+DELETE /client-requests/:id
+Authorization: Bearer <token>
+```
+
+> Удаляет заявку и все прикреплённые файлы с диска.
+
+**Ответ `204`:** пустое тело.
+
+---
+
+## Settings
+
+Управление настройками приложения. Структура (секции и ключи) задаётся через seed и не меняется через API — только значения.
+
+### Объект Setting
+
+```json
+{
+  "key": "job_scanner.enabled",
+  "title": "Enable Job Scanner",
+  "description": "Enable real-time processing of new job posts",
+  "type": "boolean",
+  "uiType": "toggle",
+  "isSecret": false,
+  "isRequired": false,
+  "order": 0,
+  "options": null,
+  "validationSchema": null,
+  "defaultValue": true,
+  "value": true
+}
+```
+
+| Поле | Описание |
+|---|---|
+| `key` | Уникальный ключ настройки |
+| `type` | Тип значения: `string` · `number` · `boolean` · `json` |
+| `uiType` | Подсказка для UI: `input` · `textarea` · `select` · `toggle` · `password` |
+| `isSecret` | Если `true` — `value` возвращается как `"***"`, `defaultValue` скрыт |
+| `isRequired` | Признак обязательности |
+| `options` | Массив вариантов для `select`, иначе `null` |
+| `validationSchema` | Объект с ограничениями, например `{ "min": 0, "max": 100 }` для `number` |
+| `value` | Текущее сохранённое значение или `defaultValue` если не задано |
+
+---
+
+### GET /settings — все секции с настройками
+
+```http
+GET /settings
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:** массив секций, отсортированных по `order`. Каждая содержит `settings` — настройки отсортированы по `order`.
+
+```json
+[
+  {
+    "key": "job_scanner",
+    "title": "Job Scanner",
+    "order": 2,
+    "settings": [ ... ]
+  }
+]
+```
+
+---
+
+### GET /settings/:key — одна настройка
+
+```http
+GET /settings/job_scanner.enabled
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:** объект настройки. `404` если не найдена.
+
+---
+
+### PATCH /settings/:key — обновить значение
+
+```http
+PATCH /settings/job_scanner.notifications.min_score
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "value": 80
+}
+```
+
+Валидация типов:
+
+| `type` | Допустимый `value` |
+|---|---|
+| `string` | строка |
+| `number` | число или числовая строка; проверяется `validationSchema.min` / `max` |
+| `boolean` | `true` / `false` или строки `"true"` / `"false"` |
+| `json` | объект или JSON-строка |
+
+**Ответ `204`:** пустое тело. `400` если тип или диапазон не совпадает. `404` если настройка не найдена.
+
+---
+
+### Секции и настройки
+
+**Порядок секций:**
+
+| order | key | title |
+|---|---|---|
+| 0 | `general` | General |
+| 1 | `ai` | AI Settings |
+| 2 | `job_scanner` | Job Scanner |
+| 3 | `integrations` | Integrations |
+| 4 | `notifications` | Notifications |
+| 5 | `api_keys` | API Keys |
+| 6 | `invoice` | Invoice |
+
+**job_scanner:**
+
+| Ключ | uiType | Тип | По умолчанию | Описание |
+|---|---|---|---|---|
+| `job_scanner.enabled` | toggle | boolean | `true` | Включить обработку постов из Telegram |
+| `job_scanner.backfill.enabled` | toggle | boolean | `false` | Включить backfill исторических постов |
+| `job_scanner.backfill.limit` | input | number | `50` | Кол-во постов за один backfill-запуск (1–1000) |
+| `job_scanner.notifications.min_score` | input | number | `70` | Минимальный score для отправки в Discord (0–100) |
+| `job_scanner.telegram.session` | password | string | `""` | Сессия gramjs (только запись через POST /telegram/auth/verify, `isSecret: true`) |
+| `job_scanner.telegram.connected` | toggle | boolean | `false` | Статус подключения Telegram-клиента (read-only индикатор) |
+
+**invoice:**
+
+| Ключ | uiType | Тип | Описание |
+|---|---|---|---|
+| `invoice.client.details` | textarea | json | Реквизиты клиента по умолчанию |
+| `invoice.contractor.details` | textarea | json | Реквизиты контрагента по умолчанию |
+
+---
+
 ## Коды ошибок
 
-| Код   | Описание                                                       |
-| ----- | -------------------------------------------------------------- |
-| `400` | Неверные данные запроса                                        |
-| `401` | Не авторизован / токен истёк / невалидный refresh token        |
-| `404` | Ресурс не найден                                               |
+| Код | Описание |
+|---|---|
+| `400` | Неверные данные запроса |
+| `401` | Не авторизован / токен истёк / невалидный refresh token |
+| `404` | Ресурс не найден |
 | `409` | Конфликт (например, proposal для этого JobPost уже существует) |
-| `500` | Внутренняя ошибка сервера                                      |
+| `500` | Внутренняя ошибка сервера |
 
 **Формат ошибки:**
 
 ```json
 {
-	"statusCode": 404,
-	"message": "Proposal not found",
-	"path": "/proposals/unknown-id",
-	"timestamp": "2024-01-01T00:00:00.000Z"
+  "statusCode": 404,
+  "message": "Proposal not found",
+  "path": "/proposals/unknown-id",
+  "timestamp": "2024-01-01T00:00:00.000Z"
 }
 ```
