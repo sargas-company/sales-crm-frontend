@@ -1,7 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { baseApi } from '../api/baseApi'
 import authReducer from './auth/authSlice'
-import chatReducer from './chats/chatSlice'
 import apiChatReducer from './chats/apiChatSlice'
 import proposalReducer from './proposals/proposalsSlice'
 import leadReducer from './leads/leadsSlice'
@@ -9,7 +8,6 @@ import leadReducer from './leads/leadsSlice'
 export const store = configureStore({
 	reducer: {
 		auth: authReducer,
-		chat: chatReducer,
 		apiChat: apiChatReducer,
 		proposal: proposalReducer,
 		lead: leadReducer,
