@@ -2,38 +2,32 @@ import { useState } from 'react'
 
 export interface FormFields {
 	title: string
-	description: string
+	content: string
 	category: string
 }
 
 export interface FormErrors {
 	title?: string
-	description?: string
+	content?: string
 	category?: string
 }
 
 const validate = (fields: FormFields): FormErrors => {
 	const errors: FormErrors = {}
 
-	if (!fields.title.trim()) {
-		errors.title = 'Title is required'
-	} else if (fields.title.trim().length < 2) {
+	if (fields.title.trim() && fields.title.trim().length < 2) {
 		errors.title = 'Title must be at least 2 characters'
 	}
 
-	if (!fields.description.trim()) {
-		errors.description = 'Description is required'
-	}
-
-	if (!fields.category.trim()) {
-		errors.category = 'Category is required'
+	if (!fields.content.trim()) {
+		errors.content = 'Content is required'
 	}
 
 	return errors
 }
 
 const useBaseKnowledgeForm = (
-	initial: FormFields = { title: '', description: '', category: '' }
+	initial: FormFields = { title: '', content: '', category: '' }
 ) => {
 	const [fields, setFields] = useState<FormFields>(initial)
 	const [errors, setErrors] = useState<FormErrors>({})
@@ -50,7 +44,7 @@ const useBaseKnowledgeForm = (
 	}
 
 	const reset = (values?: FormFields) => {
-		setFields(values ?? { title: '', description: '', category: '' })
+		setFields(values ?? { title: '', content: '', category: '' })
 		setErrors({})
 	}
 

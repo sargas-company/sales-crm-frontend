@@ -3,22 +3,25 @@ import { baseApi } from '../../api/baseApi'
 export interface BaseKnowledgeItem {
 	id: string
 	title: string
-	description: string
+	content: string
 	category: string
-	userId: string
 	createdAt: string
 	updatedAt: string
 }
 
+export interface IngestResult {
+	documentId: string
+}
+
 export interface CreateBaseKnowledgeDto {
-	title: string
-	description: string
-	category: string
+	title?: string
+	content: string
+	category?: string
 }
 
 export interface UpdateBaseKnowledgeDto {
 	title: string
-	description: string
+	content: string
 	category: string
 }
 
@@ -35,17 +38,17 @@ export interface BaseKnowledgeListParams {
 export const baseKnowledgeApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getBaseKnowledgeList: builder.query<BaseKnowledgePage, BaseKnowledgeListParams>({
-			query: ({ page, limit }) => ({ url: '/base-knowledge', params: { page, limit } }),
+			query: ({ page, limit }) => ({ url: '/knowledge', params: { page, limit } }),
 			providesTags: ['BaseKnowledge'],
 		}),
 
 		getBaseKnowledgeItem: builder.query<BaseKnowledgeItem, string>({
-			query: (id) => ({ url: `/base-knowledge/${id}` }),
+			query: (id) => ({ url: `/knowledge/${id}` }),
 			providesTags: ['BaseKnowledge'],
 		}),
 
-		createBaseKnowledge: builder.mutation<BaseKnowledgeItem, CreateBaseKnowledgeDto>({
-			query: (body) => ({ url: '/base-knowledge', method: 'POST', body }),
+		createBaseKnowledge: builder.mutation<IngestResult, CreateBaseKnowledgeDto>({
+			query: (body) => ({ url: '/knowledge/ingest', method: 'POST', body }),
 			invalidatesTags: ['BaseKnowledge'],
 		}),
 
@@ -53,12 +56,12 @@ export const baseKnowledgeApi = baseApi.injectEndpoints({
 			BaseKnowledgeItem,
 			{ id: string; body: UpdateBaseKnowledgeDto }
 		>({
-			query: ({ id, body }) => ({ url: `/base-knowledge/${id}`, method: 'PUT', body }),
+			query: ({ id, body }) => ({ url: `/knowledge/${id}`, method: 'PATCH', body }),
 			invalidatesTags: ['BaseKnowledge'],
 		}),
 
 		deleteBaseKnowledge: builder.mutation<void, string>({
-			query: (id) => ({ url: `/base-knowledge/${id}`, method: 'DELETE' }),
+			query: (id) => ({ url: `/knowledge/${id}`, method: 'DELETE' }),
 			invalidatesTags: ['BaseKnowledge'],
 		}),
 	}),

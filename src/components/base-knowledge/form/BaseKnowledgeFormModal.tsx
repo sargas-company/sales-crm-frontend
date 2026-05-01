@@ -24,9 +24,9 @@ const BaseKnowledgeFormModal = ({ onClose, onSuccess }: Props) => {
 		if (!runValidation()) return
 		try {
 			await createBaseKnowledge({
-				title: fields.title.trim(),
-				description: fields.description.trim(),
-				category: fields.category.trim(),
+				...(fields.title.trim() && { title: fields.title.trim() }),
+				content: fields.content.trim(),
+				...(fields.category.trim() && { category: fields.category.trim() }),
 			}).unwrap()
 			showToast('Knowledge entry created successfully', 'success')
 			onSuccess()
@@ -57,7 +57,7 @@ const BaseKnowledgeFormModal = ({ onClose, onSuccess }: Props) => {
 					<Box display='flex' flexDirection='column' space={2}>
 						<TextField
 							name='title'
-							label='Title'
+							label='Title (optional)'
 							placeholder='Enter title'
 							value={fields.title}
 							onChange={(e) => setField('title', e.target.value)}
@@ -68,7 +68,7 @@ const BaseKnowledgeFormModal = ({ onClose, onSuccess }: Props) => {
 
 						<TextField
 							name='category'
-							label='Category'
+							label='Category (optional)'
 							placeholder='e.g. templates, scripts, objections'
 							value={fields.category}
 							onChange={(e) => setField('category', e.target.value)}
@@ -79,17 +79,17 @@ const BaseKnowledgeFormModal = ({ onClose, onSuccess }: Props) => {
 
 						<Box display='flex' flexDirection='column' space={1}>
 							<Text varient='body2' weight='medium'>
-								Description
+								Content
 							</Text>
 							<TextField
-								name='description'
-								placeholder='Describe what this entry is about…'
-								value={fields.description}
+								name='content'
+								placeholder='Enter the knowledge content…'
+								value={fields.content}
 								onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-									setField('description', e.target.value)
+									setField('content', e.target.value)
 								}
-								error={!!errors.description}
-								hypertext={errors.description}
+								error={!!errors.content}
+								hypertext={errors.content}
 								multiRow
 								width='100%'
 								style={{ minHeight: 180, resize: 'vertical' }}

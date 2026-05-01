@@ -119,16 +119,16 @@ const BaseKnowledgePreview = () => {
 
 					<Divider styles={{ margin: '0 0 1.5rem' }} />
 
-					{/* Description */}
-					{item.description ? (
+					{/* Content */}
+					{item.content ? (
 						<Box display='flex' flexDirection='column' space={2}>
 							<Text varient='subtitle1' weight='medium'>
-								Description
+								Content
 							</Text>
-							<DescriptionText>{item.description}</DescriptionText>
+							<DescriptionText>{item.content}</DescriptionText>
 						</Box>
 					) : (
-						<Text secondary>No description provided.</Text>
+						<Text secondary>No content provided.</Text>
 					)}
 				</Card>
 			</Box>
