@@ -7,66 +7,97 @@ interface Props {
 	onRemove: (id: string) => void
 }
 
-const FileChip = ({ file, onRemove }: { file: AttachedFile; onRemove: (id: string) => void }) => (
-	<div
-		style={{
-			display: 'inline-flex',
-			alignItems: 'center',
-			gap: 6,
-			padding: '5px 6px 5px 8px',
-			borderRadius: 10,
-			background: 'rgba(120,120,128,0.15)',
-			flexShrink: 0,
-		}}
-	>
-		{file.previewUrl ? (
-			<img
-				src={file.previewUrl}
-				alt=''
-				style={{ width: 26, height: 26, borderRadius: 5, objectFit: 'cover', flexShrink: 0 }}
-			/>
-		) : (
-			<InsertDriveFileRounded style={{ fontSize: 18, opacity: 0.5, flexShrink: 0 }} />
-		)}
+const EXT_COLOR: Record<string, string> = {
+	pdf: '#FA423E',
+	doc: '#2B5797',
+	docx: '#2B5797',
+	xls: '#217346',
+	xlsx: '#217346',
+	csv: '#217346',
+	txt: '#6B7280',
+	md: '#6B7280',
+	jpg: '#7C3AED',
+	jpeg: '#7C3AED',
+	png: '#7C3AED',
+}
 
-		<div style={{ maxWidth: 110, overflow: 'hidden' }}>
-			<div
-				style={{
-					fontSize: 12,
-					fontWeight: 500,
-					lineHeight: 1.3,
-					whiteSpace: 'nowrap',
-					overflow: 'hidden',
-					textOverflow: 'ellipsis',
-				}}
-			>
-				{file.name}
-			</div>
-			<div style={{ fontSize: 10, opacity: 0.45, lineHeight: 1.3, textTransform: 'uppercase' }}>
-				{file.ext.replace('.', '')}
-			</div>
-		</div>
+const FileChip = ({ file, onRemove }: { file: AttachedFile; onRemove: (id: string) => void }) => {
+	const ext = file.ext.replace('.', '').toLowerCase()
+	const iconBg = EXT_COLOR[ext] ?? 'rgba(120,120,128,0.4)'
 
-		<button
-			type='button'
-			onClick={() => onRemove(file.id)}
-			aria-label={`Delete ${file.name}`}
+	return (
+		<div
 			style={{
-				border: 0,
-				background: 'transparent',
-				cursor: 'pointer',
-				padding: 2,
 				display: 'inline-flex',
 				alignItems: 'center',
-				opacity: 0.5,
+				justifyContent: 'space-between',
+				width: 200,
 				flexShrink: 0,
-				lineHeight: 1,
+				padding: '6px 6px 6px 8px',
+				borderRadius: 12,
+				background: 'rgba(120,120,128,0.15)',
+				gap: 8,
 			}}
 		>
-			<CloseRounded style={{ fontSize: 13 }} />
-		</button>
-	</div>
-)
+			<div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+				<div
+					style={{
+						width: 32,
+						height: 32,
+						borderRadius: 8,
+						background: iconBg,
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						flexShrink: 0,
+					}}
+				>
+					{file.previewUrl ? (
+						<img
+							src={file.previewUrl}
+							alt=''
+							style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover' }}
+						/>
+					) : (
+						<InsertDriveFileRounded style={{ fontSize: 17, color: '#fff' }} />
+					)}
+				</div>
+
+				<div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+					<div
+						style={{
+							fontSize: 12,
+							fontWeight: 600,
+							lineHeight: 1.3,
+							whiteSpace: 'nowrap',
+							overflow: 'hidden',
+							textOverflow: 'ellipsis',
+						}}
+					>
+						{file.name}
+					</div>
+					<div style={{ fontSize: 10, opacity: 0.45, lineHeight: 1.3, textTransform: 'uppercase' }}>
+						{ext}
+					</div>
+				</div>
+			</div>
+
+			<div
+				onClick={() => onRemove(file.id)}
+				style={{
+					display: 'inline-flex',
+					alignItems: 'center',
+					padding: 4,
+					cursor: 'pointer',
+					opacity: 0.45,
+					flexShrink: 0,
+				}}
+			>
+				<CloseRounded style={{ fontSize: 14 }} />
+			</div>
+		</div>
+	)
+}
 
 const FileAttachmentBar = ({ files, onRemove }: Props) => {
 	if (files.length === 0) return null
