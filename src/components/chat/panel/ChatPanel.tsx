@@ -7,6 +7,9 @@ import Box from '../../box/Box'
 import ColorBox from '../../box/ColorBox'
 import { CustomAvatar, Text } from '../../../ui'
 import MsgBox from '../chat-content/MsgBox'
+import AttachMenuButton from '../shared/AttachMenuButton'
+import FileAttachmentBar from '../shared/FileAttachmentBar'
+import { useFileAttachment } from '../shared/useFileAttachment'
 
 const MAX_HEIGHT = 220
 
@@ -42,6 +45,7 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 	})
 	const scrollRef = useRef<HTMLDivElement | null>(null)
 	const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+	const { attachedFiles, fileErrors, validateAndAdd, removeFile, clearFiles } = useFileAttachment()
 
 	// Load history whenever historyUrl changes (tab opened / different entity)
 	useEffect(() => {
@@ -110,8 +114,9 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 		}
 		setMessages((m) => [...m, msg])
 		setStreaming({ content: '', analysis: null, active: true })
-		sendMessage(proposalId, inputValue, model)
+		sendMessage(proposalId, inputValue, model, attachedFiles.map((f) => f.file))
 		setInputValue('')
+		clearFiles()
 		resetTextareaHeight()
 	}
 
@@ -249,58 +254,86 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 			<Box display='flex' align='center' space={0.8} px={12} py={8} mb={20}>
 				<ColorBox
 					display='flex'
+					flexDirection='column'
 					backgroundTheme='foreground'
 					transparency={3}
 					borderRadius='26px'
 					border={{ show: true, size: '1px', radius: '26px' }}
 					className='overflow-hidden'
 					flex={1}
-					style={{ alignItems: 'flex-end' }}
 				>
-					<div
-						style={{
-							flex: 1,
-							maskImage: 'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
-							WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
-						}}
-					>
-						<textarea
-							ref={textareaRef}
-							name='panel-chat-message'
-							value={inputValue}
-							rows={1}
-							placeholder={
-								streaming.active
-									? 'Waiting for response…'
-									: !proposalId
-										? 'Chat unavailable'
-										: 'Type your message here...'
-							}
+					<FileAttachmentBar files={attachedFiles} onRemove={removeFile} />
+
+					{fileErrors.length > 0 && (
+						<div style={{ padding: '4px 14px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+							{fileErrors.map((err, i) => (
+								<span key={i} style={{ fontSize: 11, color: '#ef4444', lineHeight: 1.4 }}>
+									{err}
+								</span>
+							))}
+						</div>
+					)}
+
+					<div style={{ display: 'flex', alignItems: 'flex-end' }}>
+						<AttachMenuButton
 							disabled={streaming.active || !proposalId}
-							onChange={handleChange}
-							onKeyDown={handleKeyDown}
-							style={{
-								width: '100%',
-								padding: '12px 0 12px 25px',
-								border: 0,
-								outline: 0,
-								resize: 'none',
-								background: 'transparent',
-								color: 'inherit',
-								fontFamily: 'inherit',
-								fontSize: 'inherit',
-								lineHeight: '1.5',
-								minHeight: '44px',
-								maxHeight: `${MAX_HEIGHT}px`,
-								overflowY: 'hidden',
-								display: 'block',
-								opacity: streaming.active || !proposalId ? 0.5 : 1,
-							}}
+							onFilesSelected={validateAndAdd}
 						/>
+
+						<div
+							style={{
+								flex: 1,
+								maskImage:
+									'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
+								WebkitMaskImage:
+									'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
+							}}
+						>
+							<textarea
+								ref={textareaRef}
+								name='panel-chat-message'
+								value={inputValue}
+								rows={1}
+								placeholder={
+									streaming.active
+										? 'Waiting for response…'
+										: !proposalId
+											? 'Chat unavailable'
+											: 'Type your message here...'
+								}
+								disabled={streaming.active || !proposalId}
+								onChange={handleChange}
+								onKeyDown={handleKeyDown}
+								style={{
+									width: '100%',
+									padding: '12px 0 12px 4px',
+									border: 0,
+									outline: 0,
+									resize: 'none',
+									background: 'transparent',
+									color: 'inherit',
+									fontFamily: 'inherit',
+									fontSize: 'inherit',
+									lineHeight: '1.5',
+									minHeight: '44px',
+									maxHeight: `${MAX_HEIGHT}px`,
+									overflowY: 'hidden',
+									display: 'block',
+									opacity: streaming.active || !proposalId ? 0.5 : 1,
+								}}
+							/>
+						</div>
+
+						<Box
+							mb={8}
+							mr={16}
+							onClick={handleSend}
+							className='cursor-pointer'
+							style={{ flexShrink: 0 }}
+						>
+							<SendRounded />
+						</Box>
 					</div>
-					<Box mb={8} mr={16} onClick={handleSend} className='cursor-pointer' style={{ flexShrink: 0 }}>
-						<SendRounded />
-					</Box>
 				</ColorBox>
 			</Box>
 		</Box>

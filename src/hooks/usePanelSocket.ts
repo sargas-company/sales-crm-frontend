@@ -44,8 +44,13 @@ export const usePanelSocket = (handlers: Handlers) => {
 		}
 	}, [accessToken])
 
-	const sendMessage = useCallback((proposalId: string, content: string, model?: string) => {
-		socketRef.current?.emit('send_message', { proposalId, content, ...(model ? { model } : {}) })
+	const sendMessage = useCallback((proposalId: string, content: string, model?: string, files?: File[]) => {
+		socketRef.current?.emit('send_message', {
+			proposalId,
+			content,
+			...(model ? { model } : {}),
+			...(files?.length ? { files } : {}),
+		})
 	}, [])
 
 	return { sendMessage }

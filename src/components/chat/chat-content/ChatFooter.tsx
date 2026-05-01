@@ -7,6 +7,9 @@ import { RootState } from '../../../store/store'
 import { IconButton } from '../../../ui'
 import Box from '../../box/Box'
 import ColorBox from '../../box/ColorBox'
+import AttachMenuButton from '../shared/AttachMenuButton'
+import FileAttachmentBar from '../shared/FileAttachmentBar'
+import { useFileAttachment } from '../shared/useFileAttachment'
 
 const selectCurrentUid = (state: RootState) => state.chat.currentUser.uid
 
@@ -17,6 +20,7 @@ const ChatFooter = () => {
 	const currentUid = useAppSelector(selectCurrentUid, shallowEqual)
 	const [message, setMessage] = useState('')
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
+	const { attachedFiles, fileErrors, validateAndAdd, removeFile, clearFiles } = useFileAttachment()
 
 	const resetHeight = () => {
 		if (textareaRef.current) {
@@ -29,6 +33,7 @@ const ChatFooter = () => {
 		if (!message.trim()) return
 		dispatch(sendMessage(currentUid, message))
 		setMessage('')
+		clearFiles()
 		resetHeight()
 	}
 
@@ -51,49 +56,75 @@ const ChatFooter = () => {
 		<Box display='flex' align='center' justify='space-between' space={0.8} px={12}>
 			<ColorBox
 				display='flex'
+				flexDirection='column'
 				transparency={3}
 				borderRadius={'26px'}
 				className='overflow-hidden'
 				flex={1}
-				style={{ alignItems: 'flex-end' }}
 			>
-				<div
-					style={{
-						flex: 1,
-						maskImage: 'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
-						WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
-					}}
-				>
-					<textarea
-						ref={textareaRef}
-						name='message-write-box'
-						value={message}
-						rows={1}
-						placeholder='Type your message here...'
-						onChange={handleChange}
-						onKeyDown={handleKeyDown}
+				<FileAttachmentBar files={attachedFiles} onRemove={removeFile} />
+
+				{fileErrors.length > 0 && (
+					<div style={{ padding: '4px 14px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+						{fileErrors.map((err, i) => (
+							<span key={i} style={{ fontSize: 11, color: '#ef4444', lineHeight: 1.4 }}>
+								{err}
+							</span>
+						))}
+					</div>
+				)}
+
+				<div style={{ display: 'flex', alignItems: 'flex-end' }}>
+					<AttachMenuButton onFilesSelected={validateAndAdd} />
+
+					<div
 						style={{
-							width: '100%',
-							padding: '12px 0 12px 20px',
-							border: 0,
-							outline: 0,
-							resize: 'none',
-							background: 'transparent',
-							color: 'inherit',
-							fontFamily: 'inherit',
-							fontSize: 'inherit',
-							lineHeight: '1.5',
-							minHeight: '44px',
-							maxHeight: `${MAX_HEIGHT}px`,
-							overflowY: 'hidden',
-							display: 'block',
+							flex: 1,
+							maskImage:
+								'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
+							WebkitMaskImage:
+								'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
 						}}
-					/>
+					>
+						<textarea
+							ref={textareaRef}
+							name='message-write-box'
+							value={message}
+							rows={1}
+							placeholder='Type your message here...'
+							onChange={handleChange}
+							onKeyDown={handleKeyDown}
+							style={{
+								width: '100%',
+								padding: '12px 0 12px 4px',
+								border: 0,
+								outline: 0,
+								resize: 'none',
+								background: 'transparent',
+								color: 'inherit',
+								fontFamily: 'inherit',
+								fontSize: 'inherit',
+								lineHeight: '1.5',
+								minHeight: '44px',
+								maxHeight: `${MAX_HEIGHT}px`,
+								overflowY: 'hidden',
+								display: 'block',
+							}}
+						/>
+					</div>
+
+					<Box
+						mb={8}
+						mr={16}
+						onClick={handleSend}
+						className='cursor-pointer'
+						style={{ flexShrink: 0 }}
+					>
+						<SendRounded />
+					</Box>
 				</div>
-				<Box mb={8} mr={16} onClick={handleSend} className='cursor-pointer' style={{ flexShrink: 0 }}>
-					<SendRounded />
-				</Box>
 			</ColorBox>
+
 			<ColorBox
 				display='flex'
 				borderRadius={'26px'}
