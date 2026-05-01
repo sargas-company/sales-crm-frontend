@@ -1,8 +1,7 @@
-import React, { memo, useState } from 'react'
+import React, { memo, useRef, useState } from 'react'
 import { SendRounded } from '@mui/icons-material'
 import Box from '../../box/Box'
 import ColorBox from '../../box/ColorBox'
-import { TextField } from '../../../ui'
 import { useAppDispatch, useAppSelector } from '../../../hooks'
 import { addUserMessage } from '../../../store/chats/apiChatSlice'
 
@@ -10,25 +9,47 @@ interface Props {
 	onSend: (proposalId: string, content: string, model: string) => void
 }
 
+const MAX_HEIGHT = 220
+
 const ChatFooter = ({ onSend }: Props) => {
 	const dispatch = useAppDispatch()
 	const selectedProposalId = useAppSelector((state) => state.apiChat.selectedProposalId)
 	const isStreaming = useAppSelector((state) => state.apiChat.isStreaming)
 	const selectedModel = useAppSelector((state) => state.apiChat.selectedModel)
 	const [message, setMessage] = useState('')
+	const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+	const resetHeight = () => {
+		if (textareaRef.current) {
+			textareaRef.current.style.height = 'auto'
+			textareaRef.current.style.overflowY = 'hidden'
+		}
+	}
 
 	const handleSend = () => {
 		if (!message.trim() || !selectedProposalId || isStreaming) return
 		dispatch(addUserMessage({ content: message }))
 		onSend(selectedProposalId, message, selectedModel)
 		setMessage('')
+		resetHeight()
 	}
 
-	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-		if (e.key === 'Enter' && message.trim()) {
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+		if (e.key === 'Enter' && !e.shiftKey && message.trim()) {
+			e.preventDefault()
 			handleSend()
 		}
 	}
+
+	const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+		setMessage(e.target.value)
+		e.target.style.height = 'auto'
+		const newHeight = Math.min(e.target.scrollHeight, MAX_HEIGHT)
+		e.target.style.height = `${newHeight}px`
+		e.target.style.overflowY = e.target.scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden'
+	}
+
+	const isDisabled = isStreaming || !selectedProposalId
 
 	return (
 		<Box display='flex' align='center' justify='space-between' space={0.8} px={12}>
@@ -41,11 +62,13 @@ const ChatFooter = ({ onSend }: Props) => {
 				className='overflow-hidden'
 				mb={20}
 				flex={1}
+				style={{ alignItems: 'flex-end' }}
 			>
-				<TextField
-					type='text'
+				<textarea
+					ref={textareaRef}
 					name='chat-message'
 					value={message}
+					rows={1}
 					placeholder={
 						isStreaming
 							? 'Waiting for response…'
@@ -53,21 +76,31 @@ const ChatFooter = ({ onSend }: Props) => {
 								? 'Chat unavailable'
 								: 'Type your message here...'
 					}
-					endAdornment={
-						<Box mr={16} mt={6} onClick={handleSend} className='cursor-pointer'>
-							<SendRounded />
-						</Box>
-					}
-					onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMessage(e.target.value)}
+					disabled={isDisabled}
+					onChange={handleChange}
 					onKeyDown={handleKeyDown}
-					width='100%'
 					style={{
-						padding: '12px 40px 12px 25px',
+						flex: 1,
+						width: '100%',
+						padding: '12px 0 12px 25px',
 						border: 0,
 						outline: 0,
+						resize: 'none',
+						background: 'transparent',
+						color: 'inherit',
+						fontFamily: 'inherit',
+						fontSize: 'inherit',
+						lineHeight: '1.5',
+						minHeight: '44px',
+						maxHeight: `${MAX_HEIGHT}px`,
+						overflowY: 'hidden',
+						display: 'block',
+						opacity: isDisabled ? 0.5 : 1,
 					}}
-					disable={isStreaming || !selectedProposalId}
 				/>
+				<Box mb={8} mr={16} onClick={handleSend} className='cursor-pointer' style={{ flexShrink: 0 }}>
+					<SendRounded />
+				</Box>
 			</ColorBox>
 		</Box>
 	)

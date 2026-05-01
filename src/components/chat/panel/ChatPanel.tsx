@@ -5,8 +5,10 @@ import axiosInstance from '../../../api/axiosInstance'
 import { usePanelSocket } from '../../../hooks/usePanelSocket'
 import Box from '../../box/Box'
 import ColorBox from '../../box/ColorBox'
-import { CustomAvatar, Text, TextField } from '../../../ui'
+import { CustomAvatar, Text } from '../../../ui'
 import MsgBox from '../chat-content/MsgBox'
+
+const MAX_HEIGHT = 220
 
 interface Message {
 	id: string
@@ -39,6 +41,7 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 		active: false,
 	})
 	const scrollRef = useRef<HTMLDivElement | null>(null)
+	const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
 	// Load history whenever historyUrl changes (tab opened / different entity)
 	useEffect(() => {
@@ -88,6 +91,13 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 		if (el) el.scrollTop = el.scrollHeight
 	}, [messages, streaming.content])
 
+	const resetTextareaHeight = () => {
+		if (textareaRef.current) {
+			textareaRef.current.style.height = 'auto'
+			textareaRef.current.style.overflowY = 'hidden'
+		}
+	}
+
 	const handleSend = () => {
 		if (!inputValue.trim() || !proposalId || streaming.active) return
 		const msg: Message = {
@@ -102,10 +112,22 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 		setStreaming({ content: '', analysis: null, active: true })
 		sendMessage(proposalId, inputValue, model)
 		setInputValue('')
+		resetTextareaHeight()
 	}
 
-	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-		if (e.key === 'Enter' && inputValue.trim()) handleSend()
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+		if (e.key === 'Enter' && !e.shiftKey && inputValue.trim()) {
+			e.preventDefault()
+			handleSend()
+		}
+	}
+
+	const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+		setInputValue(e.target.value)
+		e.target.style.height = 'auto'
+		const newHeight = Math.min(e.target.scrollHeight, MAX_HEIGHT)
+		e.target.style.height = `${newHeight}px`
+		e.target.style.overflowY = e.target.scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden'
 	}
 
 	if (loading) {
@@ -233,11 +255,13 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 					border={{ show: true, size: '1px', radius: '26px' }}
 					className='overflow-hidden'
 					flex={1}
+					style={{ alignItems: 'flex-end' }}
 				>
-					<TextField
-						type='text'
+					<textarea
+						ref={textareaRef}
 						name='panel-chat-message'
 						value={inputValue}
+						rows={1}
 						placeholder={
 							streaming.active
 								? 'Waiting for response…'
@@ -245,19 +269,31 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 									? 'Chat unavailable'
 									: 'Type your message here...'
 						}
-						endAdornment={
-							<Box mr={16} mt={6} onClick={handleSend} className='cursor-pointer'>
-								<SendRounded />
-							</Box>
-						}
-						onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-							setInputValue(e.target.value)
-						}
+						disabled={streaming.active || !proposalId}
+						onChange={handleChange}
 						onKeyDown={handleKeyDown}
-						width='100%'
-						style={{ padding: '12px 40px 12px 25px', border: 0, outline: 0 }}
-						disable={streaming.active || !proposalId}
+						style={{
+							flex: 1,
+							width: '100%',
+							padding: '12px 0 12px 25px',
+							border: 0,
+							outline: 0,
+							resize: 'none',
+							background: 'transparent',
+							color: 'inherit',
+							fontFamily: 'inherit',
+							fontSize: 'inherit',
+							lineHeight: '1.5',
+							minHeight: '44px',
+							maxHeight: `${MAX_HEIGHT}px`,
+							overflowY: 'hidden',
+							display: 'block',
+							opacity: streaming.active || !proposalId ? 0.5 : 1,
+						}}
 					/>
+					<Box mb={8} mr={16} onClick={handleSend} className='cursor-pointer' style={{ flexShrink: 0 }}>
+						<SendRounded />
+					</Box>
 				</ColorBox>
 			</Box>
 		</Box>

@@ -1,28 +1,49 @@
 import { AttachmentRounded, MicRounded, SendRounded } from '@mui/icons-material'
-import React, { memo, useState } from 'react'
+import React, { memo, useRef, useState } from 'react'
 import { shallowEqual } from 'react-redux'
 import { sendMessage } from '../../../store/chats/chatSlice'
 import { useAppDispatch, useAppSelector } from '../../../hooks'
 import { RootState } from '../../../store/store'
-import { IconButton, TextField } from '../../../ui'
+import { IconButton } from '../../../ui'
 import Box from '../../box/Box'
 import ColorBox from '../../box/ColorBox'
 
 const selectCurrentUid = (state: RootState) => state.chat.currentUser.uid
 
+const MAX_HEIGHT = 220
+
 const ChatFooter = () => {
 	const dispatch = useAppDispatch()
 	const currentUid = useAppSelector(selectCurrentUid, shallowEqual)
-
 	const [message, setMessage] = useState('')
+	const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-	const handleMessageChange = (eve: React.ChangeEvent<HTMLInputElement>) =>
-		void setMessage(eve.target.value)
+	const resetHeight = () => {
+		if (textareaRef.current) {
+			textareaRef.current.style.height = 'auto'
+			textareaRef.current.style.overflowY = 'hidden'
+		}
+	}
 
-	const handleEnterKeyPress = (eve: React.KeyboardEvent<HTMLInputElement>) => {
-		if (eve.key === 'Enter' && message.trim()) {
-			dispatch(sendMessage(currentUid, message))
-			setMessage('')
+	const handleSend = () => {
+		if (!message.trim()) return
+		dispatch(sendMessage(currentUid, message))
+		setMessage('')
+		resetHeight()
+	}
+
+	const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+		setMessage(e.target.value)
+		e.target.style.height = 'auto'
+		const newHeight = Math.min(e.target.scrollHeight, MAX_HEIGHT)
+		e.target.style.height = `${newHeight}px`
+		e.target.style.overflowY = e.target.scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden'
+	}
+
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+		if (e.key === 'Enter' && !e.shiftKey && message.trim()) {
+			e.preventDefault()
+			handleSend()
 		}
 	}
 
@@ -34,26 +55,37 @@ const ChatFooter = () => {
 				borderRadius={'26px'}
 				className='overflow-hidden'
 				flex={1}
+				style={{ alignItems: 'flex-end' }}
 			>
-				<TextField
-					type='text'
+				<textarea
+					ref={textareaRef}
 					name='message-write-box'
-					defaultValue={message}
-					placeholder='Type your message here...1'
-					endAdornment={
-						<Box mr={16}>
-							<SendRounded />
-						</Box>
-					}
-					onChange={handleMessageChange}
-					onKeyDown={handleEnterKeyPress}
-					width='100%'
+					value={message}
+					rows={1}
+					placeholder='Type your message here...'
+					onChange={handleChange}
+					onKeyDown={handleKeyDown}
 					style={{
-						padding: '12px 40px 12px 20px',
+						flex: 1,
+						width: '100%',
+						padding: '12px 0 12px 20px',
 						border: 0,
 						outline: 0,
+						resize: 'none',
+						background: 'transparent',
+						color: 'inherit',
+						fontFamily: 'inherit',
+						fontSize: 'inherit',
+						lineHeight: '1.5',
+						minHeight: '44px',
+						maxHeight: `${MAX_HEIGHT}px`,
+						overflowY: 'hidden',
+						display: 'block',
 					}}
 				/>
+				<Box mb={8} mr={16} onClick={handleSend} className='cursor-pointer' style={{ flexShrink: 0 }}>
+					<SendRounded />
+				</Box>
 			</ColorBox>
 			<ColorBox
 				display='flex'
