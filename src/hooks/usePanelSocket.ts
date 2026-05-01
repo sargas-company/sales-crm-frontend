@@ -46,15 +46,18 @@ export const usePanelSocket = (handlers: Handlers) => {
 	}, [accessToken])
 
 	const sendMessage = useCallback(async (proposalId: string, content: string, model?: string, files?: File[]) => {
-		const formData = new FormData()
-		formData.append('content', content)
-		if (model) formData.append('model', model)
-		if (socketRef.current?.id) formData.append('socketId', socketRef.current.id)
-		files?.forEach((f) => formData.append('files', f))
-
-		await axiosInstance.post(`/proposals/${proposalId}/chat`, formData, {
-			headers: { 'Content-Type': undefined },
-		})
+		if (files?.length) {
+			const formData = new FormData()
+			formData.append('content', content)
+			if (model) formData.append('model', model)
+			if (socketRef.current?.id) formData.append('socketId', socketRef.current.id)
+			files.forEach((f) => formData.append('files', f))
+			await axiosInstance.post(`/proposals/${proposalId}/chat`, formData, {
+				headers: { 'Content-Type': undefined },
+			})
+		} else {
+			socketRef.current?.emit('send_message', { proposalId, content, ...(model ? { model } : {}) })
+		}
 	}, [])
 
 	return { sendMessage }

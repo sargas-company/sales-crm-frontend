@@ -306,7 +306,7 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 								onKeyDown={handleKeyDown}
 								style={{
 									width: '100%',
-									padding: '12px 0 12px 4px',
+									padding: '12px 5px 12px 4px',
 									border: 0,
 									outline: 0,
 									resize: 'none',
