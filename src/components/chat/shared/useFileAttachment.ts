@@ -4,7 +4,7 @@ export const ALLOWED_EXTENSIONS = [
 	'.pdf', '.docx', '.txt', '.md', '.xlsx', '.csv', '.jpg', '.jpeg', '.png',
 ]
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png'])
-const MAX_FILE_SIZE = 100 * 1024 * 1024
+const MAX_TOTAL_SIZE = 50 * 1024 * 1024
 const MAX_FILES = 10
 
 export interface AttachedFile {
@@ -33,7 +33,7 @@ export const useFileAttachment = () => {
 
 	useEffect(() => {
 		if (fileErrors.length === 0) return
-		const t = setTimeout(() => setFileErrors([]), 4000)
+		const t = setTimeout(() => setFileErrors([]), 15000)
 		return () => clearTimeout(t)
 	}, [fileErrors])
 
@@ -42,10 +42,12 @@ export const useFileAttachment = () => {
 		const toAdd: AttachedFile[] = []
 		const current = currentFilesRef.current
 
+		const currentTotal = current.reduce((sum, f) => sum + f.size, 0)
+
 		for (const file of files) {
 			if (current.length + toAdd.length >= MAX_FILES) {
-				if (!errors.some((e) => e.includes('максимум'))) {
-					errors.push(`Можно прикрепить максимум ${MAX_FILES} файлов.`)
+				if (!errors.some((e) => e.includes('maximum'))) {
+					errors.push(`You can attach a maximum of ${MAX_FILES} files.`)
 				}
 				break
 			}
@@ -53,13 +55,14 @@ export const useFileAttachment = () => {
 			const ext = `.${(file.name.split('.').pop() ?? '').toLowerCase()}`
 
 			if (!ALLOWED_EXTENSIONS.includes(ext)) {
-				errors.push(`"${file.name}": этот тип файла не поддерживается.`)
+				errors.push(`"${file.name}": file type not supported.`)
 				continue
 			}
 
-			if (file.size > MAX_FILE_SIZE) {
-				errors.push(`"${file.name}": файл слишком большой. Максимальный размер — 100 MB.`)
-				continue
+			const addedTotal = toAdd.reduce((sum, f) => sum + f.size, 0)
+			if (currentTotal + addedTotal + file.size > MAX_TOTAL_SIZE) {
+				errors.push(`Total attachments size exceeds 50 MB.`)
+				break
 			}
 
 			const id = `${file.name}-${file.size}-${file.lastModified}`

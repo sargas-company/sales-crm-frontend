@@ -6,6 +6,7 @@ import {
 	setStreamingAnalysis,
 	streamingDone,
 } from '../store/chats/apiChatSlice'
+import axiosInstance from '../api/axiosInstance'
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'http://localhost:3001'
 
@@ -46,8 +47,16 @@ export const useSocket = () => {
 		}
 	}, [accessToken, dispatch])
 
-	const sendMessage = useCallback((proposalId: string, content: string, model?: string) => {
-		socketRef.current?.emit('send_message', { proposalId, content, ...(model ? { model } : {}) })
+	const sendMessage = useCallback(async (proposalId: string, content: string, model?: string, files?: File[]) => {
+		const formData = new FormData()
+		formData.append('content', content)
+		if (model) formData.append('model', model)
+		if (socketRef.current?.id) formData.append('socketId', socketRef.current.id)
+		files?.forEach((f) => formData.append('files', f))
+
+		await axiosInstance.post(`/proposals/${proposalId}/chat`, formData, {
+			headers: { 'Content-Type': undefined },
+		})
 	}, [])
 
 	return { sendMessage }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useAppSelector } from './index'
+import axiosInstance from '../api/axiosInstance'
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'http://localhost:3001'
 
@@ -44,12 +45,15 @@ export const usePanelSocket = (handlers: Handlers) => {
 		}
 	}, [accessToken])
 
-	const sendMessage = useCallback((proposalId: string, content: string, model?: string, files?: File[]) => {
-		socketRef.current?.emit('send_message', {
-			proposalId,
-			content,
-			...(model ? { model } : {}),
-			...(files?.length ? { files } : {}),
+	const sendMessage = useCallback(async (proposalId: string, content: string, model?: string, files?: File[]) => {
+		const formData = new FormData()
+		formData.append('content', content)
+		if (model) formData.append('model', model)
+		if (socketRef.current?.id) formData.append('socketId', socketRef.current.id)
+		files?.forEach((f) => formData.append('files', f))
+
+		await axiosInstance.post(`/proposals/${proposalId}/chat`, formData, {
+			headers: { 'Content-Type': undefined },
 		})
 	}, [])
 
