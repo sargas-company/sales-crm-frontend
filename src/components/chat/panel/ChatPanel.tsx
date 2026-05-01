@@ -5,8 +5,13 @@ import axiosInstance from '../../../api/axiosInstance'
 import { usePanelSocket } from '../../../hooks/usePanelSocket'
 import Box from '../../box/Box'
 import ColorBox from '../../box/ColorBox'
-import { CustomAvatar, Text, TextField } from '../../../ui'
+import { CustomAvatar, Text } from '../../../ui'
 import MsgBox from '../chat-content/MsgBox'
+import AttachMenuButton from '../shared/AttachMenuButton'
+import FileAttachmentBar from '../shared/FileAttachmentBar'
+import { useFileAttachment } from '../shared/useFileAttachment'
+
+const MAX_HEIGHT = 220
 
 interface Message {
 	id: string
@@ -39,6 +44,8 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 		active: false,
 	})
 	const scrollRef = useRef<HTMLDivElement | null>(null)
+	const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+	const { attachedFiles, fileErrors, validateAndAdd, removeFile, clearFiles } = useFileAttachment()
 
 	// Load history whenever historyUrl changes (tab opened / different entity)
 	useEffect(() => {
@@ -88,6 +95,13 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 		if (el) el.scrollTop = el.scrollHeight
 	}, [messages, streaming.content])
 
+	const resetTextareaHeight = () => {
+		if (textareaRef.current) {
+			textareaRef.current.style.height = 'auto'
+			textareaRef.current.style.overflowY = 'hidden'
+		}
+	}
+
 	const handleSend = () => {
 		if (!inputValue.trim() || !proposalId || streaming.active) return
 		const msg: Message = {
@@ -100,12 +114,25 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 		}
 		setMessages((m) => [...m, msg])
 		setStreaming({ content: '', analysis: null, active: true })
-		sendMessage(proposalId, inputValue, model)
+		sendMessage(proposalId, inputValue, model, attachedFiles.map((f) => f.file))
 		setInputValue('')
+		clearFiles()
+		resetTextareaHeight()
 	}
 
-	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-		if (e.key === 'Enter' && inputValue.trim()) handleSend()
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+		if (e.key === 'Enter' && !e.shiftKey && inputValue.trim()) {
+			e.preventDefault()
+			handleSend()
+		}
+	}
+
+	const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+		setInputValue(e.target.value)
+		e.target.style.height = 'auto'
+		const newHeight = Math.min(e.target.scrollHeight, MAX_HEIGHT)
+		e.target.style.height = `${newHeight}px`
+		e.target.style.overflowY = e.target.scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden'
 	}
 
 	if (loading) {
@@ -227,6 +254,7 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 			<Box display='flex' align='center' space={0.8} px={12} py={8} mb={20}>
 				<ColorBox
 					display='flex'
+					flexDirection='column'
 					backgroundTheme='foreground'
 					transparency={3}
 					borderRadius='26px'
@@ -234,30 +262,78 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 					className='overflow-hidden'
 					flex={1}
 				>
-					<TextField
-						type='text'
-						name='panel-chat-message'
-						value={inputValue}
-						placeholder={
-							streaming.active
-								? 'Waiting for response…'
-								: !proposalId
-									? 'Chat unavailable'
-									: 'Type your message here...'
-						}
-						endAdornment={
-							<Box mr={16} mt={6} onClick={handleSend} className='cursor-pointer'>
-								<SendRounded />
-							</Box>
-						}
-						onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-							setInputValue(e.target.value)
-						}
-						onKeyDown={handleKeyDown}
-						width='100%'
-						style={{ padding: '12px 40px 12px 25px', border: 0, outline: 0 }}
-						disable={streaming.active || !proposalId}
-					/>
+					<FileAttachmentBar files={attachedFiles} onRemove={removeFile} />
+
+					{fileErrors.length > 0 && (
+						<div style={{ padding: '4px 14px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+							{fileErrors.map((err, i) => (
+								<span key={i} style={{ fontSize: 11, color: '#ef4444', lineHeight: 1.4 }}>
+									{err}
+								</span>
+							))}
+						</div>
+					)}
+
+					<div style={{ display: 'flex', alignItems: 'flex-end' }}>
+						<AttachMenuButton
+							disabled={streaming.active || !proposalId}
+							onFilesSelected={validateAndAdd}
+						/>
+
+						<div
+							style={{
+								flex: 1,
+								maskImage:
+									'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
+								WebkitMaskImage:
+									'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
+							}}
+						>
+							<textarea
+								ref={textareaRef}
+								name='panel-chat-message'
+								value={inputValue}
+								rows={1}
+								placeholder={
+									streaming.active
+										? 'Waiting for response…'
+										: !proposalId
+											? 'Chat unavailable'
+											: 'Type your message here...'
+								}
+								disabled={streaming.active || !proposalId}
+								onChange={handleChange}
+								onKeyDown={handleKeyDown}
+								style={{
+									width: '100%',
+									padding: '12px 5px 12px 4px',
+									border: 0,
+									outline: 0,
+									resize: 'none',
+									background: 'transparent',
+									color: 'inherit',
+									fontFamily: 'inherit',
+									fontSize: 'inherit',
+									lineHeight: '1.5',
+									minHeight: '44px',
+									maxHeight: `${MAX_HEIGHT}px`,
+									overflowY: 'hidden',
+									display: 'block',
+									opacity: streaming.active || !proposalId ? 0.5 : 1,
+								}}
+							/>
+						</div>
+
+						<Box
+							mb={8}
+							mr={16}
+							onClick={handleSend}
+							className='cursor-pointer'
+							style={{ flexShrink: 0 }}
+						>
+							<SendRounded />
+						</Box>
+					</div>
 				</ColorBox>
 			</Box>
 		</Box>
