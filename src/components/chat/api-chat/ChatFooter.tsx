@@ -64,40 +64,47 @@ const ChatFooter = ({ onSend }: Props) => {
 				flex={1}
 				style={{ alignItems: 'flex-end' }}
 			>
-				<textarea
-					ref={textareaRef}
-					name='chat-message'
-					value={message}
-					rows={1}
-					placeholder={
-						isStreaming
-							? 'Waiting for response…'
-							: !selectedProposalId
-								? 'Chat unavailable'
-								: 'Type your message here...'
-					}
-					disabled={isDisabled}
-					onChange={handleChange}
-					onKeyDown={handleKeyDown}
+				<div
 					style={{
 						flex: 1,
-						width: '100%',
-						padding: '12px 0 12px 25px',
-						border: 0,
-						outline: 0,
-						resize: 'none',
-						background: 'transparent',
-						color: 'inherit',
-						fontFamily: 'inherit',
-						fontSize: 'inherit',
-						lineHeight: '1.5',
-						minHeight: '44px',
-						maxHeight: `${MAX_HEIGHT}px`,
-						overflowY: 'hidden',
-						display: 'block',
-						opacity: isDisabled ? 0.5 : 1,
+						maskImage: 'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
+						WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
 					}}
-				/>
+				>
+					<textarea
+						ref={textareaRef}
+						name='chat-message'
+						value={message}
+						rows={1}
+						placeholder={
+							isStreaming
+								? 'Waiting for response…'
+								: !selectedProposalId
+									? 'Chat unavailable'
+									: 'Type your message here...'
+						}
+						disabled={isDisabled}
+						onChange={handleChange}
+						onKeyDown={handleKeyDown}
+						style={{
+							width: '100%',
+							padding: '12px 0 12px 25px',
+							border: 0,
+							outline: 0,
+							resize: 'none',
+							background: 'transparent',
+							color: 'inherit',
+							fontFamily: 'inherit',
+							fontSize: 'inherit',
+							lineHeight: '1.5',
+							minHeight: '44px',
+							maxHeight: `${MAX_HEIGHT}px`,
+							overflowY: 'hidden',
+							display: 'block',
+							opacity: isDisabled ? 0.5 : 1,
+						}}
+					/>
+				</div>
 				<Box mb={8} mr={16} onClick={handleSend} className='cursor-pointer' style={{ flexShrink: 0 }}>
 					<SendRounded />
 				</Box>

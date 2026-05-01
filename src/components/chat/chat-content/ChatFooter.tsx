@@ -57,32 +57,39 @@ const ChatFooter = () => {
 				flex={1}
 				style={{ alignItems: 'flex-end' }}
 			>
-				<textarea
-					ref={textareaRef}
-					name='message-write-box'
-					value={message}
-					rows={1}
-					placeholder='Type your message here...'
-					onChange={handleChange}
-					onKeyDown={handleKeyDown}
+				<div
 					style={{
 						flex: 1,
-						width: '100%',
-						padding: '12px 0 12px 20px',
-						border: 0,
-						outline: 0,
-						resize: 'none',
-						background: 'transparent',
-						color: 'inherit',
-						fontFamily: 'inherit',
-						fontSize: 'inherit',
-						lineHeight: '1.5',
-						minHeight: '44px',
-						maxHeight: `${MAX_HEIGHT}px`,
-						overflowY: 'hidden',
-						display: 'block',
+						maskImage: 'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
+						WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, black 10px, black calc(100% - 10px), transparent 100%)',
 					}}
-				/>
+				>
+					<textarea
+						ref={textareaRef}
+						name='message-write-box'
+						value={message}
+						rows={1}
+						placeholder='Type your message here...'
+						onChange={handleChange}
+						onKeyDown={handleKeyDown}
+						style={{
+							width: '100%',
+							padding: '12px 0 12px 20px',
+							border: 0,
+							outline: 0,
+							resize: 'none',
+							background: 'transparent',
+							color: 'inherit',
+							fontFamily: 'inherit',
+							fontSize: 'inherit',
+							lineHeight: '1.5',
+							minHeight: '44px',
+							maxHeight: `${MAX_HEIGHT}px`,
+							overflowY: 'hidden',
+							display: 'block',
+						}}
+					/>
+				</div>
 				<Box mb={8} mr={16} onClick={handleSend} className='cursor-pointer' style={{ flexShrink: 0 }}>
 					<SendRounded />
 				</Box>
