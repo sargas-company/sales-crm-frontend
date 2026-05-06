@@ -3,13 +3,13 @@ import { SendRounded } from '@mui/icons-material'
 import Box from '../../box/Box'
 import ColorBox from '../../box/ColorBox'
 import { useAppDispatch, useAppSelector } from '../../../hooks'
-import { addUserMessage } from '../../../store/chats/apiChatSlice'
+import { addUserMessage, replaceMessageId } from '../../../store/chats/apiChatSlice'
 import AttachMenuButton from '../shared/AttachMenuButton'
 import FileAttachmentBar from '../shared/FileAttachmentBar'
 import { useFileAttachment } from '../shared/useFileAttachment'
 
 interface Props {
-	onSend: (proposalId: string, content: string, model: string, files?: File[]) => void
+	onSend: (proposalId: string, content: string, model: string, files?: File[]) => Promise<string | undefined>
 }
 
 const MAX_HEIGHT = 220
@@ -30,13 +30,26 @@ const ChatFooter = ({ onSend }: Props) => {
 		}
 	}
 
-	const handleSend = () => {
+	const handleSend = async () => {
 		if (!message.trim() || !selectedProposalId || isStreaming) return
-		dispatch(addUserMessage({ content: message }))
-		onSend(selectedProposalId, message, selectedModel, attachedFiles.map((f) => f.file))
+		const tempId = `temp-${Date.now()}`
+		dispatch(addUserMessage({
+			id: tempId,
+			content: message,
+			attachments: attachedFiles.map((f) => ({
+				id: f.id,
+				fileName: f.name,
+				mimeType: null,
+				status: 'PENDING' as const,
+				createdAt: new Date().toISOString(),
+			})),
+		}))
+		const files = attachedFiles.map((f) => f.file)
 		setMessage('')
 		clearFiles()
 		resetHeight()
+		const realId = await onSend(selectedProposalId, message, selectedModel, files)
+		if (realId) dispatch(replaceMessageId({ tempId, realId }))
 	}
 
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

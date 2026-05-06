@@ -41,7 +41,7 @@ const ChatList = () => {
 	const handleSelect = (chatId: string) => {
 		const chat = chatList.find((c) => c.id === chatId)
 		const proposalId = chat?.proposal?.id ?? null
-		dispatch(selectChat({ chatId, proposalId }))
+		dispatch(selectChat({ chatId, proposalId, leadId: chat?.lead?.id ?? null }))
 		if (proposalId) {
 			dispatch(fetchProposalHistory(proposalId))
 		} else if (chat?.lead?.id) {

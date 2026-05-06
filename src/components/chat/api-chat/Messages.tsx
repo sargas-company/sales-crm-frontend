@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import styled from 'styled-components'
 import { useAppSelector } from '../../../hooks'
 import Box from '../../box/Box'
@@ -6,15 +6,26 @@ import ColorBox from '../../box/ColorBox'
 import { CustomAvatar, Text } from '../../../ui'
 import MsgBox from '../chat-content/MsgBox'
 import { ChatBubbleOutlineRounded } from '@mui/icons-material'
+import axiosInstance from '../../../api/axiosInstance'
+import AttachmentChip from '../shared/AttachmentChip'
+import MessageFailedBadge from '../shared/MessageFailedBadge'
 
 const Messages = () => {
 	const chatHistory = useAppSelector((state) => state.apiChat.chatHistory)
 	const streamingContent = useAppSelector((state) => state.apiChat.streamingContent)
-	const streamingAnalysis = useAppSelector((state) => state.apiChat.streamingAnalysis)
 	const isStreaming = useAppSelector((state) => state.apiChat.isStreaming)
 	const loadingHistory = useAppSelector((state) => state.apiChat.loadingHistory)
+	const selectedProposalId = useAppSelector((state) => state.apiChat.selectedProposalId)
 
 	const scrollRef = useRef<HTMLDivElement | null>(null)
+
+	const openAttachment = useCallback(async (attachmentId: string) => {
+		if (!selectedProposalId) return
+		const { data } = await axiosInstance.get<{ url: string }>(
+			`/proposals/${selectedProposalId}/chat/attachments/${attachmentId}/url`
+		)
+		window.open(data.url, '_blank')
+	}, [selectedProposalId])
 
 	// Instant scroll on first render
 	useLayoutEffect(() => {
@@ -103,6 +114,14 @@ const Messages = () => {
 							</ColorBox>
 						)}
 						<MsgBox msg={msg.content} from={msg.role === 'user' ? 'me' : 'other'} />
+						{msg.attachments && msg.attachments.length > 0 && (
+							<div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+								{msg.attachments.map((a) => (
+									<AttachmentChip key={a.id} attachment={a} onOpen={openAttachment} />
+								))}
+							</div>
+						)}
+						{msg.status === 'FAILED' && <MessageFailedBadge />}
 						<Text varient='caption' secondary styles={{ marginTop: 2 }}>
 							{new Date(msg.createdAt).toLocaleTimeString([], {
 								hour: '2-digit',
@@ -116,23 +135,6 @@ const Messages = () => {
 			{isStreaming && (
 				<Box display='flex' px={16} flexDirection='row' space={0.8} mb={8}>
 					<Box space={0.4} display='flex' flexDirection='column' align='flex-start' flex={1}>
-						{streamingAnalysis && (
-							<ColorBox
-								transparency={3}
-								px={10}
-								py={4}
-								mb={4}
-								borderRadius='6px'
-								style={{ display: 'inline-flex', gap: 8 }}
-							>
-								<Text varient='caption' weight='bold' color='primary'>
-									{streamingAnalysis.decision.toUpperCase()}
-								</Text>
-								<Text varient='caption' secondary>
-									{streamingAnalysis.reasoning}
-								</Text>
-							</ColorBox>
-						)}
 						{streamingContent ? (
 							<MsgBox msg={streamingContent} from='other' />
 						) : (

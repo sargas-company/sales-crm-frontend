@@ -1,6 +1,8 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit'
 import axiosInstance from '../../api/axiosInstance'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export interface ChatUser {
 	id: string
 	email: string
@@ -44,14 +46,26 @@ export interface ChatItem {
 	messages: ChatLastMessage[]
 }
 
+export type AttachmentStatus = 'PENDING' | 'PROCESSING' | 'DONE' | 'FAILED' | 'TIMEOUT'
+
+export interface MessageAttachment {
+	id: string
+	fileName: string
+	mimeType: string | null
+	status: AttachmentStatus
+	createdAt: string
+}
+
 export interface ChatMessage {
 	id: string
 	chatId: string | null
 	role: 'user' | 'assistant'
 	content: string
+	status?: string
 	decision: string | null
 	reasoning: string | null
 	createdAt: string
+	attachments?: MessageAttachment[]
 }
 
 export interface ChatContext {
@@ -109,11 +123,11 @@ interface ChatState {
 
 	selectedChatId: string | null
 	selectedProposalId: string | null
+	selectedLeadId: string | null
 	chatHistory: ChatMessage[]
 	loadingHistory: boolean
 
 	streamingContent: string
-	streamingAnalysis: { decision: string; reasoning: string } | null
 	isStreaming: boolean
 	selectedModel: string
 	chatContext: ChatContext | null
@@ -128,11 +142,11 @@ const initialState: ChatState = {
 
 	selectedChatId: null,
 	selectedProposalId: null,
+	selectedLeadId: null,
 	chatHistory: [],
 	loadingHistory: false,
 
 	streamingContent: '',
-	streamingAnalysis: null,
 	isStreaming: false,
 	selectedModel: 'claude-sonnet-4-6',
 	chatContext: null,
@@ -156,7 +170,9 @@ export const fetchChats = createAsyncThunk(
 export const fetchProposalHistory = createAsyncThunk(
 	'apiChat/fetchHistory',
 	async (proposalId: string) => {
-		const { data } = await axiosInstance.get<{ messages: ChatMessage[]; context: ChatContext }>(`/proposals/${proposalId}/chat`)
+		const { data } = await axiosInstance.get<{ messages: ChatMessage[]; context: ChatContext }>(
+			`/proposals/${proposalId}/chat/messages`
+		)
 		return { messages: data.messages, context: data.context }
 	}
 )
@@ -164,7 +180,9 @@ export const fetchProposalHistory = createAsyncThunk(
 export const fetchLeadHistory = createAsyncThunk(
 	'apiChat/fetchLeadHistory',
 	async (leadId: string) => {
-		const { data } = await axiosInstance.get<{ messages: ChatMessage[]; context: ChatContext }>(`/leads/${leadId}/chat`)
+		const { data } = await axiosInstance.get<{ messages: ChatMessage[]; context: ChatContext }>(
+			`/leads/${leadId}/chat`
+		)
 		return { messages: data.messages, context: data.context }
 	}
 )
@@ -179,62 +197,96 @@ const apiChatSlice = createSlice({
 			state.nextCursor = null
 			state.selectedChatId = null
 			state.selectedProposalId = null
+			state.selectedLeadId = null
 			state.chatHistory = []
 			state.streamingContent = ''
-			state.streamingAnalysis = null
 			state.isStreaming = false
 		},
-		selectChat: (state, action: PayloadAction<{ chatId: string; proposalId: string | null }>) => {
+		selectChat: (
+			state,
+			action: PayloadAction<{
+				chatId: string
+				proposalId: string | null
+				leadId?: string | null
+			}>
+		) => {
 			state.selectedChatId = action.payload.chatId
 			state.selectedProposalId = action.payload.proposalId
+			state.selectedLeadId = action.payload.leadId ?? null
 			state.chatHistory = []
 			state.chatContext = null
 			state.streamingContent = ''
-			state.streamingAnalysis = null
 			state.isStreaming = false
 		},
-		addUserMessage: (state, action: PayloadAction<{ content: string }>) => {
+		addUserMessage: (state, action: PayloadAction<{ id: string; content: string; attachments?: MessageAttachment[] }>) => {
 			const msg: ChatMessage = {
-				id: `temp-${Date.now()}`,
+				id: action.payload.id,
 				chatId: null,
 				role: 'user',
 				content: action.payload.content,
 				decision: null,
 				reasoning: null,
 				createdAt: new Date().toISOString(),
+				attachments: action.payload.attachments ?? [],
 			}
 			state.chatHistory.push(msg)
 			state.isStreaming = true
 			state.streamingContent = ''
-			state.streamingAnalysis = null
 		},
-		setStreamingAnalysis: (
-			state,
-			action: PayloadAction<{ decision: string; reasoning: string }>
-		) => {
-			state.streamingAnalysis = action.payload
+		replaceMessageId: (state, action: PayloadAction<{ tempId: string; realId: string }>) => {
+			const msg = state.chatHistory.find((m) => m.id === action.payload.tempId)
+			if (msg) msg.id = action.payload.realId
 		},
 		appendStreamingChunk: (state, action: PayloadAction<string>) => {
+			state.isStreaming = true
 			state.streamingContent += action.payload
 		},
 		setSelectedModel: (state, action: PayloadAction<string>) => {
 			state.selectedModel = action.payload
 		},
-		streamingDone: (state) => {
-			if (state.streamingContent) {
-				const msg: ChatMessage = {
-					id: `stream-${Date.now()}`,
-					chatId: null,
-					role: 'assistant',
-					content: state.streamingContent,
-					decision: state.streamingAnalysis?.decision ?? null,
-					reasoning: state.streamingAnalysis?.reasoning ?? null,
-					createdAt: new Date().toISOString(),
-				}
-				state.chatHistory.push(msg)
-			}
+		streamingStart: (state) => {
+			state.isStreaming = true
 			state.streamingContent = ''
+		},
+		streamingDone: (state) => {
 			state.isStreaming = false
+			state.streamingContent = ''
+		},
+		updateMessageStatus: (
+			state,
+			action: PayloadAction<{ messageId: string; status: string }>
+		) => {
+			const msg = state.chatHistory.find((m) => m.id === action.payload.messageId)
+			if (msg) msg.status = action.payload.status
+		},
+		updateAttachmentStatus: (
+			state,
+			action: PayloadAction<{
+				messageId: string
+				attachmentId: string
+				status: AttachmentStatus
+			}>
+		) => {
+			const msg = state.chatHistory.find((m) => m.id === action.payload.messageId)
+			if (!msg?.attachments) return
+			const att = msg.attachments.find((a) => a.id === action.payload.attachmentId)
+			if (att) {
+				att.status = action.payload.status
+			} else {
+				// Оптимистичное вложение имеет локальный id — присваиваем реальный UUID и обновляем статус
+				const tempAtt = msg.attachments.find((a) => !UUID_RE.test(a.id))
+				if (tempAtt) {
+					tempAtt.id = action.payload.attachmentId
+					tempAtt.status = action.payload.status
+				}
+			}
+		},
+		setHistory: (
+			state,
+			action: PayloadAction<{ messages: ChatMessage[]; context: ChatContext | null }>
+		) => {
+			state.chatHistory = action.payload.messages
+			if (action.payload.context !== undefined) state.chatContext = action.payload.context
 		},
 	},
 	extraReducers: (builder) => {
@@ -294,10 +346,14 @@ export const {
 	setActiveTab,
 	selectChat,
 	addUserMessage,
-	setStreamingAnalysis,
+	replaceMessageId,
 	appendStreamingChunk,
+	streamingStart,
 	streamingDone,
 	setSelectedModel,
+	updateMessageStatus,
+	updateAttachmentStatus,
+	setHistory,
 } = apiChatSlice.actions
 
 export default apiChatSlice.reducer

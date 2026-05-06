@@ -4,7 +4,7 @@ export const ALLOWED_EXTENSIONS = [
 	'.pdf', '.docx', '.txt', '.md', '.xlsx', '.csv', '.jpg', '.jpeg', '.png',
 ]
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png'])
-const MAX_TOTAL_SIZE = 50 * 1024 * 1024
+const MAX_FILE_SIZE = 5 * 1024 * 1024
 const MAX_FILES = 10
 
 export interface AttachedFile {
@@ -42,8 +42,6 @@ export const useFileAttachment = () => {
 		const toAdd: AttachedFile[] = []
 		const current = currentFilesRef.current
 
-		const currentTotal = current.reduce((sum, f) => sum + f.size, 0)
-
 		for (const file of files) {
 			if (current.length + toAdd.length >= MAX_FILES) {
 				if (!errors.some((e) => e.includes('maximum'))) {
@@ -59,10 +57,9 @@ export const useFileAttachment = () => {
 				continue
 			}
 
-			const addedTotal = toAdd.reduce((sum, f) => sum + f.size, 0)
-			if (currentTotal + addedTotal + file.size > MAX_TOTAL_SIZE) {
-				errors.push(`Total attachments size exceeds 50 MB.`)
-				break
+			if (file.size > MAX_FILE_SIZE) {
+				errors.push(`"${file.name}": file exceeds the 5 MB limit.`)
+				continue
 			}
 
 			const id = `${file.name}-${file.size}-${file.lastModified}`

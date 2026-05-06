@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import styled from 'styled-components'
 import { ChatBubbleOutlineRounded, SendRounded } from '@mui/icons-material'
-import axiosInstance from '../../../api/axiosInstance'
-import { usePanelSocket } from '../../../hooks/usePanelSocket'
+import { useSocket } from '../../../hooks/useSocket'
+import { useAppDispatch, useAppSelector } from '../../../hooks'
+import { fetchProposalHistory, addUserMessage, replaceMessageId } from '../../../store/chats/apiChatSlice'
 import Box from '../../box/Box'
 import ColorBox from '../../box/ColorBox'
 import { CustomAvatar, Text } from '../../../ui'
@@ -10,6 +11,10 @@ import MsgBox from '../chat-content/MsgBox'
 import AttachMenuButton from '../shared/AttachMenuButton'
 import FileAttachmentBar from '../shared/FileAttachmentBar'
 import { useFileAttachment } from '../shared/useFileAttachment'
+import AttachmentChip from '../shared/AttachmentChip'
+import MessageFailedBadge from '../shared/MessageFailedBadge'
+import axiosInstance from '../../../api/axiosInstance'
+import type { MessageAttachment } from '../../../store/chats/apiChatSlice'
 
 const MAX_HEIGHT = 220
 
@@ -20,12 +25,7 @@ interface Message {
 	decision: string | null
 	reasoning: string | null
 	createdAt: string
-}
-
-interface StreamingState {
-	content: string
-	analysis: { decision: string; reasoning: string } | null
-	active: boolean
+	attachments?: MessageAttachment[]
 }
 
 interface Props {
@@ -34,66 +34,35 @@ interface Props {
 	model?: string
 }
 
-const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
-	const [messages, setMessages] = useState<Message[]>([])
-	const [loading, setLoading] = useState(true)
+const ChatPanel = ({ proposalId, model }: Props) => {
+	const dispatch = useAppDispatch()
+
 	const [inputValue, setInputValue] = useState('')
-	const [streaming, setStreaming] = useState<StreamingState>({
-		content: '',
-		analysis: null,
-		active: false,
-	})
+
+	const messages = useAppSelector((state) => state.apiChat.chatHistory)
+	const streamingContent = useAppSelector((state) => state.apiChat.streamingContent)
+	const isStreaming = useAppSelector((state) => state.apiChat.isStreaming)
+	const loading = useAppSelector((state) => state.apiChat.loadingHistory)
+
 	const scrollRef = useRef<HTMLDivElement | null>(null)
 	const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+
 	const { attachedFiles, fileErrors, validateAndAdd, removeFile, clearFiles } = useFileAttachment()
 
-	// Load history whenever historyUrl changes (tab opened / different entity)
+	const { sendMessage } = useSocket(proposalId)
+
+	// Load history
 	useEffect(() => {
-		let cancelled = false
-		setLoading(true)
-		setMessages([])
-		axiosInstance
-			.get<{ messages: Message[]; context: unknown }>(historyUrl)
-			.then(({ data }) => {
-				if (!cancelled) setMessages(data.messages)
-			})
-			.catch(() => {})
-			.finally(() => {
-				if (!cancelled) setLoading(false)
-			})
-		return () => {
-			cancelled = true
-		}
-	}, [historyUrl])
+		if (!proposalId) return
 
-	// WebSocket handlers
-	const { sendMessage } = usePanelSocket({
-		onAnalysis: (data) => setStreaming((s) => ({ ...s, analysis: data, active: true })),
-		onChunk: (text) => setStreaming((s) => ({ ...s, content: s.content + text })),
-		onDone: () => {
-			setStreaming((prev) => {
-				if (prev.content) {
-					const msg: Message = {
-						id: `stream-${Date.now()}`,
-						role: 'assistant',
-						content: prev.content,
-						decision: prev.analysis?.decision ?? null,
-						reasoning: prev.analysis?.reasoning ?? null,
-						createdAt: new Date().toISOString(),
-					}
-					setMessages((m) => [...m, msg])
-				}
-				return { content: '', analysis: null, active: false }
-			})
-		},
-		onError: () => setStreaming({ content: '', analysis: null, active: false }),
-	})
+		dispatch(fetchProposalHistory(proposalId))
+	}, [proposalId, dispatch])
 
-	// Auto-scroll to bottom on new messages / streaming chunks
+	// Auto-scroll
 	useLayoutEffect(() => {
 		const el = scrollRef.current
 		if (el) el.scrollTop = el.scrollHeight
-	}, [messages, streaming.content])
+	}, [messages, streamingContent])
 
 	const resetTextareaHeight = () => {
 		if (textareaRef.current) {
@@ -102,22 +71,45 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 		}
 	}
 
-	const handleSend = () => {
-		if (!inputValue.trim() || !proposalId || streaming.active) return
-		const msg: Message = {
-			id: `temp-${Date.now()}`,
-			role: 'user',
-			content: inputValue,
-			decision: null,
-			reasoning: null,
-			createdAt: new Date().toISOString(),
-		}
-		setMessages((m) => [...m, msg])
-		setStreaming({ content: '', analysis: null, active: true })
-		sendMessage(proposalId, inputValue, model, attachedFiles.map((f) => f.file))
+	const openAttachment = async (attachmentId: string) => {
+		if (!proposalId) return
+
+		const { data } = await axiosInstance.get<{ url: string }>(
+			`/proposals/${proposalId}/chat/attachments/${attachmentId}/url`
+		)
+
+		window.open(data.url, '_blank')
+	}
+
+	const handleSend = async () => {
+		if (!inputValue.trim() || !proposalId || isStreaming) return
+
+		const tempId = `temp-${Date.now()}`
+		const content = inputValue
+		const files = attachedFiles.map((f) => f.file)
+
 		setInputValue('')
 		clearFiles()
 		resetTextareaHeight()
+
+		dispatch(addUserMessage({
+			id: tempId,
+			content,
+			attachments: attachedFiles.map((f) => ({
+				id: f.id,
+				fileName: f.name,
+				mimeType: null,
+				status: 'PENDING' as const,
+				createdAt: new Date().toISOString(),
+			})),
+		}))
+
+		try {
+			const realId = await sendMessage(proposalId, content, model, files)
+			if (realId) dispatch(replaceMessageId({ tempId, realId }))
+		} catch {
+			// ошибка отправки — пользователь увидит FAILED статус через сокет
+		}
 	}
 
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -129,8 +121,11 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 
 	const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
 		setInputValue(e.target.value)
+
 		e.target.style.height = 'auto'
+
 		const newHeight = Math.min(e.target.scrollHeight, MAX_HEIGHT)
+
 		e.target.style.height = `${newHeight}px`
 		e.target.style.overflowY = e.target.scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden'
 	}
@@ -148,17 +143,18 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 	return (
 		<Box display='flex' flexDirection='column' style={{ height: '65vh', overflow: 'hidden' }}>
 			<MessagesScroll ref={scrollRef}>
-				{messages.length === 0 && !streaming.active && (
+				{messages.length === 0 && !isStreaming && (
 					<Box
 						display='flex'
-						flexDirection={'column'}
+						flexDirection='column'
 						align='center'
 						justify='center'
-						height={'100%'}
+						height='100%'
 					>
 						<CustomAvatar size={100} color='info' skin='light'>
 							<ChatBubbleOutlineRounded />
 						</CustomAvatar>
+
 						<Text heading='h6' skinColor>
 							No messages yet
 						</Text>
@@ -193,6 +189,7 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 									<Text varient='caption' weight='bold' color='primary'>
 										{msg.decision.toUpperCase()}
 									</Text>
+
 									{msg.reasoning && (
 										<Text varient='caption' secondary>
 											{msg.reasoning}
@@ -200,7 +197,26 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 									)}
 								</ColorBox>
 							)}
+
 							<MsgBox msg={msg.content} from={msg.role === 'user' ? 'me' : 'other'} />
+
+							{msg.attachments && msg.attachments.length > 0 && (
+								<div
+									style={{
+										display: 'flex',
+										flexWrap: 'wrap',
+										gap: 4,
+										marginTop: 4,
+									}}
+								>
+									{msg.attachments.map((a) => (
+										<AttachmentChip key={a.id} attachment={a} onOpen={openAttachment} />
+									))}
+								</div>
+							)}
+
+							{msg.status === 'FAILED' && <MessageFailedBadge />}
+
 							<Text varient='caption' secondary styles={{ marginTop: 2 }}>
 								{new Date(msg.createdAt).toLocaleTimeString([], {
 									hour: '2-digit',
@@ -211,7 +227,7 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 					</Box>
 				))}
 
-				{streaming.active && (
+				{isStreaming && (
 					<Box display='flex' px={16} flexDirection='row' space={0.8} mb={8}>
 						<Box
 							space={0.4}
@@ -220,25 +236,8 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 							align='flex-start'
 							flex={1}
 						>
-							{streaming.analysis && (
-								<ColorBox
-									transparency={3}
-									px={10}
-									py={4}
-									mb={4}
-									borderRadius='6px'
-									style={{ display: 'inline-flex', gap: 8 }}
-								>
-									<Text varient='caption' weight='bold' color='primary'>
-										{streaming.analysis.decision.toUpperCase()}
-									</Text>
-									<Text varient='caption' secondary>
-										{streaming.analysis.reasoning}
-									</Text>
-								</ColorBox>
-							)}
-							{streaming.content ? (
-								<MsgBox msg={streaming.content} from='other' />
+							{streamingContent ? (
+								<MsgBox msg={streamingContent} from='other' />
 							) : (
 								<Box px={16} py={8}>
 									<Text varient='caption' secondary>
@@ -258,25 +257,48 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 					backgroundTheme='foreground'
 					transparency={3}
 					borderRadius='26px'
-					border={{ show: true, size: '1px', radius: '26px' }}
+					border={{
+						show: true,
+						size: '1px',
+						radius: '26px',
+					}}
 					className='overflow-hidden'
 					flex={1}
 				>
 					<FileAttachmentBar files={attachedFiles} onRemove={removeFile} />
 
 					{fileErrors.length > 0 && (
-						<div style={{ padding: '4px 14px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+						<div
+							style={{
+								padding: '4px 14px 10px',
+								display: 'flex',
+								flexDirection: 'column',
+								gap: 2,
+							}}
+						>
 							{fileErrors.map((err, i) => (
-								<span key={i} style={{ fontSize: 11, color: '#ef4444', lineHeight: 1.4 }}>
+								<span
+									key={i}
+									style={{
+										fontSize: 11,
+										color: '#ef4444',
+										lineHeight: 1.4,
+									}}
+								>
 									{err}
 								</span>
 							))}
 						</div>
 					)}
 
-					<div style={{ display: 'flex', alignItems: 'flex-end' }}>
+					<div
+						style={{
+							display: 'flex',
+							alignItems: 'flex-end',
+						}}
+					>
 						<AttachMenuButton
-							disabled={streaming.active || !proposalId}
+							disabled={isStreaming || !proposalId}
 							onFilesSelected={validateAndAdd}
 						/>
 
@@ -295,13 +317,13 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 								value={inputValue}
 								rows={1}
 								placeholder={
-									streaming.active
+									isStreaming
 										? 'Waiting for response…'
 										: !proposalId
 											? 'Chat unavailable'
 											: 'Type your message here...'
 								}
-								disabled={streaming.active || !proposalId}
+								disabled={isStreaming || !proposalId}
 								onChange={handleChange}
 								onKeyDown={handleKeyDown}
 								style={{
@@ -319,7 +341,7 @@ const ChatPanel = ({ historyUrl, proposalId, model }: Props) => {
 									maxHeight: `${MAX_HEIGHT}px`,
 									overflowY: 'hidden',
 									display: 'block',
-									opacity: streaming.active || !proposalId ? 0.5 : 1,
+									opacity: isStreaming || !proposalId ? 0.5 : 1,
 								}}
 							/>
 						</div>
@@ -351,10 +373,12 @@ const MessagesScroll = styled.div`
 	&::-webkit-scrollbar {
 		width: 8px;
 	}
+
 	&::-webkit-scrollbar-thumb {
 		background: transparent;
 		border-radius: 6px;
 	}
+
 	&:hover::-webkit-scrollbar-thumb {
 		background: #9f9f9f45;
 	}

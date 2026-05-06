@@ -8,7 +8,7 @@ interface Props {
 const ProposalChat = ({ proposalId, model }: Props) => {
 	return (
 		<ChatPanel
-			historyUrl={`/proposals/${proposalId}/chat`}
+			historyUrl={`/proposals/${proposalId}/chat/messages`}
 			proposalId={proposalId}
 			model={model}
 		/>

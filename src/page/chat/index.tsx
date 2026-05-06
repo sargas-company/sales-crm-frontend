@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import styled from 'styled-components'
 import Card from '../../components/card/Card'
 import { GridInnerContainer, GridItem } from '../../components/layout'
-import { useAppDispatch } from '../../hooks'
+import { useAppDispatch, useAppSelector } from '../../hooks'
 import { fetchChats } from '../../store/chats/apiChatSlice'
 import { useSocket } from '../../hooks/useSocket'
 import ChatNav from '../../components/chat/api-chat/ChatNav'
@@ -17,7 +17,8 @@ export const StatusColor: Record<string, string> = {
 
 const Chat = () => {
 	const dispatch = useAppDispatch()
-	const { sendMessage } = useSocket()
+	const selectedProposalId = useAppSelector((state) => state.apiChat.selectedProposalId)
+	const { sendMessage } = useSocket(selectedProposalId)
 
 	useEffect(() => {
 		dispatch(fetchChats({ type: 'proposal' }))

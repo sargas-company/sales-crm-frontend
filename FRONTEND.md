@@ -413,39 +413,175 @@ Authorization: Bearer <token>
 
 ---
 
-### GET /proposals/:id/chat — история чата
+### GET /proposals/:id/chat/messages — история чата с вложениями
 
 ```http
-GET /proposals/:id/chat
+GET /proposals/:id/chat/messages
 Authorization: Bearer <token>
 ```
 
-**Ответ `200`:** массив сообщений, отсортированных по дате (старые первые).
+**Ответ `200`:**
 
 ```json
-[
-  {
-    "id": "uuid",
-    "chatId": "uuid",
-    "role": "user",
-    "content": "Write a proposal",
-    "decision": null,
-    "reasoning": null,
-    "createdAt": "2024-01-01T00:00:00.000Z"
-  },
-  {
-    "id": "uuid",
-    "chatId": "uuid",
-    "role": "assistant",
-    "content": "...",
-    "decision": null,
-    "reasoning": null,
-    "createdAt": "2024-01-01T00:00:00.000Z"
-  }
-]
+{
+  "messages": [
+    {
+      "id": "uuid",
+      "chatId": "uuid",
+      "role": "user",
+      "content": "Check this job",
+      "status": "DONE",
+      "decision": null,
+      "reasoning": null,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "attachments": [
+        {
+          "id": "uuid",
+          "fileName": "job.pdf",
+          "mimeType": "application/pdf",
+          "status": "DONE",
+          "createdAt": "2024-01-01T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "uuid",
+      "chatId": "uuid",
+      "role": "assistant",
+      "content": "Based on the job description...",
+      "status": "DONE",
+      "decision": null,
+      "reasoning": null,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "attachments": []
+    }
+  ]
+}
 ```
 
-> Сообщения принадлежат объекту `Chat`, который может быть связан и с proposal, и с lead — поэтому поле называется `chatId`, а не `proposalId`.
+**Статусы сообщения (`message.status`):**
+
+| Статус | Описание |
+|---|---|
+| `PREPARING_ATTACHMENTS` | Файлы загружаются и парсятся |
+| `PARTIAL_READY` | Часть файлов готова (остальные упали) — AI запущен с тем что есть |
+| `READY_FOR_AI` | Все файлы готовы, ожидает запуска AI |
+| `AI_PROCESSING` | AI генерирует ответ прямо сейчас |
+| `DONE` | AI завершил ответ |
+| `FAILED` | Ошибка на каком-либо этапе |
+
+**Статусы вложения (`attachment.status`):**
+
+| Статус | Что показывать |
+|---|---|
+| `PENDING` | Файл ожидает обработки |
+| `PROCESSING` | Обрабатывается... |
+| `DONE` | Файл готов, AI видит его содержимое |
+| `FAILED` | Ошибка — предложи перезагрузить |
+
+> Если чат ещё не создан (ни одного сообщения) — возвращает `{ "messages": [] }`.
+
+---
+
+### GET /proposals/:id/chat/attachments/:attachmentId/url — получить ссылку на файл
+
+Файлы хранятся в приватном облачном хранилище. Для открытия нужна **подписанная ссылка** — она действует **1 час** и генерируется по запросу.
+
+```http
+GET /proposals/:id/chat/attachments/:attachmentId/url
+Authorization: Bearer <token>
+```
+
+**Ответ `200`:**
+
+```json
+{
+  "url": "https://f003.backblazeb2.com/file/bucket/path/file.pdf?Authorization=..."
+}
+```
+
+**Как открыть в новой вкладке:**
+
+```js
+const { url } = await fetch(
+  `/proposals/${proposalId}/chat/attachments/${attachmentId}/url`,
+  { headers: { Authorization: `Bearer ${accessToken}` } }
+).then(r => r.json());
+
+window.open(url, '_blank');
+```
+
+> `<a href="...">` в новой вкладке **не сработает** — браузер не отправит Authorization-заголовок. Только `window.open()` после предварительного fetch.
+
+`404` если вложение не найдено или не принадлежит этому proposal.
+
+---
+
+### POST /proposals/:id/chat — отправить сообщение (основной endpoint)
+
+Единственная точка входа для отправки сообщения в AI-чат. Принимает `multipart/form-data`. AI-ответ приходит через WebSocket в **proposal room** — подключение и вступление в комнату обязательны до отправки.
+
+```http
+POST /proposals/:id/chat
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+```
+
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `content` | string | да | Текст сообщения |
+| `files` | file[] | нет | До 10 файлов: `.pdf`, `.docx`, `.txt`, `.md`, `.xlsx`, `.csv`, `.jpg`, `.jpeg`, `.png` |
+| `model` | string | нет | `claude-sonnet-4-6` \| `claude-opus-4-6` |
+
+**Ответ `200`:**
+
+```json
+{ "status": "processing", "messageId": "uuid" }
+```
+
+- `messageId` — ID созданного сообщения, используй для оптимистичного отображения в чате
+- HTTP-ответ возвращается немедленно — AI стартует асинхронно через readiness engine
+
+**Гарантии pipeline:**
+
+1. **Без файлов** — AI запускается сразу после сохранения сообщения
+2. **С файлами** — файлы парсятся асинхронно воркером; AI стартует только когда все файлы достигли терминального статуса (`DONE`/`FAILED`)
+3. Если все файлы упали → `message.status = PREPARING_ATTACHMENTS`, AI не запускается
+4. Если часть файлов DONE + часть FAILED → `PARTIAL_READY`, AI запускается с тем что есть
+5. Файл парсится до 3 попыток; при неудаче → `FAILED`, не блокирует остальные файлы
+6. Зависшие воркеры автоматически очищаются recovery cron'ом (через 5 мин)
+
+**Ограничения:** макс. 10 файлов, 5 МБ каждый. Неподдерживаемые типы → `400`.
+
+**Пример (без файлов):**
+
+```js
+const formData = new FormData();
+formData.append('content', 'Write a proposal for this vacancy');
+
+await fetch(`http://localhost:3000/proposals/${proposalId}/chat`, {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${accessToken}` },
+  body: formData,
+});
+```
+
+**Пример (с файлами):**
+
+```js
+const formData = new FormData();
+formData.append('content', 'Analyse this job description');
+formData.append('files', pdfFile);
+formData.append('files', docxFile);
+
+await fetch(`http://localhost:3000/proposals/${proposalId}/chat`, {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${accessToken}` },
+  body: formData,
+});
+```
+
+> **Важно:** `Content-Type: multipart/form-data` НЕ выставляй вручную — браузер/axios сделает это сам с правильным boundary.
 
 ---
 
@@ -579,6 +715,8 @@ Authorization: Bearer <token>
 ```
 
 > История сообщений сквозная — включает все сообщения начиная с proposal-этапа. `404` если lead не найден.
+>
+> Чат для lead-а не имеет отдельного send-endpoint — используй `POST /proposals/:id/chat` по связанному proposal.
 
 ---
 
@@ -703,56 +841,124 @@ do {
 
 ---
 
-## Чат (WebSocket — стриминг)
+## Чат (WebSocket)
 
-### Подключение с авторизацией
+WebSocket используется для получения всех real-time событий чата — lifecycle сообщений, статусов вложений и AI-стриминга. Отправка сообщений — через `POST /proposals/:id/chat`.
+
+**Архитектура:** события приходят в **proposal room** (`proposal:{proposalId}`). Перед отправкой сообщения нужно подключиться к WebSocket и вступить в комнату.
+
+---
+
+### Подключение
 
 ```js
 import { io } from 'socket.io-client';
 
 const socket = io('http://localhost:3001', {
-  auth: { token: accessToken }
+  auth: { token: accessToken },
 });
 
-socket.on('connect', () => console.log('Connected'));
-socket.on('error', ({ message }) => console.error('Error:', message));
+socket.on('connect', () => console.log('Connected, id:', socket.id));
+socket.on('disconnect', () => console.log('Disconnected'));
 ```
 
 > Без токена или с невалидным токеном соединение будет немедленно разорвано.
 
 ---
 
-### Отправка: событие `send_message`
+### Вступление в proposal room
+
+Перед отправкой сообщений — emit `join_proposal`. Все события чата приходят только в эту комнату.
 
 ```js
-socket.emit('send_message', {
-  proposalId: 'uuid',
-  content: 'Write a proposal',
-  model: 'claude-opus-4-6', // опционально
+socket.emit('join_proposal', { proposalId });
+
+socket.on('joined_proposal', ({ proposalId, room }) => {
+  console.log('Joined room:', room); // "proposal:uuid"
 });
 ```
 
-| Поле | Тип | Обязательный | Описание |
-|---|---|---|---|
-| `proposalId` | `string` | да | ID proposal |
-| `content` | `string` | да | Текст сообщения |
-| `model` | `string` | нет | Модель Claude: `claude-sonnet-4-6` \| `claude-opus-4-6`. Если не передан — используется модель из env (`CLAUDE_MODEL`). |
+> Если proposal не найден или не принадлежит пользователю — придёт событие `error`.  
+> При reconnect — emit `join_proposal` снова, сервер вернёт ACK без лишнего DB-запроса (дедуплицировано).
 
 ---
 
 ### Входящие события
 
+**Lifecycle сообщения:**
+
 | Событие | Данные | Описание |
 |---|---|---|
-| `chunk` | `{ text: string }` | Фрагмент генерируемого текста |
-| `done` | — | Генерация завершена |
-| `error` | `{ message: string }` | Ошибка |
+| `message_updated` | `{ messageId, status }` | Статус сообщения изменился |
+| `joined_proposal` | `{ proposalId, room }` | ACK успешного вступления в room |
 
-> Порядок событий всегда: `chunk` × N → `done`
+**Вложения:**
+
+| Событие | Данные | Описание |
+|---|---|---|
+| `attachment_updated` | `{ attachmentId, messageId, status, error? }` | Статус вложения изменился |
+
+**AI-стриминг:**
+
+| Событие | Данные | Описание |
+|---|---|---|
+| `thinking` | `{ messageId }` | AI начал генерацию |
+| `chunk` | `{ messageId, text }` | Фрагмент ответа |
+| `done` | `{ messageId }` | Генерация завершена |
+| `error` | `{ messageId, message }` | Ошибка AI pipeline |
+
+> Все AI-события содержат `messageId` — фильтруй по нему если в чате одновременно может идти несколько потоков.
 
 ---
 
-### Пример полного подключения
+### Порядок событий
+
+**Без файлов:**
+
+```
+POST /proposals/:id/chat
+→ message_updated { messageId, status: 'READY_FOR_AI' }     ← (внутренний переход)
+→ message_updated { messageId, status: 'AI_PROCESSING' }
+→ thinking        { messageId }
+→ chunk           { messageId, text } × N
+→ done            { messageId }
+→ message_updated { messageId, status: 'DONE' }
+```
+
+**С файлами:**
+
+```
+POST /proposals/:id/chat
+→ attachment_updated { attachmentId, messageId, status: 'PROCESSING' }  × N
+→ attachment_updated { attachmentId, messageId, status: 'DONE'/'FAILED' } × N
+→ message_updated    { messageId, status: 'READY_FOR_AI'/'PARTIAL_READY' }
+→ message_updated    { messageId, status: 'AI_PROCESSING' }
+→ thinking           { messageId }
+→ chunk              { messageId, text } × N
+→ done               { messageId }
+→ message_updated    { messageId, status: 'DONE' }
+```
+
+**Все файлы упали (AI не запускается):**
+
+```
+→ attachment_updated { ..., status: 'FAILED' } × N
+(message остаётся в PREPARING_ATTACHMENTS, AI не стартует)
+```
+
+---
+
+### Статусы файла в тексте сообщений
+
+| attachment.status | Что видит AI | Что показывать |
+|---|---|---|
+| `DONE` + текст | Полный текст файла | — |
+| `DONE` + нет текста | "Image file — text extraction not supported." | Изображение, текст не извлечён |
+| `FAILED` | "File processing failed." | Ошибка, предложить перезагрузить |
+
+---
+
+### Полный пример
 
 ```js
 import { io } from 'socket.io-client';
@@ -764,43 +970,279 @@ const { accessToken } = await fetch('http://localhost:3000/auth/login', {
   body: JSON.stringify({ email: 'admin@test.com', password: 'admin123' }),
 }).then(r => r.json());
 
-const headers = {
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${accessToken}`,
-};
-
-// 2. Создать proposal
-const proposal = await fetch('http://localhost:3000/proposals', {
-  method: 'POST',
-  headers,
-  body: JSON.stringify({
-    title: 'Full Stack Developer — MVP Project',
-    accountId: 'uuid-of-account',
-    platformId: 'uuid-of-platform',
-    proposalType: 'Bid',
-    vacancy: 'Looking for React developer to build an admin dashboard.',
-    connects: 6,
-  }),
-}).then(r => r.json());
-
-// 3. Подключиться к WebSocket
+// 2. Подключиться к WebSocket
 const socket = io('http://localhost:3001', { auth: { token: accessToken } });
+await new Promise(resolve => socket.on('connect', resolve));
 
-let fullText = '';
+// 3. Вступить в proposal room
+socket.emit('join_proposal', { proposalId });
+await new Promise(resolve => socket.once('joined_proposal', resolve));
 
-socket.on('connect', () => {
-  // 4. Отправить сообщение
-  socket.emit('send_message', {
-    proposalId: proposal.id,
-    content: 'Write a proposal',
-  });
+// 4. Подписаться на события
+let streamBuffer = '';
+const currentMessageId = null;
+
+socket.on('message_updated', ({ messageId, status }) => {
+  console.log(`message ${messageId} → ${status}`);
 });
 
-socket.on('chunk', ({ text }) => { fullText += text; });
-
-socket.on('done', () => {
-  console.log('Full response:', fullText);
+socket.on('attachment_updated', ({ attachmentId, messageId, status, error }) => {
+  console.log(`attachment ${attachmentId} → ${status}`, error ?? '');
 });
+
+socket.on('thinking', ({ messageId }) => {
+  console.log(`AI thinking for ${messageId}...`);
+  streamBuffer = '';
+});
+
+socket.on('chunk', ({ messageId, text }) => {
+  streamBuffer += text;
+  // обновить UI в реальном времени
+});
+
+socket.on('done', ({ messageId }) => {
+  console.log(`AI done for ${messageId}:`, streamBuffer);
+  // перезагрузить историю для получения сохранённого assistant message
+});
+
+socket.on('error', ({ messageId, message }) => {
+  console.error(`Error for ${messageId}:`, message);
+});
+
+// 5. Отправить сообщение
+const formData = new FormData();
+formData.append('content', 'Write a proposal for this job');
+// formData.append('files', file); // опционально
+
+const { messageId } = await fetch(
+  `http://localhost:3000/proposals/${proposalId}/chat`,
+  {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: formData,
+  },
+).then(r => r.json());
+
+console.log('Message created:', messageId);
+// Все дальнейшие события придут через WebSocket
+```
+
+---
+
+### React-хук (пример)
+
+```tsx
+// ─── Типы ─────────────────────────────────────────────────────────────────────
+
+type MessageStatus =
+  | 'PREPARING_ATTACHMENTS'
+  | 'PARTIAL_READY'
+  | 'READY_FOR_AI'
+  | 'AI_PROCESSING'
+  | 'DONE'
+  | 'FAILED';
+
+type AttachmentStatus = 'PENDING' | 'PROCESSING' | 'DONE' | 'FAILED';
+
+interface MessageAttachment {
+  id: string;
+  fileName: string;
+  mimeType: string | null;
+  status: AttachmentStatus;
+  createdAt: string;
+}
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  status: MessageStatus;
+  attachments: MessageAttachment[];
+  createdAt: string;
+}
+
+// ─── Хук ──────────────────────────────────────────────────────────────────────
+
+function useProposalChat(proposalId: string, accessToken: string) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+  const streamBufferRef = useRef<Record<string, string>>({});
+
+  const loadHistory = async () => {
+    const { messages } = await fetch(
+      `/proposals/${proposalId}/chat/messages`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    ).then(r => r.json());
+    setMessages(messages ?? []);
+  };
+
+  useEffect(() => {
+    loadHistory();
+
+    const socket = io('http://localhost:3001', { auth: { token: accessToken } });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      // Вступить в комнату при каждом (ре)подключении
+      socket.emit('join_proposal', { proposalId });
+    });
+
+    // Lifecycle сообщения — обновить статус в списке
+    socket.on('message_updated', ({ messageId, status }: { messageId: string; status: MessageStatus }) => {
+      setMessages(prev =>
+        prev.map(m => m.id === messageId ? { ...m, status } : m),
+      );
+      if (status === 'DONE' || status === 'FAILED') {
+        setStreamingMessageId(null);
+        // Перезагрузить историю чтобы получить assistant message с ID
+        void loadHistory();
+      }
+    });
+
+    // Статус вложения — обновить attachment card
+    socket.on('attachment_updated', ({
+      attachmentId,
+      messageId,
+      status,
+    }: {
+      attachmentId: string;
+      messageId: string;
+      status: AttachmentStatus;
+    }) => {
+      setMessages(prev =>
+        prev.map(m => {
+          if (m.id !== messageId) return m;
+          return {
+            ...m,
+            attachments: m.attachments.map(a =>
+              a.id === attachmentId ? { ...a, status } : a,
+            ),
+          };
+        }),
+      );
+    });
+
+    // AI стриминг
+    socket.on('thinking', ({ messageId }: { messageId: string }) => {
+      setStreamingMessageId(messageId);
+      streamBufferRef.current[messageId] = '';
+    });
+
+    socket.on('chunk', ({ messageId, text }: { messageId: string; text: string }) => {
+      streamBufferRef.current[messageId] =
+        (streamBufferRef.current[messageId] ?? '') + text;
+      // Добавить/обновить временный assistant bubble
+      setMessages(prev => {
+        const hasStreaming = prev.some(m => m.id === `streaming-${messageId}`);
+        const streamingMessage: Message = {
+          id: `streaming-${messageId}`,
+          role: 'assistant',
+          content: streamBufferRef.current[messageId],
+          status: 'AI_PROCESSING',
+          attachments: [],
+          createdAt: new Date().toISOString(),
+        };
+        if (hasStreaming) {
+          return prev.map(m =>
+            m.id === `streaming-${messageId}` ? streamingMessage : m,
+          );
+        }
+        return [...prev, streamingMessage];
+      });
+    });
+
+    socket.on('done', ({ messageId }: { messageId: string }) => {
+      // Убрать временный bubble — message_updated DONE + loadHistory уже обработают
+      setMessages(prev => prev.filter(m => m.id !== `streaming-${messageId}`));
+      delete streamBufferRef.current[messageId];
+    });
+
+    socket.on('error', ({ messageId, message }: { messageId: string; message: string }) => {
+      console.error(`AI error for message ${messageId}:`, message);
+      setStreamingMessageId(null);
+      setMessages(prev => prev.filter(m => m.id !== `streaming-${messageId}`));
+    });
+
+    return () => { socket.disconnect(); };
+  }, [accessToken, proposalId]);
+
+  const send = async (content: string, files?: File[]) => {
+    // Оптимистично добавить сообщение с временным ID
+    const tempId = `temp-${Date.now()}`;
+    setMessages(prev => [
+      ...prev,
+      {
+        id: tempId,
+        role: 'user',
+        content,
+        status: files?.length ? 'PREPARING_ATTACHMENTS' : 'READY_FOR_AI',
+        attachments: [],
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+
+    const fd = new FormData();
+    fd.append('content', content);
+    files?.forEach(f => fd.append('files', f));
+
+    const { messageId } = await fetch(`/proposals/${proposalId}/chat`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: fd,
+    }).then(r => r.json());
+
+    // Заменить temp ID на реальный
+    setMessages(prev =>
+      prev.map(m => m.id === tempId ? { ...m, id: messageId } : m),
+    );
+
+    return messageId;
+  };
+
+  const openAttachment = async (attachmentId: string) => {
+    const { url } = await fetch(
+      `/proposals/${proposalId}/chat/attachments/${attachmentId}/url`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    ).then(r => r.json());
+    window.open(url, '_blank');
+  };
+
+  return { messages, streamingMessageId, send, openAttachment };
+}
+```
+
+**Рендер вложений:**
+
+```tsx
+function AttachmentChip({
+  attachment,
+  onOpen,
+}: {
+  attachment: MessageAttachment;
+  onOpen: (id: string) => void;
+}) {
+  const label: Record<AttachmentStatus, string> = {
+    PENDING:    '⏳ Ожидает',
+    PROCESSING: '⚙️ Обрабатывается',
+    DONE:       '📎',
+    FAILED:     '❌ Ошибка',
+  };
+
+  return (
+    <button
+      onClick={() => attachment.status === 'DONE' && onOpen(attachment.id)}
+      disabled={attachment.status !== 'DONE'}
+      title={attachment.fileName}
+    >
+      {label[attachment.status]} {attachment.fileName}
+    </button>
+  );
+}
+
+{message.attachments.map(a => (
+  <AttachmentChip key={a.id} attachment={a} onOpen={openAttachment} />
+))}
 ```
 
 ---
