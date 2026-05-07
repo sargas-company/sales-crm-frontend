@@ -146,7 +146,6 @@ const CreateCallPage = () => {
 		<Box
 			sx={{
 				minHeight: '100vh',
-				background: '#f7f2fb',
 				px: { xs: 2, md: 10 },
 				py: { xs: 4, md: 8 },
 			}}
@@ -161,7 +160,7 @@ const CreateCallPage = () => {
 				}}
 			>
 				<Box>
-					<Typography variant="h3" sx={{ fontWeight: 800, color: '#3d3943' }}>
+					<Typography variant="h3" sx={{ fontWeight: 800, }}>
 						Create client call
 					</Typography>
 				</Box>

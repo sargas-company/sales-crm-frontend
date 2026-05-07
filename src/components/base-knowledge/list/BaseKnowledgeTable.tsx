@@ -10,7 +10,7 @@ import BaseKnowledgeListAction from './BaseKnowledgeListAction'
 const columns: DataGridColoumn[] = [
 	{ fieldId: 'seq', label: '#', width: '90px' },
 	{ fieldId: 'title', label: 'Title', width: '400px' },
-	{ fieldId: 'category', label: 'Category', width: '160px' },
+	{ fieldId: 'category', label: 'Category', width: '250px' },
 	{ fieldId: 'createdAt', label: 'Created At', width: '150px' },
 	{ fieldId: 'updatedAt', label: 'Updated At', width: '150px' },
 	{ fieldId: 'actions', label: 'Actions', width: '120px' },
@@ -59,13 +59,7 @@ const BaseKnowledgeTable = ({ items, isLoading, onEdit, onDelete }: Props) => {
 								<Text skinColor>{row.title}</Text>
 							</Link>
 						</DataGridCell>
-						<DataGridCell width={field['category'].width}>
-							{row.category ? (
-								<Chip label={row.category} skin='light' size='small' color='info' styles={{ color: '#000000' }} />
-							) : (
-								<Text>—</Text>
-							)}
-						</DataGridCell>
+						<DataGridCell width={field['category'].width} value={row.category} />
 						<DataGridCell
 							width={field['createdAt'].width}
 							value={formatDate(row.createdAt)}

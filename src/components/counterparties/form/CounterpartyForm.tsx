@@ -159,6 +159,7 @@ const CounterpartyFormInner = ({ id, initial }: { id?: string; initial: FormFiel
 											onChange={(e) => setField('info', e.target.value)}
 											width='100%'
 											multiRow
+											style={{ minHeight: '10rem' }}
 										/>
 									</Box>
 								</GridItem>

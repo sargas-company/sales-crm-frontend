@@ -106,14 +106,6 @@ const BaseKnowledgePreview = () => {
 									Updated: {formatDate(item.updatedAt)}
 								</Text>
 							</MetaItem>
-							{item.category && (
-								<MetaItem>
-									<CategoryOutlined style={{ fontSize: 15 }} />
-									<Text varient='body2' secondary>
-										{item.category}
-									</Text>
-								</MetaItem>
-							)}
 						</MetaRow>
 					</Box>
 

@@ -128,7 +128,6 @@ const ProfileDropdown = () => {
 						<Typography
 							sx={{
 								fontSize: 16,
-								fontWeight: 600,
 								lineHeight: 1.2,
 								color: '#202124',
 							}}
@@ -159,7 +158,6 @@ const ProfileDropdown = () => {
 						<Typography
 							sx={{
 								fontSize: 16,
-								fontWeight: 600,
 								lineHeight: 1.2,
 								color: '#d93939',
 							}}
