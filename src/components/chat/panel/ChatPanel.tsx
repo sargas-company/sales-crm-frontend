@@ -11,22 +11,11 @@ import MsgBox from '../chat-content/MsgBox'
 import AttachMenuButton from '../shared/AttachMenuButton'
 import FileAttachmentBar from '../shared/FileAttachmentBar'
 import { useFileAttachment } from '../shared/useFileAttachment'
-import AttachmentChip from '../shared/AttachmentChip'
-import MessageFailedBadge from '../shared/MessageFailedBadge'
 import axiosInstance from '../../../api/axiosInstance'
 import type { MessageAttachment } from '../../../store/chats/apiChatSlice'
+import MessageItem from '../shared/MessageItem'
 
 const MAX_HEIGHT = 220
-
-interface Message {
-	id: string
-	role: 'user' | 'assistant'
-	content: string
-	decision: string | null
-	reasoning: string | null
-	createdAt: string
-	attachments?: MessageAttachment[]
-}
 
 interface Props {
 	historyUrl: string
@@ -162,69 +151,7 @@ const ChatPanel = ({ proposalId, model }: Props) => {
 				)}
 
 				{messages.map((msg) => (
-					<Box
-						key={msg.id}
-						display='flex'
-						px={16}
-						flexDirection={msg.role === 'user' ? 'row-reverse' : 'row'}
-						space={0.8}
-						mb={8}
-					>
-						<Box
-							space={0.4}
-							display='flex'
-							flexDirection='column'
-							align={msg.role === 'user' ? 'flex-end' : 'flex-start'}
-							flex={1}
-						>
-							{msg.role === 'assistant' && msg.decision && (
-								<ColorBox
-									transparency={3}
-									px={10}
-									py={4}
-									mb={4}
-									borderRadius='6px'
-									style={{ display: 'inline-flex', gap: 8 }}
-								>
-									<Text varient='caption' weight='bold' color='primary'>
-										{msg.decision.toUpperCase()}
-									</Text>
-
-									{msg.reasoning && (
-										<Text varient='caption' secondary>
-											{msg.reasoning}
-										</Text>
-									)}
-								</ColorBox>
-							)}
-
-							<MsgBox msg={msg.content} from={msg.role === 'user' ? 'me' : 'other'} />
-
-							{msg.attachments && msg.attachments.length > 0 && (
-								<div
-									style={{
-										display: 'flex',
-										flexWrap: 'wrap',
-										gap: 4,
-										marginTop: 4,
-									}}
-								>
-									{msg.attachments.map((a) => (
-										<AttachmentChip key={a.id} attachment={a} onOpen={openAttachment} />
-									))}
-								</div>
-							)}
-
-							{msg.status === 'FAILED' && <MessageFailedBadge />}
-
-							<Text varient='caption' secondary styles={{ marginTop: 2 }}>
-								{new Date(msg.createdAt).toLocaleTimeString([], {
-									hour: '2-digit',
-									minute: '2-digit',
-								})}
-							</Text>
-						</Box>
-					</Box>
+					<MessageItem key={msg.id} msg={msg} onOpenAttachment={openAttachment} />
 				))}
 
 				{isStreaming && (

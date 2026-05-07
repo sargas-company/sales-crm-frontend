@@ -1247,6 +1247,201 @@ function AttachmentChip({
 
 ---
 
+## Translation
+
+Перевод сообщений чата на RU или UK. Переводы кэшируются в БД — повторный запрос одного и того же сообщения на тот же язык возвращается мгновенно без вызова DeepL.
+
+### POST /chat/messages/:messageId/translate — перевести сообщение
+
+```http
+POST /chat/messages/:messageId/translate
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "targetLanguage": "UK"
+}
+```
+
+| Поле | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `targetLanguage` | `RU` \| `UK` | да | Целевой язык перевода |
+
+**Ответ `200`:**
+
+```json
+{
+  "messageId": "a1b2c3d4-...",
+  "targetLanguage": "UK",
+  "sourceLanguage": "RU",
+  "content": "Привіт, як справи?",
+  "cached": false
+}
+```
+
+| Поле | Описание |
+|---|---|
+| `messageId` | ID исходного сообщения |
+| `targetLanguage` | Запрошенный язык |
+| `sourceLanguage` | Автоопределённый язык оригинала (uppercase: `"RU"`, `"EN"` и т.д.) |
+| `content` | Переведённый текст (или оригинал при same-language skip) |
+| `cached` | `true` — из кэша, `false` — свежий вызов DeepL |
+
+`404` если сообщение не найдено.  
+`503` если `DEEPL_API_KEY` не настроен на сервере.
+
+---
+
+### Сценарии ответа
+
+**Первый перевод** (`cached: false`):
+
+```json
+{
+  "messageId": "a1b2c3d4-...",
+  "targetLanguage": "UK",
+  "sourceLanguage": "RU",
+  "content": "Привіт, як справи?",
+  "cached": false
+}
+```
+
+**Повторный запрос того же сообщения** (`cached: true`):
+
+```json
+{
+  "messageId": "a1b2c3d4-...",
+  "targetLanguage": "UK",
+  "sourceLanguage": "RU",
+  "content": "Привіт, як справи?",
+  "cached": true
+}
+```
+
+**Сообщение уже на запрошенном языке** (same-language skip, DeepL определил совпадение):
+
+```json
+{
+  "messageId": "a1b2c3d4-...",
+  "targetLanguage": "UK",
+  "sourceLanguage": "UK",
+  "content": "Привіт, як справи?",
+  "cached": false
+}
+```
+
+> В этом случае `content` содержит оригинальный текст сообщения, запись в кэш не создаётся.
+
+---
+
+### Пример использования
+
+```js
+async function translateMessage(messageId, targetLanguage, accessToken) {
+  const res = await fetch(`/chat/messages/${messageId}/translate`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ targetLanguage }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.message);
+  }
+
+  return res.json(); // TranslationResponse
+}
+```
+
+---
+
+### React-пример (кнопка перевода у сообщения)
+
+```tsx
+type TranslationLanguage = 'RU' | 'UK';
+
+interface TranslationResponse {
+  messageId: string;
+  targetLanguage: TranslationLanguage;
+  sourceLanguage: string | null;
+  content: string;
+  cached: boolean;
+}
+
+function TranslateButton({
+  messageId,
+  originalContent,
+  accessToken,
+}: {
+  messageId: string;
+  originalContent: string;
+  accessToken: string;
+}) {
+  const [translated, setTranslated] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showOriginal, setShowOriginal] = useState(false);
+
+  const handleTranslate = async (lang: TranslationLanguage) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/chat/messages/${messageId}/translate`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ targetLanguage: lang }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message ?? 'Translation failed');
+      }
+
+      const data: TranslationResponse = await res.json();
+      setTranslated(data.content);
+      setShowOriginal(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const displayContent =
+    translated && !showOriginal ? translated : originalContent;
+
+  return (
+    <div>
+      <p>{displayContent}</p>
+
+      <div>
+        <button onClick={() => handleTranslate('UK')} disabled={loading}>
+          {loading ? '...' : 'UA'}
+        </button>
+        <button onClick={() => handleTranslate('RU')} disabled={loading}>
+          {loading ? '...' : 'RU'}
+        </button>
+        {translated && (
+          <button onClick={() => setShowOriginal(prev => !prev)}>
+            {showOriginal ? 'Показать перевод' : 'Оригинал'}
+          </button>
+        )}
+      </div>
+
+      {error && <span style={{ color: 'red' }}>{error}</span>}
+    </div>
+  );
+}
+```
+
+---
+
 ## Base Knowledge
 
 ### POST /base-knowledge — создать
