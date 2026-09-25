@@ -40,10 +40,19 @@ const normalButton = styled.button<ButtonType>`
 			: '#fff'};
 	font-size: 0.875rem;
 	font-weight: 500;
+	letter-spacing: 0.15px;
+	padding: 8px 16px;
+	border-radius: 6px;
+	line-height: 1.2;
+	cursor: pointer;
 	pointer-events: ${({ disabled }) => (disabled ? 'none' : 'auto')};
 	opacity: ${({ disabled }) => (disabled ? 0.5 : 1)};
 	overflow: hidden;
-	transition: 300ms background ease-out;
+	transition:
+		background 220ms cubic-bezier(0.4, 0, 0.2, 1),
+		box-shadow 220ms cubic-bezier(0.4, 0, 0.2, 1),
+		transform 180ms cubic-bezier(0.4, 0, 0.2, 1),
+		border-color 220ms cubic-bezier(0.4, 0, 0.2, 1);
 
 	&:hover {
 		background: ${({ theme, color, varient }) =>
@@ -56,7 +65,16 @@ const normalButton = styled.button<ButtonType>`
 						total: 1,
 						intensity: 2,
 					}).toString()};
-		transition: 200ms ease;
+		box-shadow: ${({ varient, color, theme }) =>
+			varient === 'contained'
+				? `0 6px 18px -6px ${color ? skinColor(color) : theme.primaryColor.color}66`
+				: 'none'};
+		transform: translateY(-1px);
+	}
+
+	&:active {
+		transform: translateY(0);
+		transition-duration: 90ms;
 	}
 `
 export default normalButton

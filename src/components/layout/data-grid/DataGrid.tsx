@@ -1,7 +1,16 @@
-import React, { createContext, memo, useEffect, useMemo, useRef, useState } from 'react'
+import React, {
+	createContext,
+	memo,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react'
 import { Icon } from '@iconify/react'
 import Box from '../../box/Box'
-import StyledDataGrid from './styled'
+import StyledDataGrid, { EmptyStateBox, SkeletonBox } from './styled'
+import useTheme from '../../../theme/useTheme'
 import DataGridColumnHead from '../../data-grid-item/DataGridColumnHead'
 import DataGridRow from '../../data-grid-item/DataGridRow'
 import ColumnsController from '../../data-grid-item/dropdowns/ColumnsController'
@@ -28,7 +37,15 @@ const DataGrid = <T extends unknown>({
 	rowPerPage,
 	rowPerPageOption,
 	renderGridData,
+	isLoading,
+	skeletonRows = 6,
+	emptyIcon,
+	emptyTitle,
+	emptyDescription,
 }: DataGridOptions<T>) => {
+	const {
+		theme: { mode },
+	} = useTheme()
 	const [dataList, setDataList] = useState<T[]>(rows)
 	const [sortOption, setSortOption] = useState<SortOption>({
 		fieldName: '',
@@ -41,6 +58,27 @@ const DataGrid = <T extends unknown>({
 		next: rowPerPage!,
 		passedRows: 1,
 	})
+
+	// Measure the visible width of the horizontal-scroll container so the
+	// empty state can be centered inside the viewport, not the wide content.
+	const scrollAreaRef = useRef<HTMLDivElement | null>(null)
+	const [visibleWidth, setVisibleWidth] = useState<number | null>(null)
+	const isEmpty = !isLoading && (!dataList || dataList.length === 0)
+
+	useLayoutEffect(() => {
+		if (!isEmpty) return
+		const el = scrollAreaRef.current
+		if (!el) return
+		const update = () => setVisibleWidth(el.clientWidth)
+		update()
+		const ro = new ResizeObserver(update)
+		ro.observe(el)
+		window.addEventListener('resize', update)
+		return () => {
+			ro.disconnect()
+			window.removeEventListener('resize', update)
+		}
+	}, [isEmpty])
 
 	const sortedList = useMemo(() => {
 		if (rows.length <= 0 || !sortOption.by) {
@@ -114,7 +152,7 @@ const DataGrid = <T extends unknown>({
 
 	return (
 		<StyledDataGrid className='data_grid_wrapper' width={width}>
-			<Box className='data_grid'>
+			<Box className='data_grid' ref={scrollAreaRef}>
 				<Box className='data_grid_content'>
 					<DataGridOptionContext.Provider
 						value={{
@@ -172,8 +210,42 @@ const DataGrid = <T extends unknown>({
 
 					{/*  Render data list */}
 					<Box className='data_grid_body'>
-						{/* Loop through data list */}
-						{dataList && dataList.length > 0 ? (
+						{isLoading ? (
+							<SkeletonBox isDark={mode.name === 'dark'}>
+								{Array.from({ length: skeletonRows }).map((_, i) => (
+									<div
+										className='skeleton-row'
+										key={i}
+										style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
+									>
+										{columns.map((c, ci) => {
+											const w =
+												typeof c.width === 'number'
+													? c.width
+													: parseInt(String(c.width || '120'), 10) || 120
+											const barWidth = Math.max(40, Math.floor(w * 0.55))
+											return (
+												<div
+													key={c.fieldId + ci}
+													style={{
+														width: typeof c.width === 'number' ? c.width : c.width,
+														minWidth: typeof c.width === 'number' ? c.width : c.width,
+														flex: c.flex,
+														display: 'flex',
+														alignItems: 'center',
+													}}
+												>
+													<div
+														className='skeleton-bar'
+														style={{ width: barWidth }}
+													/>
+												</div>
+											)
+										})}
+									</div>
+								))}
+							</SkeletonBox>
+						) : dataList && dataList.length > 0 ? (
 							dataList
 								.slice(footerOption.passedRows - 1, footerOption.next)
 								.map((item, index) => (
@@ -181,6 +253,7 @@ const DataGrid = <T extends unknown>({
 										dataId={`data-item-${item[columns[0]['fieldId'] as keyof T]}`}
 										rowId={index}
 										key={index}
+										animationIndex={index}
 									>
 										{renderGridData(
 											item as T,
@@ -193,22 +266,21 @@ const DataGrid = <T extends unknown>({
 									</DataGridRow>
 								))
 						) : (
-							<Box
-								padding={56}
-								style={{
-									display: 'flex',
-									flexDirection: 'column',
-									alignItems: 'center',
-									gap: 8,
-								}}
-							>
-								<CustomAvatar size={100} color='info' skin='light'>
-									<InboxOutlined />
-								</CustomAvatar>
-								<Text align='center' paragraph>
-									No data found.
-								</Text>
-							</Box>
+							<EmptyStateBox visibleWidth={visibleWidth}>
+								<div className='empty-state-inner'>
+									<div className='empty-state-icon-wrap'>
+										<CustomAvatar size={96} color='info' skin='light'>
+											{emptyIcon || <InboxOutlined style={{ fontSize: 44 }} />}
+										</CustomAvatar>
+									</div>
+									<Text align='center' paragraph weight='bold' size={16}>
+										{emptyTitle || 'No data found'}
+									</Text>
+									<Text align='center' paragraph secondary size={13}>
+										{emptyDescription || 'There are no records to display right now.'}
+									</Text>
+								</div>
+							</EmptyStateBox>
 						)}
 					</Box>
 				</Box>

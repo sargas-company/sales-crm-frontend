@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import Box from '../../../components/box/Box'
 import Card from '../../../components/card/Card'
+import AnimatedCardShell from '../../../components/card/AnimatedCardShell'
 import JobPostTable from '../../../components/job-posts/list/JobPostTable'
 import JobPostDeleteModal from '../../../components/job-posts/list/JobPostDeleteModal'
+import CreateNewJobPost from '../../../components/job-posts/list/CreateNewJobPost'
 import DataGridFooter from '../../../components/data-grid-item/DataGridFooter'
 import { useGetJobPostListQuery } from '../../../store/job-posts/jobPostsApi'
 import type { JobPostItem } from '../../../store/job-posts/types/definition'
@@ -39,22 +42,32 @@ const JobPostList = () => {
 
 	return (
 		<>
-			<Card padding={'30px'}>
-				<JobPostTable items={items} isLoading={isLoading} onDelete={handleDeleteRequest} />
+			<AnimatedCardShell>
+				<Card padding={'30px'}>
+					<Box display='flex' justify='flex-end' padding={20}>
+						<CreateNewJobPost />
+					</Box>
 
-				{total > 0 && (
-					<DataGridFooter
-						total={total}
-						rowPerPage={limit}
-						rowPerPageOptions={LIMIT_OPTIONS}
-						currentPage={page}
-						next={next}
-						passed={passed}
-						handlePagination={setPage}
-						handleRowOptSelect={handleLimitChange}
+					<JobPostTable
+						items={items}
+						isLoading={isLoading}
+						onDelete={handleDeleteRequest}
 					/>
-				)}
-			</Card>
+
+					{total > 0 && (
+						<DataGridFooter
+							total={total}
+							rowPerPage={limit}
+							rowPerPageOptions={LIMIT_OPTIONS}
+							currentPage={page}
+							next={next}
+							passed={passed}
+							handlePagination={setPage}
+							handleRowOptSelect={handleLimitChange}
+						/>
+					)}
+				</Card>
+			</AnimatedCardShell>
 
 			{deleteTarget && (
 				<JobPostDeleteModal

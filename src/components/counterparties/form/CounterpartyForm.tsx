@@ -1,9 +1,6 @@
-import { FormEvent, useState } from 'react'
+import { ChangeEvent, FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Card from '../../card/Card'
-import Box from '../../box/Box'
-import { GridInnerContainer, GridItem } from '../../layout'
-import { Text, TextField, Button, Divider, Select, SelectItem } from '../../../ui'
+import { TextField, Button, Select, SelectItem } from '../../../ui'
 import {
 	useGetCounterpartyByIdQuery,
 	useCreateCounterpartyMutation,
@@ -12,21 +9,29 @@ import {
 } from '../../../store/counterparties/counterpartiesApi'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
+import useTheme from '../../../theme/useTheme'
+import {
+	Field,
+	FormHeader,
+	FormLoading,
+	FormNotFound,
+	SectionHead,
+} from '../../_shared/FormShell'
+import {
+	DotMini,
+	FieldGrid,
+	FieldStack,
+	FootActions,
+	FootBar,
+	FootLeft,
+	Section,
+	Shell,
+	Surface,
+} from '../../_shared/formShell.styled'
 
 interface CounterpartyFormProps {
 	id?: string
 }
-
-const SectionLabel = ({ children }: { children: string }) => (
-	<Text
-		varient='caption'
-		weight='medium'
-		secondary
-		styles={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}
-	>
-		{children}
-	</Text>
-)
 
 interface FormFields {
 	firstName: string
@@ -35,22 +40,66 @@ interface FormFields {
 	info: string
 }
 
+interface FormErrors {
+	firstName?: string
+	lastName?: string
+}
+
 const empty: FormFields = { firstName: '', lastName: '', type: 'client', info: '' }
 
-const CounterpartyFormInner = ({ id, initial }: { id?: string; initial: FormFields }) => {
+const BuildingIcon = () => (
+	<svg width='22' height='22' viewBox='0 0 24 24' fill='none'>
+		<path
+			d='M4 21h16M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16'
+			stroke='currentColor'
+			strokeWidth='1.8'
+			strokeLinecap='round'
+			strokeLinejoin='round'
+		/>
+		<path
+			d='M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1'
+			stroke='currentColor'
+			strokeWidth='1.8'
+			strokeLinecap='round'
+		/>
+	</svg>
+)
+
+const CounterpartyFormInner = ({
+	id,
+	initial,
+}: {
+	id?: string
+	initial: FormFields
+}) => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
+	const { theme } = useTheme()
+	const isDark = theme.mode.name === 'dark'
 	const [fields, setFields] = useState<FormFields>(initial)
+	const [errors, setErrors] = useState<FormErrors>({})
 	const [createCounterparty, { isLoading: creating }] = useCreateCounterpartyMutation()
 	const [updateCounterparty, { isLoading: updating }] = useUpdateCounterpartyMutation()
 	const isLoading = creating || updating
 	const isEdit = Boolean(id)
 
-	const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) =>
+	const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) => {
 		setFields((prev) => ({ ...prev, [key]: value }))
+		if ((errors as Record<string, unknown>)[key])
+			setErrors((prev) => ({ ...prev, [key]: undefined }))
+	}
+
+	const validate = (): boolean => {
+		const next: FormErrors = {}
+		if (!fields.firstName.trim()) next.firstName = 'First name is required'
+		if (!fields.lastName.trim()) next.lastName = 'Last name is required'
+		setErrors(next)
+		return Object.keys(next).length === 0
+	}
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
+		if (!validate()) return
 		try {
 			if (isEdit) {
 				await updateCounterparty({
@@ -79,96 +128,96 @@ const CounterpartyFormInner = ({ id, initial }: { id?: string; initial: FormFiel
 	}
 
 	return (
-		<Card py='2rem' px='2rem'>
-			<Box style={{ maxWidth: 720, margin: '0 auto' }}>
-				<Box mb={5}>
-					<Text heading='h5'>{isEdit ? 'Edit Counterparty' : 'Create Counterparty'}</Text>
-					<Box mt={1}>
-						<Text varient='body2' secondary>
+		<Shell $dark={isDark}>
+			<Surface $dark={isDark}>
+				<FormHeader
+					backTo='/counterparties/list/'
+					backLabel='Back to counterparties'
+					icon={<BuildingIcon />}
+					title={isEdit ? 'Edit counterparty' : 'New counterparty'}
+					subtitle={
+						isEdit
+							? 'Update contact info, role and description'
+							: 'Fill in the details to add a new counterparty'
+					}
+					badgeLabel={isEdit ? 'Editing' : 'New'}
+					badgeTone={isEdit ? 'edit' : 'new'}
+				/>
+
+				<form onSubmit={handleSubmit} noValidate>
+					<Section $delay={80}>
+						<SectionHead
+							num='01'
+							title='Identity'
+							hint='The counterparty’s legal or contact name'
+						/>
+						<FieldGrid>
+							<Field label='First name' required error={errors.firstName}>
+								<TextField
+									name='firstName'
+									placeholder='e.g. John'
+									value={fields.firstName}
+									onChange={(e) => setField('firstName', e.target.value)}
+									error={!!errors.firstName}
+									width='100%'
+								/>
+							</Field>
+							<Field label='Last name' required error={errors.lastName}>
+								<TextField
+									name='lastName'
+									placeholder='e.g. Doe'
+									value={fields.lastName}
+									onChange={(e) => setField('lastName', e.target.value)}
+									error={!!errors.lastName}
+									width='100%'
+								/>
+							</Field>
+							<Field label='Type' required span='full'>
+								<Select
+									label='Select type'
+									defaultValue={fields.type}
+									onChange={(value) => setField('type', value as CounterpartyType)}
+									width='100%'
+									sizes='normal'
+								>
+									<SelectItem label='Client' value='client' />
+									<SelectItem label='Contractor' value='contractor' />
+								</Select>
+							</Field>
+						</FieldGrid>
+					</Section>
+
+					<Section $delay={160}>
+						<SectionHead
+							num='02'
+							title='Details'
+							hint='Free-form notes — role, address, tax info, anything useful for invoices'
+						/>
+						<FieldStack>
+							<Field label='Info' hint={`${fields.info.length} characters`}>
+								<TextField
+									name='info'
+									placeholder='CEO at Acme Corp. Based in New York.'
+									value={fields.info}
+									onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+										setField('info', e.target.value)
+									}
+									multiRow
+									width='100%'
+									style={{ minHeight: 160, resize: 'vertical' }}
+								/>
+							</Field>
+						</FieldStack>
+					</Section>
+
+					<FootBar $dark={isDark}>
+						<FootLeft $dark={isDark}>
+							<DotMini />
 							{isEdit
-								? 'Update the counterparty details below'
-								: 'Fill in the details to add a new counterparty'}
-						</Text>
-					</Box>
-				</Box>
-
-				<form onSubmit={handleSubmit}>
-					<Box display='flex' flexDirection='column' space={5}>
-						<Box display='flex' flexDirection='column' space={3}>
-							<SectionLabel>Counterparty Info</SectionLabel>
-							<GridInnerContainer spacing={2}>
-								<GridItem xs={12} md={6}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											First Name *
-										</Text>
-										<TextField
-											name='firstName'
-											placeholder='e.g. John'
-											value={fields.firstName}
-											onChange={(e) => setField('firstName', e.target.value)}
-											width='100%'
-											required
-										/>
-									</Box>
-								</GridItem>
-
-								<GridItem xs={12} md={6}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											Last Name *
-										</Text>
-										<TextField
-											name='lastName'
-											placeholder='e.g. Doe'
-											value={fields.lastName}
-											onChange={(e) => setField('lastName', e.target.value)}
-											width='100%'
-											required
-										/>
-									</Box>
-								</GridItem>
-
-								<GridItem xs={12} md={6}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											Type *
-										</Text>
-										<Select
-											label='Select type'
-											defaultValue={fields.type}
-											onChange={(value) => setField('type', value as CounterpartyType)}
-											width='100%'
-											sizes='normal'
-										>
-											<SelectItem label='Client' value='client' />
-											<SelectItem label='Contractor' value='contractor' />
-										</Select>
-									</Box>
-								</GridItem>
-
-								<GridItem xs={12}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											Info
-										</Text>
-										<TextField
-											name='info'
-											placeholder='CEO at Acme Corp. Based in New York.'
-											value={fields.info}
-											onChange={(e) => setField('info', e.target.value)}
-											width='100%'
-											multiRow
-											style={{ minHeight: '10rem' }}
-										/>
-									</Box>
-								</GridItem>
-							</GridInnerContainer>
-						</Box>
-
-						<Divider />
-
-						<Box display='flex' justify='flex-end' space={1}>
+								? 'Changes are saved when you press Save'
+								: 'Counterparty will be added to the list right away'}
+						</FootLeft>
+						<FootActions>
 							<Button
 								varient='outlined'
 								color='info'
@@ -178,42 +227,27 @@ const CounterpartyFormInner = ({ id, initial }: { id?: string; initial: FormFiel
 								Cancel
 							</Button>
 							<Button type='submit' disabled={isLoading}>
-								{isLoading ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Counterparty'}
+								{isLoading
+									? isEdit
+										? 'Saving…'
+										: 'Creating…'
+									: isEdit
+										? 'Save changes'
+										: 'Create counterparty'}
 							</Button>
-						</Box>
-					</Box>
+						</FootActions>
+					</FootBar>
 				</form>
-			</Box>
-		</Card>
+			</Surface>
+		</Shell>
 	)
 }
 
 const CounterpartyForm = ({ id }: CounterpartyFormProps) => {
 	const { data, isLoading } = useGetCounterpartyByIdQuery(id!, { skip: !id })
 
-	if (id && isLoading) {
-		return (
-			<Card py='2rem' px='2rem'>
-				<Box style={{ maxWidth: 720, margin: '0 auto' }}>
-					<Text varient='body2' secondary>
-						Loading…
-					</Text>
-				</Box>
-			</Card>
-		)
-	}
-
-	if (id && !data) {
-		return (
-			<Card py='2rem' px='2rem'>
-				<Box style={{ maxWidth: 720, margin: '0 auto' }}>
-					<Text varient='body2' secondary>
-						Counterparty not found
-					</Text>
-				</Box>
-			</Card>
-		)
-	}
+	if (id && isLoading) return <FormLoading label='Loading counterparty…' />
+	if (id && !data) return <FormNotFound label='Counterparty not found' />
 
 	const initial: FormFields = data
 		? {

@@ -1,6 +1,7 @@
 import React from 'react'
 import Box from '../../../components/box/Box'
 import Card from '../../../components/card/Card'
+import AnimatedCardShell from '../../../components/card/AnimatedCardShell'
 import UserListFilter from '../../../components/users/list/UserListFilter'
 import UserListTable from '../../../components/users/list/UserListTable'
 import { fetchUserListByParams } from '../../../features/users/creator'
@@ -16,13 +17,16 @@ const UserList = () => {
 	}
 	return (
 		<>
-			<Card padding='1.2rem' mb='1.6rem'>
-				<Text heading='h6' styles={{ marginBottom: '1rem' }}>
-					Search Filters
-				</Text>
-				<UserListFilter />
-			</Card>
-			<Card className='overflow-hidden'>
+			<AnimatedCardShell style={{ marginBottom: '1.6rem' }}>
+				<Card padding='1.2rem'>
+					<Text heading='h6' styles={{ marginBottom: '1rem' }}>
+						Search Filters
+					</Text>
+					<UserListFilter />
+				</Card>
+			</AnimatedCardShell>
+			<AnimatedCardShell>
+				<Card className='overflow-hidden'>
 				<Box
 					display='flex'
 					justify='space-between'
@@ -46,7 +50,8 @@ const UserList = () => {
 					</Box>
 				</Box>
 				<UserListTable />
-			</Card>
+				</Card>
+			</AnimatedCardShell>
 		</>
 	)
 }

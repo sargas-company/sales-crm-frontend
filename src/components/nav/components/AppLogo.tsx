@@ -1,23 +1,44 @@
 import styled from 'styled-components'
 import { Link } from 'react-router-dom'
-import Box from '../../box/Box'
-import { Text } from '../../../ui'
 import Logo from '../../../assets/logo.png'
 
 const AppLogo = () => (
-	<Link to='/dashboards/analytics'>
-		<Box display='flex' align='center' space={0.4}>
+	<StyledLink to='/dashboards/sales'>
+		<IconSlot>
 			<StyledLogo src={Logo} alt='app logo' />
-			<Text heading='h6' weight='bold' classes='app-text-logo'>
-				Sargas
-			</Text>
-		</Box>
-	</Link>
+		</IconSlot>
+		<LogoText className='app-text-logo'>Sargas</LogoText>
+	</StyledLink>
 )
 export default AppLogo
 
+const StyledLink = styled(Link)`
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	text-decoration: none;
+`
+
+const IconSlot = styled('span')`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+`
+
 const StyledLogo = styled('img')`
-	height: 30px;
-	width: 19px;
-	object-fit: cover;
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+`
+
+const LogoText = styled('span')`
+	font-family: 'Bebas Neue', 'Inter', system-ui, sans-serif;
+	font-size: 32px;
+	font-weight: 400;
+	line-height: 1;
+	letter-spacing: 3px;
+	text-transform: uppercase;
+	color: #252d3a;
 `

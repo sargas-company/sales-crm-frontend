@@ -12,7 +12,7 @@ export type purple = {
 	name: 'purple'
 	color: 'rgba(166, 108, 255, 1)'
 }
-export const BLUE_COLOR = 'rgba(0, 103, 255, 1)' as const
+export const BLUE_COLOR = 'rgba(3, 105, 161, 1)' as const
 export type blue = {
 	name: 'blue'
 	color: typeof BLUE_COLOR
@@ -48,7 +48,7 @@ export type PrimaryColor = {
 export const colorPallets: Array<PrimaryColor> = [
 	{ name: 'red', color: 'rgba(253, 93, 93, 1)' },
 	{ name: 'green', color: 'rgba(60, 207, 78, 1)' },
-	{ name: 'blue', color: BLUE_COLOR },
+	{ name: 'blue', color: 'rgba(3, 105, 161, 1)' },
 	{ name: 'purple', color: 'rgba(166, 108, 255, 1)' },
 	{ name: 'orange', color: 'rgba(255, 91, 0, 1)' },
 	{ name: 'pinky', color: 'rgba(249, 72, 146, 1)' },

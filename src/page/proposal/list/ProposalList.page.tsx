@@ -8,6 +8,7 @@ import DataGridFooter from '../../../components/data-grid-item/DataGridFooter'
 import { GridInnerContainer, GridItem } from '../../../components/layout'
 import { TextField } from '../../../ui'
 import { useGetProposalListQuery } from '../../../store/proposals/proposalsApi'
+import AnimatedCardShell from '../../../components/card/AnimatedCardShell'
 
 interface DeleteTarget {
 	id: string
@@ -53,8 +54,9 @@ const ProposalList = () => {
 
 	return (
 		<>
-			<Card padding={'30px'}>
-				<Box display='flex' justify='space-between' padding={20}>
+			<AnimatedCardShell>
+				<Card padding={'30px'}>
+					<Box display='flex' justify='space-between' padding={20}>
 					<GridInnerContainer alignItems='center' justifyContent='space-between'>
 						<GridItem xs={12} md={6}>
 							<TextField
@@ -88,7 +90,8 @@ const ProposalList = () => {
 						handleRowOptSelect={handleLimitChange}
 					/>
 				)}
-			</Card>
+				</Card>
+			</AnimatedCardShell>
 
 			{deleteTarget && (
 				<ProposalDeleteModal

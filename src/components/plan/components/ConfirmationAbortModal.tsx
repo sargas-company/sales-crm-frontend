@@ -2,7 +2,7 @@ import { CancelOutlined } from '@mui/icons-material'
 import useModal from '../../../hooks/useModal'
 import { Button } from '../../../ui'
 import Modal from '../../modal/Modal'
-import ModalContentLayout from '../../users/layout/ModalContentLayout'
+import ModalSurface from '../../_shared/ModalSurface'
 import Confirmation from './Confirmation'
 
 const ConfirmationAbortModal = ({ onConfirmDone }: { onConfirmDone: () => void }) => {
@@ -13,25 +13,20 @@ const ConfirmationAbortModal = ({ onConfirmDone }: { onConfirmDone: () => void }
 	}
 	return (
 		<>
-			<Button
-				varient='outlined'
-				color='rgba(239, 239, 240, 1)'
-				styles={{ opacity: 0.6 }}
-				onClick={toggleModal}
-			>
-				cancel
+			<Button varient='outlined' color='info' onClick={toggleModal}>
+				Cancel
 			</Button>
 			{show ? (
 				<Modal handleOutClick={toggleModal}>
-					<ModalContentLayout maxWidth='520px'>
+					<ModalSurface maxWidth={460} padding={32}>
 						<Confirmation
 							title='Cancelled'
-							subtitle='Unsubscription Cancelled'
+							subtitle='Unsubscription cancelled — your plan stays active.'
 							icon={<CancelOutlined />}
 							iconColor='error'
 							onConfirmDone={handleDone}
 						/>
-					</ModalContentLayout>
+					</ModalSurface>
 				</Modal>
 			) : (
 				''

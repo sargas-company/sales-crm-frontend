@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Card from '../../../components/card/Card'
+import AnimatedCardShell from '../../../components/card/AnimatedCardShell'
 import Box from '../../../components/box/Box'
 import DataGridFooter from '../../../components/data-grid-item/DataGridFooter'
 import { GridInnerContainer, GridItem } from '../../../components/layout'
@@ -52,7 +53,8 @@ const ClientRequestList = () => {
 
 	return (
 		<>
-			<Card padding='30px'>
+			<AnimatedCardShell>
+				<Card padding='30px'>
 				<Box display='flex' justify='space-between' padding={20}>
 					<GridInnerContainer alignItems='center' justifyContent='space-between'>
 						<GridItem xs={12} md={6}>
@@ -82,7 +84,8 @@ const ClientRequestList = () => {
 						handleRowOptSelect={handleLimitChange}
 					/>
 				)}
-			</Card>
+				</Card>
+			</AnimatedCardShell>
 
 			{deleteTarget && (
 				<ClientRequestDeleteModal

@@ -13,6 +13,11 @@ export default interface DataGridOptions<T> {
 		index: number
 	) => ReactNode
 	gridDataKey: (item: T) => string | number
+	isLoading?: boolean
+	skeletonRows?: number
+	emptyIcon?: ReactNode
+	emptyTitle?: string
+	emptyDescription?: string
 }
 
 export interface DataGridColoumn {

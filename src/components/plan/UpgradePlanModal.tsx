@@ -1,8 +1,8 @@
 import useModal from '../../hooks/useModal'
-import { Button, Select, SelectItem, Divider, Text } from '../../ui'
+import { Button, Select, SelectItem, Text } from '../../ui'
 import Box from '../box/Box'
 import Modal from '../modal/Modal'
-import ModalContentLayout from '../users/layout/ModalContentLayout'
+import ModalSurface from '../_shared/ModalSurface'
 import styled from 'styled-components'
 import CancelPlanModal from './CancelPlanModal'
 
@@ -16,7 +16,7 @@ const UpgradePlanModal = ({ plan }: { plan: string }) => {
 			<Button onClick={toggleModal}>Upgrade plan</Button>
 			{show ? (
 				<Modal handleOutClick={toggleModal}>
-					<ModalContentLayout>
+					<ModalSurface maxWidth={560} padding={32}>
 						<Box
 							width='100%'
 							display='flex'
@@ -24,12 +24,12 @@ const UpgradePlanModal = ({ plan }: { plan: string }) => {
 							justify='center'
 							align='center'
 							space={2}
-							padding={20}
 						>
-							<Text heading='h5'>Upgrade Plan</Text>
-							<Text varient='body2' paragraph secondary>
-								Choose the best plan for the user
+							<Text heading='h5'>Upgrade plan</Text>
+							<Text varient='body2' paragraph secondary align='center'>
+								Choose the best plan for your team
 							</Text>
+
 							<StyledSelectPlanWrp display='flex' wrap='nowrap' width='100%' space={1}>
 								<Select
 									defaultValue={plan.toLowerCase()}
@@ -39,14 +39,16 @@ const UpgradePlanModal = ({ plan }: { plan: string }) => {
 									containerWidth='100%'
 									labelWidth='100%'
 								>
-									<SelectItem value='basic' label='Basic - $0/month' />
-									<SelectItem value='standard' label='Standard - $99/month' />
-									<SelectItem value='enterprise' label='Enterprise - $449/month' />
-									<SelectItem value='company' label='Company - $999/month' />
+									<SelectItem value='basic' label='Basic — $0/month' />
+									<SelectItem value='standard' label='Standard — $99/month' />
+									<SelectItem value='enterprise' label='Enterprise — $449/month' />
+									<SelectItem value='company' label='Company — $999/month' />
 								</Select>
-								<Button>upgrade</Button>
+								<Button>Upgrade</Button>
 							</StyledSelectPlanWrp>
-							<Divider styles={{ width: `calc(100% + 20px + 0.75rem + 1rem)` }} />
+
+							<Divider />
+
 							<Box
 								display='flex'
 								wrap='wrap'
@@ -56,7 +58,7 @@ const UpgradePlanModal = ({ plan }: { plan: string }) => {
 							>
 								<Box>
 									<Text varient='body2' weight='medium' paragraph>
-										User current plan is {plan}
+										Current plan · {plan}
 									</Text>
 									<Box display='flex' align='baseline'>
 										<Text heading='h3' skinColor>
@@ -73,7 +75,7 @@ const UpgradePlanModal = ({ plan }: { plan: string }) => {
 								</Box>
 							</Box>
 						</Box>
-					</ModalContentLayout>
+					</ModalSurface>
 				</Modal>
 			) : (
 				''
@@ -88,4 +90,11 @@ const StyledSelectPlanWrp = styled(Box)`
 		flex-wrap: wrap;
 		flex-direction: column;
 	}
+`
+
+const Divider = styled.div`
+	width: 100%;
+	height: 1px;
+	background: #f0eef7;
+	margin: 8px 0;
 `

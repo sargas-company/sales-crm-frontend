@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Box, Button, Card, CardContent, CircularProgress, Typography } from '@mui/material'
 import InvoiceFormStep from '../add/InvoiceFormStep'
 import { useGetInvoiceByIdQuery } from '../../../store/invoices/invoicesApi'
+import { FormLoading, FormNotFound } from '../../_shared/FormShell'
 
 type PartyType = 'contractor' | 'client'
 
@@ -34,28 +34,8 @@ const InvoiceEditForm = ({ id }: Props) => {
 		}
 	}, [invoice, selectedType])
 
-	if (isLoading) {
-		return (
-			<Box sx={{ display: 'flex', justifyContent: 'center', p: 6 }}>
-				<CircularProgress />
-			</Box>
-		)
-	}
-
-	if (isError || !invoice || !selectedParty) {
-		return (
-			<Card sx={{ m: 3 }}>
-				<CardContent>
-					<Typography variant='h6' sx={{ mb: 2 }}>
-						Invoice not found
-					</Typography>
-					<Button variant='outlined' onClick={() => navigate('/invoices/list')}>
-						Back to list
-					</Button>
-				</CardContent>
-			</Card>
-		)
-	}
+	if (isLoading) return <FormLoading label='Loading invoice…' />
+	if (isError || !invoice || !selectedParty) return <FormNotFound label='Invoice not found' />
 
 	return (
 		<InvoiceFormStep

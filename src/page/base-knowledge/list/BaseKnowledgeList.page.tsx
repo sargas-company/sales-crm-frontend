@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Card from '../../../components/card/Card'
+import AnimatedCardShell from '../../../components/card/AnimatedCardShell'
 import Box from '../../../components/box/Box'
 import CreateKnowledgeButton from '../../../components/base-knowledge/list/CreateKnowledgeButton'
 import BaseKnowledgeTable from '../../../components/base-knowledge/list/BaseKnowledgeTable'
@@ -45,7 +46,8 @@ const BaseKnowledgeList = () => {
 
 	return (
 		<>
-			<Card padding={'30px'}>
+			<AnimatedCardShell>
+				<Card padding={'30px'}>
 				<Box display='flex' justify='space-between' padding={20}>
 					<GridInnerContainer alignItems='center' justifyContent='space-between'>
 						<GridItem xs={12} md={6}>
@@ -85,7 +87,8 @@ const BaseKnowledgeList = () => {
 						handleRowOptSelect={handleLimitChange}
 					/>
 				)}
-			</Card>
+				</Card>
+			</AnimatedCardShell>
 
 			{createModal.show && (
 				<BaseKnowledgeFormModal onClose={createModal.hideModal} onSuccess={refetch} />

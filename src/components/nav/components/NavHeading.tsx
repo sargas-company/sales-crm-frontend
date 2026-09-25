@@ -10,7 +10,7 @@ function NavHeading() {
 	//   dispatch,
 	// } = useTheme();
 	return (
-		<Box display='flex' align='center' justify='space-between' px={20} mt={8} py={16}>
+		<Box display='flex' align='center' justify='space-between' pl={19} pr={20} mt={8} py={16}>
 			<AppLogo />
 			{/*<Choice*/}
 			{/*  name="menu-collaps"*/}

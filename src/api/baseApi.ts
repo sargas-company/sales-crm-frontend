@@ -20,6 +20,10 @@ export const baseApi = createApi({
 		'Invoice',
 		'Prompt',
 		'Setting',
+		'SalesFeedback',
+		'SalesCandidate',
+		'SalesTaxonomy',
+		'SalesAlertConfig',
 	],
 	endpoints: () => ({}),
 })

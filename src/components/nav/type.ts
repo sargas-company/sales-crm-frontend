@@ -3,6 +3,7 @@ export interface Parent {
 	title: string
 	icon: ReactNode
 	rootPath: string
+	soon?: boolean
 }
 export interface Childrens {
 	parent?: Parent

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { AutoAwesomeOutlined } from '@mui/icons-material'
 import DataGrid from '../../layout/data-grid/DataGrid'
 import Box from '../../box/Box'
 import DataGridCell from '../../data-grid-item/DataGridCell'
@@ -28,19 +29,17 @@ interface Props {
 }
 
 const PromptTable = ({ items, isLoading, onDelete }: Props) => {
-	if (isLoading)
-		return (
-			<Box padding={24}>
-				<Text>Loading…</Text>
-			</Box>
-		)
-
 	return (
 		<Box padding={24} pl={40}>
 			<DataGrid
 				rows={items}
 				columns={columns}
 				gridDataKey={(item: PromptItem) => item.id}
+				isLoading={isLoading}
+				skeletonRows={6}
+				emptyIcon={<AutoAwesomeOutlined style={{ fontSize: 44 }} />}
+				emptyTitle='No prompts yet'
+				emptyDescription='Create your first prompt — it will show up here.'
 				renderGridData={(row: PromptItem, field, index) => (
 					<>
 						<DataGridCell
@@ -69,18 +68,38 @@ const PromptTable = ({ items, isLoading, onDelete }: Props) => {
 						</DataGridCell>
 						<DataGridCell width={field['type'].width} justify='center'>
 							<Chip
-								label={row.type}
+								label={row.type.replace(/_/g, ' ')}
 								skin='light'
 								size='small'
 								color='info'
-								styles={{ whiteSpace: 'nowrap', fontSize: '11px', color: '#000000' }}
+								styles={{
+									whiteSpace: 'nowrap',
+									fontSize: '12px',
+									fontWeight: 600,
+									letterSpacing: '0.3px',
+									textTransform: 'capitalize',
+								}}
 							/>
 						</DataGridCell>
-						<DataGridCell
-							width={field['version'].width}
-							justify='center'
-							value={`v${row.version}`}
-						/>
+						<DataGridCell width={field['version'].width} justify='center'>
+							<span
+								style={{
+									display: 'inline-flex',
+									alignItems: 'center',
+									padding: '2px 10px',
+									borderRadius: 999,
+									fontFamily:
+										'ui-monospace, SFMono-Regular, Menlo, monospace',
+									fontSize: 12,
+									fontWeight: 600,
+									color: '#6366f1',
+									background: 'rgba(99, 102, 241, 0.10)',
+									letterSpacing: '0.4px',
+								}}
+							>
+								v{row.version}
+							</span>
+						</DataGridCell>
 						<DataGridCell width={field['isActive'].width} justify='center'>
 							<PromptActiveChip isActive={row.isActive} />
 						</DataGridCell>

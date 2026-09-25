@@ -45,7 +45,6 @@ const StyledNavContent = styled(Card)<{ isCollapsed: boolean }>`
 			`opacity: 0;
       transition: 200ms;
     `}
-	font-size: 15px;
   }
 
   & .nav-item-container {

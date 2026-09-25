@@ -4,7 +4,6 @@ import { NavLink, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 import useTheme from '../../../theme/useTheme'
 import { Text } from '../../../ui'
-import genColorShades from '../../../utils/genColorShades'
 
 const NavItem: FC<Props> = (props) => {
 	const { label, path, icon, varient, compact, onClick, hideIcon, onHover } = props
@@ -16,9 +15,10 @@ const NavItem: FC<Props> = (props) => {
 		},
 	} = useTheme()
 	const location = useLocation()
-	const basePath = '/' + path.split('/').filter(Boolean)[0]
-	const isActiveSection =
-		location.pathname === basePath || location.pathname.startsWith(basePath + '/')
+	const normalize = (p: string) => (p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p)
+	const target = normalize(path)
+	const current = normalize(location.pathname)
+	const isActiveSection = current === target || current.startsWith(target + '/')
 
 	return (
 		<StyledNavItem
@@ -79,31 +79,61 @@ const StyledNavItem = styled('li')<{
 		flex: 1;
 		align-items: center;
 		gap: 12px;
-		padding: ${({ compact }) => (compact ? '0.3rem' : '0.6rem')} 1.6rem;
+		padding: ${({ compact }) => (compact ? '0.35rem' : '0.6rem')} 1.6rem;
 		color: inherit;
 		border-top-right-radius: 1.4rem;
 		border-bottom-right-radius: 1.4rem;
-		margin-bottom: 6px;
+		margin-bottom: 4px;
+		font-size: 14px;
+		font-weight: 500;
+		letter-spacing: 0;
+		transition:
+			background 220ms cubic-bezier(0.4, 0, 0.2, 1),
+			color 220ms cubic-bezier(0.4, 0, 0.2, 1),
+			transform 220ms cubic-bezier(0.4, 0, 0.2, 1),
+			box-shadow 220ms cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	& > .nav-item .nav-label {
+		font-size: 14px;
+		font-weight: 500;
+		letter-spacing: 0.1px;
+		transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	& > .nav-item svg {
+		transition:
+			transform 220ms cubic-bezier(0.4, 0, 0.2, 1),
+			color 220ms cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
 	& > .nav-item:hover {
-		background: ${({ mode }) => (mode === 'dark' ? '#ffffff14' : 'rgba(0, 0, 0, 0.03)')};
+		background: ${({ mode }) => (mode === 'dark' ? '#ffffff14' : 'rgba(0, 0, 0, 0.04)')};
+	}
+
+	& > .nav-item:hover svg {
+		transform: scale(1.08);
+		color: ${({ skinColor }) => skinColor};
+	}
+
+	& > .nav-item:hover .nav-label {
+		transform: translateX(2px);
 	}
 
 	& > .nav-item-active {
 		position: relative;
-		background: ${({ varient, skinColor }) =>
+		background: ${({ varient }) =>
 			varient === 'filled'
-				? `linear-gradient(270deg, ${skinColor}, ${genColorShades(skinColor, {
-						intensity: 7,
-						total: 1,
-					})}) !important`
+				? `linear-gradient(270deg, #0284c7, #075985) !important`
 				: 'none'};
 
-		box-shadow: ${({ mode }) => (mode === 'light' ? '#c5c5c5' : '#1a2130')} -3px 3px 8px 0px;
+		box-shadow: ${({ mode }) =>
+			mode === 'light'
+				? `rgba(3, 105, 161, 0.28) -2px 6px 16px -4px`
+				: `rgba(3, 105, 161, 0.42) -2px 6px 16px -4px`};
 		${({ varient }) => (varient === 'bordered' ? `box-shadow: none;` : '')}
 
-		${({ varient, skinColor }) =>
+		${({ varient }) =>
 			varient === 'bordered'
 				? `
           &::after {
@@ -113,10 +143,17 @@ const StyledNavItem = styled('li')<{
             width: 3px;
             left: 0;
             top: 0;
-            background: ${skinColor};
+            background: #0369a1;
+            border-radius: 3px;
           }
     `
 				: ''}
+	}
+	& > .nav-item-active:hover svg {
+		transform: none;
+	}
+	& > .nav-item-active:hover .nav-label {
+		transform: none;
 	}
 	& > .nav-item-active * {
 		color: #f5f5f5;

@@ -2,7 +2,7 @@ import { CheckCircleOutline } from '@mui/icons-material'
 import useModal from '../../../hooks/useModal'
 import { Button } from '../../../ui'
 import Modal from '../../modal/Modal'
-import ModalContentLayout from '../../users/layout/ModalContentLayout'
+import ModalSurface from '../../_shared/ModalSurface'
 import Confirmation from './Confirmation'
 
 const ConfirmationSuccessModal = ({ onConfirmDone }: { onConfirmDone: () => void }) => {
@@ -13,18 +13,20 @@ const ConfirmationSuccessModal = ({ onConfirmDone }: { onConfirmDone: () => void
 	}
 	return (
 		<>
-			<Button onClick={toggleModal}>Yes</Button>
+			<Button color='error' onClick={toggleModal}>
+				Yes, cancel
+			</Button>
 			{show ? (
 				<Modal handleOutClick={toggleModal}>
-					<ModalContentLayout maxWidth='520px'>
+					<ModalSurface maxWidth={460} padding={32}>
 						<Confirmation
-							title='Unsubscribed!'
-							subtitle='Your subscription cancelled successfully.'
+							title='Unsubscribed'
+							subtitle='Your subscription was cancelled successfully.'
 							icon={<CheckCircleOutline />}
 							iconColor='success'
 							onConfirmDone={handelDone}
 						/>
-					</ModalContentLayout>
+					</ModalSurface>
 				</Modal>
 			) : (
 				''

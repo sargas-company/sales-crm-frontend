@@ -1,13 +1,10 @@
-import { Icon } from '@iconify/react'
 import { createRef, useEffect } from 'react'
 import styled from 'styled-components'
 import useTheme from '../../theme/useTheme'
-import { IconButton } from '../../ui'
 import Box from '../box/Box'
 import Card from '../card/Card'
 import ProfileDropdown from './components/ProfileDropdown'
-// import Notification from "../notification/Notification";
-import { NotificationsOutlined } from '@mui/icons-material'
+import NotificationBell from './components/NotificationBell'
 
 const AppBar = () => {
 	const {
@@ -16,7 +13,6 @@ const AppBar = () => {
 			layout: { appBarBlur, appBarPosition },
 			menuStyle: { layout },
 		},
-		dispatch,
 	} = useTheme()
 	const contentRef = createRef<HTMLHeadElement>()
 
@@ -58,22 +54,7 @@ const AppBar = () => {
 					px={layout === 'horizontal' ? 20 : 0}
 				>
 					<Box display='flex' align='center' space={0.6}>
-						{/*<Notification />*/}
-						<IconButton varient='text' size={40} fontSize={24}>
-							<NotificationsOutlined />
-						</IconButton>
-						<IconButton
-							varient='text'
-							size={36}
-							fontSize={26}
-							onClick={dispatch?.handleChangeTheme}
-						>
-							{mode.name === 'dark' ? (
-								<Icon icon='mdi:weather-night' />
-							) : (
-								<Icon icon='mdi:weather-sunny' />
-							)}
-						</IconButton>
+						<NotificationBell />
 						<ProfileDropdown />
 					</Box>
 				</Box>

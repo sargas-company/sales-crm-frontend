@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Box from '../../../components/box/Box'
 import Card from '../../../components/card/Card'
+import AnimatedCardShell from '../../../components/card/AnimatedCardShell'
 import CreateNewClientCall from '../../../components/client-call/list/CreateNewCall'
 import ClientCallTable from '../../../components/client-call/list/ClientCallTable'
 import ClientCallDeleteModal from '../../../components/client-call/list/ProposalDeleteModal'
@@ -69,7 +70,8 @@ const ClientCallList = () => {
 
 	return (
 		<>
-			<Card padding={'30px'}>
+			<AnimatedCardShell>
+				<Card padding={'30px'}>
 				<Box display='flex' justify='space-between' padding={20}>
 					<GridInnerContainer alignItems='center' justifyContent='space-between'>
 						<GridItem xs={12} md={12}>
@@ -94,7 +96,8 @@ const ClientCallList = () => {
 						handleRowOptSelect={handleLimitChange}
 					/>
 				)}
-			</Card>
+				</Card>
+			</AnimatedCardShell>
 
 			{deleteTarget && (
 				<ClientCallDeleteModal

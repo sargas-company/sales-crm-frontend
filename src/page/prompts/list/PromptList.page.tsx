@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Card from '../../../components/card/Card'
+import AnimatedCardShell from '../../../components/card/AnimatedCardShell'
 import Box from '../../../components/box/Box'
 import DataGridFooter from '../../../components/data-grid-item/DataGridFooter'
 import { GridInnerContainer, GridItem } from '../../../components/layout'
-import { Select, SelectItem, Button } from '../../../ui'
+import { Select, SelectItem, Button, TextField } from '../../../ui'
 import PromptTable from '../../../components/prompts/list/PromptTable'
 import PromptDeleteModal from '../../../components/prompts/list/PromptDeleteModal'
 import { useGetPromptListQuery } from '../../../store/prompts/promptsApi'
 import type { PromptType, PromptItem } from '../../../store/prompts/types/definition'
+import { PromptFilterRow } from './PromptList.styled'
 
 const LIMIT_OPTIONS = [10, 20]
 
@@ -30,6 +32,7 @@ const PromptList = () => {
 	const [limit, setLimit] = useState(LIMIT_OPTIONS[0])
 	const [typeFilter, setTypeFilter] = useState<PromptType | ''>('')
 	const [activeFilter, setActiveFilter] = useState<'true' | 'false' | ''>('')
+	const [search, setSearch] = useState('')
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
 
 	const { data, isLoading, refetch } = useGetPromptListQuery({
@@ -39,8 +42,19 @@ const PromptList = () => {
 		...(activeFilter !== '' && { isActive: activeFilter === 'true' }),
 	})
 
-	const items = data?.data ?? []
+	const allItems = data?.data ?? []
 	const total = data?.total ?? 0
+
+	const items = search
+		? allItems.filter((item: PromptItem) => {
+				const q = search.toLowerCase()
+				return (
+					item.title.toLowerCase().includes(q) ||
+					item.type.toLowerCase().includes(q) ||
+					(item.createdBy ?? '').toLowerCase().includes(q)
+				)
+			})
+		: allItems
 
 	const passed = (page - 1) * limit + 1
 	const next = Math.min(page * limit, total)
@@ -61,47 +75,59 @@ const PromptList = () => {
 	}
 
 	const handleDeleteRequest = (id: string) => {
-		const item = items.find((i: PromptItem) => i.id === id)
+		const item = allItems.find((i: PromptItem) => i.id === id)
 		if (item) setDeleteTarget({ id, title: item.title })
 	}
 
 	return (
 		<>
-			<Card padding={'30px'}>
+			<AnimatedCardShell>
+				<Card padding={'30px'}>
 				<Box display='flex' justify='space-between' padding={20}>
 					<GridInnerContainer alignItems='center' justifyContent='space-between'>
-						<GridItem xs={12} md={8}>
-							<Box display='flex' align='center' style={{ gap: '16px' }}>
-								<Box style={{ minWidth: '180px', maxWidth: '220px', flex: 1 }}>
+						<GridItem xs={12} md={9}>
+							<PromptFilterRow>
+								<div className='filter-slot'>
+									<TextField
+										type='text'
+										name='search-prompt'
+										placeholder='Search prompt'
+										sizes='small'
+										onChange={(e) => setSearch(e.target.value)}
+									/>
+								</div>
+								<div className='filter-slot'>
 									<Select
 										label='Type'
 										defaultValue={typeFilter}
 										onChange={handleTypeChange}
 										sizes='small'
 										width='100%'
+										containerWidth='100%'
 									>
 										<SelectItem label='All types' value='' />
 										{PROMPT_TYPES.map(({ value, label }) => (
 											<SelectItem key={value} label={label} value={value} />
 										))}
 									</Select>
-								</Box>
-								<Box style={{ minWidth: '180px', maxWidth: '220px', flex: 1 }}>
+								</div>
+								<div className='filter-slot'>
 									<Select
 										label='Status'
 										defaultValue={activeFilter}
 										onChange={handleActiveChange}
 										sizes='small'
 										width='100%'
+										containerWidth='100%'
 									>
 										<SelectItem label='All statuses' value='' />
 										<SelectItem label='Active' value='true' />
 										<SelectItem label='Inactive' value='false' />
 									</Select>
-								</Box>
-							</Box>
+								</div>
+							</PromptFilterRow>
 						</GridItem>
-						<GridItem xs={12} md={4}>
+						<GridItem xs={12} md={3}>
 							<Box display='flex' justify='flex-end'>
 								<Button onClick={() => navigate('/prompts/add')}>Create Prompt</Button>
 							</Box>
@@ -123,7 +149,8 @@ const PromptList = () => {
 						handleRowOptSelect={handleLimitChange}
 					/>
 				)}
-			</Card>
+				</Card>
+			</AnimatedCardShell>
 
 			{deleteTarget && (
 				<PromptDeleteModal

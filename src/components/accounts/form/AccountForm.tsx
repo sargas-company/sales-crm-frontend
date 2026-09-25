@@ -1,9 +1,6 @@
 import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Card from '../../card/Card'
-import Box from '../../box/Box'
-import { GridInnerContainer, GridItem } from '../../layout'
-import { Text, TextField, Button, Divider, Select, SelectItem } from '../../../ui'
+import { TextField, Button, Select, SelectItem } from '../../../ui'
 import {
 	useGetAccountByIdQuery,
 	useCreateAccountMutation,
@@ -12,21 +9,28 @@ import {
 import { useGetPlatformsQuery } from '../../../store/platforms/platformsApi'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
+import useTheme from '../../../theme/useTheme'
+import {
+	Field,
+	FormHeader,
+	FormLoading,
+	FormNotFound,
+	SectionHead,
+} from '../../_shared/FormShell'
+import {
+	DotMini,
+	FieldGrid,
+	FootActions,
+	FootBar,
+	FootLeft,
+	Section,
+	Shell,
+	Surface,
+} from '../../_shared/formShell.styled'
 
 interface AccountFormProps {
 	id?: string
 }
-
-const SectionLabel = ({ children }: { children: string }) => (
-	<Text
-		varient='caption'
-		weight='medium'
-		secondary
-		styles={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}
-	>
-		{children}
-	</Text>
-)
 
 interface FormFields {
 	firstName: string
@@ -34,23 +38,58 @@ interface FormFields {
 	platformId: string
 }
 
+interface FormErrors {
+	firstName?: string
+	lastName?: string
+	platformId?: string
+}
+
 const empty: FormFields = { firstName: '', lastName: '', platformId: '' }
+
+const UserIcon = () => (
+	<svg width='22' height='22' viewBox='0 0 24 24' fill='none'>
+		<path
+			d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'
+			stroke='currentColor'
+			strokeWidth='1.8'
+			strokeLinecap='round'
+			strokeLinejoin='round'
+		/>
+		<circle cx='12' cy='7' r='4' stroke='currentColor' strokeWidth='1.8' />
+	</svg>
+)
 
 const AccountFormInner = ({ id, initial }: { id?: string; initial: FormFields }) => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
+	const { theme } = useTheme()
+	const isDark = theme.mode.name === 'dark'
+
 	const [fields, setFields] = useState<FormFields>(initial)
+	const [errors, setErrors] = useState<FormErrors>({})
 	const [createAccount, { isLoading: creating }] = useCreateAccountMutation()
 	const [updateAccount, { isLoading: updating }] = useUpdateAccountMutation()
-	const { data: platforms = [] } = useGetPlatformsQuery()
+	const { data: platforms = [], isLoading: platformsLoading } = useGetPlatformsQuery()
 	const isLoading = creating || updating
 	const isEdit = Boolean(id)
 
-	const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) =>
+	const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) => {
 		setFields((prev) => ({ ...prev, [key]: value }))
+		if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }))
+	}
+
+	const validate = (): boolean => {
+		const next: FormErrors = {}
+		if (!fields.firstName.trim()) next.firstName = 'First name is required'
+		if (!fields.lastName.trim()) next.lastName = 'Last name is required'
+		if (!fields.platformId) next.platformId = 'Select a platform'
+		setErrors(next)
+		return Object.keys(next).length === 0
+	}
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
+		if (!validate()) return
 		try {
 			if (isEdit) {
 				await updateAccount({
@@ -77,80 +116,84 @@ const AccountFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 	}
 
 	return (
-		<Card py='2rem' px='2rem'>
-			<Box style={{ maxWidth: 720, margin: '0 auto' }}>
-				<Box mb={5}>
-					<Text heading='h5'>{isEdit ? 'Edit Account' : 'Create Account'}</Text>
-					<Box mt={1}>
-						<Text varient='body2' secondary>
+		<Shell $dark={isDark}>
+			<Surface $dark={isDark}>
+				<FormHeader
+					backTo='/accounts/list/'
+					backLabel='Back to accounts'
+					icon={<UserIcon />}
+					title={isEdit ? 'Edit account' : 'New account'}
+					subtitle={
+						isEdit
+							? 'Update the developer account details below'
+							: 'Fill in the details to add a new developer account'
+					}
+					badgeLabel={isEdit ? 'Editing' : 'New'}
+					badgeTone={isEdit ? 'edit' : 'new'}
+				/>
+
+				<form onSubmit={handleSubmit} noValidate>
+					<Section $delay={80}>
+						<SectionHead
+							num='01'
+							title='Identity'
+							hint='The developer’s full name — used across proposals and platforms'
+						/>
+						<FieldGrid>
+							<Field label='First name' required error={errors.firstName}>
+								<TextField
+									name='firstName'
+									placeholder='e.g. Dmytro'
+									value={fields.firstName}
+									onChange={(e) => setField('firstName', e.target.value)}
+									error={!!errors.firstName}
+									width='100%'
+								/>
+							</Field>
+							<Field label='Last name' required error={errors.lastName}>
+								<TextField
+									name='lastName'
+									placeholder='e.g. Sarafaniuk'
+									value={fields.lastName}
+									onChange={(e) => setField('lastName', e.target.value)}
+									error={!!errors.lastName}
+									width='100%'
+								/>
+							</Field>
+						</FieldGrid>
+					</Section>
+
+					<Section $delay={160}>
+						<SectionHead
+							num='02'
+							title='Platform'
+							hint='Where this account exists — proposals will be attributed here'
+						/>
+						<FieldGrid>
+							<Field label='Platform' required error={errors.platformId} span='full'>
+								<Select
+									label={platformsLoading ? 'Loading…' : 'Select platform'}
+									defaultValue={fields.platformId}
+									onChange={(value) => setField('platformId', value)}
+									width='100%'
+									sizes='normal'
+								>
+									{platforms.map((p) => (
+										<SelectItem key={p.id} label={p.title} value={p.id} />
+									))}
+								</Select>
+							</Field>
+						</FieldGrid>
+					</Section>
+
+					<FootBar $dark={isDark}>
+						<FootLeft $dark={isDark}>
+							<DotMini />
 							{isEdit
-								? 'Update the account details below'
-								: 'Fill in the details to add a new developer account'}
-						</Text>
-					</Box>
-				</Box>
-
-				<form onSubmit={handleSubmit}>
-					<Box display='flex' flexDirection='column' space={5}>
-						<Box display='flex' flexDirection='column' space={3}>
-							<SectionLabel>Account Info</SectionLabel>
-							<GridInnerContainer spacing={2}>
-								<GridItem xs={12} md={6}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											First Name *
-										</Text>
-										<TextField
-											name='firstName'
-											placeholder='e.g. Dmytro'
-											value={fields.firstName}
-											onChange={(e) => setField('firstName', e.target.value)}
-											width='100%'
-											required
-										/>
-									</Box>
-								</GridItem>
-
-								<GridItem xs={12} md={6}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											Last Name *
-										</Text>
-										<TextField
-											name='lastName'
-											placeholder='e.g. Sarafaniuk'
-											value={fields.lastName}
-											onChange={(e) => setField('lastName', e.target.value)}
-											width='100%'
-											required
-										/>
-									</Box>
-								</GridItem>
-
-								<GridItem xs={12} md={6}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											Platform *
-										</Text>
-										<Select
-											label='Select platform'
-											defaultValue={fields.platformId}
-											onChange={(value) => setField('platformId', value)}
-											width='100%'
-											sizes='normal'
-										>
-											{platforms.map((p) => (
-												<SelectItem key={p.id} label={p.title} value={p.id} />
-											))}
-										</Select>
-									</Box>
-								</GridItem>
-							</GridInnerContainer>
-						</Box>
-
-						<Divider />
-
-						<Box display='flex' justify='flex-end' space={1}>
+								? 'Changes are saved when you press Save'
+								: 'Account will be added to the list right away'}
+						</FootLeft>
+						<FootActions>
 							<Button
 								varient='outlined'
 								color='info'
@@ -159,43 +202,28 @@ const AccountFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 							>
 								Cancel
 							</Button>
-							<Button type='submit' disabled={isLoading || !fields.platformId}>
-								{isLoading ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Account'}
+							<Button type='submit' disabled={isLoading}>
+								{isLoading
+									? isEdit
+										? 'Saving…'
+										: 'Creating…'
+									: isEdit
+										? 'Save changes'
+										: 'Create account'}
 							</Button>
-						</Box>
-					</Box>
+						</FootActions>
+					</FootBar>
 				</form>
-			</Box>
-		</Card>
+			</Surface>
+		</Shell>
 	)
 }
 
 const AccountForm = ({ id }: AccountFormProps) => {
 	const { data, isLoading } = useGetAccountByIdQuery(id!, { skip: !id })
 
-	if (id && isLoading) {
-		return (
-			<Card py='2rem' px='2rem'>
-				<Box style={{ maxWidth: 720, margin: '0 auto' }}>
-					<Text varient='body2' secondary>
-						Loading…
-					</Text>
-				</Box>
-			</Card>
-		)
-	}
-
-	if (id && !data) {
-		return (
-			<Card py='2rem' px='2rem'>
-				<Box style={{ maxWidth: 720, margin: '0 auto' }}>
-					<Text varient='body2' secondary>
-						Account not found
-					</Text>
-				</Box>
-			</Card>
-		)
-	}
+	if (id && isLoading) return <FormLoading label='Loading account…' />
+	if (id && !data) return <FormNotFound label='Account not found' />
 
 	const initial: FormFields = data
 		? { firstName: data.firstName, lastName: data.lastName, platformId: data.platformId }

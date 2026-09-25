@@ -3,7 +3,7 @@ import useModal from '../../hooks/useModal'
 import { Button, Text } from '../../ui'
 import Box from '../box/Box'
 import Modal from '../modal/Modal'
-import ModalContentLayout from '../users/layout/ModalContentLayout'
+import ModalSurface from '../_shared/ModalSurface'
 import ConfirmationAbortModal from './components/ConfirmationAbortModal'
 import ConfirmationSuccessModal from './components/ConfirmationSuccessModal'
 
@@ -16,27 +16,42 @@ const CancelPlanModal = () => {
 			</Button>
 			{show ? (
 				<Modal handleOutClick={toggleModal}>
-					<ModalContentLayout maxWidth='520px'>
+					<ModalSurface maxWidth={480} padding={32}>
 						<Box
 							display='flex'
 							flexDirection='column'
 							align='center'
 							justify='center'
-							space={1}
-							padding={20}
+							space={2}
 						>
-							<Text size={86} color='warning'>
-								<ErrorOutline />
-							</Text>
-							<Text align='center'>
+							<div
+								style={{
+									width: 64,
+									height: 64,
+									borderRadius: '50%',
+									background: 'rgba(239, 68, 68, 0.12)',
+									color: '#ef4444',
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'center',
+									fontSize: 32,
+								}}
+							>
+								<ErrorOutline fontSize='inherit' />
+							</div>
+							<Text align='center' weight='medium' size={17}>
 								Are you sure you would like to cancel your subscription?
 							</Text>
-							<Box display='flex' justify='center' space={1}>
-								<ConfirmationSuccessModal onConfirmDone={hideModal} />
+							<Text align='center' secondary varient='body2'>
+								You will lose access to premium features at the end of the billing
+								period. This action can be reverted before then.
+							</Text>
+							<Box display='flex' justify='center' space={1} style={{ marginTop: 8 }}>
 								<ConfirmationAbortModal onConfirmDone={hideModal} />
+								<ConfirmationSuccessModal onConfirmDone={hideModal} />
 							</Box>
 						</Box>
-					</ModalContentLayout>
+					</ModalSurface>
 				</Modal>
 			) : (
 				''

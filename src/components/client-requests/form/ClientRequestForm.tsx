@@ -1,30 +1,35 @@
-import { FormEvent, useState } from 'react'
+import { ChangeEvent, FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Card from '../../card/Card'
-import Box from '../../box/Box'
-import { GridInnerContainer, GridItem } from '../../layout'
-import { Text, TextField, Button, Divider, Select, SelectItem } from '../../../ui'
+import { TextField, Button, Select, SelectItem } from '../../../ui'
 import {
 	useGetClientRequestByIdQuery,
 	useUpdateClientRequestMutation,
 } from '../../../store/clientRequests/clientRequestsApi'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
+import useTheme from '../../../theme/useTheme'
 import type {
 	ClientRequestItem,
 	ClientRequestStatus,
 } from '../../../store/clientRequests/types/definition'
-
-const SectionLabel = ({ children }: { children: string }) => (
-	<Text
-		varient='caption'
-		weight='medium'
-		secondary
-		styles={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}
-	>
-		{children}
-	</Text>
-)
+import {
+	Field,
+	FormHeader,
+	FormLoading,
+	FormNotFound,
+	SectionHead,
+} from '../../_shared/FormShell'
+import {
+	DotMini,
+	FieldGrid,
+	FieldStack,
+	FootActions,
+	FootBar,
+	FootLeft,
+	Section,
+	Shell,
+	Surface,
+} from '../../_shared/formShell.styled'
 
 interface FormFields {
 	name: string
@@ -44,6 +49,18 @@ const toFormValues = (data: ClientRequestItem): FormFields => ({
 	status: data.status,
 })
 
+const InboxIcon = () => (
+	<svg width='22' height='22' viewBox='0 0 24 24' fill='none'>
+		<path
+			d='M4 4h16v10a2 2 0 0 1-2 2h-3l-3 3-3-3H6a2 2 0 0 1-2-2V4z'
+			stroke='currentColor'
+			strokeWidth='1.8'
+			strokeLinecap='round'
+			strokeLinejoin='round'
+		/>
+	</svg>
+)
+
 const ClientRequestFormInner = ({
 	id,
 	initialData,
@@ -53,6 +70,8 @@ const ClientRequestFormInner = ({
 }) => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
+	const { theme } = useTheme()
+	const isDark = theme.mode.name === 'dark'
 	const [fields, setFields] = useState<FormFields>(toFormValues(initialData))
 	const [updateClientRequest, { isLoading }] = useUpdateClientRequestMutation()
 
@@ -71,125 +90,118 @@ const ClientRequestFormInner = ({
 	}
 
 	return (
-		<Card py='2rem' px='2rem'>
-			<Box style={{ maxWidth: 720, margin: '0 auto' }}>
-				<Box mb={5}>
-					<Text heading='h5'>Edit Client Request</Text>
-					<Box mt={1}>
-						<Text varient='body2' secondary>
-							Update the request details below
-						</Text>
-					</Box>
-				</Box>
+		<Shell $dark={isDark}>
+			<Surface $dark={isDark}>
+				<FormHeader
+					backTo={`/client-requests/preview/${id}`}
+					backLabel='Back to request'
+					icon={<InboxIcon />}
+					title='Edit client request'
+					subtitle='Update contact details, status and the incoming message'
+					badgeLabel='Editing'
+					badgeTone='edit'
+				/>
 
-				<form onSubmit={handleSubmit}>
-					<Box display='flex' flexDirection='column' space={2}>
-						<Box display='flex' flexDirection='column' space={3}>
-							<SectionLabel>Contact Info</SectionLabel>
-							<GridInnerContainer spacing={2}>
-								<GridItem xs={12} md={6}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											Name
-										</Text>
-										<TextField
-											name='name'
-											placeholder='e.g. John Doe'
-											value={fields.name}
-											onChange={(e) => setField('name', e.target.value)}
-											width='100%'
-										/>
-									</Box>
-								</GridItem>
+				<form onSubmit={handleSubmit} noValidate>
+					<Section $delay={80}>
+						<SectionHead
+							num='01'
+							title='Contact'
+							hint='Who reached out and how to get back to them'
+						/>
+						<FieldGrid>
+							<Field label='Name'>
+								<TextField
+									name='name'
+									placeholder='e.g. John Doe'
+									value={fields.name}
+									onChange={(e) => setField('name', e.target.value)}
+									width='100%'
+								/>
+							</Field>
+							<Field label='Company'>
+								<TextField
+									name='company'
+									placeholder='e.g. Acme Corp'
+									value={fields.company}
+									onChange={(e) => setField('company', e.target.value)}
+									width='100%'
+								/>
+							</Field>
+							<Field label='Email'>
+								<TextField
+									name='email'
+									type='email'
+									placeholder='e.g. john@acme.com'
+									value={fields.email}
+									onChange={(e) => setField('email', e.target.value)}
+									width='100%'
+								/>
+							</Field>
+							<Field label='Phone'>
+								<TextField
+									name='phone'
+									placeholder='e.g. 5551234567'
+									value={fields.phone}
+									onChange={(e) => setField('phone', e.target.value)}
+									width='100%'
+								/>
+							</Field>
+						</FieldGrid>
+					</Section>
 
-								<GridItem xs={12} md={6}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											Company
-										</Text>
-										<TextField
-											name='company'
-											placeholder='e.g. Acme Corp'
-											value={fields.company}
-											onChange={(e) => setField('company', e.target.value)}
-											width='100%'
-										/>
-									</Box>
-								</GridItem>
+					<Section $delay={160}>
+						<SectionHead
+							num='02'
+							title='Pipeline'
+							hint='Track how far this request has progressed'
+						/>
+						<FieldGrid>
+							<Field label='Status' span='full'>
+								<Select
+									label='Select status'
+									defaultValue={fields.status}
+									onChange={(value) => setField('status', value as ClientRequestStatus)}
+									width='100%'
+									sizes='normal'
+								>
+									<SelectItem label='On Review' value='on_review' />
+									<SelectItem label='Conversation Ongoing' value='conversation_ongoing' />
+									<SelectItem label='Archived' value='archived' />
+								</Select>
+							</Field>
+						</FieldGrid>
+					</Section>
 
-								<GridItem xs={12} md={6}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											Email
-										</Text>
-										<TextField
-											name='email'
-											type='email'
-											placeholder='e.g. john@acme.com'
-											value={fields.email}
-											onChange={(e) => setField('email', e.target.value)}
-											width='100%'
-										/>
-									</Box>
-								</GridItem>
+					<Section $delay={240}>
+						<SectionHead
+							num='03'
+							title='Message'
+							hint='The message they sent, editable in case of clean-up'
+						/>
+						<FieldStack>
+							<Field label='Message' hint={`${fields.message.length} characters`}>
+								<TextField
+									name='message'
+									placeholder='Client message…'
+									value={fields.message}
+									onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+										setField('message', e.target.value)
+									}
+									multiRow
+									width='100%'
+									style={{ minHeight: 140, resize: 'vertical' }}
+								/>
+							</Field>
+						</FieldStack>
+					</Section>
 
-								<GridItem xs={12} md={6}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											Phone
-										</Text>
-										<TextField
-											name='phone'
-											placeholder='e.g. 5551234567'
-											value={fields.phone}
-											onChange={(e) => setField('phone', e.target.value)}
-											width='100%'
-										/>
-									</Box>
-								</GridItem>
-
-								<GridItem xs={12} md={6}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											Status
-										</Text>
-										<Select
-											label='Select status'
-											defaultValue={fields.status}
-											onChange={(value) =>
-												setField('status', value as ClientRequestStatus)
-											}
-											width='100%'
-											sizes='normal'
-										>
-											<SelectItem label='On Review' value='on_review' />
-											<SelectItem
-												label='Conversation Ongoing'
-												value='conversation_ongoing'
-											/>
-											<SelectItem label='Archived' value='archived' />
-										</Select>
-									</Box>
-								</GridItem>
-							</GridInnerContainer>
-						</Box>
-
-						<Divider />
-
-						<Box display='flex' flexDirection='column' space={3}>
-							<SectionLabel>Message</SectionLabel>
-							<TextField
-								name='message'
-								placeholder='Client message…'
-								value={fields.message}
-								onChange={(e) => setField('message', e.target.value)}
-								width='100%'
-								multiline
-								rows={4}
-							/>
-						</Box>
-
-						<Box display='flex' justify='flex-end' space={1}>
+					<FootBar $dark={isDark}>
+						<FootLeft $dark={isDark}>
+							<DotMini />
+							Changes are saved when you press Save
+						</FootLeft>
+						<FootActions>
 							<Button
 								varient='outlined'
 								color='info'
@@ -199,43 +211,20 @@ const ClientRequestFormInner = ({
 								Cancel
 							</Button>
 							<Button type='submit' disabled={isLoading}>
-								{isLoading ? 'Saving…' : 'Save Changes'}
+								{isLoading ? 'Saving…' : 'Save changes'}
 							</Button>
-						</Box>
-					</Box>
+						</FootActions>
+					</FootBar>
 				</form>
-			</Box>
-		</Card>
+			</Surface>
+		</Shell>
 	)
 }
 
 const ClientRequestForm = ({ id }: { id: string }) => {
 	const { data, isLoading } = useGetClientRequestByIdQuery(id, { skip: !id })
-
-	if (isLoading) {
-		return (
-			<Card py='2rem' px='2rem'>
-				<Box style={{ maxWidth: 720, margin: '0 auto' }}>
-					<Text varient='body2' secondary>
-						Loading…
-					</Text>
-				</Box>
-			</Card>
-		)
-	}
-
-	if (!data) {
-		return (
-			<Card py='2rem' px='2rem'>
-				<Box style={{ maxWidth: 720, margin: '0 auto' }}>
-					<Text varient='body2' secondary>
-						Client request not found
-					</Text>
-				</Box>
-			</Card>
-		)
-	}
-
+	if (isLoading) return <FormLoading label='Loading request…' />
+	if (!data) return <FormNotFound label='Client request not found' />
 	return <ClientRequestFormInner id={id} initialData={data} />
 }
 

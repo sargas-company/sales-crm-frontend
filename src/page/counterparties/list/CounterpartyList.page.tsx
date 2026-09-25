@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Box from '../../../components/box/Box'
 import Card from '../../../components/card/Card'
+import AnimatedCardShell from '../../../components/card/AnimatedCardShell'
 import CounterpartyTable from '../../../components/counterparties/list/CounterpartyTable'
 import CounterpartyDeleteModal from '../../../components/counterparties/list/CounterpartyDeleteModal'
 import DataGridFooter from '../../../components/data-grid-item/DataGridFooter'
@@ -54,7 +55,8 @@ const CounterpartyList = () => {
 
 	return (
 		<>
-			<Card padding={'30px'}>
+			<AnimatedCardShell>
+				<Card padding={'30px'}>
 				<Box display='flex' justify='space-between' padding={20}>
 					<GridInnerContainer alignItems='center' justifyContent='space-between'>
 						<GridItem xs={12} md={6}>
@@ -91,7 +93,8 @@ const CounterpartyList = () => {
 						handleRowOptSelect={handleLimitChange}
 					/>
 				)}
-			</Card>
+				</Card>
+			</AnimatedCardShell>
 
 			{deleteTarget && (
 				<CounterpartyDeleteModal

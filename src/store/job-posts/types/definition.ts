@@ -58,3 +58,11 @@ export interface JobPostListParams {
 	priority?: JobPostPriority
 	sortBy?: 'createdAt' | 'matchScore'
 }
+
+export interface CreateJobPostBody {
+	title: string
+	jobUrl?: string
+	location?: string
+	budget?: string
+	rawText?: string
+}

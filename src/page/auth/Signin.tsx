@@ -1,7 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import AuthBanner from '../../components/auth/AuthBanner'
 import Login, { LoginFormData } from '../../components/auth/Login'
-import ColorBox from '../../components/box/ColorBox'
 import AuthLayout from '../../components/layout/auth-form/AuthLayout'
 import useAuth from '../../hooks/useAuth'
 import useNavigation from '../../hooks/useNavigation'
@@ -19,13 +18,13 @@ const Signin = () => {
 	// Still initializing (checking stored refresh token)
 	if (isAuthenticated === null) return <PageLoading />
 	// Already logged in → go to dashboard
-	if (isAuthenticated) return <Navigate to='/dashboards/analytics/' replace />
+	if (isAuthenticated) return <Navigate to='/dashboards/sales' replace />
 
 	const handleSubmit = async (inputs: LoginFormData) => {
 		try {
 			const tokens = await login({ email: inputs.email, password: inputs.password }).unwrap()
 			dispatch(setCredentials(tokens))
-			navigate('/dashboards/analytics/')
+			navigate('/dashboards/sales')
 		} catch {}
 	}
 
@@ -38,9 +37,7 @@ const Signin = () => {
 	return (
 		<AuthLayout
 			RightContent={
-				<ColorBox backgroundTheme='foreground'>
-					<Login onSubmit={handleSubmit} isLoading={isLoading} serverError={serverError} />
-				</ColorBox>
+				<Login onSubmit={handleSubmit} isLoading={isLoading} serverError={serverError} />
 			}
 			LeftContent={
 				<AuthBanner

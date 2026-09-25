@@ -1,9 +1,9 @@
-import NavOptions from './type'
+import NavOptions, {NavItemType} from './type'
 
 import {
-	ChatBubbleOutlineRounded,
-	Home,
-	MenuBookOutlined,
+	SpaceDashboardOutlined,
+	TrendingUpOutlined,
+	PaidOutlined,
 	PeopleOutlined,
 	RequestQuoteOutlined,
 	LayersOutlined,
@@ -13,8 +13,35 @@ import {
 	AssignmentOutlined,
 	WorkOutlineOutlined,
 	TuneOutlined,
-	PhoneOutlined
+	PhoneOutlined, DescriptionOutlined,
+	AdminPanelSettingsOutlined,
+	BadgeOutlined,
+	ListAltOutlined,
+	BeachAccessOutlined,
+	VpnKeyOutlined,
+	FolderOutlined,
+	AssessmentOutlined,
+	AccountBalanceOutlined,
+	PaymentOutlined,
+	AttachMoneyOutlined,
+	AccountBalanceWalletOutlined,
+	LocalOfferOutlined,
+	LinkedIn,
+	LightbulbOutlined,
+	ArticleOutlined,
 } from '@mui/icons-material'
+import {ReactNode} from "react";
+
+const format = (label: string, path: string, icon?: ReactNode): NavItemType => {
+  return icon ? { label, path, icon } : { label, path };
+};
+
+const formatGroupButton = (
+  title: string,
+  icon: ReactNode,
+  rootPath: string,
+  soon = false
+) => ({ title, icon, rootPath, soon });
 
 const navList: NavOptions[] = [
 	// {
@@ -26,65 +53,77 @@ const navList: NavOptions[] = [
 	//   ],
 	// },
 	{
-		label: 'Dashboard',
-		path: '/dashboards/analytics',
-		icon: <Home />,
-	},
-	{
-		label: 'Chats',
-		path: '/chats',
-		icon: <ChatBubbleOutlineRounded />,
+		parent: formatGroupButton('Dashboard', <SpaceDashboardOutlined />, '/dashboards'),
+		childrens: [
+			format('Sales', '/dashboards/sales', <TrendingUpOutlined />),
+			format('Finance', '/dashboards/finance', <PaidOutlined />),
+		],
 	},
 	// {
-	//   parent: formatGroupButton("Proposal", <DescriptionOutlined />, "/proposal/"),
-	//   childrens: [
-	//     format("List", "/proposal/list/"),
-	//     format("Preview", "/proposal/preview/"),
-	//     format("Edit", "/proposal/edit/"),
-	//     format("Add", "/proposal/add/"),
-	//   ],
+	// 	label: 'Chats',
+	// 	path: '/chats',
+	// 	icon: <ChatBubbleOutlineRounded />,
 	// },
 	{
-		label: 'Proposals',
-		path: '/proposal/list/',
-		icon: <RequestQuoteOutlined />,
+		parent: formatGroupButton('Proposals', <RequestQuoteOutlined />, '/proposal'),
+		childrens: [
+			format('List', '/proposal/list/', <DescriptionOutlined />),
+			format('Platforms', '/platforms/list/', <LayersOutlined />),
+			format('Job Posts', '/job-posts/list/', <WorkOutlineOutlined />),
+			format('Accounts', '/accounts/list/', <AccountCircleOutlined />),
+		],
 	},
 	{
-		label: 'Leads',
-		path: '/leads/list/',
-		icon: <PeopleOutlined />,
+		parent: formatGroupButton('Leads', <PeopleOutlined />, '/leads'),
+		childrens: [
+			format('List', '/leads/list/', <PeopleOutlined />),
+			format('Client Calls', '/client-calls/list/', <PhoneOutlined />),
+			format('Client Requests', '/client-requests/list/', <AssignmentOutlined />),
+		],
 	},
 	{
-		label: 'Client Requests',
-		path: '/client-requests/list/',
-		icon: <AssignmentOutlined />,
+		parent: formatGroupButton('Invoices', <ReceiptLongOutlined />, '/invoices'),
+		childrens: [
+			format('List', '/invoices/list/', <ReceiptLongOutlined />),
+			format('Counterparties', '/counterparties/list/', <ContactsOutlined />),
+		],
 	},
 	{
-		label: 'Invoices',
-		path: '/invoices/list',
-		icon: <ReceiptLongOutlined />,
+		parent: formatGroupButton('Employees', <BadgeOutlined />, '/employees', true),
+		childrens: [
+			format('List', '/employees/list', <ListAltOutlined />),
+			format('Time Off', '/employees/time-off', <BeachAccessOutlined />),
+			format('Credentials', '/employees/credentials', <VpnKeyOutlined />),
+		],
 	},
 	{
-		label: 'Job Posts',
-		path: '/job-posts/list/',
-		icon: <WorkOutlineOutlined />,
+		parent: formatGroupButton('Projects', <FolderOutlined />, '/projects', true),
+		childrens: [
+			format('List', '/projects/list', <ListAltOutlined />),
+			format('Reports', '/projects/reports', <AssessmentOutlined />),
+		],
 	},
 	{
-		label: 'Base Knowledge',
-		path: '/knowledge/list',
-		icon: <MenuBookOutlined />,
+		parent: formatGroupButton('Finances', <AccountBalanceOutlined />, '/finances', true),
+		childrens: [
+			format('Payments', '/finances/payments', <PaymentOutlined />),
+			format('Salaries', '/finances/salaries', <AttachMoneyOutlined />),
+			format('Payment Source', '/finances/payment-source', <AccountBalanceWalletOutlined />),
+			format('Promotions', '/finances/promotions', <LocalOfferOutlined />),
+		],
 	},
 	{
-
-		label: 'Prompts',
-		path: '/prompts/list',
-		icon: <TuneOutlined />
+		parent: formatGroupButton('LinkedIn', <LinkedIn />, '/linkedin', true),
+		childrens: [
+			format('Ideas', '/linkedin/ideas', <LightbulbOutlined />),
+			format('Posts', '/linkedin/posts', <ArticleOutlined />),
+		],
 	},
-	{
-		label: 'Client Calls',
-		path: '/client-calls/list',
-		icon: <PhoneOutlined />
-	},
+	// {
+	// 	label: 'Base Knowledge',
+	// 	path: '/knowledge/list',
+	// 	icon: <MenuBookOutlined />,
+	// },
 	// {
 	//   parent: formatGroupButton("User", <PersonOutline />, "/user/"),
 	//   childrens: [format("List", "/user/list/"), format("View", "/user/view/")],
@@ -160,19 +199,14 @@ const navList: NavOptions[] = [
 
 export const secondaryNavList: NavOptions[] = [
 	{
-		label: 'Platforms',
-		path: '/platforms/list/',
-		icon: <LayersOutlined />,
+		label: 'Prompts',
+		path: '/prompts/list',
+		icon: <TuneOutlined />
 	},
 	{
-		label: 'Accounts',
-		path: '/accounts/list/',
-		icon: <AccountCircleOutlined />,
-	},
-	{
-		label: 'Counterparties',
-		path: '/counterparties/list/',
-		icon: <ContactsOutlined />,
+		label: 'Roles & Access',
+		path: '/roles',
+		icon: <AdminPanelSettingsOutlined />,
 	},
 ]
 

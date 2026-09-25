@@ -1,8 +1,5 @@
 import { CancelOutlined } from '@mui/icons-material'
-import Modal from '../../modal/Modal'
-import ModalContentLayout from '../../users/layout/ModalContentLayout'
-import Box from '../../box/Box'
-import { Text, Button, Divider } from '../../../ui'
+import ConfirmModal from '../../_shared/ConfirmModal'
 import { useUpdateClientCallMutation } from '../../../store/clientCalls/clientCallsApi'
 import { useToast } from '../../../context/toast/ToastContext'
 
@@ -29,46 +26,24 @@ const ClientCallCancelModal = ({ id, title, onClose, onSuccess }: Props) => {
 	}
 
 	return (
-		<Modal handleOutClick={onClose}>
-			<ModalContentLayout maxWidth='440px'>
-				<Box display='flex' flexDirection='column' align='center' space={2} padding={8}>
-					<Box
-						style={{
-							width: 56,
-							height: 56,
-							borderRadius: '50%',
-							background: 'rgba(235,87,87,0.12)',
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-						}}
-					>
-						<CancelOutlined style={{ fontSize: 28, color: '#eb5757' }} />
-					</Box>
-
-					<Box display='flex' flexDirection='column' align='center' space={1}>
-						<Text heading='h5' align='center'>
-							Cancel call?
-						</Text>
-						<Text varient='body2' secondary align='center'>
-							Are you sure you want to cancel <strong>"{title}"</strong>? This action cannot be
-							undone.
-						</Text>
-					</Box>
-
-					<Divider styles={{ width: '100%', margin: '0.5rem 0' }} />
-
-					<Box display='flex' justify='center' space={2} style={{ width: '100%' }}>
-						<Button varient='outlined' color='info' onClick={onClose} type='button'>
-							Keep call
-						</Button>
-						<Button color='error' onClick={handleCancel} disabled={isLoading}>
-							{isLoading ? 'Cancelling…' : 'Yes, cancel'}
-						</Button>
-					</Box>
-				</Box>
-			</ModalContentLayout>
-		</Modal>
+		<ConfirmModal
+			icon={<CancelOutlined />}
+			iconTone='danger'
+			title='Cancel call?'
+			description={
+				<>
+					Are you sure you want to cancel <strong>&quot;{title}&quot;</strong>? This action
+					cannot be undone.
+				</>
+			}
+			confirmLabel='Yes, cancel'
+			confirmLoadingLabel='Cancelling…'
+			confirmColor='error'
+			cancelLabel='Keep call'
+			onClose={onClose}
+			onConfirm={handleCancel}
+			isLoading={isLoading}
+		/>
 	)
 }
 

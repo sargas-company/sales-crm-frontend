@@ -1,50 +1,60 @@
 import { FC, ReactNode } from 'react'
 import styled from 'styled-components'
-import useTheme from '../../../theme/useTheme'
 
 const AuthLayout: FC<Props> = ({ LeftContent, RightContent }) => {
-	const {
-		theme: {
-			mode: { background },
-		},
-	} = useTheme()
 	return (
-		<StyledAuthLayout theme={{ color: background }}>
+		<StyledAuthLayout>
 			<div className='auth_left_content'>{LeftContent}</div>
 			<div className='auth_right_content'>{RightContent}</div>
 		</StyledAuthLayout>
 	)
 }
 export default AuthLayout
+
 interface Props {
 	LeftContent: ReactNode
 	RightContent: ReactNode
 }
+
 const StyledAuthLayout = styled('section')`
 	display: flex;
 	position: relative;
 	min-height: 100vh;
+	width: 100%;
 	overflow-x: hidden;
-	background-color: ${({ theme }) => theme.color};
-	overflow-y: visible;
+	background: #ffffff;
 
-	& .auth_left_content {
-		display: flex;
+	& > .auth_left_content {
 		flex: 1 1 0;
-		flex-direction: column;
+		min-width: 0;
+		display: flex;
+		align-items: stretch;
 		position: relative;
 
 		@media (max-width: 899px) {
 			display: none;
 		}
+
+		& > * {
+			flex: 1 1 auto;
+			width: 100%;
+		}
 	}
 
-	& .auth_right_content {
+	& > .auth_right_content {
+		flex: 0 0 auto;
 		width: 100%;
 		display: flex;
+		align-items: stretch;
 
 		@media (min-width: 900px) {
-			max-width: 450px;
+			width: 480px;
+			max-width: 480px;
+		}
+
+		& > * {
+			flex: 1 1 auto;
+			width: 100%;
 		}
 	}
 `

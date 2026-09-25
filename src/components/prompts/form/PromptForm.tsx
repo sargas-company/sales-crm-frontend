@@ -1,13 +1,27 @@
-import { FormEvent, useState } from 'react'
+import { ChangeEvent, FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Card from '../../card/Card'
-import Box from '../../box/Box'
-import { GridInnerContainer, GridItem } from '../../layout'
-import { Text, TextField, Button, Divider, Select, SelectItem } from '../../../ui'
+import { TextField, Button, Select, SelectItem } from '../../../ui'
 import { useCreatePromptMutation } from '../../../store/prompts/promptsApi'
 import type { PromptType } from '../../../store/prompts/types/definition'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
+import useTheme from '../../../theme/useTheme'
+import {
+	Field,
+	FormHeader,
+	SectionHead,
+} from '../../_shared/FormShell'
+import {
+	DotMini,
+	FieldGrid,
+	FieldStack,
+	FootActions,
+	FootBar,
+	FootLeft,
+	Section,
+	Shell,
+	Surface,
+} from '../../_shared/formShell.styled'
 
 const PROMPT_TYPES: { value: PromptType; label: string }[] = [
 	{ value: 'JOB_GATEKEEPER', label: 'Job Gatekeeper' },
@@ -28,39 +42,41 @@ interface FormErrors {
 	content?: string
 }
 
-const SectionLabel = ({ children }: { children: string }) => (
-	<Text
-		varient='caption'
-		weight='medium'
-		secondary
-		styles={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}
-	>
-		{children}
-	</Text>
-)
-
-const FieldError = ({ message }: { message?: string }) => {
-	if (!message) return null
-	return (
-		<Text varient='caption' styles={{ color: '#ff4d4f', marginTop: 4 }}>
-			{message}
-		</Text>
-	)
-}
-
 const validate = (fields: FormFields): FormErrors => {
 	const errors: FormErrors = {}
 	if (!fields.type) errors.type = 'Type is required'
 	if (!fields.title.trim()) errors.title = 'Title is required'
 	else if (fields.title.trim().length < 2) errors.title = 'Title must be at least 2 characters'
 	if (!fields.content.trim()) errors.content = 'Content is required'
-	else if (fields.content.trim().length < 10) errors.content = 'Content must be at least 10 characters'
+	else if (fields.content.trim().length < 10)
+		errors.content = 'Content must be at least 10 characters'
 	return errors
 }
+
+const PromptIcon = () => (
+	<svg width='22' height='22' viewBox='0 0 24 24' fill='none'>
+		<path
+			d='M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5z'
+			stroke='currentColor'
+			strokeWidth='1.8'
+			strokeLinecap='round'
+			strokeLinejoin='round'
+		/>
+		<path
+			d='M14 3v6h6M9 14l-1.5 1.5L9 17M13 14l1.5 1.5L13 17'
+			stroke='currentColor'
+			strokeWidth='1.8'
+			strokeLinecap='round'
+			strokeLinejoin='round'
+		/>
+	</svg>
+)
 
 const PromptForm = () => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
+	const { theme } = useTheme()
+	const isDark = theme.mode.name === 'dark'
 	const [createPrompt, { isLoading }] = useCreatePromptMutation()
 
 	const [fields, setFields] = useState<FormFields>({ type: '', title: '', content: '' })
@@ -92,79 +108,93 @@ const PromptForm = () => {
 	}
 
 	return (
-		<Card py='2rem' px='2rem'>
-			<Box style={{ maxWidth: 800, margin: '0 auto' }}>
-				<Box mb={5}>
-					<Text heading='h5'>Create Prompt</Text>
-					<Box mt={1}>
-						<Text varient='body2' secondary>
-							Fill in the details to add a new AI prompt
-						</Text>
-					</Box>
-				</Box>
+		<Shell $dark={isDark}>
+			<Surface $dark={isDark}>
+				<FormHeader
+					backTo='/prompts/list'
+					backLabel='Back to prompts'
+					icon={<PromptIcon />}
+					title='New prompt'
+					subtitle='Fill in the details to add a new AI prompt template'
+					badgeLabel='Draft'
+					badgeTone='draft'
+				/>
 
-				<form onSubmit={handleSubmit}>
-					<Box display='flex' flexDirection='column' space={5}>
-						<Box display='flex' flexDirection='column' space={3}>
-							<SectionLabel>Prompt Info</SectionLabel>
-							<GridInnerContainer spacing={2}>
-								<GridItem xs={12} md={6}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											Type *
-										</Text>
-										<Select
-											defaultValue={fields.type}
-											onChange={(value) => setField('type', value as PromptType)}
-											width='100%'
-										>
-											{PROMPT_TYPES.map(({ value, label }) => (
-												<SelectItem key={value} label={label} value={value} />
-											))}
-										</Select>
-										<FieldError message={errors.type} />
-									</Box>
-								</GridItem>
+				<form onSubmit={handleSubmit} noValidate>
+					<Section $delay={80}>
+						<SectionHead
+							num='01'
+							title='Prompt info'
+							hint='Where this prompt lives in the system and how it will be called'
+						/>
+						<FieldGrid>
+							<Field label='Type' required error={errors.type}>
+								<Select
+									label='Select type'
+									defaultValue={fields.type}
+									onChange={(value) => setField('type', value as PromptType)}
+									width='100%'
+									sizes='normal'
+								>
+									{PROMPT_TYPES.map(({ value, label }) => (
+										<SelectItem key={value} label={label} value={value} />
+									))}
+								</Select>
+							</Field>
+							<Field label='Title' required error={errors.title}>
+								<TextField
+									name='title'
+									placeholder='e.g. Chat System v2'
+									value={fields.title}
+									onChange={(e) => setField('title', e.target.value)}
+									width='100%'
+									error={!!errors.title}
+								/>
+							</Field>
+						</FieldGrid>
+					</Section>
 
-								<GridItem xs={12} md={6}>
-									<Box display='flex' flexDirection='column' space={1}>
-										<Text varient='body2' weight='medium'>
-											Title *
-										</Text>
-										<TextField
-											name='title'
-											placeholder='e.g. Chat System v2'
-											value={fields.title}
-											onChange={(e) => setField('title', e.target.value)}
-											width='100%'
-											error={!!errors.title}
-										/>
-										<FieldError message={errors.title} />
-									</Box>
-								</GridItem>
-							</GridInnerContainer>
-						</Box>
+					<Section $delay={160}>
+						<SectionHead
+							num='02'
+							title='Prompt body'
+							hint='The actual text that will be sent to the model — variables can be added later'
+						/>
+						<FieldStack>
+							<Field
+								label='Content'
+								required
+								error={errors.content}
+								hint={`${fields.content.length} characters`}
+							>
+								<TextField
+									name='content'
+									placeholder='Enter the prompt text…'
+									value={fields.content}
+									onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+										setField('content', e.target.value)
+									}
+									width='100%'
+									multiRow
+									error={!!errors.content}
+									style={{
+										minHeight: 260,
+										resize: 'vertical',
+										fontFamily:
+											"'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
+										fontSize: 13,
+									}}
+								/>
+							</Field>
+						</FieldStack>
+					</Section>
 
-						<Box display='flex' flexDirection='column' space={1}>
-							<Text varient='body2' weight='medium'>
-								Content *
-							</Text>
-							<TextField
-								name='content'
-								placeholder='Enter the prompt text…'
-								value={fields.content}
-								onChange={(e) => setField('content', e.target.value)}
-								width='100%'
-								multiRow
-								error={!!errors.content}
-								style={{ minHeight: 220, resize: 'vertical' }}
-							/>
-							<FieldError message={errors.content} />
-						</Box>
-
-						<Divider />
-
-						<Box display='flex' justify='flex-end' space={1}>
+					<FootBar $dark={isDark}>
+						<FootLeft $dark={isDark}>
+							<DotMini />
+							Prompt will be created as a draft
+						</FootLeft>
+						<FootActions>
 							<Button
 								varient='outlined'
 								color='info'
@@ -174,13 +204,13 @@ const PromptForm = () => {
 								Cancel
 							</Button>
 							<Button type='submit' disabled={isLoading}>
-								{isLoading ? 'Creating…' : 'Create Prompt'}
+								{isLoading ? 'Creating…' : 'Create prompt'}
 							</Button>
-						</Box>
-					</Box>
+						</FootActions>
+					</FootBar>
 				</form>
-			</Box>
-		</Card>
+			</Surface>
+		</Shell>
 	)
 }
 

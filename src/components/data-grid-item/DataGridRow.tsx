@@ -1,12 +1,24 @@
 import { FC, ReactNode, MouseEvent } from 'react'
-import styled from 'styled-components'
+import styled, { keyframes } from 'styled-components'
 import useTheme from '../../theme/useTheme'
 import genColorShades from '../../utils/genColorShades'
+
+const rowFadeIn = keyframes`
+	from {
+		opacity: 0;
+		transform: translate3d(0, 6px, 0);
+	}
+	to {
+		opacity: 1;
+		transform: translate3d(0, 0, 0);
+	}
+`
+
 const DataGridRow: FC<Props> = (props) => {
 	const {
 		theme: { mode, primaryColor },
 	} = useTheme()
-	const { dataId, rowId, children, onClick, selected } = props
+	const { dataId, rowId, children, onClick, selected, animationIndex } = props
 	return (
 		<StyledRow
 			theme={{
@@ -19,6 +31,7 @@ const DataGridRow: FC<Props> = (props) => {
 			className={`data-grid-row ${selected ? 'row-selected' : ''}`}
 			data-id={dataId}
 			data-rowindex={rowId}
+			animationIndex={animationIndex}
 			onClick={(event: MouseEvent<HTMLDivElement>) => onClick && onClick(event, rowId)}
 		>
 			{children}
@@ -31,25 +44,36 @@ interface Props {
 	dataId: number | string
 	rowId: number | string
 	selected?: boolean
+	animationIndex?: number
 	onClick?: (event: MouseEvent<HTMLDivElement>, rowId?: string | number) => void
 }
 
-const StyledRow = styled('div')`
+const StyledRow = styled('div')<{ animationIndex?: number }>`
 	display: flex;
 	position: relative;
 	flex-wrap: nowrap;
 	vertical-align: middle;
-	max-height: 72px;
-	min-height: 72px;
-	border-bottom: 1px solid ${({ theme }) => (theme.mode === 'dark' ? '#b1b1b154' : '#7a7a7a54')};
-	border-top-left-radius: 6px;
-	border-top-right-radius: 6px;
+	min-height: 64px;
+	border-bottom: 1px solid
+		${({ theme }) => (theme.mode === 'dark' ? 'rgba(177, 177, 177, 0.14)' : 'rgba(122, 122, 122, 0.14)')};
+	transition:
+		background 0.22s ease,
+		transform 0.22s ease,
+		box-shadow 0.22s ease;
+	will-change: transform, background;
+	animation: ${rowFadeIn} 0.35s ease-out both;
+	animation-delay: ${({ animationIndex }) =>
+		animationIndex !== undefined ? `${Math.min(animationIndex * 40, 400)}ms` : '0ms'};
 
 	&:hover {
-		background: ${({ theme }) => (theme.mode === 'dark' ? '#ffffff12' : '#e9e9e940')};
+		background: ${({ theme }) => (theme.mode === 'dark' ? '#ffffff10' : '#f2f4f7')};
+		transform: translateX(2px);
 	}
 	&.row-selected {
 		background: ${({ theme }) => theme.color};
+	}
+	&:last-child {
+		border-bottom: none;
 	}
 
 	& .list-action-wrapper {

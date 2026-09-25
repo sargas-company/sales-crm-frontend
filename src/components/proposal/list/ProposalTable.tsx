@@ -4,8 +4,7 @@ import { Snackbar, Alert } from '@mui/material'
 import { Tooltip } from '@mui/material'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { ContentCopy } from '@mui/icons-material'
-import { IconButton } from '../../../ui'
+import { ContentCopy, DescriptionOutlined } from '@mui/icons-material'
 
 import type { ProposalItem } from '../../../store/proposals/types/definition'
 import { formatDate } from '../../../utils/formatDate'
@@ -19,6 +18,7 @@ import ProposalListItemBoosted from './ProposalListItemBoosted'
 import Modal from '../../modal/Modal'
 import ModalContentLayout from '../../users/layout/ModalContentLayout'
 import { Text } from '../../../ui'
+import { CoverLetterCell, JobUrlCell } from './ProposalTable.styled'
 
 import type { DataGridColoumn } from '../../layout/data-grid/type'
 import ProposalListAction from './ProposalListAction'
@@ -56,17 +56,15 @@ const ProposalTable = ({ items, isLoading, onDelete }: Props) => {
 		setToastOpen(true)
 	}
 
-	if (isLoading)
-		return (
-			<Box padding={24}>
-				<Text>Loading…</Text>
-			</Box>
-		)
-
 	return (
 		<Box padding={24} pl={40}>
 			<DataGrid
 				rows={items}
+				isLoading={isLoading}
+				skeletonRows={6}
+				emptyIcon={<DescriptionOutlined style={{ fontSize: 44 }} />}
+				emptyTitle='No proposals yet'
+				emptyDescription='Create your first proposal — it will show up here.'
 				renderGridData={(row, field, index) => (
 					<>
 						<DataGridCell
@@ -86,29 +84,14 @@ const ProposalTable = ({ items, isLoading, onDelete }: Props) => {
 							justify='center'
 							children={
 								row.jobUrl ? (
-									<Box display='flex' align='center'>
-										<span
-											style={{ cursor: 'pointer' }}
-											onClick={() => handleCopyJobId(row.jobUrl!)}
-										>
-											<Text skinColor>{row.jobUrl.slice(-4)}</Text>
-										</span>
-										<Tooltip title={row.jobUrl} placement='top'>
-											<span style={{ marginLeft: 4 }}>
-												<IconButton
-													varient='text'
-													size={30}
-													fontSize={21}
-													contentOpacity={5}
-													onClick={() => handleCopyJobId(row.jobUrl!)}
-												>
-													<ContentCopy style={{ fontSize: 16 }} />
-												</IconButton>
-											</span>
-										</Tooltip>
-									</Box>
+									<Tooltip title={row.jobUrl} placement='top'>
+										<JobUrlCell onClick={() => handleCopyJobId(row.jobUrl!)}>
+											<span className='job-url-tag'>…{row.jobUrl.slice(-4)}</span>
+											<ContentCopy className='job-url-copy' />
+										</JobUrlCell>
+									</Tooltip>
 								) : (
-									<Text>—</Text>
+									<Text secondary>—</Text>
 								)
 							}
 						/>
@@ -120,22 +103,12 @@ const ProposalTable = ({ items, isLoading, onDelete }: Props) => {
 							width={field['coverLetter'].width}
 							children={
 								row.coverLetter ? (
-									<span
-										onClick={() => setCoverLetterText(row.coverLetter)}
-										style={{
-											display: '-webkit-box',
-											WebkitLineClamp: 2,
-											WebkitBoxOrient: 'vertical',
-											overflow: 'hidden',
-											fontSize: 13,
-											lineHeight: '1.5',
-											cursor: 'pointer',
-										}}
-									>
-										{row.coverLetter}
-									</span>
+									<CoverLetterCell onClick={() => setCoverLetterText(row.coverLetter)}>
+										<span className='cover-letter-text'>{row.coverLetter}</span>
+										<span className='cover-letter-hint'>Click to read</span>
+									</CoverLetterCell>
 								) : (
-									<Text>—</Text>
+									<Text secondary>—</Text>
 								)
 							}
 						/>

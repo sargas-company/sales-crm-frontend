@@ -1,12 +1,11 @@
 import { FormEvent, useEffect, useState } from 'react'
-import { CloseOutlined } from '@mui/icons-material'
-import Modal from '../../modal/Modal'
-import ModalContentLayout from '../../users/layout/ModalContentLayout'
-import Box from '../../box/Box'
-import { Text, TextField, Button, Divider, IconButton } from '../../../ui'
+import { TextField } from '../../../ui'
 import { useUpdatePromptMutation } from '../../../store/prompts/promptsApi'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
+import FormModal from '../../_shared/FormModal'
+import { Field } from '../../_shared/FormShell'
+import { FieldStack } from '../../_shared/formShell.styled'
 
 interface Props {
 	id: string
@@ -25,8 +24,7 @@ const PromptEditModal = ({ id, initialContent, onClose, onSuccess }: Props) => {
 		setContent(initialContent)
 	}, [initialContent])
 
-	const handleSubmit = async (e: FormEvent) => {
-		e.preventDefault()
+	const handleSubmit = async (_e: FormEvent) => {
 		if (!content.trim()) {
 			setError('Content is required')
 			return
@@ -46,56 +44,47 @@ const PromptEditModal = ({ id, initialContent, onClose, onSuccess }: Props) => {
 	}
 
 	return (
-		<Modal handleOutClick={onClose}>
-			<ModalContentLayout maxWidth='680px'>
-				<Box display='flex' justify='space-between' align='center' mb={4}>
-					<Box>
-						<Text heading='h5'>Edit Prompt</Text>
-						<Text varient='body2' secondary>
-							Editing creates a new version
-						</Text>
-					</Box>
-					<IconButton varient='text' size={34} fontSize={20} onClick={onClose}>
-						<CloseOutlined />
-					</IconButton>
-				</Box>
-
-				<Divider styles={{ margin: '0 0 1.5rem' }} />
-
-				<form onSubmit={handleSubmit}>
-					<Box display='flex' flexDirection='column' space={2}>
-						<Box display='flex' flexDirection='column' space={1}>
-							<Text varient='body2' weight='medium'>
-								Content *
-							</Text>
-							<TextField
-								name='content'
-								placeholder='Enter the prompt text…'
-								value={content}
-								onChange={(e) => {
-									setContent(e.target.value)
-									if (error) setError(undefined)
-								}}
-								error={!!error}
-								hypertext={error}
-								multiRow
-								width='100%'
-								style={{ minHeight: 260, resize: 'vertical' }}
-							/>
-						</Box>
-
-						<Box display='flex' justify='flex-end' space={1} mt={2}>
-							<Button varient='outlined' color='info' type='button' onClick={onClose}>
-								Cancel
-							</Button>
-							<Button type='submit' disabled={isLoading}>
-								{isLoading ? 'Saving…' : 'Save changes'}
-							</Button>
-						</Box>
-					</Box>
-				</form>
-			</ModalContentLayout>
-		</Modal>
+		<FormModal
+			title='Edit prompt'
+			subtitle='Editing creates a new version'
+			badgeLabel='Editing'
+			badgeTone='edit'
+			onClose={onClose}
+			onSubmit={handleSubmit}
+			submitLabel='Save changes'
+			submitLoadingLabel='Saving…'
+			isLoading={isLoading}
+			maxWidth={720}
+		>
+			<FieldStack>
+				<Field
+					label='Content'
+					required
+					error={error}
+					hint={`${content.length} characters`}
+				>
+					<TextField
+						name='content'
+						placeholder='Enter the prompt text…'
+						value={content}
+						onChange={(e) => {
+							setContent(e.target.value)
+							if (error) setError(undefined)
+						}}
+						error={!!error}
+						multiRow
+						width='100%'
+						style={{
+							minHeight: 280,
+							resize: 'vertical',
+							fontFamily:
+								"'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
+							fontSize: 13,
+						}}
+					/>
+				</Field>
+			</FieldStack>
+		</FormModal>
 	)
 }
 

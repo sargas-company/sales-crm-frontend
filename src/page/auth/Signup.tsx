@@ -14,7 +14,7 @@ const Signup = () => {
 
 	useEffect(() => {
 		if (isAuthenticated) {
-			navigate('/dashboards/crm/')
+			navigate('/dashboards/sales')
 		}
 	}, [isAuthenticated])
 	const handleSubmit = ({ username, email, password }: FormData) => {
@@ -27,7 +27,7 @@ const Signup = () => {
 				username: 'johnny',
 				accessToken: 'this is token',
 			})
-			navigate('/dashboards/crm/')
+			navigate('/dashboards/sales')
 		}
 	}
 

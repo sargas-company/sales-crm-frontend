@@ -1,20 +1,5 @@
-import Card from '../../../components/card/Card'
-import AddMain from '../../../components/leads/add/AddMain'
-import LeadAction from '../../../components/leads/LeadAction'
-import LeadOption from '../../../components/leads/LeadOption'
-import LeadLayout from '../../../components/leads/layout/LeadLayout'
+import LeadCreateForm from '../../../components/leads/form/LeadCreateForm'
 
-const LeadAdd = () => {
-	return (
-		<LeadLayout>
-			<AddMain />
-			<>
-				<Card padding='20px'>
-					<LeadAction />
-				</Card>
-				<LeadOption />
-			</>
-		</LeadLayout>
-	)
-}
+const LeadAdd = () => <LeadCreateForm />
+
 export default LeadAdd

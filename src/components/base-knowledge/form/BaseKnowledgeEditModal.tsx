@@ -1,9 +1,5 @@
 import { FormEvent, useEffect } from 'react'
-import { CloseOutlined } from '@mui/icons-material'
-import Modal from '../../modal/Modal'
-import ModalContentLayout from '../../users/layout/ModalContentLayout'
-import Box from '../../box/Box'
-import { Text, TextField, Button, Divider, IconButton } from '../../../ui'
+import { TextField } from '../../../ui'
 import {
 	useGetBaseKnowledgeItemQuery,
 	useUpdateBaseKnowledgeMutation,
@@ -11,6 +7,9 @@ import {
 import { useToast } from '../../../context/toast/ToastContext'
 import useBaseKnowledgeForm from './useBaseKnowledgeForm'
 import parseServerError from '../../../utils/parseServerError'
+import FormModal from '../../_shared/FormModal'
+import { Field } from '../../_shared/FormShell'
+import { FieldGrid, FieldStack } from '../../_shared/formShell.styled'
 
 interface Props {
 	id: string
@@ -35,8 +34,7 @@ const BaseKnowledgeEditModal = ({ id, onClose, onSuccess }: Props) => {
 		}
 	}, [item])
 
-	const handleSubmit = async (e: FormEvent) => {
-		e.preventDefault()
+	const handleSubmit = async (_e: FormEvent) => {
 		if (!runValidation()) return
 		try {
 			await updateBaseKnowledge({
@@ -56,83 +54,69 @@ const BaseKnowledgeEditModal = ({ id, onClose, onSuccess }: Props) => {
 	}
 
 	return (
-		<Modal handleOutClick={onClose}>
-			<ModalContentLayout maxWidth='560px'>
-				<Box display='flex' justify='space-between' align='center' mb={4}>
-					<Box>
-						<Text heading='h5'>Edit Knowledge Entry</Text>
-						<Text varient='body2' secondary>
-							Update the record details
-						</Text>
-					</Box>
-					<IconButton varient='text' size={34} fontSize={20} onClick={onClose}>
-						<CloseOutlined />
-					</IconButton>
-				</Box>
-
-				<Divider styles={{ margin: '0 0 1.5rem' }} />
-
-				{isFetching ? (
-					<Box padding={20}>
-						<Text secondary>Loading…</Text>
-					</Box>
-				) : (
-					<form onSubmit={handleSubmit}>
-						<Box display='flex' flexDirection='column' space={2}>
+		<FormModal
+			title='Edit knowledge entry'
+			subtitle='Update the record details'
+			badgeLabel='Editing'
+			badgeTone='edit'
+			onClose={onClose}
+			onSubmit={handleSubmit}
+			submitLabel='Save changes'
+			submitLoadingLabel='Saving…'
+			isLoading={isSaving}
+			isSubmitDisabled={isFetching}
+		>
+			{isFetching ? (
+				<div style={{ padding: 20 }}>Loading…</div>
+			) : (
+				<>
+					<FieldGrid>
+						<Field label='Title (optional)' error={errors.title}>
 							<TextField
 								name='title'
-								label='Title (optional)'
 								placeholder='Enter title'
 								value={fields.title}
 								onChange={(e) => setField('title', e.target.value)}
 								error={!!errors.title}
-								hypertext={errors.title}
 								width='100%'
 							/>
-
+						</Field>
+						<Field label='Category (optional)' error={errors.category}>
 							<TextField
 								name='category'
-								label='Category (optional)'
 								placeholder='e.g. templates, scripts, objections'
 								value={fields.category}
 								onChange={(e) => setField('category', e.target.value)}
 								error={!!errors.category}
-								hypertext={errors.category}
 								width='100%'
 							/>
+						</Field>
+					</FieldGrid>
 
-							<Box display='flex' flexDirection='column' space={1}>
-								<Text varient='body2' weight='medium'>
-									Content
-								</Text>
-								<TextField
-									name='content'
-									placeholder='Enter the knowledge content…'
-									value={fields.content}
-									onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-										setField('content', e.target.value)
-									}
-									error={!!errors.content}
-									hypertext={errors.content}
-									multiRow
-									width='100%'
-									style={{ minHeight: 180, resize: 'vertical' }}
-								/>
-							</Box>
-
-							<Box display='flex' justify='flex-end' space={1} mt={2}>
-								<Button varient='outlined' color='info' onClick={onClose} type='button'>
-									Cancel
-								</Button>
-								<Button type='submit' disabled={isSaving}>
-									{isSaving ? 'Saving…' : 'Save changes'}
-								</Button>
-							</Box>
-						</Box>
-					</form>
-				)}
-			</ModalContentLayout>
-		</Modal>
+					<FieldStack>
+						<Field
+							label='Content'
+							required
+							error={errors.content}
+							hint={`${fields.content.length} characters`}
+						>
+							<TextField
+								name='content'
+								placeholder='Enter the knowledge content…'
+								value={fields.content}
+								onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+									setField('content', e.target.value)
+								}
+								error={!!errors.content}
+								multiRow
+								width='100%'
+								style={{ minHeight: 200, resize: 'vertical' }}
+							/>
+						</Field>
+					</FieldStack>
+				</>
+			)}
+		</FormModal>
 	)
 }
 

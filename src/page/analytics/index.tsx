@@ -1,116 +1,123 @@
-import { Leaderboard } from '@mui/icons-material'
-import CardTotalEarning from '../../components/card/advance/CardTotalEarning'
-import CardGimificationWithAction from '../../components/card/gimification/CardGimificationWithAction'
-import CardMint from '../../components/card/statistics/CardMint'
-import CardStatisticRevenue from '../../components/card/statistics/CardStatisticRevenue'
-import CardStatisticSession from '../../components/card/statistics/CardStatisticSession'
-import { CardWidgetPerformance, CardWidgetWeeklyOverview } from '../../components/card/widgets'
-import GridInnerContainer from '../../components/layout/grid/GridInnerContainer'
-import { Flex, GridContainer, GridItem } from '../../components/layout'
-import { Button, Text } from '../../ui'
-import formatNumber from '../../utils/formatNumber'
-import CardTransactions from '../../components/cards-page/statistics/CardTransactions'
-import Card from '../../components/card/Card'
-import CardDeposit from '../../components/card/advance/CardDeposit'
-import CardExpense from '../../components/card/advance/CardExpense'
-// import CardSalesByCountry from "../../components/card/advance/CardSalesByCountry";
-// import DataGridMembers from "../../components/data-grid/DataGridMembers";
+import { useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { ThemeProvider } from 'styled-components'
+import useTheme from '../../theme/useTheme'
+import { Tab, TabContent, TabItem, TabList } from '../../ui'
+import JobPostAnalyticsDrawer from '../../components/sales-analytics/posts/JobPostAnalyticsDrawer'
+import EmergingSignalDetails from '../../components/sales-analytics/emerging/EmergingSignalDetails'
+import SalesFiltersBar from './filters/SalesFiltersBar'
+import OverviewTab from './tabs/OverviewTab'
+import {
+	Crumbs,
+	PageHead,
+	ShellCard,
+	ShellInner,
+	SoonBadge,
+	TabLabel,
+	TabsWrap,
+	ViewFade,
+} from './salesAnalytics.styled'
 
 const Analytics = () => {
+	const [, setSearchParams] = useSearchParams()
+	const {
+		theme: { mode, primaryColor },
+	} = useTheme()
+
+	const setTab = useCallback(() => {
+		setSearchParams(
+			(prev) => {
+				const p = new URLSearchParams(prev)
+				p.delete('tab')
+				return p
+			},
+			{ replace: true }
+		)
+	}, [setSearchParams])
+
 	return (
-		<Flex styles={{ width: '100%' }}>
-			<GridContainer spacing={1.5}>
-				<GridItem xs={12}>
-					<GridInnerContainer spacing={1.6} alignItems='flex-end'>
-						<GridItem xs={12} md={4}>
-							<CardGimificationWithAction
-								greet='Congratulation John!🥳'
-								message='Best seller of the month'
-								banner={'https://i.ibb.co/DQBd92c/trophy.png'}
-								stat={{
-									total: formatNumber(23232, 1000, { currancy: true }),
-								}}
-								actionHandler={<Button varient='contained'>view sales</Button>}
-								bannerOption={{
-									height: '100px',
-									width: '80PX',
-									position: 'absolute',
-									right: 0,
-									top: 0,
-								}}
-							/>
-						</GridItem>
-						<GridItem xs={12} md={8}>
-							<CardTransactions
-								slug={
-									<Text>
-										<strong>52.% growth</strong> this month
-									</Text>
-								}
-							/>
-						</GridItem>
-					</GridInnerContainer>
-				</GridItem>
-				<GridItem xs={12} md={6} lg={4}>
-					<CardWidgetWeeklyOverview />
-				</GridItem>
-				<GridItem xs={12} md={6} lg={4}>
-					<CardTotalEarning />
-				</GridItem>
-				<GridItem xs={12} md={6} lg={4}>
-					<GridInnerContainer spacing={1.6}>
-						<GridItem xs={12} md={6}>
-							<CardStatisticRevenue />
-						</GridItem>
-						<GridItem xs={12} md={6}>
-							<CardMint
-								title='total profit'
-								icon={<Leaderboard />}
-								total={42322}
-								growth={10}
-								status='inc'
-								tag='Total Profit'
-							/>
-						</GridItem>
-						<GridItem xs={12} md={6}>
-							<CardMint
-								title='New project'
-								icon={<Leaderboard />}
-								iconBackground='skin'
-								total={343}
-								growth={18}
-								status='desc'
-								tag='yearly project'
-							/>
-						</GridItem>
-						<GridItem xs={12} md={6}>
-							<CardStatisticSession />
-						</GridItem>
-					</GridInnerContainer>
-				</GridItem>
-				<GridItem xs={12} md={6} lg={4}>
-					<CardWidgetPerformance />
-				</GridItem>
-				<GridItem xs={12} md={8}>
-					<Card>
-						<GridInnerContainer rowSpacing={1.6}>
-							<GridItem xs={12} md={6}>
-								<CardDeposit />
-							</GridItem>
-							<GridItem xs={12} md={6}>
-								<CardExpense />
-							</GridItem>
-						</GridInnerContainer>
-					</Card>
-				</GridItem>
-				{/*<GridItem xs={12} md={4}>*/}
-				{/*  <CardSalesByCountry />*/}
-				{/*</GridItem>*/}
-				{/*<GridItem xs={12} lg={8}>*/}
-				{/*  <DataGridMembers />*/}
-				{/*</GridItem>*/}
-			</GridContainer>
-		</Flex>
+		<ThemeProvider theme={{ mode, primaryColor }}>
+			<ViewFade>
+				<ShellCard>
+					<ShellInner>
+						<Crumbs>
+							<span className='crumb-dot' aria-hidden='true' />
+							<span className='current'>Sales dashboard</span>
+						</Crumbs>
+
+						<PageHead>
+							<div className='title'>
+								<h1>Sales</h1>
+								<p>Scanner activity, market intelligence, and emerging demand signals.</p>
+							</div>
+							<div className='title-right' aria-hidden='true'>
+								<span className='hand-line'>signal over noise</span>
+								<span className='hand-flourish'>
+									<svg viewBox='0 0 120 20' width='120' height='20'>
+										<path
+											d='M2 12 C 28 2, 60 22, 96 6'
+											fill='none'
+											stroke='currentColor'
+											strokeWidth='2.2'
+											strokeLinecap='round'
+										/>
+										<path
+											d='M88 4 L 98 6 L 92 14'
+											fill='none'
+											stroke='currentColor'
+											strokeWidth='2.2'
+											strokeLinecap='round'
+											strokeLinejoin='round'
+										/>
+									</svg>
+								</span>
+							</div>
+						</PageHead>
+
+						<SalesFiltersBar />
+
+						<TabsWrap>
+							<Tab value={0}>
+								<TabList>
+									<TabItem value={0} label='Overview' onClick={() => setTab()} />
+									<TabItem
+										value={1}
+										disabled
+										label={
+											(
+												<TabLabel>
+													Market Intelligence
+													<SoonBadge aria-label='Coming soon'>Soon</SoonBadge>
+												</TabLabel>
+											) as unknown as React.ReactNode
+										}
+									/>
+									<TabItem
+										value={2}
+										disabled
+										label={
+											(
+												<TabLabel>
+													Emerging Signals
+													<SoonBadge aria-label='Coming soon'>Soon</SoonBadge>
+												</TabLabel>
+											) as unknown as React.ReactNode
+										}
+									/>
+								</TabList>
+								<TabContent tabIndex={0}>
+									<OverviewTab />
+								</TabContent>
+							</Tab>
+						</TabsWrap>
+					</ShellInner>
+				</ShellCard>
+
+				<JobPostAnalyticsDrawer />
+				<EmergingSignalDetails />
+			</ViewFade>
+		</ThemeProvider>
 	)
 }
+
 export default Analytics

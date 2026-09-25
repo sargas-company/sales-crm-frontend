@@ -27,6 +27,8 @@ import {
 } from '@mui/icons-material'
 import { Button as UiButton } from '../../ui'
 import { useGetSettingsQuery, useUpdateSettingMutation } from '../../store/settings/settingsApi'
+import SettingsEmptyTab from './SettingsEmptyTab'
+import { AnimatedSectionContent, AnimatedTabHeader } from './settings.styled'
 import {
 	useStartTelegramAuthMutation,
 	useVerifyTelegramAuthMutation,
@@ -42,6 +44,37 @@ const SECTION_ICONS: Record<string, React.ReactNode> = {
 	notifications: <NotificationsNoneOutlined />,
 	api_keys: <KeyOutlined />,
 	invoice: <ReceiptLongOutlined />,
+}
+
+const SECTION_EMPTY_COPY: Record<string, { title: string; description: string }> = {
+	general: {
+		title: 'Nothing to tweak yet',
+		description: 'General settings will appear here as soon as they are available.',
+	},
+	ai: {
+		title: 'AI is warming up',
+		description: 'Model settings will show up once your AI features are enabled.',
+	},
+	job_scanner: {
+		title: 'Scanner is quiet for now',
+		description: 'Job scanner options will appear here once the scanner is configured.',
+	},
+	integrations: {
+		title: 'No integrations yet',
+		description: 'Connect a service and its configuration will land right here.',
+	},
+	notifications: {
+		title: 'You are all caught up',
+		description: 'Notification preferences will appear here once channels are set up.',
+	},
+	api_keys: {
+		title: 'No API keys generated',
+		description: 'Generated tokens and their limits will be listed here.',
+	},
+	invoice: {
+		title: 'No invoice preferences',
+		description: 'Numbering rules, templates and defaults will appear here.',
+	},
 }
 
 const fieldSx = {
@@ -152,7 +185,7 @@ const SettingsPage = () => {
 											cursor: 'pointer',
 											color: activeSection === section.key ? '#1976d2' : '#222',
 											background:
-												activeSection === section.key ? '#eef4ff' : 'transparent',
+												activeSection === section.key ? '#f0f9ff' : 'transparent',
 											'& svg': { fontSize: 22 },
 										}}
 									>
@@ -168,46 +201,70 @@ const SettingsPage = () => {
 
 					{/* Content */}
 					<Box>
-						<Box sx={{ p: 3, borderBottom: '1px solid #eee' }}>
-							<Typography sx={{ fontSize: 26, fontWeight: 800 }}>
-								{currentSection?.title ?? ''}
-							</Typography>
-							<Typography sx={{ color: '#777', mt: 0.5 }}>
-								Configure selected section.
-							</Typography>
-						</Box>
+						<AnimatedTabHeader key={`h-${currentSection?.key ?? 'none'}`}>
+							<Box sx={{ p: 3, borderBottom: '1px solid #eee' }}>
+								<Typography sx={{ fontSize: 26, fontWeight: 800 }}>
+									{currentSection?.title ?? ''}
+								</Typography>
+								<Typography sx={{ color: '#777', mt: 0.5 }}>
+									Configure selected section.
+								</Typography>
+							</Box>
+						</AnimatedTabHeader>
 
 						{isLoading ? (
 							<Box sx={{ display: 'flex', justifyContent: 'center', p: 6 }}>
 								<CircularProgress />
 							</Box>
+						) : currentSection && currentSection.settings.length === 0 ? (
+							<SettingsEmptyTab
+								key={currentSection.key}
+								icon={SECTION_ICONS[currentSection.key] ?? <SettingsOutlined />}
+								title={
+									SECTION_EMPTY_COPY[currentSection.key]?.title ??
+									'Nothing to configure here yet'
+								}
+								description={
+									SECTION_EMPTY_COPY[currentSection.key]?.description ??
+									'Settings for this section will appear here once available.'
+								}
+							/>
 						) : (
-							<>
-								{currentSection?.settings.map((setting) => (
-									<SettingRow
-										key={setting.key}
-										setting={setting}
-										displayValue={getDisplayValue(setting)}
-										showPassword={showPasswords[setting.key] ?? false}
-										onTogglePassword={() =>
-											setShowPasswords((prev) => ({
-												...prev,
-												[setting.key]: !prev[setting.key],
-											}))
-										}
-										onChange={(value) => handleChange(setting.key, value)}
-										isSaving={isSaving}
-									/>
-								))}
+							<AnimatedSectionContent key={currentSection?.key ?? 'section'}>
+								{currentSection?.settings
+									.filter((setting) => {
+										if (currentSection.key !== 'job_scanner') return true
+										const t = setting.title.toLowerCase()
+										return !t.includes('backfill') && !t.includes('telegram')
+									})
+									.map((setting) => (
+										<SettingRow
+											key={setting.key}
+											setting={setting}
+											displayValue={getDisplayValue(setting)}
+											showPassword={showPasswords[setting.key] ?? false}
+											onTogglePassword={() =>
+												setShowPasswords((prev) => ({
+													...prev,
+													[setting.key]: !prev[setting.key],
+												}))
+											}
+											onChange={(value) => handleChange(setting.key, value)}
+											isSaving={isSaving}
+										/>
+									))}
 
 								{hasPendingChanges && (
-									<Box sx={{ p: 3, display: 'flex', justifyContent: 'flex-end' }}>
+									<Box
+										className='settings-save-bar'
+										sx={{ p: 3, display: 'flex', justifyContent: 'flex-end' }}
+									>
 										<UiButton onClick={handleSave} disabled={isSaving}>
 											{isSaving ? 'Saving…' : 'Save changes'}
 										</UiButton>
 									</Box>
 								)}
-							</>
+							</AnimatedSectionContent>
 						)}
 					</Box>
 				</Box>
@@ -232,6 +289,7 @@ const SettingRow = ({
 	isSaving: boolean
 }) => (
 	<Box
+		className='settings-row'
 		sx={{
 			display: 'grid',
 			gridTemplateColumns: '300px 1fr',

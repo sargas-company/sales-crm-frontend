@@ -15,7 +15,13 @@ export const StyledText = styled('span')<TextType>`
 			? `color: ${secondary && color ? color : theme.mode.name === 'dark' ? 'rgba(211, 211, 211, 60%);' : 'rgba(25, 25, 25, 50%);'}`
 			: ''}
 
-	letter-spacing: 0.15px;
+	letter-spacing: ${({ size }) => {
+		if (!size) return '0.1px'
+		if (size >= 28) return '-0.4px'
+		if (size >= 20) return '-0.2px'
+		if (size >= 16) return '0'
+		return '0.1px'
+	}};
 
 	font-weight: ${({ weight }) => weight && fontWeight[weight]};
 

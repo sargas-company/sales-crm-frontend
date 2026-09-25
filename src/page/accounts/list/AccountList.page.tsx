@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Box from '../../../components/box/Box'
 import Card from '../../../components/card/Card'
+import AnimatedCardShell from '../../../components/card/AnimatedCardShell'
 import AccountTable from '../../../components/accounts/list/AccountTable'
 import AccountDeleteModal from '../../../components/accounts/list/AccountDeleteModal'
 import { GridInnerContainer, GridItem } from '../../../components/layout'
@@ -39,7 +40,8 @@ const AccountList = () => {
 
 	return (
 		<>
-			<Card padding={'30px'}>
+			<AnimatedCardShell>
+				<Card padding={'30px'}>
 				<Box display='flex' justify='space-between' padding={20}>
 					<GridInnerContainer alignItems='center' justifyContent='space-between'>
 						<GridItem xs={12} md={6}>
@@ -61,7 +63,8 @@ const AccountList = () => {
 				</Box>
 
 				<AccountTable items={items} isLoading={isLoading} onDelete={handleDelete} />
-			</Card>
+				</Card>
+			</AnimatedCardShell>
 
 			{deleteTarget && (
 				<AccountDeleteModal

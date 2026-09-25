@@ -1,13 +1,12 @@
 import { FormEvent } from 'react'
-import { CloseOutlined } from '@mui/icons-material'
-import Modal from '../../modal/Modal'
-import ModalContentLayout from '../../users/layout/ModalContentLayout'
-import Box from '../../box/Box'
-import { Text, TextField, Button, Divider, IconButton } from '../../../ui'
+import { TextField } from '../../../ui'
 import { useCreateBaseKnowledgeMutation } from '../../../store/baseKnowledge/baseKnowledgeApi'
 import { useToast } from '../../../context/toast/ToastContext'
 import useBaseKnowledgeForm from './useBaseKnowledgeForm'
 import parseServerError from '../../../utils/parseServerError'
+import FormModal from '../../_shared/FormModal'
+import { Field } from '../../_shared/FormShell'
+import { FieldGrid, FieldStack } from '../../_shared/formShell.styled'
 
 interface Props {
 	onClose: () => void
@@ -19,8 +18,7 @@ const BaseKnowledgeFormModal = ({ onClose, onSuccess }: Props) => {
 	const [createBaseKnowledge, { isLoading }] = useCreateBaseKnowledgeMutation()
 	const { showToast } = useToast()
 
-	const handleSubmit = async (e: FormEvent) => {
-		e.preventDefault()
+	const handleSubmit = async (_e: FormEvent) => {
 		if (!runValidation()) return
 		try {
 			await createBaseKnowledge({
@@ -37,77 +35,62 @@ const BaseKnowledgeFormModal = ({ onClose, onSuccess }: Props) => {
 	}
 
 	return (
-		<Modal handleOutClick={onClose}>
-			<ModalContentLayout maxWidth='560px'>
-				<Box display='flex' justify='space-between' align='center' mb={4}>
-					<Box>
-						<Text heading='h5'>New Knowledge Entry</Text>
-						<Text varient='body2' secondary>
-							Add a new record to the knowledge base
-						</Text>
-					</Box>
-					<IconButton varient='text' size={34} fontSize={20} onClick={onClose}>
-						<CloseOutlined />
-					</IconButton>
-				</Box>
+		<FormModal
+			title='New knowledge entry'
+			subtitle='Add a new record to the knowledge base'
+			badgeLabel='Draft'
+			badgeTone='draft'
+			onClose={onClose}
+			onSubmit={handleSubmit}
+			submitLabel='Save'
+			submitLoadingLabel='Saving…'
+			isLoading={isLoading}
+		>
+			<FieldGrid>
+				<Field label='Title (optional)' error={errors.title}>
+					<TextField
+						name='title'
+						placeholder='Enter title'
+						value={fields.title}
+						onChange={(e) => setField('title', e.target.value)}
+						error={!!errors.title}
+						width='100%'
+					/>
+				</Field>
+				<Field label='Category (optional)' error={errors.category}>
+					<TextField
+						name='category'
+						placeholder='e.g. templates, scripts, objections'
+						value={fields.category}
+						onChange={(e) => setField('category', e.target.value)}
+						error={!!errors.category}
+						width='100%'
+					/>
+				</Field>
+			</FieldGrid>
 
-				<Divider styles={{ margin: '0 0 1.5rem' }} />
-
-				<form onSubmit={handleSubmit}>
-					<Box display='flex' flexDirection='column' space={2}>
-						<TextField
-							name='title'
-							label='Title (optional)'
-							placeholder='Enter title'
-							value={fields.title}
-							onChange={(e) => setField('title', e.target.value)}
-							error={!!errors.title}
-							hypertext={errors.title}
-							width='100%'
-						/>
-
-						<TextField
-							name='category'
-							label='Category (optional)'
-							placeholder='e.g. templates, scripts, objections'
-							value={fields.category}
-							onChange={(e) => setField('category', e.target.value)}
-							error={!!errors.category}
-							hypertext={errors.category}
-							width='100%'
-						/>
-
-						<Box display='flex' flexDirection='column' space={1}>
-							<Text varient='body2' weight='medium'>
-								Content
-							</Text>
-							<TextField
-								name='content'
-								placeholder='Enter the knowledge content…'
-								value={fields.content}
-								onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-									setField('content', e.target.value)
-								}
-								error={!!errors.content}
-								hypertext={errors.content}
-								multiRow
-								width='100%'
-								style={{ minHeight: 180, resize: 'vertical' }}
-							/>
-						</Box>
-
-						<Box display='flex' justify='flex-end' space={1} mt={2}>
-							<Button varient='outlined' color='info' onClick={onClose} type='button'>
-								Cancel
-							</Button>
-							<Button type='submit' disabled={isLoading}>
-								{isLoading ? 'Saving…' : 'Save'}
-							</Button>
-						</Box>
-					</Box>
-				</form>
-			</ModalContentLayout>
-		</Modal>
+			<FieldStack>
+				<Field
+					label='Content'
+					required
+					error={errors.content}
+					hint={`${fields.content.length} characters`}
+				>
+					<TextField
+						name='content'
+						placeholder='Enter the knowledge content…'
+						value={fields.content}
+						onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+							setField('content', e.target.value)
+						}
+						error={!!errors.content}
+						multiRow
+						width='100%'
+						style={{ minHeight: 200, resize: 'vertical' }}
+					/>
+				</Field>
+			</FieldStack>
+		</FormModal>
 	)
 }
 

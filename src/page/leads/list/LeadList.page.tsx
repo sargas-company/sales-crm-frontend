@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Box from '../../../components/box/Box'
 import Card from '../../../components/card/Card'
+import AnimatedCardShell from '../../../components/card/AnimatedCardShell'
 import LeadTable from '../../../components/leads/list/LeadTable'
 import LeadDeleteModal from '../../../components/leads/list/LeadDeleteModal'
 import DataGridFooter from '../../../components/data-grid-item/DataGridFooter'
@@ -63,7 +64,8 @@ const LeadList = () => {
 
 	return (
 		<>
-			<Card padding={'30px'}>
+			<AnimatedCardShell>
+				<Card padding={'30px'}>
 				<Box display='flex' justify='space-between' padding={20}>
 					<GridInnerContainer alignItems='center' justifyContent='space-between'>
 						<GridItem xs={12} md={6}>
@@ -76,7 +78,11 @@ const LeadList = () => {
 								onChange={(e) => setSearch(e.target.value)}
 							/>
 						</GridItem>
-						<GridItem xs={12} md={6} />
+						<GridItem xs={12} md={6}>
+							<Box display='flex' justify='flex-end'>
+								<CreateNewLead />
+							</Box>
+						</GridItem>
 					</GridInnerContainer>
 				</Box>
 
@@ -94,7 +100,8 @@ const LeadList = () => {
 						handleRowOptSelect={handleLimitChange}
 					/>
 				)}
-			</Card>
+				</Card>
+			</AnimatedCardShell>
 
 			{deleteTarget && (
 				<LeadDeleteModal
