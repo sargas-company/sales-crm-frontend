@@ -11,6 +11,7 @@ const TextField = forwardRef<InputRef, Inputs>((props, ref) => {
 		theme: { mode, primaryColor },
 	} = useTheme()
 	const {
+		id,
 		type,
 		name,
 		disable,
@@ -52,6 +53,7 @@ const TextField = forwardRef<InputRef, Inputs>((props, ref) => {
 		>
 			{!multiRow ? (
 				<Input
+					id={id}
 					type={type}
 					name={name}
 					className={`form-input body1 ${

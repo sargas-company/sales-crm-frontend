@@ -3,17 +3,7 @@ import styled from 'styled-components'
 import { TabItemAdditional } from './TabList'
 
 const TbsItem: FC<Props> = (props) => {
-	const {
-		value,
-		label,
-		selectedIndex,
-		onClick,
-		changeTab,
-		activeColor,
-		disabled,
-		getWidth,
-		icon,
-	} = props
+	const { value, label, selectedIndex, onClick, changeTab, disabled, getWidth, icon } = props
 	const btnRef = createRef<HTMLButtonElement>()
 	const handleClick = (eve: React.MouseEvent<HTMLButtonElement>) => {
 		changeTab && changeTab(value)
@@ -44,7 +34,6 @@ const TbsItem: FC<Props> = (props) => {
 			tabIndex={value === selectedIndex ? 0 : -1}
 			onClick={handleClick}
 			className={`tab-item ${value === selectedIndex && 'tab-item-active'}`}
-			color={activeColor}
 			disabled={disabled}
 			ref={btnRef}
 		>
@@ -63,24 +52,27 @@ interface Props extends TabItemAdditional {
 	onClick?: (value?: string | number, event?: React.MouseEvent<HTMLButtonElement>) => void
 }
 
-const StyledTabBtn = styled('button')<{ color?: string }>`
+const StyledTabBtn = styled('button')`
 	display: flex;
 	justify-content: center;
 	flex: 0 0 auto;
 	align-items: center;
-	gap: 0.6rem;
+	gap: ${({ theme }) => theme.spacing!.sm}px;
 	min-width: 90px;
 	width: auto;
 	background: transparent;
-	padding: 0.8rem 1rem;
+	padding: ${({ theme }) => theme.spacing!.md}px ${({ theme }) => theme.spacing!.lg}px;
 	text-align: center;
-	font-size: 0.875rem;
+	font-family: ${({ theme }) => theme.typography!.body.fontFamily};
+	font-size: ${({ theme }) => theme.typography!.body.fontSize};
+	color: ${({ theme }) => theme.colors!.text.secondary};
 	border: none;
 	white-space: nowrap;
 	line-height: unset;
+	cursor: pointer;
 
 	&.tab-item-active {
-		color: ${({ color }) => color};
+		color: ${({ theme }) => theme.colors!.accent.primary};
 		transition: 200ms ease;
 	}
 

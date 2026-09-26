@@ -10,7 +10,6 @@ import {
 } from 'react'
 import styled from 'styled-components'
 import { TabProvider } from '..'
-import useTheme from '../../../theme/useTheme'
 
 interface ActiveTabOptions {
 	top?: number
@@ -24,6 +23,7 @@ interface ActiveTabOptions {
 export interface TabItemAdditional {
 	selectedIndex?: number
 	readonly changeTab?: (tabIndex: number) => void
+	/** @deprecated read `theme.colors.accent.primary` from context instead. */
 	activeColor?: string
 	getWidth?: (value: number | string, options?: ActiveTabOptions) => void
 }
@@ -37,11 +37,6 @@ interface Props {
 const TbsLst: FC<Props> = ({ children, varient = 'default' }) => {
 	const indicatorRef = createRef<HTMLSpanElement>()
 	const containerRef = createRef<HTMLDivElement>()
-	const {
-		theme: {
-			primaryColor: { color },
-		},
-	} = useTheme()
 
 	const tab = useContext(TabProvider)
 
@@ -73,7 +68,6 @@ const TbsLst: FC<Props> = ({ children, varient = 'default' }) => {
 		cloneElement(tabItem, {
 			changeTab: tab?.handleChangeTab,
 			selectedIndex: tab?.value,
-			activeColor: color,
 			getWidth: tabItemWidth,
 		})
 	)
@@ -86,18 +80,17 @@ const TbsLst: FC<Props> = ({ children, varient = 'default' }) => {
 			ref={containerRef}
 		>
 			{mapChildren}
-			<StyledTabIndicator ref={indicatorRef} color={color} varient={varient || 'default'} />
+			<StyledTabIndicator ref={indicatorRef} varient={varient || 'default'} />
 		</div>
 	)
 }
 export default TbsLst
 
 const StyledTabIndicator = styled('span')<{
-	color: string
 	varient: Varient
 }>`
 	position: absolute;
-	background: ${({ color }) => color};
+	background: ${({ theme }) => theme.colors!.accent.primary};
 	width: ${({ varient }) => (varient === 'vertical' ? `2px` : '90px')};
 	height: ${({ varient }) => (varient !== 'vertical' ? '2px' : 'auto')};
 	${({ varient }) =>
