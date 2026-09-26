@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import AppBar from '../components/appbar/AppBar'
 import { Flex } from '../components/layout'
 import AppLayout from '../components/layout/AppLayout'
-import PageLoading from '../components/loading/PageLoading'
+import Loading from '../components/loading/Loading'
 import Nav from '../components/nav/Nav'
 
 const PageNotFound = lazy(() => import('./404/PageNotFound'))
@@ -51,7 +51,7 @@ const Home = () => {
 						overflowX: 'hidden',
 					}}
 				>
-					<Suspense fallback={<PageLoading />}>
+					<Suspense fallback={<Loading />}>
 						<Routes>
 							<Route index element={<Navigate to='/dashboards/sales' replace />} />
 							<Route path='/dashboards' element={<Navigate to='/dashboards/sales' replace />} />
