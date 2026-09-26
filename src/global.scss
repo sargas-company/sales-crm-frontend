@@ -3,90 +3,14 @@
 @import './_variables';
 // @import "./styles/modal/Modal.scss";
 
-h1,
-.h1 {
-	font-size: 32px;
-	line-height: 40px;
-	font-weight: 700;
-	letter-spacing: -0.4px;
-}
-
-h2,
-.h2 {
-	font-size: 26px;
-	line-height: 34px;
-	font-weight: 600;
-	letter-spacing: -0.3px;
-}
-
-h3,
-.h3 {
-	font-size: 22px;
-	line-height: 30px;
-	font-weight: 600;
-	letter-spacing: -0.2px;
-}
-
-h4,
-.h4 {
-	font-size: 18px;
-	line-height: 26px;
-	font-weight: 600;
-	letter-spacing: -0.1px;
-}
-
-h5,
-.h5 {
-	font-size: 16px;
-	line-height: 24px;
-	font-weight: 600;
-}
-
-h6,
-.h6 {
-	font-size: 14px;
-	line-height: 22px;
-	font-weight: 600;
-}
-
-.subtitle1 {
-	font-size: 15px;
-	line-height: 22px;
-	font-weight: 500;
-}
-
-.subtitle2 {
-	font-size: 13px;
-	line-height: 20px;
-	font-weight: 500;
-}
-
-.body1 {
-	font-size: 14px;
-	line-height: 22px;
-	font-weight: 400;
-}
-
-.body2 {
-	font-size: 13px;
-	line-height: 20px;
-	font-weight: 400;
-}
-
-.caption {
-	font-size: 12px;
-	line-height: 16px;
-	font-weight: 400;
-	letter-spacing: 0.2px;
-}
-
-.overline {
-	font-size: 11px;
-	line-height: 16px;
-	font-weight: 600;
-	letter-spacing: 0.6px;
-	text-transform: uppercase;
-}
+// This SCSS file is NOT consumed at runtime: `App.tsx` only imports
+// `./global.css`, and no npm script rebuilds `global.css` from this
+// source (the stale `.map` reflects a historical build). The runtime
+// canonical stylesheet is `global.css`, which mirrors the same numeric
+// scale as `src/theme/tokens.ts` → `typography` (spec §1 keys).
+// New styling should read `theme.typography.<role>` from tokens.
+// This file keeps only the utility classes below; the removed type
+// scale would be a no-op duplicate.
 
 .overflow-hidden {
 	overflow: hidden;

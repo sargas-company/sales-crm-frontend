@@ -80,84 +80,91 @@ export const zIndex = {
 	toast: 1100,
 } as const
 
-const uiFamily = "'Inter', 'Inter Variable', system-ui, sans-serif"
+const uiFamily = "'Inter Variable', 'Inter', system-ui, sans-serif"
 
+// Numerical values mirror the legacy scale currently present in
+// `src/global.css` (h1..h6 + body1/2 + subtitle1/2 + caption +
+// overline) so token consumers and existing markup produce the same
+// visual sizes. Role names differ from legacy CSS class names on
+// purpose (spec §1 keys). When `<Text varient=…>` and bare `<h1>`
+// tags migrate away from those classes, the CSS classes in
+// `global.css` will be dropped and this file becomes the sole source.
 export const typography = {
 	display: {
 		fontFamily: uiFamily,
 		fontSize: '32px',
 		lineHeight: '40px',
-		letterSpacing: '-0.02em',
+		letterSpacing: '-0.4px',
 		fontWeight: 700,
 	},
 	h1: {
 		fontFamily: uiFamily,
-		fontSize: '24px',
-		lineHeight: '32px',
-		letterSpacing: '-0.01em',
-		fontWeight: 700,
+		fontSize: '26px',
+		lineHeight: '34px',
+		letterSpacing: '-0.3px',
+		fontWeight: 600,
 	},
 	h2: {
 		fontFamily: uiFamily,
-		fontSize: '20px',
-		lineHeight: '28px',
-		letterSpacing: '-0.01em',
+		fontSize: '22px',
+		lineHeight: '30px',
+		letterSpacing: '-0.2px',
 		fontWeight: 600,
 	},
 	h3: {
 		fontFamily: uiFamily,
 		fontSize: '18px',
-		lineHeight: '24px',
-		letterSpacing: '0em',
+		lineHeight: '26px',
+		letterSpacing: '-0.1px',
 		fontWeight: 600,
 	},
 	h4: {
 		fontFamily: uiFamily,
 		fontSize: '16px',
-		lineHeight: '22px',
-		letterSpacing: '0em',
+		lineHeight: '24px',
+		letterSpacing: '0px',
 		fontWeight: 600,
 	},
 	bodyLg: {
 		fontFamily: uiFamily,
-		fontSize: '16px',
-		lineHeight: '24px',
-		letterSpacing: '0em',
-		fontWeight: 400,
+		fontSize: '15px',
+		lineHeight: '22px',
+		letterSpacing: '0px',
+		fontWeight: 500,
 	},
 	body: {
 		fontFamily: uiFamily,
 		fontSize: '14px',
-		lineHeight: '20px',
-		letterSpacing: '0em',
+		lineHeight: '22px',
+		letterSpacing: '0px',
 		fontWeight: 400,
 	},
 	bodySm: {
 		fontFamily: uiFamily,
 		fontSize: '13px',
-		lineHeight: '18px',
-		letterSpacing: '0em',
+		lineHeight: '20px',
+		letterSpacing: '0px',
 		fontWeight: 400,
 	},
 	caption: {
 		fontFamily: uiFamily,
 		fontSize: '12px',
 		lineHeight: '16px',
-		letterSpacing: '0.01em',
+		letterSpacing: '0.2px',
 		fontWeight: 400,
 	},
 	overline: {
 		fontFamily: uiFamily,
 		fontSize: '11px',
-		lineHeight: '14px',
-		letterSpacing: '0.06em',
+		lineHeight: '16px',
+		letterSpacing: '0.6px',
 		fontWeight: 600,
 	},
 	numeric: {
 		fontFamily: uiFamily,
 		fontSize: '14px',
-		lineHeight: '20px',
-		letterSpacing: '0em',
+		lineHeight: '22px',
+		letterSpacing: '0px',
 		fontWeight: 500,
 	},
 } as const

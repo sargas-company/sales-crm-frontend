@@ -1,3 +1,40 @@
+@font-face {
+	font-family: 'Inter Variable';
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url('/fonts/InterVariable.woff2') format('woff2-variations');
+}
+@font-face {
+	font-family: 'Inter Variable';
+	font-style: italic;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url('/fonts/InterVariable-Italic.woff2') format('woff2-variations');
+}
+/*
+ * Legacy alias: existing markup (`src/index.css`, ~10 styled files
+ * like Login.tsx / AuthBanner.tsx / formShell.styled.ts / FormModal.tsx)
+ * still writes `font-family: 'Inter', ...`. Alias `Inter` to the same
+ * Inter Variable file so those references resolve without touching
+ * every callsite. Alias will be dropped when callsites migrate to
+ * `theme.typography.*` in a later feature.
+ */
+@font-face {
+	font-family: 'Inter';
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url('/fonts/InterVariable.woff2') format('woff2-variations');
+}
+@font-face {
+	font-family: 'Inter';
+	font-style: italic;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url('/fonts/InterVariable-Italic.woff2') format('woff2-variations');
+}
+
 h1,
 .h1 {
 	font-size: 32px;
