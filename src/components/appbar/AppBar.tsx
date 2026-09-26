@@ -1,5 +1,5 @@
 import { createRef, useEffect } from 'react'
-import styled from 'styled-components'
+import styled, { ThemeProvider as StyledThemeProvider } from 'styled-components'
 import useTheme from '../../theme/useTheme'
 import Box from '../box/Box'
 import Card from '../card/Card'
@@ -34,45 +34,46 @@ const AppBar = () => {
 	}, [contentRef, layout])
 
 	return (
-		<StyledAppBar
-			ref={contentRef}
-			className={`${
-				appBarPosition === 'hidden'
-					? 'appbar-hidden'
-					: appBarPosition === 'static'
-						? 'appbar-static'
-						: 'appbar-fixed'
-			} ${layout === 'horizontal' ? 'no_padding' : ''}`}
-			theme={{ mode, appBarBlur }}
-		>
-			<Card className='appbar-content'>
-				<Box
-					display='flex'
-					justify='flex-end'
-					align='center'
-					height='100%'
-					px={layout === 'horizontal' ? 20 : 0}
-				>
-					<Box display='flex' align='center' space={0.6}>
-						<NotificationBell />
-						<ProfileDropdown />
+		<StyledThemeProvider theme={(outer) => ({ ...outer, mode, appBarBlur })}>
+			<StyledAppBar
+				ref={contentRef}
+				className={`${
+					appBarPosition === 'hidden'
+						? 'appbar-hidden'
+						: appBarPosition === 'static'
+							? 'appbar-static'
+							: 'appbar-fixed'
+				} ${layout === 'horizontal' ? 'no_padding' : ''}`}
+			>
+				<Card className='appbar-content'>
+					<Box
+						display='flex'
+						justify='flex-end'
+						align='center'
+						height='100%'
+						px={layout === 'horizontal' ? 20 : 0}
+					>
+						<Box display='flex' align='center' space={0.6}>
+							<NotificationBell />
+							<ProfileDropdown />
+						</Box>
 					</Box>
-				</Box>
-			</Card>
-		</StyledAppBar>
+				</Card>
+			</StyledAppBar>
+		</StyledThemeProvider>
 	)
 }
 
 export default AppBar
 
 const StyledAppBar = styled('header')`
-	min-height: 64px;
+	min-height: ${({ theme }) => `${theme.spacing!.xxxl + theme.spacing!.lg}px`};
 	width: 100%;
 	top: 0px;
 	left: auto;
 	right: 0px;
-	padding: 0 1.2rem;
-	z-index: 900;
+	padding: 0 ${({ theme }) => `${theme.spacing!.lg}px`};
+	z-index: ${({ theme }) => theme.zIndex!.overlay};
 	&.no_padding {
 		padding: 0;
 	}
@@ -94,17 +95,17 @@ const StyledAppBar = styled('header')`
 		flex-direction: column;
 		${({ theme }) =>
 			theme.appBarBlur
-				? `background: ${
-						theme.mode.name === 'dark' ? `rgb(37 45 58 / 80%) ` : `rgb(255 255 253 / 57%)`
-					};`
+				? `background: color-mix(in srgb, ${theme.colors!.bg.surface} ${
+						theme.mode.name === 'dark' ? '80%' : '57%'
+					}, transparent);`
 				: ''}
 		width: 100%;
 		height: 100%;
 		flex: 0 0 auto;
-		padding: 0 1rem;
+		padding: 0 ${({ theme }) => `${theme.spacing!.lg}px`};
 		transition: padding 300ms;
 		${({ theme }) => (theme.appBarBlur ? `backdrop-filter: blur(10px);` : '')}
-		z-index: 900;
+		z-index: ${({ theme }) => theme.zIndex!.overlay};
 	}
 
 	&.appbar-content-hide > .appbar-content {
@@ -117,7 +118,7 @@ const StyledAppBar = styled('header')`
 	.horizontal_nav_bar {
 		display: none;
 
-		@media (min-width: 1200px) {
+		@media (min-width: ${({ theme }) => `${theme.breakpoint!.lg}px`}) {
 			display: block;
 		}
 	}
