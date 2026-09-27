@@ -24,6 +24,8 @@ export const baseApi = createApi({
 		'SalesCandidate',
 		'SalesTaxonomy',
 		'SalesAlertConfig',
+		'Role',
+		'Permission',
 	],
 	endpoints: () => ({}),
 })

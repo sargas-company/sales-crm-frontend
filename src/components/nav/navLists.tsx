@@ -209,6 +209,7 @@ export const secondaryNavList: NavOptions[] = [
 		label: 'Roles & Access',
 		path: '/roles',
 		icon: <AdminPanelSettingsOutlined />,
+		permission: 'roles:view',
 	},
 ]
 

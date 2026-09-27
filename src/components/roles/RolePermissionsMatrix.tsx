@@ -1,102 +1,139 @@
-import { FC, Fragment, useMemo } from 'react'
-import { Check } from '@mui/icons-material'
-import { ACTIONS, RESOURCES, buildPermission } from '../../store/roles/types'
-import {
-	Checkmark,
-	Matrix,
-	MatrixCell,
-	MatrixCount,
-	MatrixHead,
-	MatrixRes,
-	MatrixWrap,
-} from './roles.styled'
+import { useMemo } from 'react'
+import styled from 'styled-components'
+import type { Permission, Role } from '../../store/roles/types'
+import { OWNER_SLUG, ROLE_ERROR_MESSAGES } from '../../store/roles/types'
 
 interface Props {
-	permissions: Set<string>
+	role: Role
+	catalogue: Permission[]
+	selected: Set<string>
+	onToggle: (key: string) => void
 	disabled?: boolean
-	onToggle: (perm: string) => void
-	onToggleRow: (resource: string) => void
-	onToggleColumn: (action: string) => void
 }
 
-const RolePermissionsMatrix: FC<Props> = ({
-	permissions,
-	disabled,
-	onToggle,
-	onToggleRow,
-	onToggleColumn,
-}) => {
-	const columnState = useMemo(() => {
-		const map: Record<string, { on: number; total: number }> = {}
-		ACTIONS.forEach((a) => {
-			const total = RESOURCES.length
-			let on = 0
-			RESOURCES.forEach((r) => {
-				if (permissions.has(buildPermission(r.key, a))) on++
-			})
-			map[a] = { on, total }
-		})
-		return map
-	}, [permissions])
+const RolePermissionsMatrix = ({ role, catalogue, selected, onToggle, disabled }: Props) => {
+	const ownerLocked = role.name === OWNER_SLUG
+	const readOnly = disabled || ownerLocked
+
+	const grouped = useMemo(() => {
+		const map = new Map<string, Permission[]>()
+		for (const p of catalogue) {
+			const list = map.get(p.module) ?? []
+			list.push(p)
+			map.set(p.module, list)
+		}
+		return Array.from(map.entries())
+			.map(
+				([module, perms]) =>
+					[module, perms.sort((a, b) => a.action.localeCompare(b.action))] as const
+			)
+			.sort((a, b) => a[0].localeCompare(b[0]))
+	}, [catalogue])
 
 	return (
-		<MatrixWrap>
-			<Matrix>
-				<MatrixHead className='first'>Resource</MatrixHead>
-				{ACTIONS.map((a) => (
-					<MatrixHead
-						key={a}
-						interactive={!disabled}
-						onClick={() => !disabled && onToggleColumn(a)}
-						title={disabled ? undefined : `Toggle entire "${a}" column`}
-					>
-						{a}
-						{columnState[a].on > 0 && columnState[a].on < columnState[a].total ? '·' : ''}
-					</MatrixHead>
+		<Wrapper>
+			{ownerLocked && <LockNote>{ROLE_ERROR_MESSAGES.OWNER_PERMISSIONS_LOCKED}</LockNote>}
+			<Grid>
+				{grouped.map(([module, perms]) => (
+					<GroupCard key={module}>
+						<GroupHead>{module}</GroupHead>
+						<PermList>
+							{perms.map((p) => {
+								const isChecked = selected.has(p.key)
+								return (
+									<PermRow key={p.id}>
+										<input
+											type='checkbox'
+											checked={isChecked}
+											disabled={readOnly}
+											onChange={() => onToggle(p.key)}
+											title={
+												ownerLocked
+													? ROLE_ERROR_MESSAGES.OWNER_PERMISSIONS_LOCKED
+													: (p.label ?? p.key)
+											}
+											aria-label={p.key}
+										/>
+										<PermKey>{p.action}</PermKey>
+										<PermHint>{p.label ?? p.key}</PermHint>
+									</PermRow>
+								)
+							})}
+						</PermList>
+					</GroupCard>
 				))}
-				<MatrixHead>Total</MatrixHead>
-
-				{RESOURCES.map((r, ri) => {
-					const isLast = ri === RESOURCES.length - 1
-					let rowCount = 0
-					const cells = ACTIONS.map((a) => {
-						const p = buildPermission(r.key, a)
-						const on = permissions.has(p)
-						if (on) rowCount++
-						return (
-							<MatrixCell
-								key={a}
-								isLast={isLast}
-								onClick={() => !disabled && onToggle(p)}
-							>
-								<Checkmark on={on} className='cb'>
-									<Check />
-								</Checkmark>
-							</MatrixCell>
-						)
-					})
-					return (
-						<Fragment key={r.key}>
-							<MatrixRes
-								isLast={isLast}
-								onClick={() => !disabled && onToggleRow(r.key)}
-								title={disabled ? undefined : `Toggle entire "${r.label}" row`}
-							>
-								<span className='r-name'>{r.label}</span>
-								<span className='r-hint'>{r.hint}</span>
-							</MatrixRes>
-							{cells}
-							<MatrixCount isLast={isLast}>
-								<span>
-									<span className='n'>{rowCount}</span>/{ACTIONS.length}
-								</span>
-							</MatrixCount>
-						</Fragment>
-					)
-				})}
-			</Matrix>
-		</MatrixWrap>
+			</Grid>
+		</Wrapper>
 	)
 }
 
 export default RolePermissionsMatrix
+
+const Wrapper = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: ${({ theme }) => theme.spacing!.md}px;
+`
+
+const LockNote = styled.div`
+	background: color-mix(in srgb, ${({ theme }) => theme.colors!.status.warning} 12%, transparent);
+	border: 1px solid
+		color-mix(in srgb, ${({ theme }) => theme.colors!.status.warning} 32%, transparent);
+	border-radius: ${({ theme }) => theme.radius!.md}px;
+	padding: ${({ theme }) => theme.spacing!.md}px;
+	color: ${({ theme }) => theme.colors!.text.primary};
+	font-size: ${({ theme }) => theme.typography!.bodySm.fontSize};
+`
+
+const Grid = styled.div`
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: ${({ theme }) => theme.spacing!.md}px;
+`
+
+const GroupCard = styled.div`
+	background: ${({ theme }) => theme.colors!.bg.surface};
+	border: 1px solid ${({ theme }) => theme.colors!.border.subtle};
+	border-radius: ${({ theme }) => theme.radius!.md}px;
+	padding: ${({ theme }) => theme.spacing!.md}px;
+`
+
+const GroupHead = styled.div`
+	font: ${({ theme }) => theme.typography!.overline.fontWeight}
+		${({ theme }) => theme.typography!.overline.fontSize} /
+		${({ theme }) => theme.typography!.overline.lineHeight}
+		${({ theme }) => theme.typography!.overline.fontFamily};
+	color: ${({ theme }) => theme.colors!.text.secondary};
+	letter-spacing: ${({ theme }) => theme.typography!.overline.letterSpacing};
+	margin-bottom: ${({ theme }) => theme.spacing!.sm}px;
+`
+
+const PermList = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: ${({ theme }) => theme.spacing!.xs}px;
+`
+
+const PermRow = styled.label`
+	display: grid;
+	grid-template-columns: auto 90px 1fr;
+	align-items: center;
+	gap: ${({ theme }) => theme.spacing!.sm}px;
+	font-size: ${({ theme }) => theme.typography!.bodySm.fontSize};
+	color: ${({ theme }) => theme.colors!.text.primary};
+	cursor: pointer;
+
+	input:disabled {
+		cursor: not-allowed;
+		opacity: 0.6;
+	}
+`
+
+const PermKey = styled.span`
+	font-weight: 500;
+`
+
+const PermHint = styled.span`
+	color: ${({ theme }) => theme.colors!.text.secondary};
+	font-size: ${({ theme }) => theme.typography!.caption.fontSize};
+`

@@ -1,50 +1,62 @@
-export type RoleType = 'system' | 'default' | 'custom'
+// Shape mirrors the T-08 Roles administration API response
+// (spec §3.3). Backend is the source of truth.
 
-export interface ResourceMeta {
+export interface RolePermission {
+	id: string
 	key: string
-	label: string
-	hint: string
+	module: string
+	action: string
+	label?: string | null
 }
-
-export type ActionKey = 'read' | 'create' | 'update' | 'delete'
 
 export interface Role {
 	id: string
 	name: string
-	description: string
-	type: RoleType
-	locked?: boolean
-	userIds: string[]
-	permissions: Set<string>
+	label: string
+	description: string | null
+	system: boolean
+	createdAt: string
+	updatedAt: string
+	permissions: RolePermission[]
+	userCount: number
 }
 
-export interface UserPreview {
+export interface Permission {
 	id: string
-	name: string
+	key: string
+	module: string
+	action: string
+	label?: string | null
+	description?: string | null
 }
 
-export const RESOURCES: ResourceMeta[] = [
-	{ key: 'leads', label: 'leads', hint: 'Leads and funnel' },
-	{ key: 'proposals', label: 'proposals', hint: 'Proposals' },
-	{ key: 'platforms', label: 'platforms', hint: 'Search platforms' },
-	{ key: 'accounts', label: 'accounts', hint: 'Response accounts' },
-	{ key: 'counterparties', label: 'counterparties', hint: 'Counterparties' },
-	{ key: 'client_requests', label: 'client_requests', hint: 'Client requests' },
-	{ key: 'client_calls', label: 'client_calls', hint: 'Calls' },
-	{ key: 'job_posts', label: 'job_posts', hint: 'Job postings' },
-	{ key: 'invoices', label: 'invoices', hint: 'Invoices' },
-	{ key: 'prompts', label: 'prompts', hint: 'Prompts' },
-	{ key: 'settings', label: 'settings', hint: 'Application settings' },
-	{ key: 'users', label: 'users', hint: 'Users' },
-	{ key: 'roles', label: 'roles', hint: 'Roles and permissions' },
-]
+// Machine-readable 400 codes from spec §6.
+export type RoleErrorCode =
+	| 'RESERVED_ROLE_SLUG'
+	| 'ROLE_NAME_TAKEN'
+	| 'UNKNOWN_PERMISSION_KEYS'
+	| 'SYSTEM_ROLE_SLUG_LOCKED'
+	| 'OWNER_PERMISSIONS_LOCKED'
+	| 'SYSTEM_ROLE_UNDELETABLE'
+	| 'ROLE_HAS_USERS'
+	| 'LAST_OWNER_LOCK'
+	| 'ROLE_NOT_FOUND'
+	| 'USER_NOT_FOUND'
 
-export const ACTIONS: ActionKey[] = ['read', 'create', 'update', 'delete']
-
-export const buildPermission = (resource: string, action: ActionKey) => `${resource}:${action}`
-
-export const allPermissions = (): Set<string> => {
-	const s = new Set<string>()
-	RESOURCES.forEach((r) => ACTIONS.forEach((a) => s.add(buildPermission(r.key, a))))
-	return s
+export const ROLE_ERROR_MESSAGES: Record<RoleErrorCode, string> = {
+	RESERVED_ROLE_SLUG: 'This slug is reserved for a system role.',
+	ROLE_NAME_TAKEN: 'A role with this slug already exists.',
+	UNKNOWN_PERMISSION_KEYS: 'One or more permission keys are unknown.',
+	SYSTEM_ROLE_SLUG_LOCKED: 'A role’s slug is immutable.',
+	OWNER_PERMISSIONS_LOCKED: 'The Owner role permission set is locked.',
+	SYSTEM_ROLE_UNDELETABLE: 'System roles cannot be deleted.',
+	ROLE_HAS_USERS: 'Reassign users off this role before deleting it.',
+	LAST_OWNER_LOCK: 'Cannot leave the system without an Owner.',
+	ROLE_NOT_FOUND: 'Role not found.',
+	USER_NOT_FOUND: 'User not found.',
 }
+
+export const RESERVED_SLUGS = new Set(['owner', 'admin_manager', 'regular_manager'])
+export const OWNER_SLUG = 'owner'
+
+export const SLUG_REGEX = /^[a-z][a-z0-9_]*$/

@@ -85,7 +85,14 @@ const Home = () => {
 							/>
 							<Route path='/client-calls/*' element={<ClientCalls />} />
 							<Route path='/settings' element={<Settings />} />
-							<Route path='/roles/*' element={<Roles />} />
+							<Route
+								path='/roles/*'
+								element={
+									<ProtectedRoute permission='roles:view'>
+										<Roles />
+									</ProtectedRoute>
+								}
+							/>
 							<Route path='/employees/list' element={<EmployeesList />} />
 							<Route path='/employees/time-off' element={<EmployeesTimeOff />} />
 							<Route path='/employees/credentials' element={<EmployeesCredentials />} />

@@ -1,211 +1,268 @@
-import { FC, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CheckOutlined, CloseOutlined, LockOutlined } from '@mui/icons-material'
+import styled from 'styled-components'
+import PageShell from '../../ui/page/PageShell'
+import PageHeader from '../../ui/page/PageHeader'
+import SectionCard from '../../ui/surface/SectionCard'
+import Input from '../../ui/form/Input'
+import Badge from '../../ui/badge/Badge'
+import Loading from '../../ui/state/Loading'
+import ErrorState from '../../ui/state/ErrorState'
 import { Button } from '../../ui'
-import {
-	ACTIONS,
-	RESOURCES,
-	allPermissions,
-	buildPermission,
-} from '../../store/roles/types'
-import { useRoles } from '../../store/roles/rolesMockStore'
+import PermissionGate from '../auth/PermissionGate'
 import RolePermissionsMatrix from './RolePermissionsMatrix'
-import RoleBadge from './RoleBadge'
-import { useToast } from './Toast'
 import {
-	Crumbs,
-	EditorHead,
-	LockedBanner,
-	ShellCard,
-	ShellInner,
-	Toolbar,
-	ViewFade,
-} from './roles.styled'
+	useAssignUserRoleMutation,
+	useListPermissionsQuery,
+	useListRolesQuery,
+	useUpdateRoleMutation,
+} from '../../store/roles/rolesApi'
+import { OWNER_SLUG } from '../../store/roles/types'
+import { useToast } from '../../context/toast/ToastContext'
+import { extractRoleErrorMessage } from './errorMessage'
 
-const plural = (n: number, singular: string, plural: string) =>
-	n === 1 ? singular : plural
-
-const RoleEditorPage: FC = () => {
+const RoleEditorPage = () => {
+	const { id = '' } = useParams<{ id: string }>()
 	const navigate = useNavigate()
-	const { id } = useParams<{ id: string }>()
-	const { getRole, saveRolePermissions } = useRoles()
-	const { push } = useToast()
+	const toast = useToast()
 
-	const role = id ? getRole(id) : undefined
-	const [working, setWorking] = useState<Set<string>>(new Set())
+	const rolesQuery = useListRolesQuery()
+	const permsQuery = useListPermissionsQuery()
+	const [updateRole, { isLoading: isSaving }] = useUpdateRoleMutation()
+	const [assignUserRole, { isLoading: isAssigning }] = useAssignUserRoleMutation()
 
+	const role = useMemo(
+		() => rolesQuery.data?.find((r) => r.id === id) ?? null,
+		[rolesQuery.data, id]
+	)
+
+	const [label, setLabel] = useState('')
+	const [description, setDescription] = useState('')
+	const [selected, setSelected] = useState<Set<string>>(new Set())
+	const [assignUserId, setAssignUserId] = useState('')
+
+	// Rehydrate local form state only when the ROLE ID changes (initial
+	// load or navigation to a different role). A refetch of the same id
+	// (e.g., after `assignUserRole` invalidates the list cache and RTK
+	// Query returns a fresh role object) MUST NOT overwrite unsaved
+	// edits — dep is intentionally `role?.id`, not `role`.
 	useEffect(() => {
-		if (role) setWorking(new Set(role.permissions))
+		if (!role) return
+		setLabel(role.label)
+		setDescription(role.description ?? '')
+		setSelected(new Set(role.permissions.map((p) => p.key)))
 	}, [role?.id])
 
-	const goList = () => navigate('/roles')
-
-	if (!role) {
+	if (rolesQuery.isLoading || permsQuery.isLoading) {
 		return (
-			<ViewFade>
-				<ShellCard>
-					<ShellInner>
-						<Crumbs>
-							<button className='link' onClick={goList} type='button'>
-								Roles &amp; Access
-							</button>
-							<span className='sep'>/</span>
-							<span className='current'>Not found</span>
-						</Crumbs>
-						<div style={{ padding: '40px 0', textAlign: 'center', opacity: 0.6 }}>
-							Role not found.{' '}
-							<Button varient='text' onClick={goList}>
-								Back to list
-							</Button>
-						</div>
-					</ShellInner>
-				</ShellCard>
-			</ViewFade>
+			<PageShell>
+				<Loading label='Loading role…' />
+			</PageShell>
+		)
+	}
+	if (rolesQuery.isError || permsQuery.isError || !role) {
+		return (
+			<PageShell>
+				<ErrorState
+					title='Role not available'
+					description='Could not load role or permission catalogue.'
+					action={<Button onClick={() => navigate('/roles')}>Back to list</Button>}
+				/>
+			</PageShell>
 		)
 	}
 
-	const original = role.permissions
+	const ownerLocked = role.name === OWNER_SLUG
+	const initialKeys = new Set(role.permissions.map((p) => p.key))
+	const permsChanged = !setsEqual(initialKeys, selected)
+	const labelChanged = label !== role.label
+	const descChanged = (description || null) !== (role.description || null)
+	const dirty = labelChanged || descChanged || permsChanged
 
-	const { added, removed } = useMemo(() => {
-		let a = 0
-		let r = 0
-		working.forEach((p) => {
-			if (!original.has(p)) a++
-		})
-		original.forEach((p) => {
-			if (!working.has(p)) r++
-		})
-		return { added: a, removed: r }
-	}, [working, original])
-
-	const dirty = added > 0 || removed > 0
-
-	const togglePerm = (p: string) => {
-		setWorking((prev) => {
+	const handleToggle = (key: string) => {
+		if (ownerLocked) return
+		setSelected((prev) => {
 			const next = new Set(prev)
-			if (next.has(p)) next.delete(p)
-			else next.add(p)
+			if (next.has(key)) next.delete(key)
+			else next.add(key)
 			return next
 		})
 	}
 
-	const toggleRow = (resKey: string) => {
-		setWorking((prev) => {
-			const next = new Set(prev)
-			const all = ACTIONS.every((a) => next.has(buildPermission(resKey, a)))
-			ACTIONS.forEach((a) => {
-				const p = buildPermission(resKey, a)
-				if (all) next.delete(p)
-				else next.add(p)
-			})
-			return next
-		})
-	}
-
-	const toggleColumn = (action: string) => {
-		setWorking((prev) => {
-			const next = new Set(prev)
-			const all = RESOURCES.every((r) => next.has(`${r.key}:${action}`))
-			RESOURCES.forEach((r) => {
-				const p = `${r.key}:${action}`
-				if (all) next.delete(p)
-				else next.add(p)
-			})
-			return next
-		})
-	}
-
-	const setAll = (on: boolean) => {
-		setWorking(on ? allPermissions() : new Set())
-	}
-
-	const save = () => {
-		saveRolePermissions(role.id, working)
-		push('Saved')
-	}
-
-	const cancel = () => {
-		if (dirty) {
-			setWorking(new Set(role.permissions))
-			return
+	const handleSave = async () => {
+		try {
+			const payload: {
+				id: string
+				label?: string
+				description?: string
+				permissionKeys?: string[]
+			} = { id: role.id }
+			if (labelChanged) payload.label = label
+			if (descChanged) payload.description = description
+			if (permsChanged && !ownerLocked) payload.permissionKeys = Array.from(selected).sort()
+			await updateRole(payload).unwrap()
+			toast.showToast('Role updated', 'success')
+		} catch (err) {
+			toast.showToast(extractRoleErrorMessage(err), 'error')
 		}
-		goList()
 	}
 
-	const locked = !!role.locked
-	const meta = `${role.description} · ${role.userIds.length} ${plural(role.userIds.length, 'user', 'users')}`
+	const handleAssign = async () => {
+		if (!assignUserId) return
+		try {
+			await assignUserRole({ userId: assignUserId, roleId: role.id }).unwrap()
+			toast.showToast('User assigned to role', 'success')
+			setAssignUserId('')
+		} catch (err) {
+			toast.showToast(extractRoleErrorMessage(err), 'error')
+		}
+	}
 
 	return (
-		<ViewFade>
-			<ShellCard>
-				<ShellInner>
-					<Crumbs>
-						<button className='link' onClick={goList} type='button'>
-							Roles &amp; Access
-						</button>
-						<span className='sep'>/</span>
-						<span className='current'>{role.name}</span>
-					</Crumbs>
+		<PageShell>
+			<PageHeader
+				title={role.label}
+				subtitle={
+					<HeaderMeta>
+						<Badge tone={role.system ? 'accent' : 'neutral'} variant='subtle'>
+							{role.system ? 'system' : 'custom'}
+						</Badge>
+						<span>Slug: {role.name}</span>
+						<span>{role.userCount} users assigned</span>
+					</HeaderMeta>
+				}
+				actions={
+					<Button varient='outlined' onClick={() => navigate('/roles')}>
+						Back to list
+					</Button>
+				}
+			/>
 
-					<EditorHead>
-						<div className='role-title'>
-							<div>
-								<h1>{role.name}</h1>
-								<p className='role-title-meta'>{meta}</p>
-							</div>
-							<RoleBadge type={role.type} />
-						</div>
-						<div className='save-cluster'>
-							<span className='diff'>
-								<span className='plus'>+{added}</span>
-								<span className='minus'>-{removed}</span>
-							</span>
-							<Button varient='outlined' onClick={cancel}>
-								{dirty ? 'Discard' : 'Back'}
-							</Button>
-							<Button disabled={locked || !dirty} onClick={save}>
-								Save
-							</Button>
-						</div>
-					</EditorHead>
+			<SectionCard title='Details'>
+				<Grid>
+					<Field>
+						<label>Label</label>
+						<Input
+							type='text'
+							name='role-label'
+							value={label}
+							onChange={(e) => setLabel(e.target.value)}
+							sizes='small'
+						/>
+					</Field>
+					<Field>
+						<label>Description</label>
+						<Input
+							type='text'
+							name='role-desc'
+							value={description}
+							onChange={(e) => setDescription(e.target.value)}
+							sizes='small'
+						/>
+					</Field>
+				</Grid>
+			</SectionCard>
 
-					{locked && (
-						<LockedBanner>
-							<LockOutlined />
-							<p>
-								<strong>Owner</strong> is a system role. Permissions are fixed and always
-								include everything. This role cannot be edited or restricted, so nobody
-								locks themselves out by accident.
-							</p>
-						</LockedBanner>
-					)}
+			<SectionCard title='Permissions'>
+				<RolePermissionsMatrix
+					role={role}
+					catalogue={permsQuery.data ?? []}
+					selected={selected}
+					onToggle={handleToggle}
+				/>
+			</SectionCard>
 
-					<Toolbar>
-						<div className='left'>
-							<Button varient='text' onClick={() => setAll(true)} disabled={locked}>
-								<CheckOutlined fontSize='small' /> All
-							</Button>
-							<Button varient='text' onClick={() => setAll(false)} disabled={locked}>
-								<CloseOutlined fontSize='small' /> None
-							</Button>
-						</div>
-						<span className='hint'>
-							Click a column header to toggle the whole column. Click a resource name to
-							toggle the whole row.
-						</span>
-					</Toolbar>
+			<PermissionGate permission='roles:assign'>
+				<SectionCard title='Assign user'>
+					<AssignRow>
+						<Input
+							type='text'
+							name='assign-user-id'
+							placeholder='User ID (UUID)'
+							value={assignUserId}
+							onChange={(e) => setAssignUserId(e.target.value)}
+							sizes='small'
+							maxWidth='360px'
+						/>
+						<Button onClick={handleAssign} disabled={!assignUserId || isAssigning}>
+							{isAssigning ? 'Assigning…' : 'Assign'}
+						</Button>
+					</AssignRow>
+					<Hint>
+						Assigning moves the user to this role. Reassigning the only Owner returns
+						`LAST_OWNER_LOCK` (spec §6).
+					</Hint>
+				</SectionCard>
+			</PermissionGate>
 
-					<RolePermissionsMatrix
-						permissions={working}
-						disabled={locked}
-						onToggle={togglePerm}
-						onToggleRow={toggleRow}
-						onToggleColumn={toggleColumn}
-					/>
-				</ShellInner>
-			</ShellCard>
-		</ViewFade>
+			<StickyActions>
+				<Button varient='outlined' onClick={() => navigate('/roles')}>
+					Cancel
+				</Button>
+				<PermissionGate permission='roles:update'>
+					<Button onClick={handleSave} disabled={!dirty || isSaving}>
+						{isSaving ? 'Saving…' : 'Save changes'}
+					</Button>
+				</PermissionGate>
+			</StickyActions>
+		</PageShell>
 	)
 }
 
 export default RoleEditorPage
+
+function setsEqual(a: Set<string>, b: Set<string>) {
+	if (a.size !== b.size) return false
+	for (const v of a) if (!b.has(v)) return false
+	return true
+}
+
+const HeaderMeta = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: ${({ theme }) => theme.spacing!.sm}px;
+	color: ${({ theme }) => theme.colors!.text.secondary};
+	font-size: ${({ theme }) => theme.typography!.bodySm.fontSize};
+`
+
+const Grid = styled.div`
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: ${({ theme }) => theme.spacing!.md}px;
+`
+
+const Field = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: ${({ theme }) => theme.spacing!.xs}px;
+
+	label {
+		color: ${({ theme }) => theme.colors!.text.secondary};
+		font-size: ${({ theme }) => theme.typography!.caption.fontSize};
+		text-transform: uppercase;
+		letter-spacing: ${({ theme }) => theme.typography!.caption.letterSpacing};
+	}
+`
+
+const AssignRow = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: ${({ theme }) => theme.spacing!.sm}px;
+	margin-bottom: ${({ theme }) => theme.spacing!.sm}px;
+`
+
+const Hint = styled.p`
+	margin: 0;
+	color: ${({ theme }) => theme.colors!.text.secondary};
+	font-size: ${({ theme }) => theme.typography!.caption.fontSize};
+`
+
+const StickyActions = styled.div`
+	position: sticky;
+	bottom: 0;
+	display: flex;
+	justify-content: flex-end;
+	gap: ${({ theme }) => theme.spacing!.sm}px;
+	padding: ${({ theme }) => theme.spacing!.md}px 0;
+	background: ${({ theme }) => theme.colors!.bg.canvas};
+`
