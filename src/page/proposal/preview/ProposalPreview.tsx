@@ -4,7 +4,6 @@ import {
 	InfoOutlined,
 	ChatOutlined,
 	ArrowBackOutlined,
-	EditOutlined,
 	ContentCopy,
 } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
@@ -61,8 +60,8 @@ const ProposalPreview = () => {
 					space={3}
 				>
 					<Text heading='h6'>Proposal not found</Text>
-					<Button varient='outlined' color='info' onClick={() => navigate('/proposal/list')}>
-						Back to list
+					<Button varient='outlined' color='info' onClick={() => navigate('/job-posts/list')}>
+						Back to Job Posts
 					</Button>
 				</Box>
 			</Card>
@@ -80,7 +79,7 @@ const ProposalPreview = () => {
 							varient='text'
 							size={34}
 							fontSize={20}
-							onClick={() => navigate('/proposal/list')}
+							onClick={() => navigate('/job-posts/list')}
 						>
 							<ArrowBackOutlined />
 						</IconButton>
@@ -114,24 +113,13 @@ const ProposalPreview = () => {
 						</Box>
 					</Box>
 
-					{/* Row 2: chips left, Edit button right */}
-					<Box display='flex' align='center' justify='space-between'>
-						<Box display='flex' align='center' space={2} style={{ flexWrap: 'wrap', gap: 8 }}>
-							<ProposalListItemStatus itemStatus={proposal.status} />
-							<ProposalListItemType itemType={proposal.proposalType} />
-							<ProposalListItemBoosted
-								itemBoosted={proposal.boosted ? 'Boosted' : 'Not Boosted'}
-							/>
-						</Box>
-						<Button
-							varient='outlined'
-							color='info'
-							onClick={() => navigate(`/proposal/edit/${proposal.id}`)}
-							styles={{ display: 'flex', alignItems: 'center', gap: 6 }}
-						>
-							<EditOutlined style={{ fontSize: 16 }} />
-							Edit
-						</Button>
+					{/* Row 2: chips */}
+					<Box display='flex' align='center' space={2} style={{ flexWrap: 'wrap', gap: 8 }}>
+						<ProposalListItemStatus itemStatus={proposal.status} />
+						<ProposalListItemType itemType={proposal.proposalType} />
+						<ProposalListItemBoosted
+							itemBoosted={proposal.boosted ? 'Boosted' : 'Not Boosted'}
+						/>
 					</Box>
 				</Box>
 

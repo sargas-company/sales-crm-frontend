@@ -1,10 +1,5 @@
 import { baseApi } from '../../api/baseApi'
-import type {
-	JobPostItem,
-	JobPostPage,
-	JobPostListParams,
-	CreateJobPostBody,
-} from './types/definition'
+import type { JobPostItem, JobPostPage, JobPostListParams } from './types/definition'
 
 export const jobPostsApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
@@ -29,11 +24,6 @@ export const jobPostsApi = baseApi.injectEndpoints({
 			}),
 		}),
 
-		createJobPost: builder.mutation<JobPostItem, CreateJobPostBody>({
-			query: (body) => ({ url: '/job-posts', method: 'POST', body }),
-			invalidatesTags: ['JobPost'],
-		}),
-
 		deleteJobPost: builder.mutation<void, string>({
 			query: (id) => ({ url: `/job-posts/${id}`, method: 'DELETE' }),
 			invalidatesTags: ['JobPost'],
@@ -45,6 +35,5 @@ export const {
 	useGetJobPostListQuery,
 	useGetJobPostByIdQuery,
 	useConvertJobPostToProposalMutation,
-	useCreateJobPostMutation,
 	useDeleteJobPostMutation,
 } = jobPostsApi

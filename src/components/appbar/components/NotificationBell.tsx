@@ -60,7 +60,6 @@ const MOCK_NOTIFS: Notif[] = [
 		desc: 'Client scheduled a follow-up call.',
 		time: '1h',
 		unread: true,
-		to: '/proposal',
 	},
 	{
 		id: 'n4',

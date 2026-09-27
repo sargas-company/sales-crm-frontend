@@ -14,7 +14,6 @@ import {
 	WorkOutlineOutlined,
 	TuneOutlined,
 	PhoneOutlined,
-	DescriptionOutlined,
 	AdminPanelSettingsOutlined,
 	BadgeOutlined,
 	ListAltOutlined,
@@ -55,7 +54,6 @@ const navList: NavOptions[] = [
 	{
 		parent: formatGroupButton('Proposals', <RequestQuoteOutlined />, '/proposal'),
 		childrens: [
-			format('List', '/proposal/list/', <DescriptionOutlined />),
 			format('Platforms', '/platforms/list/', <LayersOutlined />),
 			format('Job Posts', '/job-posts/list/', <WorkOutlineOutlined />),
 			format('Accounts', '/accounts/list/', <AccountCircleOutlined />),
