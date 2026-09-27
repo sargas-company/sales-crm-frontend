@@ -10,9 +10,6 @@ injectStore(store)
 import Theme from './theme/Theme'
 import { BrowserRouter as Router } from 'react-router-dom'
 
-// MirageJS disabled — real backend is used instead
-// import server from "./api/server";
-
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
 	<React.StrictMode>
 		<Router>
