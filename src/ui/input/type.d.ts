@@ -10,11 +10,13 @@ type InputEvents =
 			multiRow?: false
 			onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
 			onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
+			onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void
 	  }
 	| {
 			multiRow: true
 			onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
 			onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
+			onBlur?: (e: React.FocusEvent<HTMLTextAreaElement>) => void
 	  }
 
 export interface InputOptions {

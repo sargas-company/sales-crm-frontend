@@ -21,6 +21,7 @@ const TextField = forwardRef<InputRef, Inputs>((props, ref) => {
 		label,
 		onChange,
 		onKeyDown,
+		onBlur,
 		color,
 		hypertext,
 		error,
@@ -67,6 +68,7 @@ const TextField = forwardRef<InputRef, Inputs>((props, ref) => {
 					defaultValue={defaultValue}
 					onChange={onChange}
 					onKeyDown={onKeyDown}
+					onBlur={onBlur}
 					disabled={disable}
 					error={error}
 					placeholder={placeholder}
@@ -94,6 +96,7 @@ const TextField = forwardRef<InputRef, Inputs>((props, ref) => {
 					hasLabel={!!label}
 					onChange={onChange}
 					onKeyDown={onKeyDown}
+					onBlur={onBlur}
 				/>
 			)}
 			{label && <InputLabel label={label} isFloating={!!(value || defaultValue)} />}
