@@ -1,13 +1,30 @@
 import { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import useAuth from '../hooks/useAuth'
+import usePermissions from '../hooks/usePermissions'
 import PageLoading from '../components/loading/PageLoading'
 
-const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+interface ProtectedRouteProps {
+	children: ReactNode
+	// Optional capability gate. When set and the caller lacks the
+	// permission (single key or AND-list), redirect to
+	// `/dashboards/sales`. Backend `PermissionGuard` remains the
+	// source of truth; this is UX-only (spec §4, §5).
+	permission?: string | string[]
+}
+
+const ProtectedRoute = ({ children, permission }: ProtectedRouteProps) => {
 	const { isAuthenticated } = useAuth()
+	const { hasAll } = usePermissions()
 
 	if (isAuthenticated === null) return <PageLoading />
 	if (!isAuthenticated) return <Navigate to='/auth/login' replace />
+	if (permission) {
+		const keys = Array.isArray(permission) ? permission : [permission]
+		if (keys.length > 0 && !hasAll(keys)) {
+			return <Navigate to='/dashboards/sales' replace />
+		}
+	}
 	return <>{children}</>
 }
 

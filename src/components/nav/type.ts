@@ -5,6 +5,11 @@ export interface Parent {
 	rootPath: string
 	soon?: boolean
 }
+
+// Permission gating (spec §4). `permission` is a single capability key
+// or an all-of list. Absent → entry always renders (backward-compatible).
+export type NavPermission = string | string[]
+
 export interface Childrens {
 	parent?: Parent
 	label?: string
@@ -12,6 +17,7 @@ export interface Childrens {
 	icon?: ReactNode
 	childrens?: Childrens[]
 	hideIcon?: boolean
+	permission?: NavPermission
 }
 
 export interface NavItemType {
@@ -19,6 +25,7 @@ export interface NavItemType {
 	path: string
 	icon?: ReactNode
 	hideIcon?: boolean
+	permission?: NavPermission
 }
 
 export default interface NavOptions {
@@ -28,4 +35,5 @@ export default interface NavOptions {
 	parent?: Parent
 	childrens?: Childrens[]
 	hideIcon?: boolean
+	permission?: NavPermission
 }

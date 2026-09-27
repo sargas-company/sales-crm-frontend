@@ -6,15 +6,38 @@ import NavItem from './components/NavItem'
 import NavContainer from './NavContainer'
 import NavContent from './NavContent'
 import navList, { secondaryNavList } from './navLists'
+import usePermissions from '../../hooks/usePermissions'
+import type { Childrens, NavPermission } from './type'
+
+// Nav entries without a `permission` field render as before
+// (backward-compatible). Entries opting in are dropped when the caller
+// lacks the listed key(s); a group parent is dropped when every one of
+// its children is filtered out.
+const permissionAllows = (
+	perm: NavPermission | undefined,
+	has: (key: string) => boolean
+): boolean => {
+	if (!perm) return true
+	const keys = Array.isArray(perm) ? perm : [perm]
+	return keys.every(has)
+}
 
 const Nav = () => {
 	const theme = useTheme()
+	const { has } = usePermissions()
+
+	const filterChildrens = (children: Childrens[]) =>
+		children.filter((c) => permissionAllows(c.permission, has))
 
 	const renderNavItem = (nav: (typeof navList)[number], index: number) => {
 		const key = String(index)
 		if (nav.childrens) {
-			return <NavGroup navData={{ parent: nav.parent!, childrens: nav.childrens }} key={key} />
+			if (!permissionAllows(nav.permission, has)) return null
+			const visibleChildren = filterChildrens(nav.childrens)
+			if (visibleChildren.length === 0) return null
+			return <NavGroup navData={{ parent: nav.parent!, childrens: visibleChildren }} key={key} />
 		}
+		if (!permissionAllows(nav.permission, has)) return null
 		return <NavItem label={nav.label!} path={nav.path!} icon={nav.icon} key={key} />
 	}
 
