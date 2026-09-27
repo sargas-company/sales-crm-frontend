@@ -5,6 +5,7 @@ import { Flex } from '../components/layout'
 import AppLayout from '../components/layout/AppLayout'
 import Loading from '../components/loading/Loading'
 import Nav from '../components/nav/Nav'
+import ProtectedRoute from '../routes/ProtectedRoute'
 
 const PageNotFound = lazy(() => import('./404/PageNotFound'))
 const Analytics = lazy(() => import('./analytics'))
@@ -54,10 +55,16 @@ const Home = () => {
 					<Suspense fallback={<Loading />}>
 						<Routes>
 							<Route index element={<Navigate to='/dashboards/sales' replace />} />
-							<Route path='/dashboards' element={<Navigate to='/dashboards/sales' replace />} />
+							<Route
+								path='/dashboards'
+								element={<Navigate to='/dashboards/sales' replace />}
+							/>
 							<Route path='/dashboards/sales' element={<Analytics />} />
 							<Route path='/dashboards/finance' element={<Finance />} />
-							<Route path='/dashboards/analytics/' element={<Navigate to='/dashboards/sales' replace />} />
+							<Route
+								path='/dashboards/analytics/'
+								element={<Navigate to='/dashboards/sales' replace />}
+							/>
 							<Route path='/chats' element={<Chat />} />
 							<Route path='/proposal/*' element={<Proposal />} />
 							<Route path='/leads/*' element={<Leads />} />
@@ -68,7 +75,14 @@ const Home = () => {
 							<Route path='/client-requests/*' element={<ClientRequests />} />
 							<Route path='/invoices/*' element={<Invoices />} />
 							<Route path='/job-posts/*' element={<JobPosts />} />
-							<Route path='/prompts/*' element={<Prompts />} />
+							<Route
+								path='/prompts/*'
+								element={
+									<ProtectedRoute permission='prompts:view'>
+										<Prompts />
+									</ProtectedRoute>
+								}
+							/>
 							<Route path='/client-calls/*' element={<ClientCalls />} />
 							<Route path='/settings' element={<Settings />} />
 							<Route path='/roles/*' element={<Roles />} />

@@ -6,6 +6,7 @@ import type { PromptType } from '../../../store/prompts/types/definition'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
 import useTheme from '../../../theme/useTheme'
+import PermissionGate from '../../auth/PermissionGate'
 import {
 	Field,
 	FormHeader,
@@ -203,9 +204,11 @@ const PromptForm = () => {
 							>
 								Cancel
 							</Button>
-							<Button type='submit' disabled={isLoading}>
-								{isLoading ? 'Creating…' : 'Create prompt'}
-							</Button>
+							<PermissionGate permission='prompts:create'>
+								<Button type='submit' disabled={isLoading}>
+									{isLoading ? 'Creating…' : 'Create prompt'}
+								</Button>
+							</PermissionGate>
 						</FootActions>
 					</FootBar>
 				</form>

@@ -12,6 +12,7 @@ import Box from '../../../components/box/Box'
 import { Text, Chip, Button, Divider } from '../../../ui'
 import PromptActiveChip from '../../../components/prompts/list/PromptActiveChip'
 import PromptEditModal from '../../../components/prompts/form/PromptEditModal'
+import PermissionGate from '../../../components/auth/PermissionGate'
 import { useGetPromptByIdQuery, useActivatePromptMutation } from '../../../store/prompts/promptsApi'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
@@ -70,22 +71,24 @@ const PromptPreview = () => {
 						</Box>
 					</Button>
 					<Box display='flex' align='center' space={1}>
-						{!prompt.isActive && (
-							<Button
-								color='success'
-								varient='outlined'
-								onClick={handleActivate}
-								disabled={isActivating}
-							>
-								{isActivating ? 'Activating…' : 'Activate'}
+						<PermissionGate permission='prompts:update'>
+							{!prompt.isActive && (
+								<Button
+									color='success'
+									varient='outlined'
+									onClick={handleActivate}
+									disabled={isActivating}
+								>
+									{isActivating ? 'Activating…' : 'Activate'}
+								</Button>
+							)}
+							<Button onClick={() => setEditOpen(true)}>
+								<Box display='flex' align='center' space={1}>
+									<EditOutlined style={{ fontSize: 16 }} />
+									<span>Edit</span>
+								</Box>
 							</Button>
-						)}
-						<Button onClick={() => setEditOpen(true)}>
-							<Box display='flex' align='center' space={1}>
-								<EditOutlined style={{ fontSize: 16 }} />
-								<span>Edit</span>
-							</Box>
-						</Button>
+						</PermissionGate>
 					</Box>
 				</Box>
 

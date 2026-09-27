@@ -1,4 +1,4 @@
-import NavOptions, {NavItemType} from './type'
+import NavOptions, { NavItemType } from './type'
 
 import {
 	SpaceDashboardOutlined,
@@ -13,7 +13,8 @@ import {
 	AssignmentOutlined,
 	WorkOutlineOutlined,
 	TuneOutlined,
-	PhoneOutlined, DescriptionOutlined,
+	PhoneOutlined,
+	DescriptionOutlined,
 	AdminPanelSettingsOutlined,
 	BadgeOutlined,
 	ListAltOutlined,
@@ -30,18 +31,18 @@ import {
 	LightbulbOutlined,
 	ArticleOutlined,
 } from '@mui/icons-material'
-import {ReactNode} from "react";
+import { ReactNode } from 'react'
 
 const format = (label: string, path: string, icon?: ReactNode): NavItemType => {
-  return icon ? { label, path, icon } : { label, path };
-};
+	return icon ? { label, path, icon } : { label, path }
+}
 
-const formatGroupButton = (
-  title: string,
-  icon: ReactNode,
-  rootPath: string,
-  soon = false
-) => ({ title, icon, rootPath, soon });
+const formatGroupButton = (title: string, icon: ReactNode, rootPath: string, soon = false) => ({
+	title,
+	icon,
+	rootPath,
+	soon,
+})
 
 const navList: NavOptions[] = [
 	// {
@@ -201,7 +202,8 @@ export const secondaryNavList: NavOptions[] = [
 	{
 		label: 'Prompts',
 		path: '/prompts/list',
-		icon: <TuneOutlined />
+		icon: <TuneOutlined />,
+		permission: 'prompts:view',
 	},
 	{
 		label: 'Roles & Access',

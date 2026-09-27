@@ -8,6 +8,7 @@ import { GridInnerContainer, GridItem } from '../../../components/layout'
 import { Select, SelectItem, Button, TextField } from '../../../ui'
 import PromptTable from '../../../components/prompts/list/PromptTable'
 import PromptDeleteModal from '../../../components/prompts/list/PromptDeleteModal'
+import PermissionGate from '../../../components/auth/PermissionGate'
 import { useGetPromptListQuery } from '../../../store/prompts/promptsApi'
 import type { PromptType, PromptItem } from '../../../store/prompts/types/definition'
 import { PromptFilterRow } from './PromptList.styled'
@@ -129,7 +130,9 @@ const PromptList = () => {
 						</GridItem>
 						<GridItem xs={12} md={3}>
 							<Box display='flex' justify='flex-end'>
-								<Button onClick={() => navigate('/prompts/add')}>Create Prompt</Button>
+								<PermissionGate permission='prompts:create'>
+									<Button onClick={() => navigate('/prompts/add')}>Create Prompt</Button>
+								</PermissionGate>
 							</Box>
 						</GridItem>
 					</GridInnerContainer>
