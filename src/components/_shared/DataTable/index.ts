@@ -1,5 +1,11 @@
 export { default as DataTable } from './DataTable'
-export type { DataTableColumn, DataTablePagination, DataTableProps } from './DataTable'
+export type {
+	DataTableColumn,
+	DataTablePagination,
+	DataTableProps,
+	SortDirection,
+	SortState,
+} from './DataTable'
 export {
 	Actions,
 	IconAction,

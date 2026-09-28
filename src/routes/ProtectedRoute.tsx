@@ -8,8 +8,9 @@ interface ProtectedRouteProps {
 	children: ReactNode
 	// Optional capability gate. When set and the caller lacks the
 	// permission (single key or AND-list), redirect to
-	// `/dashboards/sales`. Backend `PermissionGuard` remains the
-	// source of truth; this is UX-only (spec §4, §5).
+	// `/access-denied` (a plain authenticated-only page — cannot
+	// loop). Backend `PermissionGuard` remains the source of truth;
+	// this is UX-only (spec §4, §5).
 	permission?: string | string[]
 }
 
@@ -22,7 +23,7 @@ const ProtectedRoute = ({ children, permission }: ProtectedRouteProps) => {
 	if (permission) {
 		const keys = Array.isArray(permission) ? permission : [permission]
 		if (keys.length > 0 && !hasAll(keys)) {
-			return <Navigate to='/dashboards/sales' replace />
+			return <Navigate to='/access-denied' replace />
 		}
 	}
 	return <>{children}</>

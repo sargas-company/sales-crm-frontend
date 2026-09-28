@@ -20,10 +20,27 @@ import { extractRoleErrorMessage } from './errorMessage'
 
 const PAGE_SIZE = 12
 
+type RoleSortKey = 'label' | 'userCount'
+type RoleSortDirection = 'asc' | 'desc'
+interface RoleSortState {
+	key: RoleSortKey
+	direction: RoleSortDirection
+}
+
+const cycleSortState = (
+	current: RoleSortState | null,
+	next: RoleSortKey,
+): RoleSortState | null => {
+	if (!current || current.key !== next) return { key: next, direction: 'asc' }
+	if (current.direction === 'asc') return { key: next, direction: 'desc' }
+	return null
+}
+
 const RolesListPage = () => {
 	const navigate = useNavigate()
 	const [search, setSearch] = useState('')
 	const [page, setPage] = useState(1)
+	const [sort, setSort] = useState<RoleSortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<Role | null>(null)
 
 	const { data, isLoading, isError, refetch } = useListRolesQuery()
@@ -31,6 +48,7 @@ const RolesListPage = () => {
 	const toast = useToast()
 
 	const roles = data ?? []
+
 	const filtered = useMemo(() => {
 		if (!search) return roles
 		const q = search.toLowerCase()
@@ -42,11 +60,30 @@ const RolesListPage = () => {
 		)
 	}, [roles, search])
 
-	const total = filtered.length
+	const sorted = useMemo(() => {
+		if (!sort) return filtered
+		const dir = sort.direction === 'asc' ? 1 : -1
+		return [...filtered].sort((a, b) => {
+			if (sort.key === 'label') return a.label.localeCompare(b.label) * dir
+			return (a.userCount - b.userCount) * dir
+		})
+	}, [filtered, sort])
+
+	const cycleSort = (key: RoleSortKey) => {
+		setSort((prev) => cycleSortState(prev, key))
+		setPage(1)
+	}
+
+	const sortIndicator = (key: RoleSortKey): string => {
+		if (!sort || sort.key !== key) return ''
+		return sort.direction === 'asc' ? ' ▲' : ' ▼'
+	}
+
+	const total = sorted.length
 	const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 	const clampedPage = Math.min(page, totalPages)
 	const offset = (clampedPage - 1) * PAGE_SIZE
-	const pageItems = filtered.slice(offset, offset + PAGE_SIZE)
+	const pageItems = sorted.slice(offset, offset + PAGE_SIZE)
 
 	const handleDelete = async () => {
 		if (!deleteTarget) return
@@ -117,9 +154,35 @@ const RolesListPage = () => {
 								<Table>
 									<thead>
 										<tr>
-											<th className='col-role'>Role</th>
+											<th
+												className='col-role sortable'
+												onClick={() => cycleSort('label')}
+												aria-sort={
+													sort?.key === 'label'
+														? sort.direction === 'asc'
+															? 'ascending'
+															: 'descending'
+														: 'none'
+												}
+												role='columnheader'
+											>
+												Role{sortIndicator('label')}
+											</th>
 											<th className='col-desc'>Description</th>
-											<th className='col-users'>Users</th>
+											<th
+												className='col-users sortable'
+												onClick={() => cycleSort('userCount')}
+												aria-sort={
+													sort?.key === 'userCount'
+														? sort.direction === 'asc'
+															? 'ascending'
+															: 'descending'
+														: 'none'
+												}
+												role='columnheader'
+											>
+												Users{sortIndicator('userCount')}
+											</th>
 											<th className='col-actions'>Actions</th>
 										</tr>
 									</thead>
@@ -556,6 +619,14 @@ const Table = styled.table`
 		background: ${T.subtleBg};
 		padding: 15px 22px;
 		border-bottom: 1px solid ${T.divider};
+	}
+
+	thead th.sortable {
+		cursor: pointer;
+		user-select: none;
+	}
+	thead th.sortable:hover {
+		color: ${T.primary};
 	}
 
 	thead th.col-users,

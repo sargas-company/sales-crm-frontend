@@ -180,6 +180,24 @@ function DataTable<T>({
 	const dataColumns = columns.filter((c) => !isActions(c.key))
 	const actionsColumn = columns.find((c) => isActions(c.key))
 
+	// When there are no records (and we are not loading / erroring), hide
+	// both the header row and the pager — the card becomes a clean empty
+	// canvas rather than a bordered strip with empty rails.
+	const showEmpty = !isLoading && !isError && sortedRows.length === 0
+
+	if (showEmpty) {
+		return (
+			<TableCard>
+				<EmptyState>
+					<EmptyIconWrap>
+						{emptyIcon ?? (searchActive ? <SearchOffOutlined /> : <InboxOutlined />)}
+					</EmptyIconWrap>
+					<EmptyTitle>{searchActive ? emptyTitleSearch : emptyTitle}</EmptyTitle>
+				</EmptyState>
+			</TableCard>
+		)
+	}
+
 	return (
 		<TableCard>
 			<TableScrollWrap $leftHint={edge.left} $rightHint={edge.right}>
@@ -277,22 +295,6 @@ function DataTable<T>({
 												</button>
 											)}
 										</InlineState>
-									</td>
-								</tr>
-							)}
-
-							{!isLoading && !isError && sortedRows.length === 0 && (
-								<tr>
-									<td colSpan={totalCols}>
-										<EmptyState>
-											<EmptyIconWrap>
-												{emptyIcon ??
-													(searchActive ? <SearchOffOutlined /> : <InboxOutlined />)}
-											</EmptyIconWrap>
-											<EmptyTitle>
-												{searchActive ? emptyTitleSearch : emptyTitle}
-											</EmptyTitle>
-										</EmptyState>
 									</td>
 								</tr>
 							)}
