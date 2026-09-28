@@ -10,19 +10,14 @@ import { useGetPlatformsQuery } from '../../../store/platforms/platformsApi'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
 import useTheme from '../../../theme/useTheme'
-import {
-	Field,
-	FormHeader,
-	FormLoading,
-	FormNotFound,
-	SectionHead,
-} from '../../_shared/FormShell'
+import { Field, FormHeader, FormLoading, FormNotFound, SectionHead } from '../../_shared/FormShell'
 import {
 	DotMini,
 	FieldGrid,
 	FootActions,
 	FootBar,
 	FootLeft,
+	PrimarySolidButton,
 	Section,
 	Shell,
 	Surface,
@@ -202,7 +197,7 @@ const AccountFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 							>
 								Cancel
 							</Button>
-							<Button type='submit' disabled={isLoading}>
+							<PrimarySolidButton type='submit' disabled={isLoading}>
 								{isLoading
 									? isEdit
 										? 'Saving…'
@@ -210,7 +205,7 @@ const AccountFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 									: isEdit
 										? 'Save changes'
 										: 'Create account'}
-							</Button>
+							</PrimarySolidButton>
 						</FootActions>
 					</FootBar>
 				</form>

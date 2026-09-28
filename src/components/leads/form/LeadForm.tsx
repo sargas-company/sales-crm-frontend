@@ -5,24 +5,15 @@ import { useGetLeadByIdQuery, useUpdateLeadMutation } from '../../../store/leads
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
 import useTheme from '../../../theme/useTheme'
-import type {
-	ApiLeadStatus,
-	ApiClientType,
-	LeadItem,
-} from '../../../store/leads/types/definition'
-import {
-	Field,
-	FormHeader,
-	FormLoading,
-	FormNotFound,
-	SectionHead,
-} from '../../_shared/FormShell'
+import type { ApiLeadStatus, ApiClientType, LeadItem } from '../../../store/leads/types/definition'
+import { Field, FormHeader, FormLoading, FormNotFound, SectionHead } from '../../_shared/FormShell'
 import {
 	DotMini,
 	FieldGrid,
 	FootActions,
 	FootBar,
 	FootLeft,
+	PrimarySolidButton,
 	Section,
 	Shell,
 	Surface,
@@ -62,12 +53,7 @@ const LeadIcon = () => (
 			strokeLinejoin='round'
 		/>
 		<circle cx='9' cy='7' r='4' stroke='currentColor' strokeWidth='1.8' />
-		<path
-			d='M22 11h-6M19 8v6'
-			stroke='currentColor'
-			strokeWidth='1.8'
-			strokeLinecap='round'
-		/>
+		<path d='M22 11h-6M19 8v6' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' />
 	</svg>
 )
 
@@ -238,9 +224,9 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 							>
 								Cancel
 							</Button>
-							<Button type='submit' disabled={isLoading}>
+							<PrimarySolidButton type='submit' disabled={isLoading}>
 								{isLoading ? 'Saving…' : 'Save changes'}
-							</Button>
+							</PrimarySolidButton>
 						</FootActions>
 					</FootBar>
 				</form>

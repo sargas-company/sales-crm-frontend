@@ -10,13 +10,7 @@ import {
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
 import useTheme from '../../../theme/useTheme'
-import {
-	Field,
-	FormHeader,
-	FormLoading,
-	FormNotFound,
-	SectionHead,
-} from '../../_shared/FormShell'
+import { Field, FormHeader, FormLoading, FormNotFound, SectionHead } from '../../_shared/FormShell'
 import {
 	DotMini,
 	FieldGrid,
@@ -24,6 +18,7 @@ import {
 	FootActions,
 	FootBar,
 	FootLeft,
+	PrimarySolidButton,
 	Section,
 	Shell,
 	Surface,
@@ -65,13 +60,7 @@ const BuildingIcon = () => (
 	</svg>
 )
 
-const CounterpartyFormInner = ({
-	id,
-	initial,
-}: {
-	id?: string
-	initial: FormFields
-}) => {
+const CounterpartyFormInner = ({ id, initial }: { id?: string; initial: FormFields }) => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
 	const { theme } = useTheme()
@@ -204,7 +193,11 @@ const CounterpartyFormInner = ({
 									}
 									multiRow
 									width='100%'
-									style={{ minHeight: 160, resize: 'vertical' }}
+									style={{
+										minHeight: 96,
+										resize: 'none',
+										fieldSizing: 'content',
+									}}
 								/>
 							</Field>
 						</FieldStack>
@@ -226,7 +219,7 @@ const CounterpartyFormInner = ({
 							>
 								Cancel
 							</Button>
-							<Button type='submit' disabled={isLoading}>
+							<PrimarySolidButton type='submit' disabled={isLoading}>
 								{isLoading
 									? isEdit
 										? 'Saving…'
@@ -234,7 +227,7 @@ const CounterpartyFormInner = ({
 									: isEdit
 										? 'Save changes'
 										: 'Create counterparty'}
-							</Button>
+							</PrimarySolidButton>
 						</FootActions>
 					</FootBar>
 				</form>

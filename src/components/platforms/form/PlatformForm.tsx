@@ -10,13 +10,7 @@ import {
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
 import useTheme from '../../../theme/useTheme'
-import {
-	Field,
-	FormHeader,
-	FormLoading,
-	FormNotFound,
-	SectionHead,
-} from '../../_shared/FormShell'
+import { Field, FormHeader, FormLoading, FormNotFound, SectionHead } from '../../_shared/FormShell'
 import {
 	DotMini,
 	FieldGrid,
@@ -24,6 +18,7 @@ import {
 	FootBar,
 	FootLeft,
 	InfoPanel,
+	PrimarySolidButton,
 	Section,
 	Shell,
 	Surface,
@@ -64,11 +59,7 @@ const isValidUrl = (value: string) => {
 
 const PlanetIcon = () => (
 	<svg width='22' height='22' viewBox='0 0 24 24' fill='none'>
-		<path
-			d='M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z'
-			stroke='currentColor'
-			strokeWidth='1.8'
-		/>
+		<path d='M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z' stroke='currentColor' strokeWidth='1.8' />
 		<path
 			d='M3 12h18M12 3a13.5 13.5 0 0 1 0 18M12 3a13.5 13.5 0 0 0 0 18'
 			stroke='currentColor'
@@ -163,12 +154,7 @@ const PlatformFormInner = ({ id, initial }: { id?: string; initial: FormFields }
 							hint='Give your platform a recognizable name — the slug is generated automatically'
 						/>
 						<FieldGrid>
-							<Field
-								label='Platform title'
-								required
-								error={errors.title}
-								span='two-thirds'
-							>
+							<Field label='Platform title' required error={errors.title} span='two-thirds'>
 								<TextField
 									name='title'
 									placeholder='e.g. Upwork'
@@ -225,9 +211,7 @@ const PlatformFormInner = ({ id, initial }: { id?: string; initial: FormFields }
 										)}
 									</PreviewLogo>
 									<PreviewText>
-										<PreviewTitle>
-											{fields.title || 'Platform preview'}
-										</PreviewTitle>
+										<PreviewTitle>{fields.title || 'Platform preview'}</PreviewTitle>
 										<PreviewHint $dark={isDark}>
 											{showLogo
 												? 'Logo will appear next to the platform name'
@@ -257,7 +241,7 @@ const PlatformFormInner = ({ id, initial }: { id?: string; initial: FormFields }
 							>
 								Cancel
 							</Button>
-							<Button type='submit' disabled={isLoading}>
+							<PrimarySolidButton type='submit' disabled={isLoading}>
 								{isLoading
 									? isEdit
 										? 'Saving…'
@@ -265,7 +249,7 @@ const PlatformFormInner = ({ id, initial }: { id?: string; initial: FormFields }
 									: isEdit
 										? 'Save changes'
 										: 'Create platform'}
-							</Button>
+							</PrimarySolidButton>
 						</FootActions>
 					</FootBar>
 				</form>
@@ -280,9 +264,7 @@ const PlatformForm = ({ id }: PlatformFormProps) => {
 	if (id && isLoading) return <FormLoading label='Loading platform…' />
 	if (id && !data) return <FormNotFound label='Platform not found' />
 
-	const initial: FormFields = data
-		? { title: data.title, imageUrl: data.imageUrl ?? '' }
-		: empty
+	const initial: FormFields = data ? { title: data.title, imageUrl: data.imageUrl ?? '' } : empty
 
 	return <PlatformFormInner id={id} initial={initial} />
 }

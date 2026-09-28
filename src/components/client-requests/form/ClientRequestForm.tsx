@@ -12,13 +12,7 @@ import type {
 	ClientRequestItem,
 	ClientRequestStatus,
 } from '../../../store/clientRequests/types/definition'
-import {
-	Field,
-	FormHeader,
-	FormLoading,
-	FormNotFound,
-	SectionHead,
-} from '../../_shared/FormShell'
+import { Field, FormHeader, FormLoading, FormNotFound, SectionHead } from '../../_shared/FormShell'
 import {
 	DotMini,
 	FieldGrid,
@@ -26,6 +20,7 @@ import {
 	FootActions,
 	FootBar,
 	FootLeft,
+	PrimarySolidButton,
 	Section,
 	Shell,
 	Surface,
@@ -210,9 +205,9 @@ const ClientRequestFormInner = ({
 							>
 								Cancel
 							</Button>
-							<Button type='submit' disabled={isLoading}>
+							<PrimarySolidButton type='submit' disabled={isLoading}>
 								{isLoading ? 'Saving…' : 'Save changes'}
-							</Button>
+							</PrimarySolidButton>
 						</FootActions>
 					</FootBar>
 				</form>
