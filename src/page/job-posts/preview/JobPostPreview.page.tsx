@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import {
@@ -15,9 +15,11 @@ import {
 	SellOutlined,
 	SpeedOutlined,
 	TrendingUpOutlined,
+	VisibilityOutlined,
 	WarningAmberOutlined,
 	WorkOutlineOutlined,
 } from '@mui/icons-material'
+import { Tooltip } from '@mui/material'
 import Loading from '../../../ui/state/Loading'
 import ErrorState from '../../../ui/state/ErrorState'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
@@ -30,6 +32,7 @@ import type {
 	JobPostStatus,
 } from '../../../store/job-posts/types/definition'
 import { useToast } from '../../../context/toast/ToastContext'
+import { getJobPostViewedAt, markJobPostViewed } from '../../../hooks/useViewedJobPosts'
 
 /* ── Tokens ─────────────────────────────────────────────────────── */
 
@@ -134,6 +137,12 @@ const JobPostPreview = () => {
 	const [showProposalModal, setShowProposalModal] = useState(false)
 
 	const { data: post, isLoading, isError } = useGetJobPostByIdQuery(id!, { skip: !id })
+
+	const previouslyViewedAt = useMemo(() => (id ? getJobPostViewedAt(id) : null), [id])
+
+	useEffect(() => {
+		if (id) markJobPostViewed(id)
+	}, [id])
 
 	if (isLoading) {
 		return (
@@ -243,6 +252,20 @@ const JobPostPreview = () => {
 							<TrendingUpOutlined sx={{ fontSize: 14 }} />
 							{priorityLabel[post.priority]}
 						</Pill>
+					) : null}
+					{previouslyViewedAt ? (
+						<Tooltip title={`Last opened ${formatDate(previouslyViewedAt)}`} placement='top'>
+							<span>
+								<Pill
+									$bg={PRIMARY_TINT}
+									$fg={PRIMARY}
+									$border={'rgba(3, 105, 161, 0.32)'}
+								>
+									<VisibilityOutlined sx={{ fontSize: 14 }} />
+									Viewed on {formatDate(previouslyViewedAt)}
+								</Pill>
+							</span>
+						</Tooltip>
 					) : null}
 				</ChipRow>
 

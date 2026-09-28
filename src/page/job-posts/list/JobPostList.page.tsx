@@ -7,6 +7,7 @@ import {
 	SearchOutlined,
 	WorkOutlineOutlined,
 } from '@mui/icons-material'
+import { Tooltip } from '@mui/material'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import {
 	DataTable,
@@ -19,6 +20,7 @@ import JobPostDeleteModal from '../../../components/job-posts/list/JobPostDelete
 import type { JobPostItem } from '../../../store/job-posts/types/definition'
 import { useGetJobPostListQuery } from '../../../store/job-posts/jobPostsApi'
 import { formatDate } from '../../../utils/formatDate'
+import { getJobPostViewedAt, markJobPostViewed } from '../../../hooks/useViewedJobPosts'
 
 const PAGE_SIZE = 20
 
@@ -40,6 +42,10 @@ const JobPostList = () => {
 		offset,
 	})
 
+	const openJobPost = (id: string) => {
+		markJobPostViewed(id)
+		navigate(`/job-posts/preview/${id}`)
+	}
 	const items = data?.data ?? []
 	const total = data?.meta.total ?? 0
 
@@ -54,11 +60,23 @@ const JobPostList = () => {
 			minWidth: 480,
 			sortable: true,
 			sortValue: (r) => r.title ?? '',
-			render: (r) => (
-				<TitleLink onClick={() => navigate(`/job-posts/preview/${r.id}`)}>
-					{r.title ?? '—'}
-				</TitleLink>
-			),
+			render: (r) => {
+				const viewedAt = getJobPostViewedAt(r.id)
+				return (
+					<TitleRow>
+						{viewedAt ? (
+							<Tooltip title={`Viewed on ${formatDate(viewedAt)}`} placement='top'>
+								<ViewedDot aria-label='Viewed'>
+									<VisibilityOutlined style={{ fontSize: 12 }} />
+								</ViewedDot>
+							</Tooltip>
+						) : (
+							<ViewedSpacer aria-hidden />
+						)}
+						<TitleLink onClick={() => openJobPost(r.id)}>{r.title ?? '—'}</TitleLink>
+					</TitleRow>
+				)
+			},
 			skeleton: (i) => <TableSkeleton $w={`${260 + ((i * 41) % 160)}px`} $h='14px' />,
 		},
 		{
@@ -181,7 +199,7 @@ const JobPostList = () => {
 				<Actions>
 					<IconAction
 						type='button'
-						onClick={() => navigate(`/job-posts/preview/${r.id}`)}
+						onClick={() => openJobPost(r.id)}
 						aria-label='View job post'
 					>
 						<VisibilityOutlined />
@@ -520,6 +538,35 @@ const SearchField = styled.label`
 		border-color: ${T.primary};
 		box-shadow: 0 0 0 3px ${T.primaryTint};
 	}
+`
+
+const TitleRow = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	width: 100%;
+`
+
+const ViewedDot = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: rgba(3, 105, 161, 0.12);
+	color: rgb(3, 105, 161);
+	border: 1px solid rgba(3, 105, 161, 0.28);
+	flex-shrink: 0;
+	line-height: 0;
+`
+
+const ViewedSpacer = styled.span`
+	display: inline-block;
+	width: 20px;
+	height: 20px;
+	flex-shrink: 0;
 `
 
 const TitleLink = styled.button`
