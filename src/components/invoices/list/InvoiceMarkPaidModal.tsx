@@ -28,7 +28,7 @@ const InvoiceMarkPaidModal = ({ id, title, onClose, onSuccess }: Props) => {
 	return (
 		<ConfirmModal
 			icon={<PaidOutlined />}
-			iconTone='success'
+			iconTone='primary'
 			title='Mark as paid?'
 			description={
 				<>
@@ -37,7 +37,7 @@ const InvoiceMarkPaidModal = ({ id, title, onClose, onSuccess }: Props) => {
 			}
 			confirmLabel='Yes, mark as paid'
 			confirmLoadingLabel='Updating…'
-			confirmColor='success'
+			confirmColor='primary'
 			cancelLabel='No'
 			onClose={onClose}
 			onConfirm={handleMarkPaid}

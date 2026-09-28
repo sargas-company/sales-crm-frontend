@@ -1,101 +1,207 @@
 import { useState } from 'react'
-import Card from '../../../components/card/Card'
-import AnimatedCardShell from '../../../components/card/AnimatedCardShell'
-import Box from '../../../components/box/Box'
-import DataGridFooter from '../../../components/data-grid-item/DataGridFooter'
-import { GridInnerContainer, GridItem } from '../../../components/layout'
-import { TextField } from '../../../ui'
-import { useGetClientRequestListQuery } from '../../../store/clientRequests/clientRequestsApi'
-import ClientRequestTable from '../../../components/client-requests/list/ClientRequestTable'
+import { useNavigate } from 'react-router-dom'
+import styled from 'styled-components'
+import { DeleteOutline, VisibilityOutlined, EditOutlined, MailOutline } from '@mui/icons-material'
+import { T } from '../../../components/sales-analytics/_shared/tokens'
+import { ListPageShell } from '../../../components/_shared/ListPageShell'
+import {
+	DataTable,
+	Actions,
+	IconAction,
+	TableSkeleton,
+} from '../../../components/_shared/DataTable'
+import type { DataTableColumn } from '../../../components/_shared/DataTable'
 import ClientRequestDeleteModal from '../../../components/client-requests/list/ClientRequestDeleteModal'
+import type { ClientRequestItem } from '../../../store/clientRequests/types/definition'
+import { useGetClientRequestListQuery } from '../../../store/clientRequests/clientRequestsApi'
+import { formatDate } from '../../../utils/format'
 
-const LIMIT_OPTIONS = [8, 20]
+const PAGE_SIZE = 20
 
 interface DeleteTarget {
 	id: string
 	title: string
 }
 
+const prettyStatus = (s: string) => s.replace(/_/g, ' ')
+
 const ClientRequestList = () => {
-	const [page, setPage] = useState(1)
-	const [limit, setLimit] = useState(LIMIT_OPTIONS[0])
+	const navigate = useNavigate()
 	const [search, setSearch] = useState('')
+	const [page, setPage] = useState(1)
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
 
-	const { data, isLoading, refetch } = useGetClientRequestListQuery({ page, limit })
-	const allItems = data?.data ?? []
+	const { data, isLoading, isError, refetch } = useGetClientRequestListQuery({
+		page,
+		limit: PAGE_SIZE,
+	})
+	const items = data?.data ?? []
 	const total = data?.total ?? 0
 
-	const handleDelete = (id: string) => {
-		const item = allItems.find((i) => i.id === id)
-		if (item) setDeleteTarget({ id, title: item.name || 'this request' })
-	}
-
-	const items = search
-		? allItems.filter((item) => {
+	const filtered = search
+		? items.filter((r) => {
 				const q = search.toLowerCase()
 				return (
-					item.name.toLowerCase().includes(q) ||
-					item.company.toLowerCase().includes(q) ||
-					item.status.toLowerCase().includes(q) ||
-					item.services.some((s) => s.toLowerCase().includes(q))
+					r.name.toLowerCase().includes(q) ||
+					r.company.toLowerCase().includes(q) ||
+					r.email.toLowerCase().includes(q)
 				)
 			})
-		: allItems
+		: items
 
-	const passed = (page - 1) * limit + 1
-	const next = Math.min(page * limit, total)
-
-	const handleLimitChange = (newLimit: number) => {
-		setLimit(newLimit)
-		setPage(1)
-	}
+	const columns: DataTableColumn<ClientRequestItem>[] = [
+		{
+			key: 'name',
+			label: 'Contact',
+			minWidth: 240,
+			sortable: true,
+			sortValue: (r) => r.name,
+			render: (r) => (
+				<ContactCell>
+					<ContactName>{r.name}</ContactName>
+					<ContactMeta>{r.company}</ContactMeta>
+				</ContactCell>
+			),
+			skeleton: () => (
+				<>
+					<TableSkeleton $w='150px' $h='14px' />
+					<TableSkeleton $w='110px' $h='11px' style={{ marginTop: 6 }} />
+				</>
+			),
+		},
+		{
+			key: 'email',
+			label: 'Email',
+			minWidth: 220,
+			sortable: true,
+			sortValue: (r) => r.email,
+			render: (r) => <Muted>{r.email}</Muted>,
+			skeleton: () => <TableSkeleton $w='180px' $h='13px' />,
+		},
+		{
+			key: 'phone',
+			label: 'Phone',
+			minWidth: 160,
+			sortable: true,
+			sortValue: (r) => `${r.phoneCountry}${r.phone}`,
+			render: (r) => (
+				<Muted>
+					{r.phoneCountry}
+					{r.phone}
+				</Muted>
+			),
+			skeleton: () => <TableSkeleton $w='120px' $h='13px' />,
+		},
+		{
+			key: 'services',
+			label: 'Services',
+			minWidth: 220,
+			render: (r) => (
+				<TagRow>
+					{r.services.slice(0, 3).map((s) => (
+						<Tag key={s}>{s}</Tag>
+					))}
+					{r.services.length > 3 && <Tag $more>+{r.services.length - 3}</Tag>}
+				</TagRow>
+			),
+			skeleton: () => <TableSkeleton $w='160px' $h='20px' style={{ borderRadius: 6 }} />,
+		},
+		{
+			key: 'files',
+			label: 'Files',
+			minWidth: 90,
+			sortable: true,
+			sortValue: (r) => r.files.length,
+			render: (r) => <Num>{r.files.length}</Num>,
+			skeleton: () => <TableSkeleton $w='30px' $h='13px' />,
+		},
+		{
+			key: 'status',
+			label: 'Status',
+			minWidth: 170,
+			sortable: true,
+			sortValue: (r) => r.status,
+			render: (r) => <StatusPill $status={r.status}>{prettyStatus(r.status)}</StatusPill>,
+			skeleton: () => <TableSkeleton $w='110px' $h='22px' style={{ borderRadius: 999 }} />,
+		},
+		{
+			key: 'created',
+			label: 'Created',
+			minWidth: 140,
+			sortable: true,
+			sortValue: (r) => new Date(r.createdAt),
+			render: (r) => <Muted>{formatDate(r.createdAt, 'short')}</Muted>,
+			skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
+		},
+		{
+			key: 'actions',
+			label: 'Actions',
+			render: (r) => (
+				<Actions>
+					<IconAction
+						type='button'
+						onClick={() => navigate(`/client-requests/preview/${r.id}`)}
+						aria-label='View request'
+					>
+						<VisibilityOutlined />
+					</IconAction>
+					<IconAction
+						type='button'
+						onClick={() => navigate(`/client-requests/edit/${r.id}`)}
+						aria-label='Edit request'
+					>
+						<EditOutlined />
+					</IconAction>
+					<IconAction
+						type='button'
+						$danger
+						onClick={() => setDeleteTarget({ id: r.id, title: r.name })}
+						aria-label='Delete request'
+					>
+						<DeleteOutline />
+					</IconAction>
+				</Actions>
+			),
+		},
+	]
 
 	return (
 		<>
-			<AnimatedCardShell>
-				<Card padding='30px'>
-				<Box display='flex' justify='space-between' padding={20}>
-					<GridInnerContainer alignItems='center' justifyContent='space-between'>
-						<GridItem xs={12} md={6}>
-							<TextField
-								type='text'
-								name='search-client-request'
-								placeholder='Search client request'
-								sizes='small'
-								maxWidth='280px'
-								onChange={(e) => setSearch(e.target.value)}
-							/>
-						</GridItem>
-					</GridInnerContainer>
-				</Box>
-
-				<ClientRequestTable items={items} isLoading={isLoading} onDelete={handleDelete} />
-
-				{total > 0 && (
-					<DataGridFooter
-						total={total}
-						rowPerPage={limit}
-						rowPerPageOptions={LIMIT_OPTIONS}
-						currentPage={page}
-						next={next}
-						passed={passed}
-						handlePagination={setPage}
-						handleRowOptSelect={handleLimitChange}
-					/>
-				)}
-				</Card>
-			</AnimatedCardShell>
+			<ListPageShell
+				crumbs={[{ label: 'Pipeline' }, { label: 'Client requests', current: true }]}
+				icon={<MailOutline />}
+				title='Client requests'
+				subtitle='Inbound requests from prospective clients — with attachments and service tags.'
+				searchPlaceholder='Search by name, company or email'
+				search={search}
+				onSearchChange={(v) => {
+					setSearch(v)
+					setPage(1)
+				}}
+			>
+				<DataTable
+					columns={columns}
+					rows={filtered}
+					rowKey={(r) => r.id}
+					isLoading={isLoading}
+					isError={isError}
+					onRetry={refetch}
+					searchActive={!!search}
+					pagination={{
+						page,
+						pageSize: PAGE_SIZE,
+						total,
+						onPageChange: setPage,
+					}}
+				/>
+			</ListPageShell>
 
 			{deleteTarget && (
 				<ClientRequestDeleteModal
 					id={deleteTarget.id}
 					title={deleteTarget.title}
 					onClose={() => setDeleteTarget(null)}
-					onSuccess={() => {
-						if (allItems.length === 1 && page > 1) setPage(page - 1)
-						else refetch()
-					}}
+					onSuccess={() => refetch()}
 				/>
 			)}
 		</>
@@ -103,3 +209,78 @@ const ClientRequestList = () => {
 }
 
 export default ClientRequestList
+
+const ContactCell = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	min-width: 0;
+`
+
+const ContactName = styled.span`
+	font-size: 14.5px;
+	font-weight: 600;
+	color: ${T.textStrong};
+	line-height: 1.3;
+`
+
+const ContactMeta = styled.span`
+	font-size: 12px;
+	color: ${T.textSecondary};
+`
+
+const Muted = styled.span`
+	font-size: 13.5px;
+	color: ${T.textSecondary};
+`
+
+const Num = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-size: 13px;
+	font-weight: 700;
+	color: ${T.textStrong};
+	font-variant-numeric: tabular-nums;
+`
+
+const TagRow = styled.div`
+	display: inline-flex;
+	gap: 4px;
+	flex-wrap: nowrap;
+`
+
+const Tag = styled.span<{ $more?: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 8px;
+	border-radius: 6px;
+	background: ${({ $more }) => ($more ? T.primaryTint : T.subtleBg)};
+	border: 1px solid ${({ $more }) => ($more ? '#d5e5f3' : T.border)};
+	font-size: 11px;
+	color: ${({ $more }) => ($more ? T.primary : T.textSecondary)};
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-weight: ${({ $more }) => ($more ? 700 : 500)};
+`
+
+const StatusPill = styled.span<{ $status: string }>`
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	white-space: nowrap;
+	background: ${({ $status }) =>
+		$status === 'archived'
+			? 'rgba(148, 163, 184, 0.18)'
+			: $status === 'conversation_ongoing'
+				? 'rgba(34, 197, 94, 0.14)'
+				: 'rgba(3, 105, 161, 0.12)'};
+	color: ${({ $status }) =>
+		$status === 'archived'
+			? '#475569'
+			: $status === 'conversation_ongoing'
+				? '#15803d'
+				: T.primary};
+`
