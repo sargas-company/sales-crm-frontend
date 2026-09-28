@@ -17,9 +17,16 @@ export interface CounterpartyPage {
 	total: number
 }
 
+export type CounterpartySortBy = 'firstName' | 'type' | 'createdAt' | 'updatedAt'
+
+export type CounterpartySortDirection = 'asc' | 'desc'
+
 export interface CounterpartyListParams {
 	page: number
 	limit: number
+	sortBy?: CounterpartySortBy
+	sortDirection?: CounterpartySortDirection
+	search?: string
 }
 
 export interface CreateCounterpartyBody {
@@ -39,7 +46,10 @@ export interface UpdateCounterpartyBody {
 export const counterpartiesApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getCounterparties: builder.query<CounterpartyPage, CounterpartyListParams>({
-			query: ({ page, limit }) => ({ url: '/counterparties', params: { page, limit } }),
+			query: ({ page, limit, sortBy, sortDirection, search }) => ({
+				url: '/counterparties',
+				params: { page, limit, sortBy, sortDirection, search: search || undefined },
+			}),
 			providesTags: ['Counterparty'],
 		}),
 

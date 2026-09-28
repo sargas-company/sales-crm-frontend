@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { DeleteOutline, VisibilityOutlined, EditOutlined, MailOutline } from '@mui/icons-material'
@@ -10,11 +10,16 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../../components/_shared/DataTable'
-import type { DataTableColumn } from '../../../components/_shared/DataTable'
+import type { DataTableColumn, SortState } from '../../../components/_shared/DataTable'
 import ClientRequestDeleteModal from '../../../components/client-requests/list/ClientRequestDeleteModal'
-import type { ClientRequestItem } from '../../../store/clientRequests/types/definition'
+import PermissionGate from '../../../components/auth/PermissionGate'
+import type {
+	ClientRequestItem,
+	ClientRequestSortBy,
+} from '../../../store/clientRequests/types/definition'
 import { useGetClientRequestListQuery } from '../../../store/clientRequests/clientRequestsApi'
 import { formatDate } from '../../../utils/format'
+import useDebouncedValue from '../../../hooks/useDebouncedValue'
 
 const PAGE_SIZE = 20
 
@@ -27,27 +32,30 @@ const prettyStatus = (s: string) => s.replace(/_/g, ' ')
 
 const ClientRequestList = () => {
 	const navigate = useNavigate()
-	const [search, setSearch] = useState('')
+	const [searchInput, setSearchInput] = useState('')
+	const search = useDebouncedValue(searchInput.trim(), 300)
 	const [page, setPage] = useState(1)
+	const [sort, setSort] = useState<SortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
 
 	const { data, isLoading, isError, refetch } = useGetClientRequestListQuery({
 		page,
 		limit: PAGE_SIZE,
+		search: search || undefined,
+		sortBy: (sort?.key as ClientRequestSortBy | undefined) ?? undefined,
+		sortDirection: sort?.direction,
 	})
 	const items = data?.data ?? []
 	const total = data?.total ?? 0
 
-	const filtered = search
-		? items.filter((r) => {
-				const q = search.toLowerCase()
-				return (
-					r.name.toLowerCase().includes(q) ||
-					r.company.toLowerCase().includes(q) ||
-					r.email.toLowerCase().includes(q)
-				)
-			})
-		: items
+	const handleSortChange = (next: SortState | null) => {
+		setSort(next)
+		setPage(1)
+	}
+
+	useEffect(() => {
+		setPage(1)
+	}, [search])
 
 	const columns: DataTableColumn<ClientRequestItem>[] = [
 		{
@@ -145,21 +153,25 @@ const ClientRequestList = () => {
 					>
 						<VisibilityOutlined />
 					</IconAction>
-					<IconAction
-						type='button'
-						onClick={() => navigate(`/client-requests/edit/${r.id}`)}
-						aria-label='Edit request'
-					>
-						<EditOutlined />
-					</IconAction>
-					<IconAction
-						type='button'
-						$danger
-						onClick={() => setDeleteTarget({ id: r.id, title: r.name })}
-						aria-label='Delete request'
-					>
-						<DeleteOutline />
-					</IconAction>
+					<PermissionGate permission='client_requests:update'>
+						<IconAction
+							type='button'
+							onClick={() => navigate(`/client-requests/edit/${r.id}`)}
+							aria-label='Edit request'
+						>
+							<EditOutlined />
+						</IconAction>
+					</PermissionGate>
+					<PermissionGate permission='client_requests:delete'>
+						<IconAction
+							type='button'
+							$danger
+							onClick={() => setDeleteTarget({ id: r.id, title: r.name })}
+							aria-label='Delete request'
+						>
+							<DeleteOutline />
+						</IconAction>
+					</PermissionGate>
 				</Actions>
 			),
 		},
@@ -172,21 +184,20 @@ const ClientRequestList = () => {
 				icon={<MailOutline />}
 				title='Client requests'
 				subtitle='Inbound requests from prospective clients — with attachments and service tags.'
-				searchPlaceholder='Search by name, company or email'
-				search={search}
-				onSearchChange={(v) => {
-					setSearch(v)
-					setPage(1)
-				}}
+				searchPlaceholder='Search by contact name'
+				search={searchInput}
+				onSearchChange={setSearchInput}
 			>
 				<DataTable
 					columns={columns}
-					rows={filtered}
+					rows={items}
 					rowKey={(r) => r.id}
 					isLoading={isLoading}
 					isError={isError}
 					onRetry={refetch}
 					searchActive={!!search}
+					sort={sort}
+					onSortChange={handleSortChange}
 					pagination={{
 						page,
 						pageSize: PAGE_SIZE,

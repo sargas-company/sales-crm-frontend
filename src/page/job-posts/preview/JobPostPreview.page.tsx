@@ -24,6 +24,7 @@ import Loading from '../../../ui/state/Loading'
 import ErrorState from '../../../ui/state/ErrorState'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
 import JobPostToProposalModal from '../../../components/job-posts/JobPostToProposalModal'
+import PermissionGate from '../../../components/auth/PermissionGate'
 import { useGetJobPostByIdQuery } from '../../../store/job-posts/jobPostsApi'
 import { formatDate } from '../../../utils/formatDate'
 import type {
@@ -199,10 +200,12 @@ const JobPostPreview = () => {
 							</GhostButton>
 						)}
 						{!post.proposal?.id && (
-							<ProposalButton type='button' onClick={() => setShowProposalModal(true)}>
-								<RocketLaunchOutlined />
-								Start proposal
-							</ProposalButton>
+							<PermissionGate permission='job_posts:convert'>
+								<ProposalButton type='button' onClick={() => setShowProposalModal(true)}>
+									<RocketLaunchOutlined />
+									Start proposal
+								</ProposalButton>
+							</PermissionGate>
 						)}
 					</TopActions>
 				</TopRow>

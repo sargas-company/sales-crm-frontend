@@ -4,9 +4,25 @@ import type { JobPostItem, JobPostPage, JobPostListParams } from './types/defini
 export const jobPostsApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getJobPostList: builder.query<JobPostPage, JobPostListParams>({
-			query: ({ limit, offset, decision, priority, sortBy }) => ({
+			query: ({
+				limit,
+				offset,
+				decision,
+				priority,
+				sortBy,
+				sortDirection,
+				search,
+			}) => ({
 				url: '/job-posts',
-				params: { limit, offset, decision, priority, sortBy },
+				params: {
+					limit,
+					offset,
+					decision,
+					priority,
+					sortBy,
+					sortDirection,
+					search: search || undefined,
+				},
 			}),
 			providesTags: ['JobPost'],
 		}),

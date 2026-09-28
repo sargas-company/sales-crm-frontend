@@ -46,7 +46,19 @@ export interface ClientRequestPage {
 	total: number
 }
 
+export type ClientRequestSortBy =
+	| 'name'
+	| 'email'
+	| 'phoneCountry'
+	| 'status'
+	| 'createdAt'
+
+export type ClientRequestSortDirection = 'asc' | 'desc'
+
 export interface ClientRequestListParams {
 	page: number
 	limit: number
+	sortBy?: ClientRequestSortBy
+	sortDirection?: ClientRequestSortDirection
+	search?: string
 }

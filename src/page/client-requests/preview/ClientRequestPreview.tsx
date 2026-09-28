@@ -27,6 +27,7 @@ import {
 } from '../../../store/clientRequests/clientRequestsApi'
 import type { ClientRequestSignedFile } from '../../../store/clientRequests/types/definition'
 import ClientRequestStatusSelect from '../../../components/client-requests/preview/ClientRequestStatusSelect'
+import PermissionGate from '../../../components/auth/PermissionGate'
 import { formatDate } from '../../../utils/formatDate'
 
 const SectionLabel = ({ children }: { children: string }) => (
@@ -160,7 +161,9 @@ const ClientRequestPreview = () => {
 					</Box>
 
 					<Box display='flex' align='center' justify='space-between'>
-						<ClientRequestStatusSelect id={request.id} status={request.status} />
+						<PermissionGate permission='client_requests:update'>
+							<ClientRequestStatusSelect id={request.id} status={request.status} />
+						</PermissionGate>
 						<Button
 							varient='outlined'
 							color='info'

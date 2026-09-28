@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import {
@@ -15,14 +15,19 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../../components/_shared/DataTable'
-import type { DataTableColumn } from '../../../components/_shared/DataTable'
+import type { DataTableColumn, SortState } from '../../../components/_shared/DataTable'
 import JobPostDeleteModal from '../../../components/job-posts/list/JobPostDeleteModal'
-import type { JobPostItem } from '../../../store/job-posts/types/definition'
+import PermissionGate from '../../../components/auth/PermissionGate'
+import type {
+	JobPostItem,
+	JobPostSortBy,
+} from '../../../store/job-posts/types/definition'
 import { useGetJobPostListQuery } from '../../../store/job-posts/jobPostsApi'
 import { formatDate } from '../../../utils/formatDate'
 import { getJobPostViewedAt, markJobPostViewed } from '../../../hooks/useViewedJobPosts'
 
 const PAGE_SIZE = 20
+const SEARCH_DEBOUNCE_MS = 300
 
 interface DeleteTarget {
 	id: string
@@ -31,15 +36,30 @@ interface DeleteTarget {
 
 const JobPostList = () => {
 	const navigate = useNavigate()
+	const [searchInput, setSearchInput] = useState('')
 	const [search, setSearch] = useState('')
 	const [page, setPage] = useState(1)
+	const [sort, setSort] = useState<SortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+
+	// Debounce search input → server request; also snap back to page 1 whenever
+	// the effective query (search or sort) changes.
+	useEffect(() => {
+		const h = setTimeout(() => {
+			setSearch(searchInput.trim())
+			setPage(1)
+		}, SEARCH_DEBOUNCE_MS)
+		return () => clearTimeout(h)
+	}, [searchInput])
 
 	const offset = (page - 1) * PAGE_SIZE
 
 	const { data, isLoading, isError, refetch } = useGetJobPostListQuery({
 		limit: PAGE_SIZE,
 		offset,
+		search: search || undefined,
+		sortBy: (sort?.key as JobPostSortBy | undefined) ?? undefined,
+		sortDirection: sort?.direction,
 	})
 
 	const openJobPost = (id: string) => {
@@ -49,9 +69,10 @@ const JobPostList = () => {
 	const items = data?.data ?? []
 	const total = data?.meta.total ?? 0
 
-	const filteredItems = search
-		? items.filter((it) => (it.title ?? '').toLowerCase().includes(search.toLowerCase()))
-		: items
+	const handleSortChange = (next: SortState | null) => {
+		setSort(next)
+		setPage(1)
+	}
 
 	const columns: DataTableColumn<JobPostItem>[] = [
 		{
@@ -204,14 +225,16 @@ const JobPostList = () => {
 					>
 						<VisibilityOutlined />
 					</IconAction>
-					<IconAction
-						type='button'
-						$danger
-						onClick={() => setDeleteTarget({ id: r.id, title: r.title ?? 'this job post' })}
-						aria-label='Delete job post'
-					>
-						<DeleteOutline />
-					</IconAction>
+					<PermissionGate permission='job_posts:delete'>
+						<IconAction
+							type='button'
+							$danger
+							onClick={() => setDeleteTarget({ id: r.id, title: r.title ?? 'this job post' })}
+							aria-label='Delete job post'
+						>
+							<DeleteOutline />
+						</IconAction>
+					</PermissionGate>
 				</Actions>
 			),
 		},
@@ -272,10 +295,8 @@ const JobPostList = () => {
 									type='text'
 									name='search-job-post'
 									placeholder='Search by title'
-									value={search}
-									onChange={(e) => {
-										setSearch(e.target.value)
-									}}
+									value={searchInput}
+									onChange={(e) => setSearchInput(e.target.value)}
 									aria-label='Search job posts'
 								/>
 							</SearchField>
@@ -283,12 +304,14 @@ const JobPostList = () => {
 
 						<DataTable
 							columns={columns}
-							rows={filteredItems}
+							rows={items}
 							rowKey={(r) => r.id}
 							isLoading={isLoading}
 							isError={isError}
 							onRetry={refetch}
 							searchActive={!!search}
+							sort={sort}
+							onSortChange={handleSortChange}
 							pagination={{
 								page,
 								pageSize: PAGE_SIZE,

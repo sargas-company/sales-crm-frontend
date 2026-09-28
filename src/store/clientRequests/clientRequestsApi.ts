@@ -10,7 +10,10 @@ import type {
 export const clientRequestsApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getClientRequestList: builder.query<ClientRequestPage, ClientRequestListParams>({
-			query: ({ page, limit }) => ({ url: '/client-requests', params: { page, limit } }),
+			query: ({ page, limit, sortBy, sortDirection, search }) => ({
+				url: '/client-requests',
+				params: { page, limit, sortBy, sortDirection, search: search || undefined },
+			}),
 			providesTags: ['ClientRequest'],
 		}),
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import {
@@ -16,12 +16,14 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../../components/_shared/DataTable'
-import type { DataTableColumn } from '../../../components/_shared/DataTable'
+import type { DataTableColumn, SortState } from '../../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
 import LeadDeleteModal from '../../../components/leads/list/LeadDeleteModal'
-import type { LeadItem } from '../../../store/leads/types/definition'
+import PermissionGate from '../../../components/auth/PermissionGate'
+import type { LeadItem, LeadSortBy } from '../../../store/leads/types/definition'
 import { useGetLeadListQuery } from '../../../store/leads/leadsApi'
 import { formatDate } from '../../../utils/format'
+import useDebouncedValue from '../../../hooks/useDebouncedValue'
 
 const PAGE_SIZE = 20
 
@@ -39,27 +41,30 @@ const prettyStatus = (s: string) => s.replace(/_/g, ' ')
 
 const LeadList = () => {
 	const navigate = useNavigate()
-	const [search, setSearch] = useState('')
+	const [searchInput, setSearchInput] = useState('')
+	const search = useDebouncedValue(searchInput.trim(), 300)
 	const [page, setPage] = useState(1)
+	const [sort, setSort] = useState<SortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
 
 	const { data, isLoading, isError, refetch } = useGetLeadListQuery({
 		page,
 		limit: PAGE_SIZE,
+		search: search || undefined,
+		sortBy: (sort?.key as LeadSortBy | undefined) ?? undefined,
+		sortDirection: sort?.direction,
 	})
 	const items = data?.data ?? []
 	const total = data?.total ?? 0
 
-	const filtered = search
-		? items.filter((l) => {
-				const q = search.toLowerCase()
-				return (
-					leadName(l).toLowerCase().includes(q) ||
-					(l.companyName ?? '').toLowerCase().includes(q) ||
-					(l.location ?? '').toLowerCase().includes(q)
-				)
-			})
-		: items
+	const handleSortChange = (next: SortState | null) => {
+		setSort(next)
+		setPage(1)
+	}
+
+	useEffect(() => {
+		setPage(1)
+	}, [search])
 
 	const columns: DataTableColumn<LeadItem>[] = [
 		{
@@ -159,21 +164,25 @@ const LeadList = () => {
 					>
 						<VisibilityOutlined />
 					</IconAction>
-					<IconAction
-						type='button'
-						onClick={() => navigate(`/leads/edit/${l.id}`)}
-						aria-label='Edit lead'
-					>
-						<EditOutlined />
-					</IconAction>
-					<IconAction
-						type='button'
-						$danger
-						onClick={() => setDeleteTarget({ id: l.id, title: leadName(l) })}
-						aria-label='Delete lead'
-					>
-						<DeleteOutline />
-					</IconAction>
+					<PermissionGate permission='leads:update'>
+						<IconAction
+							type='button'
+							onClick={() => navigate(`/leads/edit/${l.id}`)}
+							aria-label='Edit lead'
+						>
+							<EditOutlined />
+						</IconAction>
+					</PermissionGate>
+					<PermissionGate permission='leads:delete'>
+						<IconAction
+							type='button'
+							$danger
+							onClick={() => setDeleteTarget({ id: l.id, title: leadName(l) })}
+							aria-label='Delete lead'
+						>
+							<DeleteOutline />
+						</IconAction>
+					</PermissionGate>
 				</Actions>
 			),
 		},
@@ -187,26 +196,27 @@ const LeadList = () => {
 				title='Leads'
 				subtitle='Conversations with prospects — pipeline stages and outreach state.'
 				action={
-					<PrimarySolidButton type='button' onClick={() => navigate('/leads/add/')}>
-						<AddRounded />
-						New lead
-					</PrimarySolidButton>
+					<PermissionGate permission='leads:create'>
+						<PrimarySolidButton type='button' onClick={() => navigate('/leads/add/')}>
+							<AddRounded />
+							New lead
+						</PrimarySolidButton>
+					</PermissionGate>
 				}
-				searchPlaceholder='Search by name, company or location'
-				search={search}
-				onSearchChange={(v) => {
-					setSearch(v)
-					setPage(1)
-				}}
+				searchPlaceholder='Search by name'
+				search={searchInput}
+				onSearchChange={setSearchInput}
 			>
 				<DataTable
 					columns={columns}
-					rows={filtered}
+					rows={items}
 					rowKey={(l) => l.id}
 					isLoading={isLoading}
 					isError={isError}
 					onRetry={refetch}
 					searchActive={!!search}
+					sort={sort}
+					onSortChange={handleSortChange}
 					pagination={{
 						page,
 						pageSize: PAGE_SIZE,

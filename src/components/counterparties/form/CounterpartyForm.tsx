@@ -10,6 +10,7 @@ import {
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
 import useTheme from '../../../theme/useTheme'
+import usePermissions from '../../../hooks/usePermissions'
 import { Field, FormHeader, FormLoading, FormNotFound, SectionHead } from '../../_shared/FormShell'
 import {
 	DotMini,
@@ -71,6 +72,18 @@ const CounterpartyFormInner = ({ id, initial }: { id?: string; initial: FormFiel
 	const [updateCounterparty, { isLoading: updating }] = useUpdateCounterpartyMutation()
 	const isLoading = creating || updating
 	const isEdit = Boolean(id)
+	const { has } = usePermissions()
+	// Contractor rows are only creatable/mutable by callers with
+	// `contractor_scope:manage`; hide the option for everyone else so
+	// they don't submit a request the backend will reject. The
+	// backend remains the source of truth.
+	const canPickContractor = has('contractor_scope:manage')
+	// Editing an existing contractor record requires `contractor_scope:manage`
+	// on the server. A caller with only `contractor_scope:view` reached this
+	// page because the GET succeeded — we still need to lock the form so
+	// they can't attempt an update the backend will 403.
+	const editingContractorLocked =
+		isEdit && initial.type === 'contractor' && !canPickContractor
 
 	const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) => {
 		setFields((prev) => ({ ...prev, [key]: value }))
@@ -170,7 +183,9 @@ const CounterpartyFormInner = ({ id, initial }: { id?: string; initial: FormFiel
 									sizes='normal'
 								>
 									<SelectItem label='Client' value='client' />
-									<SelectItem label='Contractor' value='contractor' />
+									{canPickContractor && (
+										<SelectItem label='Contractor' value='contractor' />
+									)}
 								</Select>
 							</Field>
 						</FieldGrid>
@@ -219,7 +234,10 @@ const CounterpartyFormInner = ({ id, initial }: { id?: string; initial: FormFiel
 							>
 								Cancel
 							</Button>
-							<PrimarySolidButton type='submit' disabled={isLoading}>
+							<PrimarySolidButton
+								type='submit'
+								disabled={isLoading || editingContractorLocked}
+							>
 								{isLoading
 									? isEdit
 										? 'Saving…'

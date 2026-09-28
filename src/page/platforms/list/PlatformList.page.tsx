@@ -19,6 +19,7 @@ import {
 } from '../../../components/_shared/DataTable'
 import type { DataTableColumn } from '../../../components/_shared/DataTable'
 import PlatformDeleteModal from '../../../components/platforms/list/PlatformDeleteModal'
+import PermissionGate from '../../../components/auth/PermissionGate'
 import type { PlatformItem } from '../../../store/platforms/platformsApi'
 import { useGetPlatformsQuery } from '../../../store/platforms/platformsApi'
 import { formatDate } from '../../../utils/format'
@@ -123,21 +124,25 @@ const PlatformList = () => {
 						>
 							<VisibilityOutlined />
 						</IconAction>
-						<IconAction
-							type='button'
-							onClick={() => navigate(`/platforms/edit/${p.id}`)}
-							aria-label='Edit platform'
-						>
-							<EditOutlined />
-						</IconAction>
-						<IconAction
-							type='button'
-							$danger
-							onClick={() => setDeleteTarget({ id: p.id, title: p.title })}
-							aria-label='Delete platform'
-						>
-							<DeleteOutline />
-						</IconAction>
+						<PermissionGate permission='platforms:update'>
+							<IconAction
+								type='button'
+								onClick={() => navigate(`/platforms/edit/${p.id}`)}
+								aria-label='Edit platform'
+							>
+								<EditOutlined />
+							</IconAction>
+						</PermissionGate>
+						<PermissionGate permission='platforms:delete'>
+							<IconAction
+								type='button'
+								$danger
+								onClick={() => setDeleteTarget({ id: p.id, title: p.title })}
+								aria-label='Delete platform'
+							>
+								<DeleteOutline />
+							</IconAction>
+						</PermissionGate>
 					</Actions>
 				),
 			},
@@ -169,10 +174,12 @@ const PlatformList = () => {
 									<p>Sources for job posts and proposals.</p>
 								</div>
 							</div>
-							<PrimarySolidButton type='button' onClick={() => navigate('/platforms/add/')}>
-								<AddRounded />
-								New platform
-							</PrimarySolidButton>
+							<PermissionGate permission='platforms:create'>
+								<PrimarySolidButton type='button' onClick={() => navigate('/platforms/add/')}>
+									<AddRounded />
+									New platform
+								</PrimarySolidButton>
+							</PermissionGate>
 						</PageHead>
 
 						<FiltersBar>

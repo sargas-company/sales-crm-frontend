@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import {
@@ -17,18 +17,21 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../../components/_shared/DataTable'
-import type { DataTableColumn } from '../../../components/_shared/DataTable'
+import type { DataTableColumn, SortState } from '../../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
 import InvoiceDeleteModal from '../../../components/invoices/list/InvoiceDeleteModal'
 import InvoiceMarkPaidModal from '../../../components/invoices/list/InvoiceMarkPaidModal'
+import PermissionGate from '../../../components/auth/PermissionGate'
 import {
 	formatInvoiceMoney,
 	getCounterpartyName,
 	getInvoiceTotal,
 } from '../../../components/invoices/list/utils'
-import type { InvoiceItem } from '../../../store/invoices/invoicesApi'
+import type { InvoiceItem, InvoiceSortBy } from '../../../store/invoices/invoicesApi'
 import { useGetInvoiceListQuery } from '../../../store/invoices/invoicesApi'
 import { formatDate } from '../../../utils/format'
+import useDebouncedValue from '../../../hooks/useDebouncedValue'
+import usePermissions from '../../../hooks/usePermissions'
 
 const PAGE_SIZE = 20
 
@@ -41,29 +44,40 @@ const invoiceLabel = (i: InvoiceItem) => (i.number ? `Invoice #${i.number}` : `I
 
 const InvoiceList = () => {
 	const navigate = useNavigate()
-	const [search, setSearch] = useState('')
+	const [searchInput, setSearchInput] = useState('')
+	const search = useDebouncedValue(searchInput.trim(), 300)
 	const [page, setPage] = useState(1)
+	const [sort, setSort] = useState<SortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<Target | null>(null)
 	const [paidTarget, setPaidTarget] = useState<Target | null>(null)
 
 	const { data, isLoading, isError, refetch } = useGetInvoiceListQuery({
 		page,
 		limit: PAGE_SIZE,
+		search: search || undefined,
+		sortBy: (sort?.key as InvoiceSortBy | undefined) ?? undefined,
+		sortDirection: sort?.direction,
 	})
 	const allItems = data ? (Array.isArray(data) ? data : data.data) : []
 	const total = data ? (Array.isArray(data) ? data.length : data.total) : 0
 
-	const filtered = search
-		? allItems.filter((i) => {
-				const q = search.toLowerCase()
-				return (
-					(i.number ?? '').toLowerCase().includes(q) ||
-					i.currency.toLowerCase().includes(q) ||
-					(i.status ?? '').toLowerCase().includes(q) ||
-					getCounterpartyName(i).toLowerCase().includes(q)
-				)
-			})
-		: allItems
+	const handleSortChange = (next: SortState | null) => {
+		setSort(next)
+		setPage(1)
+	}
+
+	useEffect(() => {
+		setPage(1)
+	}, [search])
+
+	// Invoice scope inherits from the linked counterparty. Callers
+	// without `contractor_scope:manage` cannot mutate a contractor
+	// invoice — backend returns 403 — so hide row-level Edit /
+	// Mark-Paid / Delete on those rows to keep the UI honest.
+	const { has } = usePermissions()
+	const canManageContractor = has('contractor_scope:manage')
+	const canMutateRow = (i: InvoiceItem) =>
+		i.counterparty?.type !== 'contractor' || canManageContractor
 
 	const columns: DataTableColumn<InvoiceItem>[] = [
 		{
@@ -117,8 +131,6 @@ const InvoiceList = () => {
 			key: 'total',
 			label: 'Total',
 			minWidth: 140,
-			sortable: true,
-			sortValue: (i) => getInvoiceTotal(i),
 			render: (i) => <MoneyPill>{formatInvoiceMoney(getInvoiceTotal(i), i.currency)}</MoneyPill>,
 			skeleton: () => <TableSkeleton $w='100px' $h='24px' style={{ borderRadius: 8 }} />,
 		},
@@ -143,30 +155,40 @@ const InvoiceList = () => {
 					>
 						<VisibilityOutlined />
 					</IconAction>
-					<IconAction
-						type='button'
-						onClick={() => navigate(`/invoices/edit/${i.id}`)}
-						aria-label='Edit invoice'
-					>
-						<EditOutlined />
-					</IconAction>
-					{i.status !== 'paid' && (
-						<IconAction
-							type='button'
-							onClick={() => setPaidTarget({ id: i.id, title: invoiceLabel(i) })}
-							aria-label='Mark as paid'
-						>
-							<PaidOutlined />
-						</IconAction>
+					{canMutateRow(i) && (
+						<PermissionGate permission='invoices:update'>
+							<IconAction
+								type='button'
+								onClick={() => navigate(`/invoices/edit/${i.id}`)}
+								aria-label='Edit invoice'
+							>
+								<EditOutlined />
+							</IconAction>
+						</PermissionGate>
 					)}
-					<IconAction
-						type='button'
-						$danger
-						onClick={() => setDeleteTarget({ id: i.id, title: invoiceLabel(i) })}
-						aria-label='Delete invoice'
-					>
-						<DeleteOutline />
-					</IconAction>
+					{canMutateRow(i) && i.status !== 'paid' && (
+						<PermissionGate permission='invoices:update'>
+							<IconAction
+								type='button'
+								onClick={() => setPaidTarget({ id: i.id, title: invoiceLabel(i) })}
+								aria-label='Mark as paid'
+							>
+								<PaidOutlined />
+							</IconAction>
+						</PermissionGate>
+					)}
+					{canMutateRow(i) && (
+						<PermissionGate permission='invoices:delete'>
+							<IconAction
+								type='button'
+								$danger
+								onClick={() => setDeleteTarget({ id: i.id, title: invoiceLabel(i) })}
+								aria-label='Delete invoice'
+							>
+								<DeleteOutline />
+							</IconAction>
+						</PermissionGate>
+					)}
 				</Actions>
 			),
 		},
@@ -180,26 +202,27 @@ const InvoiceList = () => {
 				title='Invoices'
 				subtitle='Client invoices, totals and payment status.'
 				action={
-					<PrimarySolidButton type='button' onClick={() => navigate('/invoices/add/')}>
-						<AddRounded />
-						New invoice
-					</PrimarySolidButton>
+					<PermissionGate permission='invoices:create'>
+						<PrimarySolidButton type='button' onClick={() => navigate('/invoices/add/')}>
+							<AddRounded />
+							New invoice
+						</PrimarySolidButton>
+					</PermissionGate>
 				}
-				searchPlaceholder='Search by number, counterparty or currency'
-				search={search}
-				onSearchChange={(v) => {
-					setSearch(v)
-					setPage(1)
-				}}
+				searchPlaceholder='Search by invoice number'
+				search={searchInput}
+				onSearchChange={setSearchInput}
 			>
 				<DataTable
 					columns={columns}
-					rows={filtered}
+					rows={allItems}
 					rowKey={(i) => i.id}
 					isLoading={isLoading}
 					isError={isError}
 					onRetry={refetch}
 					searchActive={!!search}
+					sort={sort}
+					onSortChange={handleSortChange}
 					pagination={{
 						page,
 						pageSize: PAGE_SIZE,

@@ -23,6 +23,7 @@ import { PrimarySolidButton } from '../../../components/_shared/formShell.styled
 import { useGetClientCallByIdQuery } from '../../../store/clientCalls/clientCallsApi'
 import ClientCallDeleteModal from '../../../components/client-call/list/ProposalDeleteModal'
 import ClientCallCancelModal from '../../../components/client-call/preview/ClientCallCancelModal'
+import PermissionGate from '../../../components/auth/PermissionGate'
 import { formatDate } from '../../../utils/formatDate'
 import type { ClientCallStatus } from '../../../store/clientCalls/types/definition'
 
@@ -143,24 +144,30 @@ const ClientCallPreview = () => {
 					</BackChip>
 
 					<TopActions>
-						<DangerGhostButton type='button' onClick={() => setShowDeleteModal(true)}>
-							<DeleteOutline sx={{ fontSize: 18 }} />
-							<span>Delete</span>
-						</DangerGhostButton>
-						{canReschedule && (
-							<DangerGhostButton type='button' onClick={() => setShowCancelModal(true)}>
-								<CancelOutlined sx={{ fontSize: 18 }} />
-								<span>Cancel call</span>
+						<PermissionGate permission='client_calls:delete'>
+							<DangerGhostButton type='button' onClick={() => setShowDeleteModal(true)}>
+								<DeleteOutline sx={{ fontSize: 18 }} />
+								<span>Delete</span>
 							</DangerGhostButton>
+						</PermissionGate>
+						{canReschedule && (
+							<PermissionGate permission='client_calls:update'>
+								<DangerGhostButton type='button' onClick={() => setShowCancelModal(true)}>
+									<CancelOutlined sx={{ fontSize: 18 }} />
+									<span>Cancel call</span>
+								</DangerGhostButton>
+							</PermissionGate>
 						)}
 						{canReschedule && (
-							<ReschedButton
-								type='button'
-								onClick={() => navigate(`/client-calls/edit/${call.id}`)}
-							>
-								<EditCalendarOutlined />
-								Reschedule
-							</ReschedButton>
+							<PermissionGate permission='client_calls:update'>
+								<ReschedButton
+									type='button'
+									onClick={() => navigate(`/client-calls/edit/${call.id}`)}
+								>
+									<EditCalendarOutlined />
+									Reschedule
+								</ReschedButton>
+							</PermissionGate>
 						)}
 					</TopActions>
 				</TopRow>

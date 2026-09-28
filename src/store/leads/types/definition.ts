@@ -59,9 +59,24 @@ export interface LeadPage {
 	total: number
 }
 
+export type LeadSortBy =
+	| 'number'
+	| 'firstName'
+	| 'clientType'
+	| 'status'
+	| 'rate'
+	| 'location'
+	| 'repliedAt'
+	| 'createdAt'
+
+export type LeadSortDirection = 'asc' | 'desc'
+
 export interface LeadListParams {
 	page: number
 	limit: number
+	sortBy?: LeadSortBy
+	sortDirection?: LeadSortDirection
+	search?: string
 }
 
 export type AvatarColor = 'error' | 'info' | 'warning' | 'success'

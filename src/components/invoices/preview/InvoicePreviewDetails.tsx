@@ -14,6 +14,8 @@ import {
 import Loading from '../../../ui/state/Loading'
 import ErrorState from '../../../ui/state/ErrorState'
 import { PrimarySolidButton } from '../../_shared/formShell.styled'
+import PermissionGate from '../../auth/PermissionGate'
+import usePermissions from '../../../hooks/usePermissions'
 import {
 	type InvoiceItem,
 	useGenerateInvoicePdfMutation,
@@ -63,6 +65,15 @@ const InvoicePreviewDetails = ({ id }: Props) => {
 	const { data: invoice, isLoading, isError } = useGetInvoiceByIdQuery(id, { skip: !id })
 	const [getInvoicePdf, { isLoading: isOpeningPdf }] = useLazyGetInvoicePdfQuery()
 	const [generateInvoicePdf, { isLoading: isGenerating }] = useGenerateInvoicePdfMutation()
+	// Contractor invoices are only mutable by callers with
+	// `contractor_scope:manage`. Reading remains open to callers with
+	// `contractor_scope:view` OR `contractor_scope:manage` — this
+	// preview page just has to hide the write-side toolbar buttons
+	// when the caller lacks manage for a contractor invoice.
+	const { has } = usePermissions()
+	const isContractorInvoice = invoice?.counterparty?.type === 'contractor'
+	const canMutateThisInvoice =
+		!isContractorInvoice || has('contractor_scope:manage')
 
 	const handleOpenPdf = async () => {
 		try {
@@ -173,22 +184,30 @@ const InvoicePreviewDetails = ({ id }: Props) => {
 								<span>Open PDF</span>
 							</GhostButton>
 						) : (
-							<GhostButton
-								type='button'
-								disabled={isGenerating || isOpeningPdf}
-								onClick={handleGeneratePdf}
-							>
-								<PictureAsPdfOutlined sx={{ fontSize: 18 }} />
-								<span>Generate PDF</span>
-							</GhostButton>
+							canMutateThisInvoice && (
+								<PermissionGate permission='invoices:generate'>
+									<GhostButton
+										type='button'
+										disabled={isGenerating || isOpeningPdf}
+										onClick={handleGeneratePdf}
+									>
+										<PictureAsPdfOutlined sx={{ fontSize: 18 }} />
+										<span>Generate PDF</span>
+									</GhostButton>
+								</PermissionGate>
+							)
 						)}
-						<PrimarySolidButton
-							type='button'
-							onClick={() => navigate(`/invoices/edit/${invoice.id}`)}
-						>
-							<EditOutlined />
-							Edit invoice
-						</PrimarySolidButton>
+						{canMutateThisInvoice && (
+							<PermissionGate permission='invoices:update'>
+								<PrimarySolidButton
+									type='button'
+									onClick={() => navigate(`/invoices/edit/${invoice.id}`)}
+								>
+									<EditOutlined />
+									Edit invoice
+								</PrimarySolidButton>
+							</PermissionGate>
+						)}
 					</TopActions>
 				</TopRow>
 

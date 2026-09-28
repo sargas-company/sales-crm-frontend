@@ -51,12 +51,29 @@ export interface JobPostPage {
 	meta: JobPostMeta
 }
 
+export type JobPostSortBy =
+	| 'createdAt'
+	| 'matchScore'
+	| 'title'
+	| 'status'
+	| 'budget'
+	| 'location'
+	| 'totalSpent'
+	| 'avgRatePaid'
+	| 'hireRate'
+	| 'scanner'
+	| 'processedAt'
+
+export type JobPostSortDirection = 'asc' | 'desc'
+
 export interface JobPostListParams {
 	limit: number
 	offset: number
 	decision?: JobPostDecision
 	priority?: JobPostPriority
-	sortBy?: 'createdAt' | 'matchScore'
+	sortBy?: JobPostSortBy
+	sortDirection?: JobPostSortDirection
+	search?: string
 }
 
 export interface CreateJobPostBody {

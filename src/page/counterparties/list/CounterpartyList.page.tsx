@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import {
@@ -16,12 +16,18 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../../components/_shared/DataTable'
-import type { DataTableColumn } from '../../../components/_shared/DataTable'
+import type { DataTableColumn, SortState } from '../../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
 import CounterpartyDeleteModal from '../../../components/counterparties/list/CounterpartyDeleteModal'
-import type { CounterpartyItem } from '../../../store/counterparties/counterpartiesApi'
+import PermissionGate from '../../../components/auth/PermissionGate'
+import type {
+	CounterpartyItem,
+	CounterpartySortBy,
+} from '../../../store/counterparties/counterpartiesApi'
 import { useGetCounterpartiesQuery } from '../../../store/counterparties/counterpartiesApi'
 import { formatDate } from '../../../utils/format'
+import useDebouncedValue from '../../../hooks/useDebouncedValue'
+import usePermissions from '../../../hooks/usePermissions'
 
 const PAGE_SIZE = 20
 
@@ -40,27 +46,39 @@ const personInitials = (first: string, last: string): string => {
 
 const CounterpartyList = () => {
 	const navigate = useNavigate()
-	const [search, setSearch] = useState('')
+	const [searchInput, setSearchInput] = useState('')
+	const search = useDebouncedValue(searchInput.trim(), 300)
 	const [page, setPage] = useState(1)
+	const [sort, setSort] = useState<SortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
 
 	const { data, isLoading, isError, refetch } = useGetCounterpartiesQuery({
 		page,
 		limit: PAGE_SIZE,
+		search: search || undefined,
+		sortBy: (sort?.key as CounterpartySortBy | undefined) ?? undefined,
+		sortDirection: sort?.direction,
 	})
 	const items = data?.data ?? []
 	const total = data?.total ?? 0
 
-	const filtered = search
-		? items.filter((c) => {
-				const q = search.toLowerCase()
-				return (
-					fullName(c).toLowerCase().includes(q) ||
-					(c.info ?? '').toLowerCase().includes(q) ||
-					c.type.toLowerCase().includes(q)
-				)
-			})
-		: items
+	const handleSortChange = (next: SortState | null) => {
+		setSort(next)
+		setPage(1)
+	}
+
+	useEffect(() => {
+		setPage(1)
+	}, [search])
+
+	// Contractor rows are mutable only by callers with
+	// `contractor_scope:manage`; backend enforces the same rule and
+	// answers 403 otherwise, so hiding the row-level Edit/Delete
+	// controls avoids submitting a request the API will reject.
+	const { has } = usePermissions()
+	const canManageContractor = has('contractor_scope:manage')
+	const canMutateRow = (c: CounterpartyItem) =>
+		c.type !== 'contractor' || canManageContractor
 
 	const columns: DataTableColumn<CounterpartyItem>[] = [
 		{
@@ -121,21 +139,29 @@ const CounterpartyList = () => {
 					>
 						<VisibilityOutlined />
 					</IconAction>
-					<IconAction
-						type='button'
-						onClick={() => navigate(`/counterparties/edit/${c.id}`)}
-						aria-label='Edit counterparty'
-					>
-						<EditOutlined />
-					</IconAction>
-					<IconAction
-						type='button'
-						$danger
-						onClick={() => setDeleteTarget({ id: c.id, title: fullName(c) })}
-						aria-label='Delete counterparty'
-					>
-						<DeleteOutline />
-					</IconAction>
+					{canMutateRow(c) && (
+						<PermissionGate permission='counterparties:update'>
+							<IconAction
+								type='button'
+								onClick={() => navigate(`/counterparties/edit/${c.id}`)}
+								aria-label='Edit counterparty'
+							>
+								<EditOutlined />
+							</IconAction>
+						</PermissionGate>
+					)}
+					{canMutateRow(c) && (
+						<PermissionGate permission='counterparties:delete'>
+							<IconAction
+								type='button'
+								$danger
+								onClick={() => setDeleteTarget({ id: c.id, title: fullName(c) })}
+								aria-label='Delete counterparty'
+							>
+								<DeleteOutline />
+							</IconAction>
+						</PermissionGate>
+					)}
 				</Actions>
 			),
 		},
@@ -149,26 +175,27 @@ const CounterpartyList = () => {
 				title='Counterparties'
 				subtitle='Clients and contractors who appear on invoices.'
 				action={
-					<PrimarySolidButton type='button' onClick={() => navigate('/counterparties/add/')}>
-						<AddRounded />
-						New counterparty
-					</PrimarySolidButton>
+					<PermissionGate permission='counterparties:create'>
+						<PrimarySolidButton type='button' onClick={() => navigate('/counterparties/add/')}>
+							<AddRounded />
+							New counterparty
+						</PrimarySolidButton>
+					</PermissionGate>
 				}
-				searchPlaceholder='Search by name, type or info'
-				search={search}
-				onSearchChange={(v) => {
-					setSearch(v)
-					setPage(1)
-				}}
+				searchPlaceholder='Search by name'
+				search={searchInput}
+				onSearchChange={setSearchInput}
 			>
 				<DataTable
 					columns={columns}
-					rows={filtered}
+					rows={items}
 					rowKey={(c) => c.id}
 					isLoading={isLoading}
 					isError={isError}
 					onRetry={refetch}
 					searchActive={!!search}
+					sort={sort}
+					onSortChange={handleSortChange}
 					pagination={{
 						page,
 						pageSize: PAGE_SIZE,

@@ -130,15 +130,32 @@ export interface InvoicePage {
 
 export type InvoiceListResponse = InvoicePage | InvoiceItem[]
 
+export type InvoiceSortBy =
+	| 'number'
+	| 'counterparty'
+	| 'status'
+	| 'date'
+	| 'dueDate'
+	| 'currency'
+	| 'createdAt'
+
+export type InvoiceSortDirection = 'asc' | 'desc'
+
 export interface InvoiceListParams {
 	page: number
 	limit: number
+	sortBy?: InvoiceSortBy
+	sortDirection?: InvoiceSortDirection
+	search?: string
 }
 
 export const invoicesApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getInvoiceList: builder.query<InvoiceListResponse, InvoiceListParams>({
-			query: ({ page, limit }) => ({ url: '/invoices', params: { page, limit } }),
+			query: ({ page, limit, sortBy, sortDirection, search }) => ({
+				url: '/invoices',
+				params: { page, limit, sortBy, sortDirection, search: search || undefined },
+			}),
 			providesTags: ['Invoice'],
 		}),
 

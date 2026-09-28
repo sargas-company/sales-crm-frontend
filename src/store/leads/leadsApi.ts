@@ -4,7 +4,10 @@ import type { LeadItem, LeadPage, LeadListParams, CreateLeadBody } from './types
 export const leadsApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getLeadList: builder.query<LeadPage, LeadListParams>({
-			query: ({ page, limit }) => ({ url: '/leads', params: { page, limit } }),
+			query: ({ page, limit, sortBy, sortDirection, search }) => ({
+				url: '/leads',
+				params: { page, limit, sortBy, sortDirection, search: search || undefined },
+			}),
 			providesTags: ['Lead'],
 		}),
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import {
@@ -16,12 +16,17 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../../components/_shared/DataTable'
-import type { DataTableColumn } from '../../../components/_shared/DataTable'
+import type { DataTableColumn, SortState } from '../../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
 import ClientCallDeleteModal from '../../../components/client-call/list/ProposalDeleteModal'
-import type { ClientCallItem } from '../../../store/clientCalls/types/definition'
+import PermissionGate from '../../../components/auth/PermissionGate'
+import type {
+	ClientCallItem,
+	ClientCallSortBy,
+} from '../../../store/clientCalls/types/definition'
 import { useGetClientCallListQuery } from '../../../store/clientCalls/clientCallsApi'
 import { formatDate } from '../../../utils/format'
+import useDebouncedValue from '../../../hooks/useDebouncedValue'
 
 const PAGE_SIZE = 20
 
@@ -41,23 +46,30 @@ const clientName = (c: ClientCallItem): string => {
 
 const ClientCallList = () => {
 	const navigate = useNavigate()
-	const [search, setSearch] = useState('')
+	const [searchInput, setSearchInput] = useState('')
+	const search = useDebouncedValue(searchInput.trim(), 300)
 	const [page, setPage] = useState(1)
+	const [sort, setSort] = useState<SortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
 
 	const { data, isLoading, isError, refetch } = useGetClientCallListQuery({
 		page,
 		limit: PAGE_SIZE,
+		search: search || undefined,
+		sortBy: (sort?.key as ClientCallSortBy | undefined) ?? undefined,
+		sortDirection: sort?.direction,
 	})
 	const items = data?.data ?? []
 	const total = data?.total ?? 0
 
-	const filtered = search
-		? items.filter((c) => {
-				const q = search.toLowerCase()
-				return c.callTitle.toLowerCase().includes(q) || clientName(c).toLowerCase().includes(q)
-			})
-		: items
+	const handleSortChange = (next: SortState | null) => {
+		setSort(next)
+		setPage(1)
+	}
+
+	useEffect(() => {
+		setPage(1)
+	}, [search])
 
 	const columns: DataTableColumn<ClientCallItem>[] = [
 		{
@@ -151,21 +163,25 @@ const ClientCallList = () => {
 					>
 						<VisibilityOutlined />
 					</IconAction>
-					<IconAction
-						type='button'
-						onClick={() => navigate(`/client-calls/edit/${c.id}`)}
-						aria-label='Edit call'
-					>
-						<EditOutlined />
-					</IconAction>
-					<IconAction
-						type='button'
-						$danger
-						onClick={() => setDeleteTarget({ id: c.id, title: c.callTitle })}
-						aria-label='Delete call'
-					>
-						<DeleteOutline />
-					</IconAction>
+					<PermissionGate permission='client_calls:update'>
+						<IconAction
+							type='button'
+							onClick={() => navigate(`/client-calls/edit/${c.id}`)}
+							aria-label='Edit call'
+						>
+							<EditOutlined />
+						</IconAction>
+					</PermissionGate>
+					<PermissionGate permission='client_calls:delete'>
+						<IconAction
+							type='button'
+							$danger
+							onClick={() => setDeleteTarget({ id: c.id, title: c.callTitle })}
+							aria-label='Delete call'
+						>
+							<DeleteOutline />
+						</IconAction>
+					</PermissionGate>
 				</Actions>
 			),
 		},
@@ -179,26 +195,27 @@ const ClientCallList = () => {
 				title='Client calls'
 				subtitle='Scheduled meetings and past conversations with leads and clients.'
 				action={
-					<PrimarySolidButton type='button' onClick={() => navigate('/client-calls/add/')}>
-						<AddRounded />
-						New call
-					</PrimarySolidButton>
+					<PermissionGate permission='client_calls:create'>
+						<PrimarySolidButton type='button' onClick={() => navigate('/client-calls/add/')}>
+							<AddRounded />
+							New call
+						</PrimarySolidButton>
+					</PermissionGate>
 				}
-				searchPlaceholder='Search by title or client'
-				search={search}
-				onSearchChange={(v) => {
-					setSearch(v)
-					setPage(1)
-				}}
+				searchPlaceholder='Search by title'
+				search={searchInput}
+				onSearchChange={setSearchInput}
 			>
 				<DataTable
 					columns={columns}
-					rows={filtered}
+					rows={items}
 					rowKey={(c) => c.id}
 					isLoading={isLoading}
 					isError={isError}
 					onRetry={refetch}
 					searchActive={!!search}
+					sort={sort}
+					onSortChange={handleSortChange}
 					pagination={{
 						page,
 						pageSize: PAGE_SIZE,

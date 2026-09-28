@@ -50,9 +50,23 @@ export interface ClientCallPage {
 	total: number
 }
 
+export type ClientCallSortBy =
+	| 'callTitle'
+	| 'scheduledAt'
+	| 'duration'
+	| 'clientTimezone'
+	| 'status'
+	| 'createdBy'
+	| 'createdAt'
+
+export type ClientCallSortDirection = 'asc' | 'desc'
+
 export interface ClientCallListParams {
 	page: number
 	limit: number
+	sortBy?: ClientCallSortBy
+	sortDirection?: ClientCallSortDirection
+	search?: string
 }
 
 export type CreateClientCallBody = {
