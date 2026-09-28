@@ -70,7 +70,9 @@ const ScannerStatusCard = ({ data }: Props) => {
 						<span className='wh-hero-label'>Last event received</span>
 					</div>
 					<div className='wh-hero-value'>
-						<span className='wh-hero-num'>{last.value}</span>
+						<span className={`wh-hero-num${last.suffix ? '' : ' is-text'}`}>
+							{last.value}
+						</span>
 						{last.suffix && <span className='wh-hero-suffix'>{last.suffix}</span>}
 					</div>
 				</div>
@@ -83,10 +85,10 @@ const ScannerStatusCard = ({ data }: Props) => {
 						analyzed={data.analyzedInPeriod}
 						received={data.receivedToday}
 					/>
-					<AlertsTile
-						alerts={data.discordAlertsInPeriod}
-						analyzed={data.analyzedInPeriod}
-					/>
+					{/* Discord alerts count is not yet wired to notification
+					    deliveries — render an unavailable placeholder instead
+					    of showing "0 sent today" as if it were real data. */}
+					<AlertsUnavailableTile />
 				</div>
 			</WebhookCard>
 		</SectionCard>
@@ -185,16 +187,17 @@ const AnalyzedTile = ({ analyzed, received }: { analyzed: number; received: numb
 	)
 }
 
-const AlertsTile = ({ alerts, analyzed }: { alerts: number; analyzed: number }) => {
-	const signalRate = analyzed > 0 ? Math.round((alerts / analyzed) * 100) : 0
-
-	return (
-		<div className={`hw-tile hw-tile-rose hw-tone-${toneForPct(signalRate)}`}>
-			<HeroBody label='Discord alerts' value={alerts} unit='sent today' />
-			<PercentBar pct={signalRate} caption='signal rate' />
-		</div>
-	)
-}
+const AlertsUnavailableTile = () => (
+	<div className='hw-tile hw-tile-rose hw-tone-warn'>
+		<HeroBody
+			label='Discord alerts'
+			value='—'
+			unit=''
+			caption='not wired to deliveries yet'
+		/>
+		<PercentBar pct={0} caption='awaiting integration' />
+	</div>
+)
 
 const PercentBar = ({ pct, caption }: { pct: number; caption: string }) => (
 	<div className='hw-pct' aria-hidden='true'>

@@ -27,7 +27,7 @@ const Wrap = styled('div')`
 	}
 	.list-title {
 		font-size: 15px;
-		font-weight: 700;
+		font-weight: 500;
 		color: ${T.textStrong};
 	}
 	.list-sub {
@@ -219,9 +219,6 @@ const AllPostsList = ({ onClose }: Props) => {
 				<div className='list-head'>
 					<div>
 						<div className='list-title'>All posts</div>
-						<div className='list-sub'>
-							{data ? `${data.total.toLocaleString()} in current filters` : 'Loading…'}
-						</div>
 					</div>
 					<button type='button' className='list-close' onClick={onClose}>
 						<CloseOutlined style={{ fontSize: 16 }} />
@@ -249,7 +246,6 @@ const AllPostsList = ({ onClose }: Props) => {
 									<th>Technologies</th>
 									<th>Budget</th>
 									<th>Client</th>
-									<th>Notification</th>
 									<th>Relevance</th>
 									<th />
 								</tr>
@@ -270,7 +266,6 @@ const AllPostsList = ({ onClose }: Props) => {
 											<div className='client-country'>{p.clientCountry}</div>
 											<div className='client-tier'>{clientTierOf(p)}</div>
 										</td>
-										<td>{p.notificationStatus.replace('_', ' ')}</td>
 										<td>
 											<RelevanceControl postId={p.id} compact />
 										</td>

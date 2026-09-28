@@ -4,7 +4,7 @@ export const QUALIFIED_THRESHOLD = 50
 export const HOT_THRESHOLD = 75
 
 export const DEFAULT_TIMEZONE = 'Europe/Kyiv'
-export const DEFAULT_DATE_RANGE: SalesDateRangeKey = '7d'
+export const DEFAULT_DATE_RANGE: SalesDateRangeKey = 'today'
 
 export const SCORE_BUCKETS: {
 	label: string

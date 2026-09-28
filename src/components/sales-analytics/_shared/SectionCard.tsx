@@ -57,13 +57,13 @@ const PanelHead = styled('header')`
 	}
 	.sc-title {
 		font-size: 16px;
-		font-weight: 700;
+		font-weight: 500;
 		color: ${T.textStrong};
-		letter-spacing: -0.2px;
+		letter-spacing: -0.1px;
 	}
 	.sc-hint {
 		font-size: 12.5px;
-		font-weight: 500;
+		font-weight: 400;
 		color: ${T.textSecondary};
 	}
 	.sc-action {

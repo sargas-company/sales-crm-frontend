@@ -676,9 +676,6 @@ const JobPostAnalyticsDrawer = () => {
 											<strong>Notified:</strong> {formatDateTime(data.notifiedAt)}
 										</span>
 									)}
-									<span>
-										<strong>Notification:</strong> {data.notificationStatus}
-									</span>
 								</div>
 							</div>
 

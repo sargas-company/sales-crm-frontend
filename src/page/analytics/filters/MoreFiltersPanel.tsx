@@ -1,7 +1,14 @@
 import { useGetFiltersOptionsQuery } from '../../../store/sales-analytics/salesAnalyticsApi'
 import { useSalesFilters } from './useSalesFilters'
 import { MoreFiltersPanel as Panel } from './filters.styled'
-import type { ClientTier } from '../../../store/sales-analytics/types/jobPost'
+
+// Only filters that the backend actually applies today are exposed here.
+// Manual relevance, notification status, contract type, budget bucket,
+// platform, direction and client-quality controls are intentionally
+// omitted — the backend silently ignores them, so showing them in the
+// UI would make the results look filtered when they are not. Re-add
+// each one only when the corresponding filter lands in
+// AnalyticsService.buildWhere.
 
 const MoreFiltersPanel = () => {
 	const { data } = useGetFiltersOptionsQuery()
@@ -55,117 +62,6 @@ const MoreFiltersPanel = () => {
 					</div>
 
 					<div className='filter-field'>
-						<label htmlFor='relevance'>Manual relevance</label>
-						<select
-							id='relevance'
-							value={filters.manualRelevance ?? ''}
-							onChange={(e) =>
-								setFilter({
-									manualRelevance: (e.target.value || undefined) as
-										| 'relevant'
-										| 'not_relevant'
-										| 'very_relevant'
-										| 'unrated'
-										| undefined,
-								})
-							}
-						>
-							<option value=''>Any</option>
-							<option value='very_relevant'>Very relevant</option>
-							<option value='relevant'>Relevant</option>
-							<option value='not_relevant'>Not relevant</option>
-							<option value='unrated'>Unrated</option>
-						</select>
-					</div>
-
-					<div className='filter-field'>
-						<label htmlFor='notification'>Notification status</label>
-						<select
-							id='notification'
-							value={filters.notificationStatus ?? ''}
-							onChange={(e) =>
-								setFilter({
-									notificationStatus: (e.target.value || undefined) as
-										| 'sent'
-										| 'failed'
-										| 'not_required'
-										| 'pending'
-										| undefined,
-								})
-							}
-						>
-							<option value=''>Any status</option>
-							<option value='sent'>Sent</option>
-							<option value='pending'>Pending</option>
-							<option value='failed'>Failed</option>
-							<option value='not_required'>Not required</option>
-						</select>
-					</div>
-				</div>
-			</div>
-
-			<div className='filter-section'>
-				<div className='section-title'>Contract &amp; source</div>
-				<div className='field-grid'>
-					<div className='filter-field'>
-						<label htmlFor='contract-type'>Contract type</label>
-						<select
-							id='contract-type'
-							value={filters.contractType ?? ''}
-							onChange={(e) =>
-								setFilter({
-									contractType: (e.target.value || undefined) as
-										| 'fixed'
-										| 'hourly'
-										| 'unknown'
-										| undefined,
-								})
-							}
-						>
-							<option value=''>Any</option>
-							<option value='fixed'>Fixed</option>
-							<option value='hourly'>Hourly</option>
-							<option value='unknown'>Unknown</option>
-						</select>
-					</div>
-
-					<div className='filter-field'>
-						<label htmlFor='budget'>Budget bucket</label>
-						<select
-							id='budget'
-							value={filters.budgetBucket ?? ''}
-							onChange={(e) => setFilter({ budgetBucket: e.target.value || undefined })}
-						>
-							<option value=''>Any budget</option>
-							{data.budgetBuckets.map((b) => (
-								<option key={b.key} value={b.key}>
-									{b.label}
-								</option>
-							))}
-						</select>
-					</div>
-
-					<div className='filter-field'>
-						<label htmlFor='platform'>Platform</label>
-						<select
-							id='platform'
-							value={filters.platformId?.[0] ?? ''}
-							onChange={(e) =>
-								setFilter({
-									platformId: e.target.value ? [e.target.value] : undefined,
-								})
-							}
-						>
-							<option value=''>All platforms</option>
-							{data.platforms.map((p) => (
-								<option key={p.id} value={p.id}>
-									{p.name}
-								</option>
-							))}
-						</select>
-					</div>
-
-					<div className='filter-field'>
 						<label htmlFor='client-country'>Client country</label>
 						<select
 							id='client-country'
@@ -187,74 +83,29 @@ const MoreFiltersPanel = () => {
 				</div>
 			</div>
 
-			<div className='filter-section'>
-				<div className='section-title'>Direction</div>
-				<div className='chip-row'>
-					{data.directions.map((d) => {
-						const active = filters.direction?.includes(d) ?? false
-						return (
-							<button
-								key={d}
-								type='button'
-								className={`chip ${active ? 'active' : ''}`}
-								onClick={() => setFilter({ direction: toggleInList(filters.direction, d) })}
-								aria-pressed={active}
-							>
-								{d}
-							</button>
-						)
-					})}
+			{data.technologies.length > 0 && (
+				<div className='filter-section'>
+					<div className='section-title'>Technologies</div>
+					<div className='chip-row'>
+						{data.technologies.map((t) => {
+							const active = filters.technology?.includes(t) ?? false
+							return (
+								<button
+									key={t}
+									type='button'
+									className={`chip ${active ? 'active' : ''}`}
+									onClick={() =>
+										setFilter({ technology: toggleInList(filters.technology, t) })
+									}
+									aria-pressed={active}
+								>
+									{t}
+								</button>
+							)
+						})}
+					</div>
 				</div>
-			</div>
-
-			<div className='filter-section'>
-				<div className='section-title'>Technologies</div>
-				<div className='chip-row'>
-					{data.technologies.map((t) => {
-						const active = filters.technology?.includes(t) ?? false
-						return (
-							<button
-								key={t}
-								type='button'
-								className={`chip ${active ? 'active' : ''}`}
-								onClick={() =>
-									setFilter({ technology: toggleInList(filters.technology, t) })
-								}
-								aria-pressed={active}
-							>
-								{t}
-							</button>
-						)
-					})}
-				</div>
-			</div>
-
-			<div className='filter-section'>
-				<div className='section-title'>Client quality</div>
-				<div className='chip-row'>
-					{data.clientTiers.map((t) => {
-						const active = filters.clientQuality?.includes(t.key) ?? false
-						return (
-							<button
-								key={t.key}
-								type='button'
-								className={`chip ${active ? 'active' : ''}`}
-								onClick={() =>
-									setFilter({
-										clientQuality: toggleInList(
-											filters.clientQuality,
-											t.key as ClientTier
-										),
-									})
-								}
-								aria-pressed={active}
-							>
-								{t.label}
-							</button>
-						)
-					})}
-				</div>
-			</div>
+			)}
 		</Panel>
 	)
 }

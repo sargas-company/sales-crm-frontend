@@ -237,11 +237,6 @@ const Row = ({ item }: { item: JobPostAnalyticsSummary }) => (
 			{timeAgo(item.receivedAt)}
 		</td>
 		<td>
-			<span className={`status ${item.notificationStatus}`}>
-				{item.notificationStatus.replace('_', ' ')}
-			</span>
-		</td>
-		<td>
 			<RelevanceControl postId={item.id} compact />
 		</td>
 		<td style={{ whiteSpace: 'nowrap' }}>
@@ -292,7 +287,6 @@ const RecentHighScorePosts = ({ onViewAll }: { onViewAll?: () => void }) => {
 	return (
 		<SectionCard
 			title='Recent high-score posts'
-			hint={`${data.total} qualified in period`}
 			action={
 				onViewAll && data.total > data.items.length ? (
 					<ViewAllBtn type='button' onClick={onViewAll}>
@@ -318,7 +312,6 @@ const RecentHighScorePosts = ({ onViewAll }: { onViewAll?: () => void }) => {
 							<th>Budget</th>
 							<th>Client</th>
 							<th>Age</th>
-							<th>Notification</th>
 							<th>Relevance</th>
 							<th>Actions</th>
 						</tr>

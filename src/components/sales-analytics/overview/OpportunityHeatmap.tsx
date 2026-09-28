@@ -437,7 +437,6 @@ const OpportunityHeatmap = () => {
 	return (
 		<SectionCard
 			title='Opportunity heatmap'
-			hint={data ? `Timezone · ${data.timezone} · ${data.sampleSize} posts` : 'Loading…'}
 			action={
 				<MetricSwitcher role='tablist' aria-label='Heatmap metric'>
 					{METRIC_OPTIONS.map((opt) => (

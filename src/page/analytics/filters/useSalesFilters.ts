@@ -134,17 +134,13 @@ export const useSalesFilters = (): UseSalesFilters => {
 		)
 	}, [setSearchParams])
 
+	// Only count filters the backend actually applies. The other keys
+	// remain on the type for URL back-compat but never get set from the
+	// current UI, so they must not inflate the filter badge count.
 	const activeCount =
 		(filters.scoreMin != null || filters.scoreMax != null ? 1 : 0) +
 		(filters.technology?.length ? 1 : 0) +
-		(filters.direction?.length ? 1 : 0) +
-		(filters.platformId?.length ? 1 : 0) +
-		(filters.contractType ? 1 : 0) +
-		(filters.budgetBucket ? 1 : 0) +
-		(filters.clientCountry?.length ? 1 : 0) +
-		(filters.clientQuality?.length ? 1 : 0) +
-		(filters.manualRelevance ? 1 : 0) +
-		(filters.notificationStatus ? 1 : 0)
+		(filters.clientCountry?.length ? 1 : 0)
 
 	const isDefault =
 		filters.dateRange === DEFAULT_DATE_RANGE &&

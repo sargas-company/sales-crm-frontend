@@ -38,6 +38,12 @@ import type { FeedbackMetrics, RelevanceFeedbackPayload } from './types/feedback
 import type { CanonicalTaxonomy } from './types/taxonomy'
 import type { MockJobPost } from './types/jobPost'
 
+// The Overview tab, its transitively-mounted controls (SalesFiltersBar
+// options, JobPostAnalyticsDrawer detail fetch) and the shared drawer
+// go through the real backend at /analytics/**.  The remaining
+// endpoints stay on `mockAdapter` because they belong to the deferred
+// Market Intelligence / Emerging Signals tabs OR to client-side-only
+// state (manual relevance feedback has no backend model yet).
 const repo: SalesAnalyticsRepository = mockAdapter
 
 const asBaseQueryError = (e: unknown) => ({
@@ -57,23 +63,50 @@ const q =
 		}
 	}
 
+const filtersToQueryParams = (filters: SalesFilters): Record<string, string | number> => {
+	const params: Record<string, string | number> = {}
+	if (filters.dateRange) params.dateRange = filters.dateRange
+	if (filters.customFrom) params.customFrom = filters.customFrom
+	if (filters.customTo) params.customTo = filters.customTo
+	if (filters.timezone) params.timezone = filters.timezone
+	if (filters.scoreMin != null) params.scoreMin = filters.scoreMin
+	if (filters.scoreMax != null) params.scoreMax = filters.scoreMax
+	if (filters.technology?.length) params.technology = filters.technology.join(',')
+	if (filters.direction?.length) params.direction = filters.direction.join(',')
+	if (filters.platformId?.length) params.platformId = filters.platformId.join(',')
+	if (filters.contractType) params.contractType = filters.contractType
+	if (filters.budgetBucket) params.budgetBucket = filters.budgetBucket
+	if (filters.clientCountry?.length) params.clientCountry = filters.clientCountry.join(',')
+	if (filters.clientQuality?.length) params.clientQuality = filters.clientQuality.join(',')
+	if (filters.manualRelevance) params.manualRelevance = filters.manualRelevance
+	if (filters.notificationStatus) params.notificationStatus = filters.notificationStatus
+	return params
+}
+
 export const salesAnalyticsApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
+		// ── Overview-served endpoints (real backend) ───────────────────────
 		getSalesDataSource: builder.query<{ dataSource: DataSource }, void>({
-			queryFn: () => ({ data: { dataSource: repo.dataSource } }),
+			queryFn: () => ({ data: { dataSource: 'api' as const } }),
 		}),
 
 		getScannerHealth: builder.query<ScannerHealth, ScannerHealthFilters>({
-			queryFn: q((args: ScannerHealthFilters) => repo.getScannerHealth(args)),
+			query: ({ period }) => ({
+				url: '/analytics/scanner-health',
+				params: { period },
+			}),
 		}),
 
 		getFiltersOptions: builder.query<FiltersOptions, void>({
-			queryFn: q(() => repo.getFiltersOptions()),
+			query: () => ({ url: '/analytics/filters-options' }),
 			providesTags: ['SalesTaxonomy'],
 		}),
 
 		getSalesOverview: builder.query<SalesOverviewSummary, SalesFilters>({
-			queryFn: q((args: SalesFilters) => repo.getSalesOverview(args)),
+			query: (filters) => ({
+				url: '/analytics/sales-overview',
+				params: filtersToQueryParams(filters),
+			}),
 			providesTags: ['SalesFeedback'],
 		}),
 
@@ -81,19 +114,10 @@ export const salesAnalyticsApi = baseApi.injectEndpoints({
 			HeatmapData,
 			{ filters: SalesFilters; metric: HeatmapMetric }
 		>({
-			queryFn: q(({ filters, metric }: { filters: SalesFilters; metric: HeatmapMetric }) =>
-				repo.getOpportunityHeatmap(filters, metric)
-			),
-			providesTags: ['SalesFeedback'],
-		}),
-
-		getCoverageWindows: builder.query<CoverageWindows, SalesFilters>({
-			queryFn: q((args: SalesFilters) => repo.getCoverageWindows(args)),
-			providesTags: ['SalesFeedback'],
-		}),
-
-		getActionableInsights: builder.query<ActionableInsights, SalesFilters>({
-			queryFn: q((args: SalesFilters) => repo.getActionableInsights(args)),
+			query: ({ filters, metric }) => ({
+				url: '/analytics/opportunity-heatmap',
+				params: { ...filtersToQueryParams(filters), metric },
+			}),
 			providesTags: ['SalesFeedback'],
 		}),
 
@@ -101,9 +125,34 @@ export const salesAnalyticsApi = baseApi.injectEndpoints({
 			RecentHighScorePostsData,
 			{ filters: SalesFilters; limit: number }
 		>({
-			queryFn: q(({ filters, limit }: { filters: SalesFilters; limit: number }) =>
-				repo.getRecentHighScorePosts(filters, limit)
-			),
+			query: ({ filters, limit }) => ({
+				url: '/analytics/recent-high-score-posts',
+				params: { ...filtersToQueryParams(filters), limit },
+			}),
+			providesTags: ['SalesFeedback'],
+		}),
+
+		getJobPostsPage: builder.query<JobPostAnalyticsPage, JobPostsQuery>({
+			query: ({ filters, page, limit }) => ({
+				url: '/analytics/job-posts',
+				params: { ...filtersToQueryParams(filters), page, limit },
+			}),
+			providesTags: ['SalesFeedback'],
+		}),
+
+		getJobPostById: builder.query<MockJobPost | null, string>({
+			query: (id) => ({ url: `/analytics/job-posts/${id}` }),
+			providesTags: ['SalesFeedback'],
+		}),
+
+		// ── Deferred tabs (Market Intelligence / Emerging) stay on mock ────
+		getCoverageWindows: builder.query<CoverageWindows, SalesFilters>({
+			queryFn: q((args: SalesFilters) => repo.getCoverageWindows(args)),
+			providesTags: ['SalesFeedback'],
+		}),
+
+		getActionableInsights: builder.query<ActionableInsights, SalesFilters>({
+			queryFn: q((args: SalesFilters) => repo.getActionableInsights(args)),
 			providesTags: ['SalesFeedback'],
 		}),
 
@@ -152,16 +201,6 @@ export const salesAnalyticsApi = baseApi.injectEndpoints({
 			providesTags: ['SalesFeedback'],
 		}),
 
-		getJobPostsPage: builder.query<JobPostAnalyticsPage, JobPostsQuery>({
-			queryFn: q((args: JobPostsQuery) => repo.getJobPostsPage(args)),
-			providesTags: ['SalesFeedback'],
-		}),
-
-		getJobPostById: builder.query<MockJobPost | null, string>({
-			queryFn: q((id: string) => repo.getJobPostById(id)),
-			providesTags: ['SalesFeedback'],
-		}),
-
 		getCanonicalTaxonomy: builder.query<CanonicalTaxonomy, void>({
 			queryFn: q(() => repo.getCanonicalTaxonomy()),
 			providesTags: ['SalesTaxonomy'],
@@ -192,6 +231,8 @@ export const salesAnalyticsApi = baseApi.injectEndpoints({
 			providesTags: ['SalesFeedback'],
 		}),
 
+		// ── Manual relevance is user-supplied session state, no backend
+		//    persistence yet — stays in the in-memory mock state store.
 		setRelevanceFeedback: builder.mutation<void, RelevanceFeedbackPayload>({
 			queryFn: q((payload: RelevanceFeedbackPayload) => repo.setRelevanceFeedback(payload)),
 			invalidatesTags: ['SalesFeedback'],

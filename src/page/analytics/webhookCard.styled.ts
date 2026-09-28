@@ -226,6 +226,11 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
 	}
+	.wh-hero-num.is-text {
+		font-size: 22px;
+		font-weight: 600;
+		letter-spacing: -0.2px;
+	}
 	.wh-hero-suffix {
 		font-size: 15px;
 		font-weight: 600;
