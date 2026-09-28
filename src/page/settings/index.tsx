@@ -225,21 +225,7 @@ const SettingsPage = () => {
 							/>
 						) : (
 							<AnimatedSectionContent key={currentSection?.key ?? 'section'}>
-								{currentSection?.settings
-									.filter((setting) => {
-										// TEMP: hide the legacy telegram / backfill scanner
-										// keys until legacy-cleanup T-05 removes them from
-										// the backend settings enum. Their custom UI
-										// (TelegramStatusChip + TelegramAuthBlock) was
-										// removed by T-04; without this filter they would
-										// otherwise render as ordinary text / switch
-										// settings via the standard SettingControl path.
-										// Remove this filter together with T-05.
-										if (currentSection.key !== 'job_scanner') return true
-										const t = setting.title.toLowerCase()
-										return !t.includes('backfill') && !t.includes('telegram')
-									})
-									.map((setting) => (
+								{currentSection?.settings.map((setting) => (
 										<SettingRow
 											key={setting.key}
 											setting={setting}

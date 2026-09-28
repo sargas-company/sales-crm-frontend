@@ -12,13 +12,6 @@ export interface ProposalUser {
 	lastName: string
 }
 
-export interface ProposalChat {
-	id: string
-	proposalId: string
-	leadId: string | null
-	createdAt: string
-}
-
 export interface ProposalItem {
 	number: number
 	id: string
@@ -41,7 +34,6 @@ export interface ProposalItem {
 	account: AccountItem
 	platform: PlatformItem
 	lead?: { id: string } | null
-	chat: ProposalChat | null
 	jobPostId: string | null
 }
 
