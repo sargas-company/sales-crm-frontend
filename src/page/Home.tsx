@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import AppBar from '../components/appbar/AppBar'
 import { Flex } from '../components/layout'
 import AppLayout from '../components/layout/AppLayout'
-import Loading from '../components/loading/Loading'
+import PageLoading from '../components/loading/PageLoading'
 import Nav from '../components/nav/Nav'
 import ProtectedRoute from '../routes/ProtectedRoute'
 
@@ -52,7 +52,7 @@ const Home = () => {
 						overflowX: 'hidden',
 					}}
 				>
-					<Suspense fallback={<Loading />}>
+					<Suspense fallback={<PageLoading />}>
 						<Routes>
 							<Route index element={<Navigate to='/dashboards/sales' replace />} />
 							<Route
