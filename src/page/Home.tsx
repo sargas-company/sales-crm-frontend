@@ -10,10 +10,8 @@ import ProtectedRoute from '../routes/ProtectedRoute'
 const PageNotFound = lazy(() => import('./404/PageNotFound'))
 const Analytics = lazy(() => import('./analytics'))
 const Finance = lazy(() => import('./analytics/Finance'))
-const Chat = lazy(() => import('./chat'))
 const Proposal = lazy(() => import('./proposal'))
 const Leads = lazy(() => import('./leads'))
-const BaseKnowledge = lazy(() => import('./base-knowledge'))
 const Platforms = lazy(() => import('./platforms'))
 const Accounts = lazy(() => import('./accounts'))
 const Counterparties = lazy(() => import('./counterparties'))
@@ -65,10 +63,8 @@ const Home = () => {
 								path='/dashboards/analytics/'
 								element={<Navigate to='/dashboards/sales' replace />}
 							/>
-							<Route path='/chats' element={<Chat />} />
 							<Route path='/proposal/*' element={<Proposal />} />
 							<Route path='/leads/*' element={<Leads />} />
-							<Route path='/knowledge/*' element={<BaseKnowledge />} />
 							<Route path='/platforms/*' element={<Platforms />} />
 							<Route path='/accounts/*' element={<Accounts />} />
 							<Route path='/counterparties/*' element={<Counterparties />} />

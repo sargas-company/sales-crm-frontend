@@ -7,9 +7,7 @@ export const baseApi = createApi({
 	reducerPath: 'api',
 	baseQuery: axiosBaseQuery,
 	tagTypes: [
-		'BaseKnowledge',
 		'Proposal',
-		'ProposalChat',
 		'Lead',
 		'Account',
 		'Platform',

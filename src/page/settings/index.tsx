@@ -2,7 +2,6 @@ import { memo, useState, useEffect } from 'react'
 import {
 	Box,
 	Card,
-	Chip,
 	CircularProgress,
 	FormControl,
 	IconButton,
@@ -29,11 +28,6 @@ import { Button as UiButton } from '../../ui'
 import { useGetSettingsQuery, useUpdateSettingMutation } from '../../store/settings/settingsApi'
 import SettingsEmptyTab from './SettingsEmptyTab'
 import { AnimatedSectionContent, AnimatedTabHeader } from './settings.styled'
-import {
-	useStartTelegramAuthMutation,
-	useVerifyTelegramAuthMutation,
-	useLogoutTelegramAuthMutation,
-} from '../../store/telegram/telegramApi'
 import type { SettingItem } from '../../store/settings/types/definition'
 
 const SECTION_ICONS: Record<string, React.ReactNode> = {
@@ -233,6 +227,14 @@ const SettingsPage = () => {
 							<AnimatedSectionContent key={currentSection?.key ?? 'section'}>
 								{currentSection?.settings
 									.filter((setting) => {
+										// TEMP: hide the legacy telegram / backfill scanner
+										// keys until legacy-cleanup T-05 removes them from
+										// the backend settings enum. Their custom UI
+										// (TelegramStatusChip + TelegramAuthBlock) was
+										// removed by T-04; without this filter they would
+										// otherwise render as ordinary text / switch
+										// settings via the standard SettingControl path.
+										// Remove this filter together with T-05.
 										if (currentSection.key !== 'job_scanner') return true
 										const t = setting.title.toLowerCase()
 										return !t.includes('backfill') && !t.includes('telegram')
@@ -335,14 +337,6 @@ const SettingControl = ({
 	isSaving: boolean
 }) => {
 	const { uiType, type, options, validationSchema, isSecret } = setting
-
-	if (setting.key === 'job_scanner.telegram.connected') {
-		return <TelegramStatusChip connected={setting.value === true} />
-	}
-
-	if (setting.key === 'job_scanner.telegram.session') {
-		return <TelegramAuthBlock />
-	}
 
 	if (type === 'json') {
 		let currentObj: Record<string, unknown> = {}
@@ -470,85 +464,6 @@ const SettingControl = ({
 			})}
 			sx={fieldSx}
 		/>
-	)
-}
-
-const TelegramStatusChip = ({ connected }: { connected: boolean }) => (
-	<Chip
-		label={connected ? 'Connected' : 'Disconnected'}
-		color={connected ? 'success' : 'default'}
-		size="small"
-		sx={{ borderRadius: '8px', fontWeight: 600, py: 3 }}
-	/>
-)
-
-const TelegramAuthBlock = () => {
-	const { data: sections = [] } = useGetSettingsQuery()
-	const [startAuth, { isLoading: isStarting }] = useStartTelegramAuthMutation()
-	const [verifyAuth, { isLoading: isVerifying }] = useVerifyTelegramAuthMutation()
-	const [logoutAuth, { isLoading: isLoggingOut }] = useLogoutTelegramAuthMutation()
-
-	const [step, setStep] = useState<'idle' | 'code'>('idle')
-	const [code, setCode] = useState('')
-
-	const isConnected =
-		sections
-			.flatMap((s) => s.settings)
-			.find((s) => s.key === 'job_scanner.telegram.connected')?.value === true
-
-	const handleStart = async () => {
-		await startAuth()
-		setStep('code')
-	}
-
-	const handleVerify = async () => {
-		await verifyAuth({ code })
-		setStep('idle')
-		setCode('')
-	}
-
-	const handleCancel = () => {
-		setStep('idle')
-		setCode('')
-	}
-
-	if (step === 'code') {
-		return (
-			<Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-				<TextField
-					size="small"
-					value={code}
-					onChange={(e) => setCode(e.target.value)}
-					placeholder="Code from Telegram"
-					sx={{ ...fieldSx, width: 200, '& input::placeholder': { fontSize: 13 } }}
-				/>
-				<UiButton onClick={handleVerify} disabled={isVerifying || !code.trim()}>
-					{isVerifying ? 'Verifying…' : 'Verify'}
-				</UiButton>
-				<UiButton varient="text" onClick={handleCancel}>
-					Cancel
-				</UiButton>
-			</Box>
-		)
-	}
-
-	return (
-		<Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-			{isConnected ? (
-				<>
-					<UiButton varient="outlined" onClick={handleStart} disabled={isStarting || isLoggingOut}>
-						{isStarting ? 'Sending code…' : 'Refresh session'}
-					</UiButton>
-					<UiButton varient="outlined" color="error" onClick={() => logoutAuth()} disabled={isLoggingOut || isStarting}>
-						{isLoggingOut ? 'Disconnecting…' : 'Disconnect'}
-					</UiButton>
-				</>
-			) : (
-				<UiButton onClick={handleStart} disabled={isStarting}>
-					{isStarting ? 'Sending code…' : 'Connect Telegram'}
-				</UiButton>
-			)}
-		</Box>
 	)
 }
 

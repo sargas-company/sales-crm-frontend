@@ -1,43 +1,23 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import {
-	InfoOutlined,
-	ChatOutlined,
-	ArrowBackOutlined,
-	ContentCopy,
-} from '@mui/icons-material'
+import { InfoOutlined, ArrowBackOutlined, ContentCopy } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
 import Box from '../../../components/box/Box'
 import Card from '../../../components/card/Card'
 import PreviewMain from '../../../components/proposal/preview/PreviewMain'
-import ProposalChat from '../../../components/proposal/preview/ProposalChat'
 import { Button, Tab, TabList, TabItem, TabContent, Text, IconButton } from '../../../ui'
 import ProposalListItemStatus from '../../../components/proposal/list/ProposalListItemStatus'
 import ProposalListItemType from '../../../components/proposal/list/ProposalListItemType'
 import ProposalListItemBoosted from '../../../components/proposal/list/ProposalListItemBoosted'
 import { useGetProposalByIdQuery } from '../../../store/proposals/proposalsApi'
 import { shortUuid, formatDate } from '../../../utils/formatDate'
-import ModelSwitcher from '../../../components/chat/api-chat/ModelSwitcher'
-import DetailsPopover from '../../../components/chat/api-chat/DetailsPopover'
-import { useAppDispatch, useAppSelector } from '../../../hooks'
-import { fetchProposalHistory } from '../../../store/chats/apiChatSlice'
 
 const ProposalPreview = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
 	const [activeTab, setActiveTab] = useState(1)
-	const [model, setModel] = useState('claude-sonnet-4-6')
-
-	const dispatch = useAppDispatch()
-	const chatContext = useAppSelector((state) => state.apiChat.chatContext)
 
 	const { data: proposal, isLoading, isError } = useGetProposalByIdQuery(id!, { skip: !id })
-
-	useEffect(() => {
-		if (proposal?.id) {
-			dispatch(fetchProposalHistory(proposal.id))
-		}
-	}, [proposal?.id, dispatch])
 
 	if (isLoading) {
 		return (
@@ -132,54 +112,10 @@ const ProposalPreview = () => {
 							icon={<InfoOutlined />}
 							onClick={(v) => setActiveTab(v as number)}
 						/>
-						<TabItem
-							value={2}
-							label='Chat'
-							icon={<ChatOutlined />}
-							onClick={(v) => setActiveTab(v as number)}
-						/>
 					</TabList>
 
 					<TabContent tabIndex={1}>
 						<PreviewMain proposal={proposal} />
-					</TabContent>
-
-					<TabContent tabIndex={2}>
-						<Box
-							style={{
-								border: '1px solid #dbe3ef',
-								borderRadius: 25,
-								padding: 15,
-							}}
-						>
-							<Box
-								display='flex'
-								align='center'
-								style={{
-									marginBottom: 25,
-									marginLeft: 'auto',
-									width: 'fit-content',
-								}}
-							>
-								<DetailsPopover
-									proposal={{
-										title: proposal.title,
-										status: proposal.status,
-										proposalType: proposal.proposalType,
-										boosted: proposal.boosted,
-										connects: proposal.connects,
-										boostedConnects: proposal.boostedConnects,
-										platform: { id: proposal.platform.id, name: proposal.platform.title },
-										vacancy: proposal.vacancy,
-										coverLetter: proposal.coverLetter,
-									}}
-									jobPost={chatContext?.jobPost ?? undefined}
-									lead={chatContext?.lead ?? undefined}
-								/>
-								<ModelSwitcher value={model} onChange={setModel} />
-							</Box>
-							<ProposalChat proposalId={proposal.id} model={model} />
-						</Box>
 					</TabContent>
 				</Tab>
 			</Box>
