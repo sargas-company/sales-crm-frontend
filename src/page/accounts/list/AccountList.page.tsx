@@ -7,6 +7,7 @@ import {
 	SearchOutlined,
 	PeopleAltOutlined,
 	AddRounded,
+	VisibilityOutlined,
 } from '@mui/icons-material'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
@@ -18,6 +19,7 @@ import {
 } from '../../../components/_shared/DataTable'
 import type { DataTableColumn } from '../../../components/_shared/DataTable'
 import AccountDeleteModal from '../../../components/accounts/list/AccountDeleteModal'
+import PermissionGate from '../../../components/auth/PermissionGate'
 import type { AccountItem } from '../../../store/accounts/accountsApi'
 import { useGetAccountsQuery } from '../../../store/accounts/accountsApi'
 import { formatDate } from '../../../utils/format'
@@ -108,23 +110,36 @@ const AccountList = () => {
 				label: 'Actions',
 				render: (a) => (
 					<Actions>
-						<IconAction
-							type='button'
-							onClick={() => navigate(`/accounts/edit/${a.id}`)}
-							aria-label='Edit account'
-						>
-							<EditOutlined />
-						</IconAction>
-						<IconAction
-							type='button'
-							$danger
-							onClick={() =>
-								setDeleteTarget({ id: a.id, title: `${a.firstName} ${a.lastName}` })
-							}
-							aria-label='Delete account'
-						>
-							<DeleteOutline />
-						</IconAction>
+						<PermissionGate permission='accounts:view'>
+							<IconAction
+								type='button'
+								onClick={() => navigate(`/accounts/${a.id}`)}
+								aria-label='View account'
+							>
+								<VisibilityOutlined />
+							</IconAction>
+						</PermissionGate>
+						<PermissionGate permission='accounts:update'>
+							<IconAction
+								type='button'
+								onClick={() => navigate(`/accounts/edit/${a.id}`)}
+								aria-label='Edit account'
+							>
+								<EditOutlined />
+							</IconAction>
+						</PermissionGate>
+						<PermissionGate permission='accounts:delete'>
+							<IconAction
+								type='button'
+								$danger
+								onClick={() =>
+									setDeleteTarget({ id: a.id, title: `${a.firstName} ${a.lastName}` })
+								}
+								aria-label='Delete account'
+							>
+								<DeleteOutline />
+							</IconAction>
+						</PermissionGate>
 					</Actions>
 				),
 			},
@@ -156,10 +171,12 @@ const AccountList = () => {
 									<p>Team members and freelance accounts linked to sources.</p>
 								</div>
 							</div>
-							<PrimarySolidButton type='button' onClick={() => navigate('/accounts/add/')}>
-								<AddRounded />
-								New account
-							</PrimarySolidButton>
+							<PermissionGate permission='accounts:create'>
+								<PrimarySolidButton type='button' onClick={() => navigate('/accounts/add/')}>
+									<AddRounded />
+									New account
+								</PrimarySolidButton>
+							</PermissionGate>
 						</PageHead>
 
 						<FiltersBar>

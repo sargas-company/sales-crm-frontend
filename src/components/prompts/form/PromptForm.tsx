@@ -24,8 +24,6 @@ import {
 const PROMPT_TYPES: { value: PromptType; label: string }[] = [
 	{ value: 'JOB_GATEKEEPER', label: 'Job Gatekeeper' },
 	{ value: 'JOB_EVALUATION', label: 'Job Evaluation' },
-	{ value: 'CHAT_SYSTEM', label: 'Chat System' },
-	{ value: 'CHAT_FALLBACK', label: 'Chat Fallback' },
 ]
 
 interface FormFields {

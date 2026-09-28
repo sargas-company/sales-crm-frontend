@@ -10,13 +10,16 @@ import type {
 export const promptsApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getPromptList: builder.query<PromptPage, PromptListParams>({
-			query: ({ page, limit, type, isActive }) => ({
+			query: ({ page, limit, type, isActive, sortBy, sortDirection, search }) => ({
 				url: '/prompts',
 				params: {
 					page,
 					limit,
 					...(type !== undefined && { type }),
 					...(isActive !== undefined && { isActive }),
+					...(sortBy !== undefined && { sortBy }),
+					...(sortDirection !== undefined && { sortDirection }),
+					...(search ? { search } : {}),
 				},
 			}),
 			providesTags: ['Prompt'],

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import {
@@ -15,21 +15,24 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../../components/_shared/DataTable'
-import type { DataTableColumn } from '../../../components/_shared/DataTable'
+import type { DataTableColumn, SortState } from '../../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
 import PromptDeleteModal from '../../../components/prompts/list/PromptDeleteModal'
 import PermissionGate from '../../../components/auth/PermissionGate'
 import { useGetPromptListQuery } from '../../../store/prompts/promptsApi'
-import type { PromptType, PromptItem } from '../../../store/prompts/types/definition'
+import type {
+	PromptType,
+	PromptItem,
+	PromptSortBy,
+} from '../../../store/prompts/types/definition'
 import { formatDate } from '../../../utils/format'
+import useDebouncedValue from '../../../hooks/useDebouncedValue'
 
 const PAGE_SIZE = 20
 
 const TYPE_LABELS: Record<PromptType, string> = {
 	JOB_GATEKEEPER: 'Job Gatekeeper',
 	JOB_EVALUATION: 'Job Evaluation',
-	CHAT_SYSTEM: 'Chat System',
-	CHAT_FALLBACK: 'Chat Fallback',
 }
 
 interface DeleteTarget {
@@ -40,26 +43,29 @@ interface DeleteTarget {
 const PromptList = () => {
 	const navigate = useNavigate()
 	const [page, setPage] = useState(1)
-	const [search, setSearch] = useState('')
+	const [searchInput, setSearchInput] = useState('')
+	const search = useDebouncedValue(searchInput.trim(), 300)
+	const [sort, setSort] = useState<SortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
 
 	const { data, isLoading, isError, refetch } = useGetPromptListQuery({
 		page,
 		limit: PAGE_SIZE,
+		search: search || undefined,
+		sortBy: (sort?.key as PromptSortBy | undefined) ?? undefined,
+		sortDirection: sort?.direction,
 	})
 	const allItems = data?.data ?? []
 	const total = data?.total ?? 0
 
-	const filtered = search
-		? allItems.filter((p: PromptItem) => {
-				const q = search.toLowerCase()
-				return (
-					p.title.toLowerCase().includes(q) ||
-					p.type.toLowerCase().includes(q) ||
-					(p.createdBy ?? '').toLowerCase().includes(q)
-				)
-			})
-		: allItems
+	const handleSortChange = (next: SortState | null) => {
+		setSort(next)
+		setPage(1)
+	}
+
+	useEffect(() => {
+		setPage(1)
+	}, [search])
 
 	const columns: DataTableColumn<PromptItem>[] = [
 		{
@@ -169,21 +175,20 @@ const PromptList = () => {
 						</PrimarySolidButton>
 					</PermissionGate>
 				}
-				searchPlaceholder='Search by title, type or author'
-				search={search}
-				onSearchChange={(v) => {
-					setSearch(v)
-					setPage(1)
-				}}
+				searchPlaceholder='Search by title'
+				search={searchInput}
+				onSearchChange={setSearchInput}
 			>
 				<DataTable
 					columns={columns}
-					rows={filtered}
+					rows={allItems}
 					rowKey={(p) => p.id}
 					isLoading={isLoading}
 					isError={isError}
 					onRetry={refetch}
 					searchActive={!!search}
+					sort={sort}
+					onSortChange={handleSortChange}
 					pagination={{
 						page,
 						pageSize: PAGE_SIZE,

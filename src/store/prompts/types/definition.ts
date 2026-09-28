@@ -1,4 +1,4 @@
-export type PromptType = 'JOB_GATEKEEPER' | 'JOB_EVALUATION' | 'CHAT_SYSTEM' | 'CHAT_FALLBACK'
+export type PromptType = 'JOB_GATEKEEPER' | 'JOB_EVALUATION'
 
 export interface PromptItem {
 	id: string
@@ -18,11 +18,25 @@ export interface PromptPage {
 	total: number
 }
 
+export type PromptSortBy =
+	| 'title'
+	| 'type'
+	| 'version'
+	| 'isActive'
+	| 'createdBy'
+	| 'updatedAt'
+	| 'createdAt'
+
+export type PromptSortDirection = 'asc' | 'desc'
+
 export interface PromptListParams {
 	page: number
 	limit: number
 	type?: PromptType
 	isActive?: boolean
+	sortBy?: PromptSortBy
+	sortDirection?: PromptSortDirection
+	search?: string
 }
 
 export interface CreatePromptDto {

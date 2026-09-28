@@ -29,6 +29,7 @@ import { useGetSettingsQuery, useUpdateSettingMutation } from '../../store/setti
 import SettingsEmptyTab from './SettingsEmptyTab'
 import { AnimatedSectionContent, AnimatedTabHeader } from './settings.styled'
 import type { SettingItem } from '../../store/settings/types/definition'
+import PermissionGate from '../../components/auth/PermissionGate'
 
 const SECTION_ICONS: Record<string, React.ReactNode> = {
 	general: <SettingsOutlined />,
@@ -79,14 +80,25 @@ const fieldSx = {
 }
 
 const SettingsPage = () => {
-	const { data: sections = [], isLoading } = useGetSettingsQuery()
+	const { data: allSections = [], isLoading } = useGetSettingsQuery()
 	const [updateSetting, { isLoading: isSaving }] = useUpdateSettingMutation()
 	const [activeSection, setActiveSection] = useState('')
 	const [pendingChanges, setPendingChanges] = useState<Record<string, string>>({})
 	const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
 
+	// Hide sidebar entries for sections that have zero configurable Settings
+	// today. The sections still exist in the DB — they just have no rows yet,
+	// so rendering them as empty tabs invites clicks that go nowhere. Only
+	// sections with real settings are shown; when new settings land, their
+	// section becomes visible automatically.
+	const sections = allSections.filter((s) => s.settings.length > 0)
+
 	useEffect(() => {
-		if (sections.length > 0 && !activeSection) {
+		if (sections.length === 0) {
+			if (activeSection !== '') setActiveSection('')
+			return
+		}
+		if (!activeSection || !sections.some((s) => s.key === activeSection)) {
 			setActiveSection(sections[0].key)
 		}
 	}, [sections, activeSection])
@@ -243,14 +255,16 @@ const SettingsPage = () => {
 									))}
 
 								{hasPendingChanges && (
-									<Box
-										className='settings-save-bar'
-										sx={{ p: 3, display: 'flex', justifyContent: 'flex-end' }}
-									>
-										<UiButton onClick={handleSave} disabled={isSaving}>
-											{isSaving ? 'Saving…' : 'Save changes'}
-										</UiButton>
-									</Box>
+									<PermissionGate permission='settings:update'>
+										<Box
+											className='settings-save-bar'
+											sx={{ p: 3, display: 'flex', justifyContent: 'flex-end' }}
+										>
+											<UiButton onClick={handleSave} disabled={isSaving}>
+												{isSaving ? 'Saving…' : 'Save changes'}
+											</UiButton>
+										</Box>
+									</PermissionGate>
 								)}
 							</AnimatedSectionContent>
 						)}
