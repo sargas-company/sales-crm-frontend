@@ -1,7 +1,6 @@
 import { ReactNode } from 'react'
 import { Text } from '../../../ui'
 import Box from '../../box/Box'
-import CustomCardTitle from '../../card/titles/CustomCardTitle'
 import TableBody from '../../table/TableBody'
 import TableHead from '../../table/TableHead'
 import TableRow from '../../table/TableRow'
@@ -17,7 +16,11 @@ const Table = <T extends unknown, R extends unknown>({
 }: TableProps<T, R>) => {
 	return (
 		<Box className='table-container'>
-			{title && <CustomCardTitle title={<Text>{title}</Text>} showIcon={false} />}
+			{title && (
+				<Box padding={20}>
+					<Text>{title}</Text>
+				</Box>
+			)}
 			<div className='table-wrapper'>
 				<table className={`holy-table ${className ? className : ''}`}>
 					{fields && renderField && (
