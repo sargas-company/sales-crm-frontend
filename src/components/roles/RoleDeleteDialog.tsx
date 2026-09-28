@@ -1,4 +1,5 @@
-import ConfirmationDialog from '../../ui/overlay/ConfirmationDialog'
+import { DeleteOutline } from '@mui/icons-material'
+import ConfirmModal from '../_shared/ConfirmModal'
 import type { Role } from '../../store/roles/types'
 
 interface Props {
@@ -9,15 +10,23 @@ interface Props {
 }
 
 const RoleDeleteDialog = ({ role, isBusy, onCancel, onConfirm }: Props) => (
-	<ConfirmationDialog
-		open
-		tone='danger'
+	<ConfirmModal
+		icon={<DeleteOutline />}
+		iconTone='danger'
 		title={`Delete role "${role.label}"?`}
-		message='The role cannot be restored. Reassign every user off this role before deleting.'
-		confirmLabel={isBusy ? 'Deleting…' : 'Delete role'}
+		description={
+			<>
+				The role <strong>&quot;{role.label}&quot;</strong> cannot be restored. Reassign every
+				user off this role before deleting.
+			</>
+		}
+		confirmLabel='Yes, delete role'
+		confirmLoadingLabel='Deleting…'
+		confirmColor='error'
 		cancelLabel='Cancel'
-		onCancel={onCancel}
+		onClose={onCancel}
 		onConfirm={onConfirm}
+		isLoading={isBusy}
 	/>
 )
 
