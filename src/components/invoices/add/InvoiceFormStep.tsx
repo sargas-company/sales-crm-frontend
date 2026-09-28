@@ -1,4 +1,4 @@
-import { FC, useMemo, useState } from 'react'
+import { FC, useEffect, useMemo, useState } from 'react'
 import {
 	Box,
 	Button,
@@ -11,7 +11,16 @@ import {
 	TextField,
 	Typography,
 } from '@mui/material'
-import { Add, ArrowBack, Close, Loop } from '@mui/icons-material'
+import {
+	Add,
+	ArrowBack,
+	Close,
+	Loop,
+	CheckRounded,
+	PictureAsPdfOutlined,
+	SaveOutlined,
+	OpenInNewRounded,
+} from '@mui/icons-material'
 import logo from '../../../assets/logo.png'
 import {
 	type InvoiceCreatePayload,
@@ -53,12 +62,20 @@ type EditableLabelProps = {
 	sx?: Record<string, unknown>
 	inputSx?: Record<string, unknown>
 	ariaLabel: string
+	onDark?: boolean
+}
+
+export type ReuseLineItem = {
+	name: string
+	quantity: number
+	unitCost: number
 }
 
 type Props = {
 	selectedType: PartyType
 	selectedParty: Party
 	invoice?: ApiInvoiceItem
+	reuseLineItems?: ReuseLineItem[]
 	onBack?: () => void
 	onSaved?: (invoice: ApiInvoiceItem) => void
 }
@@ -209,17 +226,31 @@ const DEFAULT_LABELS: InvoiceFormLabels = {
 	balance_title: 'Balance Due',
 }
 
+// Auto-generate a unique invoice number of the shape `INV-YYYY-TIMESTAMP`.
+// Year is the current calendar year; timestamp is the current epoch time in
+// milliseconds — guarantees uniqueness within the year with zero coordination.
+const generateInvoiceNumber = (): string => {
+	const now = new Date()
+	return `INV-${now.getFullYear()}-${now.getTime()}`
+}
+
 const buildInitialForm = (party: Party, selectedType: PartyType, invoice?: ApiInvoiceItem) => {
 	const isContractor = selectedType === 'contractor'
-	const issueDate = formatDateInputValue(new Date())
+	const today = new Date()
+	// Default invoice period covers the previous calendar month —
+	// issue date on the 1st, due date on the 10th of that same month.
+	const firstOfPrevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+	const tenthOfPrevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 10)
+	const issueDate = formatDateInputValue(firstOfPrevMonth)
+	const dueDate = formatDateInputValue(tenthOfPrevMonth)
 
 	return {
 		header: invoice?.header ?? 'INVOICE',
-		number: invoice?.number ?? '',
+		number: invoice?.number ?? generateInvoiceNumber(),
 		currency: invoice?.currency ?? party.currency ?? companyProfile.currency,
 		date: normalizeDateInputValue(invoice?.date, issueDate),
 		paymentTerms: invoice?.paymentTerms ?? '',
-		dueDate: normalizeDateInputValue(invoice?.dueDate, ''),
+		dueDate: normalizeDateInputValue(invoice?.dueDate, dueDate),
 		poNumber: invoice?.poNumber ?? '',
 		fromValue:
 			invoice?.fromValue ?? (isContractor ? party.invoiceBlock : companyProfile.invoiceBlock),
@@ -227,13 +258,15 @@ const buildInitialForm = (party: Party, selectedType: PartyType, invoice?: ApiIn
 			invoice?.toValue ?? (isContractor ? companyProfile.invoiceBlock : party.invoiceBlock),
 		shipTo: invoice?.shipTo ?? party.defaultShipTo ?? '',
 		notes: invoice?.notes ?? '',
-		terms: invoice?.terms ?? 'Citibank\n' +
-			'111 Wall Street New York, NY 10043 USA\n' +
-			'031100209\n' +
-			'CITIUS33\n' +
-			'70582800001644814\n' +
-			'Beneficiary name:\n' +
-			'Sargas Agency OU',
+		terms:
+			invoice?.terms ??
+			'Citibank\n' +
+				'111 Wall Street New York, NY 10043 USA\n' +
+				'031100209\n' +
+				'CITIUS33\n' +
+				'70582800001644814\n' +
+				'Beneficiary name:\n' +
+				'Sargas Agency OU',
 		amountPaid: invoice?.amountPaid ?? 0,
 		taxMode: 'percent' as 'percent' | 'fixed',
 		tax: invoice?.tax ?? 0,
@@ -278,6 +311,8 @@ const areaSx = {
 	'& .MuiOutlinedInput-input': {
 		fontSize: '14px',
 		lineHeight: 1.5,
+		fieldSizing: 'content',
+		resize: 'none',
 	},
 }
 
@@ -288,7 +323,14 @@ const labelSx = {
 	mb: 1,
 }
 
-const EditableLabel: FC<EditableLabelProps> = ({ value, onChange, sx, inputSx, ariaLabel }) => (
+const EditableLabel: FC<EditableLabelProps> = ({
+	value,
+	onChange,
+	sx,
+	inputSx,
+	ariaLabel,
+	onDark,
+}) => (
 	<TextField
 		variant='standard'
 		value={value}
@@ -304,35 +346,64 @@ const EditableLabel: FC<EditableLabelProps> = ({ value, onChange, sx, inputSx, a
 			cursor: 'text',
 			zIndex: 0,
 			...sx,
-			'&::before': {
-				content: '""',
-				position: 'absolute',
-				left: '-14px',
-				right: '-14px',
-				top: '50%',
-				height: 'max(44px, calc(100% + 20px))',
-				transform: 'translateY(-50%)',
-				border: '1px solid transparent',
-				borderRadius: '10px',
-				backgroundColor: 'transparent',
-				boxShadow: 'none',
-				pointerEvents: 'none',
-				transition:
-					'border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease',
-				zIndex: 0,
-			},
-			'&:hover::before': {
-				borderColor: '#d0d5dd',
-				backgroundColor: '#fff',
-			},
-			'&:focus-within::before': {
-				border: '2px solid #1c75d2',
-				borderColor: '#1c75d2',
-				backgroundColor: '#fff',
-				boxShadow: '0 0 0 3px rgba(28, 117, 210, 0.14)',
-			},
+			'&::before': onDark
+				? {
+						content: '""',
+						position: 'absolute',
+						left: 0,
+						right: 0,
+						bottom: -10,
+						height: '1px',
+						borderRadius: '2px',
+						backgroundColor: '#fff',
+						opacity: 0,
+						transform: 'scaleX(0.4)',
+						transformOrigin: 'left center',
+						transition:
+							'opacity 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 240ms cubic-bezier(0.22, 1, 0.36, 1)',
+						pointerEvents: 'none',
+						zIndex: 0,
+					}
+				: {
+						content: '""',
+						position: 'absolute',
+						left: '-14px',
+						right: '-14px',
+						top: '50%',
+						height: 'max(44px, calc(100% + 20px))',
+						transform: 'translateY(-50%)',
+						border: '1px solid transparent',
+						borderRadius: '10px',
+						backgroundColor: 'transparent',
+						boxShadow: 'none',
+						pointerEvents: 'none',
+						transition:
+							'border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease',
+						zIndex: 0,
+					},
+			'&:hover::before': onDark
+				? {
+						opacity: 0.75,
+						transform: 'scaleX(1)',
+					}
+				: {
+						borderColor: '#d0d5dd',
+						backgroundColor: '#fff',
+					},
+			'&:focus-within::before': onDark
+				? {
+						opacity: 1,
+						transform: 'scaleX(1)',
+						height: '1px',
+					}
+				: {
+						border: '2px solid rgba(3, 105, 161, 1)',
+						borderColor: 'rgba(3, 105, 161, 1)',
+						backgroundColor: '#fff',
+						boxShadow: '0 0 0 3px rgba(28, 117, 210, 0.14)',
+					},
 			'&:hover .MuiInputBase-input, &:focus-within .MuiInputBase-input': {
-				color: '#101828',
+				color: onDark ? '#fff' : '#101828',
 			},
 			'& .MuiInputBase-root': {
 				position: 'relative',
@@ -359,7 +430,23 @@ const EditableLabel: FC<EditableLabelProps> = ({ value, onChange, sx, inputSx, a
 	/>
 )
 
-const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBack, onSaved }) => {
+const InvoiceFormStep: FC<Props> = ({
+	selectedType,
+	selectedParty,
+	invoice,
+	reuseLineItems,
+	onBack,
+	onSaved,
+}) => {
+	// When entering this step, the page's scroll position is inherited from
+	// wherever the user was on Step 1 (usually near the bottom, where the
+	// Continue button lives). Reset the scroll so Step 2's header is in view.
+	useEffect(() => {
+		if (typeof window !== 'undefined') {
+			window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+		}
+	}, [])
+
 	const { showToast } = useToast()
 	const [form, setForm] = useState(() => buildInitialForm(selectedParty, selectedType, invoice))
 	const [labels, setLabels] = useState<InvoiceFormLabels>(() => ({
@@ -368,6 +455,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 	}))
 	const [formError, setFormError] = useState('')
 	const [dateFocused, setDateFocused] = useState(false)
+	const [dueDateFocused, setDueDateFocused] = useState(false)
 	const [items, setItems] = useState<InvoiceItem[]>(() => {
 		if (invoice?.lineItems?.length) {
 			return invoice.lineItems
@@ -381,7 +469,22 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 				}))
 		}
 
-		return [{ id: '1', name: '', quantity: 1, unitCost: 0 }]
+		if (reuseLineItems?.length) {
+			return reuseLineItems.map((item, index) => ({
+				id: `${index + 1}`,
+				name: item.name ?? '',
+				quantity: toNonNegativeNumber(item.quantity),
+				unitCost: toNonNegativeNumber(item.unitCost),
+			}))
+		}
+
+		if (selectedType === 'contractor') {
+			return [
+				{ id: '1', name: 'Web Development Services', quantity: 160, unitCost: 5 },
+				{ id: '2', name: 'Bonus', quantity: 1, unitCost: 100 },
+			]
+		}
+		return [{ id: '1', name: 'Web Development Services', quantity: 160, unitCost: 25 }]
 	})
 	const [createInvoice, { isLoading: isSaving }] = useCreateInvoiceMutation()
 	const [updateInvoice, { isLoading: isUpdating }] = useUpdateInvoiceMutation()
@@ -538,55 +641,25 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 						display: 'flex',
 						justifyContent: 'space-between',
 						alignItems: 'center',
-						mb: 2,
+						mb: 2.5,
+						gap: 2,
+						flexWrap: 'wrap',
 					}}
 				>
-					<Button
-						variant='outlined'
-						startIcon={<ArrowBack />}
-						onClick={onBack}
-						sx={{ borderRadius: 2.5 }}
-					>
-						Back
-					</Button>
+					<BackPill onClick={onBack} />
 
-					<Card sx={{ borderRadius: '12px' }}>
-						<CardContent>
-							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-								<Box sx={{ display: 'flex', gap: 1.5 }}>
-									{invoice?.pdfUrl ? (
-										<Button
-											variant='outlined'
-											disabled={saving}
-											onClick={handleOpenPdf}
-										>
-											Open PDF
-										</Button>
-									) : null}
-									<Button
-										variant='contained'
-										disabled={saving}
-										onClick={() => handleSaveInvoice(true)}
-									>
-										Create PDF
-									</Button>
-									<Button
-										variant='outlined'
-										disabled={saving}
-										onClick={() => handleSaveInvoice(false)}
-									>
-										{invoice ? 'Save Changes' : 'Save Draft'}
-									</Button>
-								</Box>
-								{formError ? (
-									<Alert severity='error' sx={{ maxWidth: 360, whiteSpace: 'pre-line' }}>
-										{formError}
-									</Alert>
-								) : null}
-							</Box>
-						</CardContent>
-					</Card>
+					<ActionToolbar
+						hasPdf={!!invoice?.pdfUrl}
+						saving={saving}
+						isEdit={!!invoice}
+						onOpenPdf={handleOpenPdf}
+						onSaveDraft={() => handleSaveInvoice(false)}
+						onCreatePdf={() => handleSaveInvoice(true)}
+						formError={formError}
+					/>
 				</Box>
+
+				<Step2Progress />
 
 				<Card
 					sx={{
@@ -638,7 +711,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 
 								<TextField
 									multiline
-									minRows={10}
+									minRows={1}
 									fullWidth
 									value={form.fromValue}
 									onChange={(e) =>
@@ -649,7 +722,6 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 										maxWidth: '448px',
 										'& .MuiOutlinedInput-root': {
 											...areaSx['& .MuiOutlinedInput-root'],
-											minHeight: '286px',
 										},
 										'& .MuiOutlinedInput-input': {
 											padding: '14px 16px',
@@ -679,52 +751,58 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 								/>
 
 								<Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: '84px' }}>
-									<Box sx={{ width: '202px' }}>
+									<Box
+										sx={{
+											position: 'relative',
+											display: 'inline-flex',
+											maxWidth: '100%',
+										}}
+									>
 										<Box
 											sx={{
-												position: 'relative',
-												width: '202px',
+												position: 'absolute',
+												left: '14px',
+												top: '50%',
+												transform: 'translateY(-50%)',
+												color: '#667085',
+												fontSize: '18px',
+												lineHeight: 1,
+												zIndex: 1,
+												userSelect: 'none',
+												pointerEvents: 'none',
 											}}
 										>
-											<Box
-												sx={{
-													position: 'absolute',
-													left: '14px',
-													top: '50%',
-													transform: 'translateY(-50%)',
-													color: '#667085',
-													fontSize: '18px',
-													lineHeight: 1,
-													zIndex: 1,
-													userSelect: 'none',
-													pointerEvents: 'none',
-												}}
-											>
-												#
-											</Box>
-
-											<TextField
-												fullWidth
-												value={form.number}
-												onChange={(e) =>
-													setForm((current) => ({
-														...current,
-														number: e.target.value,
-													}))
-												}
-												sx={{
-													...outlinedSx,
-													'& .MuiOutlinedInput-input': {
-														padding: '11px 14px 11px 40px',
-														fontSize: '14px',
-														textAlign: 'right',
-													},
-													'& .MuiInputBase-input::placeholder': {
-														opacity: 1,
-													},
-												}}
-											/>
+											#
 										</Box>
+
+										<TextField
+											value={form.number}
+											onChange={(e) =>
+												setForm((current) => ({
+													...current,
+													number: e.target.value,
+												}))
+											}
+											slotProps={{
+												htmlInput: {
+													size: Math.max((form.number ?? '').length + 1, 12),
+												},
+											}}
+											sx={{
+												...outlinedSx,
+												'& .MuiOutlinedInput-root': { width: 'auto' },
+												'& .MuiOutlinedInput-input': {
+													padding: '11px 14px 11px 40px',
+													fontSize: '14px',
+													textAlign: 'right',
+													fontVariantNumeric: 'tabular-nums',
+													width: 'auto',
+												},
+												'& .MuiInputBase-input::placeholder': {
+													opacity: 1,
+												},
+											}}
+										/>
 									</Box>
 								</Box>
 
@@ -757,50 +835,21 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 									/>
 
 									<EditableLabel
-										value={labels.payment_terms_title}
-										onChange={(value) => updateLabel('payment_terms_title', value)}
-										ariaLabel='Payment terms label'
-										sx={{ fontSize: '13px', color: '#475467' }}
-									/>
-									<TextField
-										fullWidth
-										value={form.paymentTerms}
-										onChange={(e) =>
-											setForm((current) => ({
-												...current,
-												paymentTerms: e.target.value,
-											}))
-										}
-										sx={outlinedSx}
-									/>
-
-									<EditableLabel
 										value={labels.due_date_title}
 										onChange={(value) => updateLabel('due_date_title', value)}
 										ariaLabel='Due date label'
 										sx={{ fontSize: '13px', color: '#475467' }}
 									/>
 									<TextField
-										type='date'
+										type={dueDateFocused ? 'date' : 'text'}
 										fullWidth
-										value={form.dueDate}
+										value={
+											dueDateFocused ? form.dueDate : formatDisplayDate(form.dueDate)
+										}
+										onFocus={() => setDueDateFocused(true)}
+										onBlur={() => setDueDateFocused(false)}
 										onChange={(e) =>
 											setForm((current) => ({ ...current, dueDate: e.target.value }))
-										}
-										sx={outlinedSx}
-									/>
-
-									<EditableLabel
-										value={labels.purchase_order_title}
-										onChange={(value) => updateLabel('purchase_order_title', value)}
-										ariaLabel='Purchase order label'
-										sx={{ fontSize: '13px', color: '#475467' }}
-									/>
-									<TextField
-										fullWidth
-										value={form.poNumber}
-										onChange={(e) =>
-											setForm((current) => ({ ...current, poNumber: e.target.value }))
 										}
 										sx={outlinedSx}
 									/>
@@ -813,7 +862,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 								display: 'grid',
 								gridTemplateColumns: '1fr 1fr',
 								gap: '28px',
-								mb: '38px',
+								mb: '72px',
 								maxWidth: '706px',
 							}}
 						>
@@ -826,7 +875,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 								/>
 								<TextField
 									multiline
-									minRows={3}
+									minRows={1}
 									fullWidth
 									value={form.toValue}
 									onChange={(e) =>
@@ -836,7 +885,6 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 										...areaSx,
 										'& .MuiOutlinedInput-root': {
 											...areaSx['& .MuiOutlinedInput-root'],
-											minHeight: '92px',
 										},
 										'& .MuiOutlinedInput-input': {
 											padding: '12px 14px',
@@ -856,7 +904,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 								/>
 								<TextField
 									multiline
-									minRows={3}
+									minRows={1}
 									fullWidth
 									placeholder='(optional)'
 									value={form.shipTo}
@@ -873,7 +921,6 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 										...areaSx,
 										'& .MuiOutlinedInput-root': {
 											...areaSx['& .MuiOutlinedInput-root'],
-											minHeight: '92px',
 										},
 										'& .MuiOutlinedInput-input': {
 											padding: '12px 14px',
@@ -899,10 +946,10 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 									display: 'grid',
 									gridTemplateColumns: '1fr 104px 128px 154px 38px',
 									alignItems: 'center',
-									background: '#1976d2',
+									background: 'rgba(3, 105, 161, 1)',
 									color: '#fff',
 									px: '16px',
-									height: '42px',
+									height: '60px',
 									fontSize: '14px',
 									fontWeight: 700,
 								}}
@@ -911,29 +958,33 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 									value={labels.item_header}
 									onChange={(value) => updateLabel('item_header', value)}
 									ariaLabel='Item header'
+									onDark
 								/>
 								<EditableLabel
 									value={labels.quantity_header}
 									onChange={(value) => updateLabel('quantity_header', value)}
 									ariaLabel='Quantity header'
 									sx={{ textAlign: 'center' }}
+									onDark
 								/>
 								<EditableLabel
 									value={labels.unit_cost_header}
 									onChange={(value) => updateLabel('unit_cost_header', value)}
 									ariaLabel='Rate header'
 									sx={{ textAlign: 'center' }}
+									onDark
 								/>
 								<EditableLabel
 									value={labels.amount_header}
 									onChange={(value) => updateLabel('amount_header', value)}
 									ariaLabel='Amount header'
 									sx={{ textAlign: 'center' }}
+									onDark
 								/>
 								<Box />
 							</Box>
 
-							<Box sx={{ p: '10px 0 0 0' }}>
+							<Box sx={{ p: '28px 0 0 0' }}>
 								{items.map((item) => {
 									const amount =
 										toNonNegativeNumber(item.quantity) *
@@ -1010,7 +1061,21 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 												{items.length > 1 && item.id === items[items.length - 1].id ? (
 													<IconButton
 														onClick={() => removeItem(item.id)}
-														sx={{ color: '#98a2b3' }}
+														sx={{
+															color: '#98a2b3',
+															width: 32,
+															height: 32,
+															minWidth: 32,
+															minHeight: 32,
+															aspectRatio: '1 / 1',
+															padding: 0,
+															borderRadius: '50%',
+															flexShrink: 0,
+															'&:hover': {
+																backgroundColor: 'rgba(15, 23, 42, 0.06)',
+																color: '#475467',
+															},
+														}}
 													>
 														<Close fontSize='small' />
 													</IconButton>
@@ -1028,8 +1093,8 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 										sx={{
 											borderRadius: '10px',
 											textTransform: 'none',
-											color: '#1976d2',
-											borderColor: '#1976d2',
+											color: 'rgba(3, 105, 161, 1)',
+											borderColor: 'rgba(3, 105, 161, 1)',
 											fontWeight: 600,
 											px: 1.75,
 											py: 0.9,
@@ -1058,7 +1123,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 								/>
 								<TextField
 									multiline
-									minRows={2}
+									minRows={1}
 									fullWidth
 									placeholder='Notes - any relevant information not already covered'
 									value={form.notes}
@@ -1069,7 +1134,6 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 										...areaSx,
 										'& .MuiOutlinedInput-root': {
 											...areaSx['& .MuiOutlinedInput-root'],
-											minHeight: '72px',
 										},
 										'& .MuiOutlinedInput-input': {
 											padding: '14px 14px',
@@ -1086,7 +1150,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 								/>
 								<TextField
 									multiline
-									minRows={2}
+									minRows={1}
 									fullWidth
 									placeholder='Terms and conditions - late fees, payment methods, delivery schedule'
 									value={form.terms}
@@ -1097,7 +1161,6 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 										...areaSx,
 										'& .MuiOutlinedInput-root': {
 											...areaSx['& .MuiOutlinedInput-root'],
-											minHeight: '72px',
 										},
 										'& .MuiOutlinedInput-input': {
 											padding: '14px 14px',
@@ -1140,7 +1203,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 													value={labels.tax_title}
 													onChange={(value) => updateLabel('tax_title', value)}
 													ariaLabel='Tax label'
-													sx={{ fontSize: '14px', color: '#475467', flex: 1, minWidth: 0 }}
+													sx={{
+														fontSize: '14px',
+														color: '#475467',
+														flex: 1,
+														minWidth: 0,
+													}}
 												/>
 												<IconButton
 													size='small'
@@ -1224,7 +1292,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 													value={labels.discounts_title}
 													onChange={(value) => updateLabel('discounts_title', value)}
 													ariaLabel='Discounts label'
-													sx={{ fontSize: '14px', color: '#475467', flex: 1, minWidth: 0 }}
+													sx={{
+														fontSize: '14px',
+														color: '#475467',
+														flex: 1,
+														minWidth: 0,
+													}}
 												/>
 												<IconButton
 													size='small'
@@ -1288,7 +1361,12 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 													value={labels.shipping_title}
 													onChange={(value) => updateLabel('shipping_title', value)}
 													ariaLabel='Shipping label'
-													sx={{ fontSize: '14px', color: '#475467', flex: 1, minWidth: 0 }}
+													sx={{
+														fontSize: '14px',
+														color: '#475467',
+														flex: 1,
+														minWidth: 0,
+													}}
 												/>
 												<IconButton
 													size='small'
@@ -1363,7 +1441,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 													sx={{
 														fontSize: '14px',
 														fontWeight: 600,
-														color: '#1976d2',
+														color: 'rgba(3, 105, 161, 1)',
 														cursor: 'pointer',
 													}}
 												>
@@ -1381,7 +1459,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 													sx={{
 														fontSize: '14px',
 														fontWeight: 600,
-														color: '#1976d2',
+														color: 'rgba(3, 105, 161, 1)',
 														cursor: 'pointer',
 													}}
 												>
@@ -1399,7 +1477,7 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 													sx={{
 														fontSize: '14px',
 														fontWeight: 600,
-														color: '#1976d2',
+														color: 'rgba(3, 105, 161, 1)',
 														cursor: 'pointer',
 													}}
 												>
@@ -1518,6 +1596,465 @@ const InvoiceFormStep: FC<Props> = ({ selectedType, selectedParty, invoice, onBa
 						</Box>
 					</CardContent>
 				</Card>
+			</Box>
+		</Box>
+	)
+}
+
+/* ── Top-bar controls: Back pill + action toolbar ─────────────────── */
+
+const BackPill: FC<{ onClick?: () => void }> = ({ onClick }) => (
+	<Box
+		component='button'
+		type='button'
+		onClick={onClick}
+		sx={{
+			appearance: 'none',
+			background: 'transparent',
+			border: 'none',
+			borderRadius: '999px',
+			padding: '10px 18px 10px 14px',
+			cursor: 'pointer',
+			display: 'inline-flex',
+			alignItems: 'center',
+			gap: 1.25,
+			fontFamily: 'inherit',
+			fontSize: 13.5,
+			fontWeight: 500,
+			color: STEP_INK,
+			boxShadow: 'none',
+			transition: 'transform 200ms cubic-bezier(0.22, 1, 0.36, 1), color 200ms ease',
+			'& .arrow': {
+				display: 'inline-flex',
+				alignItems: 'center',
+				justifyContent: 'center',
+				width: 26,
+				height: 26,
+				borderRadius: '50%',
+				background: STEP_PRIMARY,
+				color: '#fff',
+				transition: 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)',
+			},
+			'&:hover': {
+				boxShadow: 'none',
+			},
+			'&:hover .arrow': {
+				transform: 'translateX(-3px)',
+			},
+			'&:active': { transform: 'translateY(1px)' },
+		}}
+	>
+		<span className='arrow'>
+			<ArrowBack sx={{ fontSize: 16 }} />
+		</span>
+		<span>Back to party</span>
+	</Box>
+)
+
+interface ActionToolbarProps {
+	hasPdf: boolean
+	saving: boolean
+	isEdit: boolean
+	onOpenPdf: () => void
+	onSaveDraft: () => void
+	onCreatePdf: () => void
+	formError: string | null
+}
+
+const ActionToolbar: FC<ActionToolbarProps> = ({
+	hasPdf,
+	saving,
+	isEdit,
+	onOpenPdf,
+	onSaveDraft,
+	onCreatePdf,
+	formError,
+}) => (
+	<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, alignItems: 'flex-end' }}>
+		<Box
+			sx={{
+				display: 'inline-flex',
+				alignItems: 'center',
+				gap: 1,
+				flexWrap: 'wrap',
+				justifyContent: 'flex-end',
+			}}
+		>
+			{hasPdf ? (
+				<ToolbarButton
+					onClick={onOpenPdf}
+					disabled={saving}
+					icon={<OpenInNewRounded sx={{ fontSize: 20 }} />}
+					variant='ghost'
+					iconAnim='launch'
+				>
+					Open PDF
+				</ToolbarButton>
+			) : null}
+			<ToolbarButton
+				onClick={onSaveDraft}
+				disabled={saving}
+				icon={<SaveOutlined sx={{ fontSize: 20 }} />}
+				variant='outline'
+				iconAnim='drop'
+			>
+				{isEdit ? 'Save changes' : 'Save draft'}
+			</ToolbarButton>
+			<ToolbarButton
+				onClick={onCreatePdf}
+				disabled={saving}
+				icon={<PictureAsPdfOutlined sx={{ fontSize: 20 }} />}
+				variant='primary'
+				iconAnim='print'
+			>
+				Create PDF
+			</ToolbarButton>
+		</Box>
+		{formError ? (
+			<Alert
+				severity='error'
+				sx={{
+					maxWidth: 420,
+					whiteSpace: 'pre-line',
+					borderRadius: '10px',
+					fontSize: 12.5,
+				}}
+			>
+				{formError}
+			</Alert>
+		) : null}
+	</Box>
+)
+
+type IconAnim = 'launch' | 'drop' | 'print'
+
+const ToolbarButton: FC<{
+	icon: React.ReactNode
+	children: React.ReactNode
+	onClick: () => void
+	disabled?: boolean
+	variant: 'primary' | 'outline' | 'ghost'
+	iconAnim?: IconAnim
+}> = ({ icon, children, onClick, disabled, variant, iconAnim }) => {
+	const styles =
+		variant === 'primary'
+			? {
+					background: STEP_PRIMARY,
+					color: '#fff',
+					border: `1px solid ${STEP_PRIMARY}`,
+					boxShadow: `0 6px 16px -6px ${STEP_PRIMARY}88`,
+					hoverBg: STEP_PRIMARY,
+					hoverShadow: `0 6px 16px -6px ${STEP_PRIMARY}88`,
+					hoverColor: '#fff',
+					hoverBorder: STEP_PRIMARY,
+				}
+			: variant === 'outline'
+				? {
+						background: '#fff',
+						color: STEP_INK,
+						border: `1px solid ${STEP_INK_10}`,
+						boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+						hoverBg: '#fff',
+						hoverShadow: '0 1px 2px rgba(15,23,42,0.04)',
+						hoverColor: STEP_INK,
+						hoverBorder: STEP_INK_10,
+					}
+				: {
+						background: 'transparent',
+						color: STEP_INK_45,
+						border: `1px solid transparent`,
+						boxShadow: 'none',
+						hoverBg: 'transparent',
+						hoverShadow: 'none',
+						hoverColor: STEP_INK_45,
+						hoverBorder: 'transparent',
+					}
+
+	return (
+		<Box
+			component='button'
+			type='button'
+			onClick={onClick}
+			disabled={disabled}
+			sx={{
+				appearance: 'none',
+				background: styles.background,
+				color: styles.color,
+				border: styles.border,
+				borderRadius: '12px',
+				padding: '13px 22px',
+				cursor: disabled ? 'not-allowed' : 'pointer',
+				opacity: disabled ? 0.55 : 1,
+				display: 'inline-flex',
+				alignItems: 'center',
+				gap: 1.1,
+				fontFamily: 'inherit',
+				fontSize: 15,
+				fontWeight: 500,
+				letterSpacing: '0.005em',
+				lineHeight: 1.2,
+				boxShadow: styles.boxShadow,
+				transition:
+					'background 180ms ease, color 180ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease, border-color 200ms ease',
+				'&:hover:not(:disabled)': {
+					background: styles.hoverBg,
+					color: styles.hoverColor,
+					boxShadow: styles.hoverShadow,
+					borderColor: styles.hoverBorder,
+				},
+				'&:hover:not(:disabled) .tb-icon': {
+					scale: '1.22',
+					animation:
+						iconAnim === 'launch'
+							? 'tbLaunch 560ms cubic-bezier(0.22, 1, 0.36, 1)'
+							: iconAnim === 'drop'
+								? 'tbDrop 620ms cubic-bezier(0.34, 1.56, 0.64, 1)'
+								: iconAnim === 'print'
+									? 'tbPrint 680ms cubic-bezier(0.22, 1, 0.36, 1)'
+									: 'none',
+				},
+				'@keyframes tbLaunch': {
+					'0%': { transform: 'translate(0, 0) rotate(0deg)' },
+					'55%': { transform: 'translate(9px, -9px) rotate(18deg)' },
+					'100%': { transform: 'translate(0, 0) rotate(0deg)' },
+				},
+				'@keyframes tbDrop': {
+					'0%': { transform: 'translateY(0) rotate(0deg)' },
+					'55%': { transform: 'translateY(9px) rotate(-8deg)' },
+					'100%': { transform: 'translateY(0) rotate(0deg)' },
+				},
+				'@keyframes tbPrint': {
+					'0%': { transform: 'translateY(0)' },
+					'25%': { transform: 'translateY(-6px)' },
+					'55%': { transform: 'translateY(5px)' },
+					'100%': { transform: 'translateY(0)' },
+				},
+				'@media (prefers-reduced-motion: reduce)': {
+					'&:hover:not(:disabled) .tb-icon': { animation: 'none' },
+				},
+			}}
+		>
+			<Box
+				component='span'
+				className='tb-icon'
+				sx={{
+					display: 'inline-flex',
+					alignItems: 'center',
+					transformOrigin: 'center',
+					scale: '1',
+					transition: 'scale 340ms cubic-bezier(0.22, 1, 0.36, 1)',
+				}}
+			>
+				{icon}
+			</Box>
+			<span>{children}</span>
+		</Box>
+	)
+}
+
+/* ── Step-2 progress bar (matches Step 1's ProgressBar visually) ─── */
+
+const STEP_PRIMARY = 'rgb(3, 105, 161)'
+const STEP_INK = '#0f172a'
+const STEP_INK_45 = 'rgba(15, 23, 42, 0.45)'
+const STEP_INK_10 = 'rgba(15, 23, 42, 0.08)'
+const STEP_TINT = '#e0f2fe'
+
+const Step2Progress: FC = () => {
+	const steps = [
+		{ n: 1, label: 'Party', hint: 'Contractor or client' },
+		{ n: 2, label: 'Details', hint: 'Numbers, dates, line items' },
+	]
+	const current: 1 | 2 = 2
+	return (
+		<Box
+			sx={{
+				position: 'relative',
+				width: '100%',
+				mb: 3,
+				animation: 'invoiceStep2ProgressIn 500ms cubic-bezier(0.22, 1, 0.36, 1) both',
+				'@keyframes invoiceStep2ProgressIn': {
+					from: { opacity: 0, transform: 'translateY(6px)' },
+					to: { opacity: 1, transform: 'translateY(0)' },
+				},
+				'@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+			}}
+		>
+			{/* Track */}
+			<Box
+				sx={{
+					position: 'absolute',
+					top: 26,
+					left: 26,
+					right: 26,
+					height: 4,
+					background: STEP_INK_10,
+					borderRadius: 2,
+					zIndex: 0,
+				}}
+			>
+				<Box
+					sx={{
+						height: '100%',
+						width: current === 2 ? '100%' : '0%',
+						background: `linear-gradient(90deg, ${STEP_PRIMARY} 0%, rgb(56, 189, 248) 100%)`,
+						borderRadius: 2,
+						transition: 'width 500ms cubic-bezier(0.22, 1, 0.36, 1)',
+					}}
+				/>
+			</Box>
+
+			{/* Cursive hand-note between the step circles — invoice-themed */}
+			<Box
+				aria-hidden
+				sx={{
+					position: 'absolute',
+					top: -60,
+					left: '50%',
+					transform: 'translateX(-50%) rotate(-4deg)',
+					pointerEvents: 'none',
+					userSelect: 'none',
+					display: { xs: 'none', sm: 'inline-flex' },
+					flexDirection: 'column',
+					alignItems: 'center',
+					gap: 0.25,
+					zIndex: 2,
+					'@keyframes step2NoteIn': {
+						from: {
+							opacity: 0,
+							transform: 'translate(-50%, 6px) rotate(-4deg)',
+						},
+						to: { opacity: 1, transform: 'translate(-50%, 0) rotate(-4deg)' },
+					},
+					'@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+					animation: 'step2NoteIn 700ms cubic-bezier(0.22, 1, 0.36, 1) 260ms both',
+				}}
+			>
+				<Box
+					component='span'
+					sx={{
+						fontFamily: '"Caveat", "Brush Script MT", cursive',
+						fontSize: 54,
+						fontWeight: 700,
+						lineHeight: 1,
+						color: STEP_PRIMARY,
+						textShadow: '0 8px 26px rgba(2, 132, 199, 0.22)',
+						whiteSpace: 'nowrap',
+					}}
+				>
+					now the numbers
+				</Box>
+				<Box
+					component='svg'
+					viewBox='0 0 110 20'
+					width='110'
+					height='16'
+					sx={{
+						color: STEP_PRIMARY,
+						opacity: 0.7,
+						mt: 0.25,
+						'& path': {
+							strokeDasharray: 220,
+							strokeDashoffset: 220,
+							animation: 'step2NoteDraw 900ms cubic-bezier(0.22, 1, 0.36, 1) 700ms forwards',
+						},
+						'@keyframes step2NoteDraw': {
+							to: { strokeDashoffset: 0 },
+						},
+					}}
+				>
+					<path
+						d='M4 10 C 24 2, 54 18, 88 6'
+						fill='none'
+						stroke='currentColor'
+						strokeWidth='2'
+						strokeLinecap='round'
+					/>
+					<path
+						d='M82 4 L 90 6 L 86 12'
+						fill='none'
+						stroke='currentColor'
+						strokeWidth='2'
+						strokeLinecap='round'
+						strokeLinejoin='round'
+					/>
+				</Box>
+			</Box>
+
+			<Box
+				sx={{
+					position: 'relative',
+					zIndex: 1,
+					display: 'flex',
+					justifyContent: 'space-between',
+					alignItems: 'flex-start',
+					gap: 3,
+				}}
+			>
+				{steps.map((s) => {
+					const active = current === s.n
+					const done = current > s.n
+					return (
+						<Box
+							key={s.n}
+							sx={{
+								display: 'flex',
+								flexDirection: 'column',
+								alignItems: 'center',
+								flex: 1,
+								minWidth: 0,
+							}}
+						>
+							<Box
+								sx={{
+									width: 56,
+									height: 56,
+									borderRadius: '50%',
+									display: 'inline-flex',
+									alignItems: 'center',
+									justifyContent: 'center',
+									fontFamily:
+										'"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+									fontSize: 18,
+									fontWeight: 700,
+									letterSpacing: '0.02em',
+									background: active || done ? STEP_PRIMARY : '#fff',
+									color: active || done ? '#fff' : STEP_INK_45,
+									border: `2px solid ${active || done ? STEP_PRIMARY : STEP_INK_10}`,
+									boxShadow: active
+										? `0 0 0 6px ${STEP_PRIMARY}20, 0 10px 24px -10px ${STEP_PRIMARY}77`
+										: 'none',
+									transition: 'all 240ms cubic-bezier(0.22, 1, 0.36, 1)',
+									mb: 1.5,
+								}}
+							>
+								{done ? <CheckRounded sx={{ fontSize: 24 }} /> : `0${s.n}`}
+							</Box>
+							<Typography
+								sx={{
+									fontSize: 14.5,
+									fontWeight: 700,
+									color: active || done ? STEP_INK : STEP_INK_45,
+									letterSpacing: '-0.005em',
+									lineHeight: 1.2,
+								}}
+							>
+								{s.label}
+							</Typography>
+							<Typography
+								sx={{
+									fontSize: 12,
+									color: active ? STEP_PRIMARY : STEP_INK_45,
+									mt: 0.5,
+									fontWeight: active ? 600 : 400,
+									textAlign: 'center',
+								}}
+							>
+								{active ? 'You are here' : s.hint}
+							</Typography>
+						</Box>
+					)
+				})}
 			</Box>
 		</Box>
 	)
