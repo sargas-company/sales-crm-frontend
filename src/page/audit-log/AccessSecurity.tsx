@@ -1,13 +1,17 @@
 import { ShieldOutlined } from '@mui/icons-material'
-import ComingSoon from '../../components/coming-soon/ComingSoon'
+import AuditActivityView from './_shared/AuditActivityView'
 
 const AccessSecurity = () => (
-	<ComingSoon
-		headerTitle='Access & security'
-		headerSubtitle='Authentication, roles and permission changes'
+	<AuditActivityView
+		crumbs={[
+			{ label: 'Governance' },
+			{ label: 'Audit Log' },
+			{ label: 'Access & security', current: true },
+		]}
 		icon={<ShieldOutlined />}
-		title='Access & security log is on the way'
-		description="Sign-ins, role assignments, permission grants and revocations — every access-side change in one place."
+		title='Access & security'
+		subtitle='Login attempts, role changes, access denials — everything that touches who can do what.'
+		category='access'
 	/>
 )
 

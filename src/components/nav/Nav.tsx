@@ -44,27 +44,31 @@ const Nav = () => {
 	return (
 		<NavContainer>
 			<NavContent>
-				<PrimaryNav>
-					<NavHeading />
-					<ScrollContainer
-						maxHeight='calc(100vh - 10rem)'
-						scrollBarSize={`${theme.spacing!.xs}px`}
-					>
-						{navList.map(renderNavItem)}
-					</ScrollContainer>
-				</PrimaryNav>
-				<div>
+				<NavHeading />
+				<ScrollContainer
+					maxHeight='calc(100vh - 5.5rem)'
+					scrollBarSize={`${theme.spacing!.xs}px`}
+				>
+					{navList.map(renderNavItem)}
+					<SectionGap />
 					<NavDivider />
 					{secondaryNavList.map(renderNavItem)}
-				</div>
+					<BottomPad />
+				</ScrollContainer>
 			</NavContent>
 		</NavContainer>
 	)
 }
 export default Nav
 
-const PrimaryNav = styled('div')`
-	margin-bottom: 70px;
+const SectionGap = styled('div')`
+	height: 20px;
+`
+
+/* Bottom breathing room so the last fully-expanded group never sits
+ * flush against the viewport edge. */
+const BottomPad = styled('div')`
+	height: 70px;
 `
 
 const NavDivider = styled('hr')`

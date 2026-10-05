@@ -3,7 +3,6 @@ import styled, { keyframes } from 'styled-components'
 import { CloseOutlined, OpenInNewOutlined } from '@mui/icons-material'
 import { useGetSalesJobPostByIdQuery } from '../../../store/sales-analytics/salesAnalyticsApi'
 import { subscribePostDetail, emitPostDetail } from './JobPostDrawerBus'
-import RelevanceControl from './RelevanceControl'
 import SkeletonBlock from '../_shared/SkeletonBlock'
 import type { ScoreBreakdown } from '../../../store/sales-analytics/types/jobPost'
 
@@ -530,9 +529,6 @@ const JobPostAnalyticsDrawer = () => {
 									<span style={{ fontSize: 12, color: '#64748b' }}>
 										{data.scoringVersion} · {data.modelVersion}
 									</span>
-								</div>
-								<div className='dp-score-actions'>
-									<RelevanceControl postId={data.id} />
 								</div>
 							</div>
 

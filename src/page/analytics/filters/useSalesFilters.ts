@@ -2,7 +2,6 @@ import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type {
 	ContractTypeFilter,
-	ManualRelevanceFilter,
 	NotificationStatusFilter,
 	SalesDateRangeKey,
 	SalesFilters,
@@ -11,12 +10,6 @@ import { DEFAULT_DATE_RANGE, DEFAULT_TIMEZONE } from '../../../store/sales-analy
 
 const DATE_RANGE_KEYS: readonly SalesDateRangeKey[] = ['today', '7d', '30d', 'custom']
 const CONTRACT_TYPES: readonly ContractTypeFilter[] = ['fixed', 'hourly', 'unknown']
-const RELEVANCE: readonly ManualRelevanceFilter[] = [
-	'relevant',
-	'not_relevant',
-	'very_relevant',
-	'unrated',
-]
 const NOTIFICATIONS: readonly NotificationStatusFilter[] = [
 	'sent',
 	'failed',
@@ -72,7 +65,6 @@ const applyPatch = (prev: URLSearchParams, patch: FilterPatch): URLSearchParams 
 	if ('budgetBucket' in patch) set('bud', patch.budgetBucket)
 	if ('clientCountry' in patch) setList('cco', patch.clientCountry)
 	if ('clientQuality' in patch) setList('cq', patch.clientQuality)
-	if ('manualRelevance' in patch) set('rel', patch.manualRelevance)
 	if ('notificationStatus' in patch) set('nst', patch.notificationStatus)
 	return p
 }
@@ -104,7 +96,6 @@ export const useSalesFilters = (): UseSalesFilters => {
 			budgetBucket: searchParams.get('bud') ?? undefined,
 			clientCountry: parseList(searchParams.get('cco')),
 			clientQuality: parseList(searchParams.get('cq')),
-			manualRelevance: parseEnum(searchParams.get('rel'), RELEVANCE),
 			notificationStatus: parseEnum(searchParams.get('nst'), NOTIFICATIONS),
 		}),
 		[searchParams]

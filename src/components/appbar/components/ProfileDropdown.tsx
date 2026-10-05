@@ -4,15 +4,12 @@ import { Avatar } from '@mui/material'
 import {
 	ExitToApp,
 	KeyboardArrowDownRounded,
-	SettingsOutlined,
 	PersonOutlineOutlined,
-	HelpOutlineOutlined,
-	KeyboardOutlined,
-	ChevronRightRounded,
-	ShieldOutlined,
+	SettingsOutlined,
+	VpnKeyOutlined,
 } from '@mui/icons-material'
-import john from '../../../image/humans/3.png'
 import useLogout from '../../../hooks/useLogout'
+import { useGetMeQuery } from '../../../store/auth/authApi'
 import {
 	TriggerWrap,
 	Trigger,
@@ -27,6 +24,8 @@ const CLOSE_DURATION_MS = 200
 const ProfileDropdown = () => {
 	const navigate = useNavigate()
 	const logout = useLogout()
+	const { data: me } = useGetMeQuery()
+
 	const [open, setOpen] = useState(false)
 	const [closing, setClosing] = useState(false)
 	const wrapRef = useRef<HTMLDivElement | null>(null)
@@ -88,6 +87,16 @@ const ProfileDropdown = () => {
 		}
 	}, [])
 
+	const fullName = me
+		? `${me.firstName} ${me.lastName}`.trim() || me.email
+		: '—'
+	const initials = me
+		? (
+				(me.firstName?.[0] ?? '') + (me.lastName?.[0] ?? '')
+			).toUpperCase() || me.email.slice(0, 2).toUpperCase()
+		: '?'
+	const avatarSrc = me?.avatarUrl ?? undefined
+
 	return (
 		<TriggerWrap ref={wrapRef}>
 			<Trigger
@@ -96,56 +105,65 @@ const ProfileDropdown = () => {
 				aria-haspopup='menu'
 				aria-expanded={open}
 			>
-				<Avatar src={john} alt='John Doe' sx={{ width: 36, height: 36 }} />
+				<Avatar
+					src={avatarSrc}
+					alt={fullName}
+					sx={{
+						width: 36,
+						height: 36,
+						bgcolor: '#0369a1',
+						fontSize: 14,
+						fontWeight: 700,
+					}}
+				>
+					{!avatarSrc && initials}
+				</Avatar>
 				<KeyboardArrowDownRounded className='trigger-chevron' />
 			</Trigger>
 
 			{open && (
 				<Popover closing={closing} role='menu'>
 					<ProfileHead>
-						<div
-							className='p-avatar'
-							style={{ backgroundImage: `url(${john})` }}
-						>
+						<div className='p-avatar-wrap'>
+							<Avatar
+								src={avatarSrc}
+								alt={fullName}
+								sx={{
+									width: 56,
+									height: 56,
+									bgcolor: '#0369a1',
+									fontSize: 20,
+									fontWeight: 700,
+								}}
+							>
+								{!avatarSrc && initials}
+							</Avatar>
 							<span className='p-avatar-status' />
 						</div>
 						<div className='p-body'>
-							<div className='p-name'>John Doe</div>
-							<span className='p-role'>
-								<ShieldOutlined />
-								Administrator
-							</span>
+							<div className='p-name'>{fullName}</div>
+							<div className='p-email'>{me?.email ?? '—'}</div>
 						</div>
 					</ProfileHead>
 
 					<MenuList>
-						<li onClick={() => handleNavigate('/settings')}>
+						<li onClick={() => handleNavigate('/settings?s=my_account')}>
 							<span className='item-icon'>
 								<PersonOutlineOutlined />
 							</span>
-							<span className='item-label'>My Profile</span>
-							<ChevronRightRounded className='item-arrow' />
+							<span className='item-label'>My account</span>
 						</li>
 						<li onClick={() => handleNavigate('/settings')}>
 							<span className='item-icon'>
 								<SettingsOutlined />
 							</span>
 							<span className='item-label'>Settings</span>
-							<ChevronRightRounded className='item-arrow' />
 						</li>
-						<li onClick={() => handleNavigate('/settings')}>
+						<li onClick={() => handleNavigate('/credentials/vault-settings')}>
 							<span className='item-icon'>
-								<KeyboardOutlined />
+								<VpnKeyOutlined />
 							</span>
-							<span className='item-label'>Keyboard Shortcuts</span>
-							<ChevronRightRounded className='item-arrow' />
-						</li>
-						<li onClick={() => handleNavigate('/settings')}>
-							<span className='item-icon'>
-								<HelpOutlineOutlined />
-							</span>
-							<span className='item-label'>Help &amp; Support</span>
-							<ChevronRightRounded className='item-arrow' />
+							<span className='item-label'>My vault access</span>
 						</li>
 					</MenuList>
 
@@ -154,8 +172,7 @@ const ProfileDropdown = () => {
 							<span className='logout-icon'>
 								<ExitToApp />
 							</span>
-							<span className='logout-label'>Logout</span>
-							<ChevronRightRounded className='logout-arrow' />
+							<span className='logout-label'>Sign out</span>
 						</button>
 					</MenuFoot>
 				</Popover>

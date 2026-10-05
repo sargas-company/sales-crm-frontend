@@ -16,6 +16,7 @@ import {
 	PhoneOutlined,
 	AdminPanelSettingsOutlined,
 	BadgeOutlined,
+	GroupsOutlined,
 	ListAltOutlined,
 	BeachAccessOutlined,
 	VpnKeyOutlined,
@@ -24,16 +25,27 @@ import {
 	AccountBalanceOutlined,
 	PaymentOutlined,
 	AttachMoneyOutlined,
+	ChecklistRtlOutlined,
 	AccountBalanceWalletOutlined,
+	InsightsOutlined,
 	LocalOfferOutlined,
 	LinkedIn,
 	LightbulbOutlined,
 	ArticleOutlined,
+	CalendarMonthOutlined,
 	HistoryEduOutlined,
 	HistoryOutlined,
 	ShieldOutlined,
 	ChangeHistoryOutlined,
 	LockOpenOutlined,
+	ListAltOutlined as ListAltOutlinedFw,
+	PhoneAndroidOutlined,
+	AppsOutlined,
+	AssignmentIndOutlined,
+	BuildOutlined,
+	FolderSpecialOutlined,
+	BackupOutlined,
+	NotificationsNoneOutlined,
 } from '@mui/icons-material'
 import { ReactNode } from 'react'
 
@@ -59,8 +71,10 @@ const navList: NavOptions[] = [
 		parent: formatGroupButton('Dashboard', <SpaceDashboardOutlined />, '/dashboards'),
 		childrens: [
 			format('Sales', '/dashboards/sales', <TrendingUpOutlined />, 'sales_analytics:view'),
-			// Finance dashboard is a Coming Soon placeholder — no permission gate.
-			format('Finance', '/dashboards/finance', <PaidOutlined />),
+			format('Finances', '/dashboards/finances', <InsightsOutlined />, 'finances_weekly:view'),
+			format('Projects', '/dashboards/projects', <FolderOutlined />, 'project_analytics:view'),
+			format('Time Off', '/dashboards/time-off', <BeachAccessOutlined />, 'employee_analytics:view'),
+			format('Compensation', '/dashboards/compensation', <PaidOutlined />, 'compensation_analytics:view'),
 		],
 	},
 	{
@@ -87,34 +101,49 @@ const navList: NavOptions[] = [
 		],
 	},
 	{
-		parent: formatGroupButton('Employees', <BadgeOutlined />, '/employees', true),
+		parent: formatGroupButton('Employees', <BadgeOutlined />, '/employees'),
 		childrens: [
-			format('List', '/employees/list', <ListAltOutlined />),
-			format('Time Off', '/employees/time-off', <BeachAccessOutlined />),
-			format('Credentials', '/employees/credentials', <VpnKeyOutlined />),
+			format('List', '/employees/list', <ListAltOutlined />, 'employees:view'),
+			format('Time Off', '/employees/time-off', <BeachAccessOutlined />, 'time_off:view'),
+			format('Credentials', '/credentials', <VpnKeyOutlined />, 'credentials:view'),
 		],
 	},
 	{
-		parent: formatGroupButton('Projects', <FolderOutlined />, '/projects', true),
+		parent: formatGroupButton('Projects', <FolderOutlined />, '/projects'),
 		childrens: [
-			format('List', '/projects/list', <ListAltOutlined />),
-			format('Reports', '/projects/reports', <AssessmentOutlined />),
+			format('List', '/projects/list', <ListAltOutlined />, 'projects:view'),
+			format('Reports', '/projects/reports', <AssessmentOutlined />, 'project_reports:view'),
+			format('Portfolio', '/portfolio', <FolderSpecialOutlined />, 'portfolio:view'),
 		],
 	},
 	{
-		parent: formatGroupButton('Finances', <AccountBalanceOutlined />, '/finances', true),
+		parent: formatGroupButton('Finances', <AccountBalanceOutlined />, '/finances'),
 		childrens: [
-			format('Payments', '/finances/payments', <PaymentOutlined />),
-			format('Salaries', '/finances/salaries', <AttachMoneyOutlined />),
-			format('Payment Source', '/finances/payment-source', <AccountBalanceWalletOutlined />),
-			format('Promotions', '/finances/promotions', <LocalOfferOutlined />),
+			format('Payments', '/finances/payments', <PaymentOutlined />, 'finances_weekly:view'),
+			format('Payments List', '/finances/payments-list', <ListAltOutlinedFw />, 'finances_weekly:view'),
+			format('Salaries', '/finances/salaries', <AttachMoneyOutlined />, 'salaries:view'),
+			format('Monthly run', '/finances/salaries/run', <ChecklistRtlOutlined />, 'salaries:view'),
+			format('Salary Reviews', '/finances/promotions', <LocalOfferOutlined />, 'compensation_reviews:view'),
+			format('Payment Sources', '/finances/payment-source', <AccountBalanceWalletOutlined />, 'payment_sources:view'),
 		],
 	},
 	{
-		parent: formatGroupButton('LinkedIn', <LinkedIn />, '/linkedin', true),
+		parent: formatGroupButton('LinkedIn', <LinkedIn />, '/linkedin'),
 		childrens: [
-			format('Ideas', '/linkedin/ideas', <LightbulbOutlined />),
-			format('Posts', '/linkedin/posts', <ArticleOutlined />),
+			format('Posts', '/linkedin/posts', <ArticleOutlined />, 'linkedin_posts:view'),
+			format('Calendar', '/linkedin/posts/calendar', <CalendarMonthOutlined />, 'linkedin_posts:view'),
+			format('Ideas', '/linkedin/ideas', <LightbulbOutlined />, 'linkedin_ideas:view'),
+			format('Accounts', '/linkedin/accounts', <AccountCircleOutlined />, 'linkedin_accounts:view'),
+		],
+	},
+	{
+		parent: formatGroupButton('Phone Numbers', <PhoneAndroidOutlined />, '/phone-numbers'),
+		permission: 'phone_numbers:view',
+		childrens: [
+			format('Numbers', '/phone-numbers', <PhoneAndroidOutlined />, 'phone_numbers:view'),
+			format('Service Assignments', '/phone-numbers/assignments', <AssignmentIndOutlined />, 'phone_numbers:view'),
+			format('Maintenance', '/phone-numbers/maintenance', <BuildOutlined />, 'phone_numbers:view'),
+			format('Services', '/phone-numbers/services', <AppsOutlined />, 'phone_numbers:view'),
 		],
 	},
 ]
@@ -138,9 +167,23 @@ export const secondaryNavList: NavOptions[] = [
 		childrens: [
 			format('All activity', '/audit-log/all-activity', <HistoryOutlined />),
 			format('Access & security', '/audit-log/access-security', <ShieldOutlined />),
+			format('Financial activity', '/audit-log/financial-activity', <AccountBalanceOutlined />),
 			format('Data changes', '/audit-log/data-changes', <ChangeHistoryOutlined />),
 			format('Sensitive access', '/audit-log/sensitive-access', <LockOpenOutlined />),
 		],
+	},
+	{
+		parent: formatGroupButton('Backup & Recovery', <BackupOutlined />, '/backups'),
+		permission: 'backups:view',
+		childrens: [
+			format('List', '/backups/list', <ListAltOutlined />, 'backups:view'),
+		],
+	},
+	{
+		label: 'Notifications',
+		path: '/notifications/list',
+		icon: <NotificationsNoneOutlined />,
+		permission: 'notifications:view',
 	},
 ]
 

@@ -32,6 +32,7 @@ interface CounterpartyFormProps {
 interface FormFields {
 	firstName: string
 	lastName: string
+	company: string
 	type: CounterpartyType
 	info: string
 }
@@ -41,7 +42,7 @@ interface FormErrors {
 	lastName?: string
 }
 
-const empty: FormFields = { firstName: '', lastName: '', type: 'client', info: '' }
+const empty: FormFields = { firstName: '', lastName: '', company: '', type: 'client', info: '' }
 
 const BuildingIcon = () => (
 	<svg width='22' height='22' viewBox='0 0 24 24' fill='none'>
@@ -109,6 +110,7 @@ const CounterpartyFormInner = ({ id, initial }: { id?: string; initial: FormFiel
 					body: {
 						firstName: fields.firstName || undefined,
 						lastName: fields.lastName || undefined,
+						company: fields.company.trim() ? fields.company.trim() : null,
 						type: fields.type || undefined,
 						info: fields.info,
 					},
@@ -118,6 +120,7 @@ const CounterpartyFormInner = ({ id, initial }: { id?: string; initial: FormFiel
 				await createCounterparty({
 					firstName: fields.firstName,
 					lastName: fields.lastName,
+					company: fields.company.trim() || undefined,
 					type: fields.type,
 					info: fields.info || undefined,
 				}).unwrap()
@@ -154,6 +157,15 @@ const CounterpartyFormInner = ({ id, initial }: { id?: string; initial: FormFiel
 							hint='The counterparty’s legal or contact name'
 						/>
 						<FieldGrid>
+							<Field label='Company' hint='Optional — leave blank for individuals' span='full'>
+								<TextField
+									name='company'
+									placeholder='e.g. Acme Corp'
+									value={fields.company}
+									onChange={(e) => setField('company', e.target.value)}
+									width='100%'
+								/>
+							</Field>
 							<Field label='First name' required error={errors.firstName}>
 								<TextField
 									name='firstName'
@@ -264,6 +276,7 @@ const CounterpartyForm = ({ id }: CounterpartyFormProps) => {
 		? {
 				firstName: data.firstName,
 				lastName: data.lastName,
+				company: data.company ?? '',
 				type: data.type,
 				info: data.info ?? '',
 			}

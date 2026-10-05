@@ -10,20 +10,21 @@ const StyledSelectWrapper = styled(InputWrapper)<{ width?: string; containerWidt
 
     & .select-status-arrow {
         position: absolute;
-        top: ${({ sizes }) => (sizes === 'small' ? 7 : 15)}px;
+        top: 50%;
         right: ${({ sizes }) => (sizes === 'small' ? 3 : 10)}px;
         font-size: ${({ sizes }) => (sizes === 'small' ? 25 : 30)}px;
         opacity: 0.6;
+        pointer-events: none;
     }
-    
+
     & .rotateDown {
-        transform: rotate(0deg);
-        transition: 0.3s all ease;
+        transform: translateY(-50%) rotate(0deg);
+        transition: transform 0.3s ease;
     }
 
     & .rotateUp {
-        transform: rotate(-180deg);
-        transition: 0.2s all ease;
+        transform: translateY(-50%) rotate(-180deg);
+        transition: transform 0.2s ease;
     }
 
     & .select-list-container {

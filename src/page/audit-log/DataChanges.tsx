@@ -1,13 +1,17 @@
 import { ChangeHistoryOutlined } from '@mui/icons-material'
-import ComingSoon from '../../components/coming-soon/ComingSoon'
+import AuditActivityView from './_shared/AuditActivityView'
 
 const DataChanges = () => (
-	<ComingSoon
-		headerTitle='Data changes'
-		headerSubtitle='Create, update and delete operations'
+	<AuditActivityView
+		crumbs={[
+			{ label: 'Governance' },
+			{ label: 'Audit Log' },
+			{ label: 'Data changes', current: true },
+		]}
 		icon={<ChangeHistoryOutlined />}
-		title='Data changes log is on the way'
-		description="Track every business-record mutation with before / after context, filtered by module and actor."
+		title='Data changes'
+		subtitle='Operational edits across settings, employees, projects and the rest of the data layer.'
+		category='data'
 	/>
 )
 

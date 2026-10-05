@@ -4,7 +4,6 @@ import SectionCard from '../_shared/SectionCard'
 import SkeletonBlock from '../_shared/SkeletonBlock'
 import EmptyState from '../_shared/EmptyState'
 import ErrorState from '../_shared/ErrorState'
-import RelevanceControl from '../posts/RelevanceControl'
 import { emitPostDetail } from '../posts/JobPostDrawerBus'
 import { T } from '../_shared/tokens'
 import { useSalesFilters } from '../../../page/analytics/filters/useSalesFilters'
@@ -235,9 +234,6 @@ const Row = ({ item }: { item: JobPostAnalyticsSummary }) => (
 		</td>
 		<td className='age' style={{ whiteSpace: 'nowrap' }}>
 			{timeAgo(item.receivedAt)}
-		</td>
-		<td>
-			<RelevanceControl postId={item.id} compact />
 		</td>
 		<td style={{ whiteSpace: 'nowrap' }}>
 			<button type='button' className='link' onClick={() => emitPostDetail(item.id)}>

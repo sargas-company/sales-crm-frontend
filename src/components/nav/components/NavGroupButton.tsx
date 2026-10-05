@@ -15,6 +15,7 @@ const NavGroupButton: FC<Props> = (props) => {
 			onClick={onHandleClick}
 			isActive={isActive}
 			mode={mode.name}
+			soon={soon}
 		>
 			<Box display='flex' space={0.6} align='center' flex={1}>
 				{icon && (
@@ -55,13 +56,17 @@ const soonPulse = keyframes`
 	50%      { transform: scale(1.15); box-shadow: 0 0 0 5px rgba(220, 38, 38, 0); }
 `
 
-const StyledNavGroupButton = styled('div')<{ isActive: boolean; mode: 'dark' | 'light' }>`
+const StyledNavGroupButton = styled('div')<{
+	isActive: boolean
+	mode: 'dark' | 'light'
+	soon?: boolean
+}>`
 	display: flex;
 	flex: 1;
 	padding: 0.6rem 0;
 	padding-right: 0.6rem;
 	padding-left: 1.6rem;
-	cursor: pointer;
+	cursor: ${({ soon }) => (soon ? 'not-allowed' : 'pointer')};
 	border-top-right-radius: 1.4rem;
 	border-bottom-right-radius: 1.4rem;
 	margin-bottom: 4px;

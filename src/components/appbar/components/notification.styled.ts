@@ -57,6 +57,24 @@ const badgePulse = keyframes`
 	50% { transform: scale(1.15); }
 `
 
+const unreadPulse = keyframes`
+	0% {
+		transform: scale(1);
+		box-shadow: 0 0 0 2px rgba(232, 93, 47, 0.14),
+			0 0 0 0 rgba(232, 93, 47, 0.4);
+	}
+	60% {
+		transform: scale(1.05);
+		box-shadow: 0 0 0 2px rgba(232, 93, 47, 0.14),
+			0 0 0 7px rgba(232, 93, 47, 0);
+	}
+	100% {
+		transform: scale(1);
+		box-shadow: 0 0 0 2px rgba(232, 93, 47, 0.14),
+			0 0 0 0 rgba(232, 93, 47, 0);
+	}
+`
+
 const backdropFade = keyframes`
 	from { opacity: 0; }
 	to   { opacity: 1; }
@@ -107,7 +125,7 @@ export const BellWrap = styled('div')`
 		min-width: 18px;
 		height: 18px;
 		padding: 0 5px;
-		background: linear-gradient(135deg, #f97377 0%, #ee5a68 100%);
+		background: linear-gradient(135deg, #fb923c 0%, #e85d2f 100%);
 		color: #fff;
 		font-size: 10.5px;
 		font-weight: 800;
@@ -115,7 +133,7 @@ export const BellWrap = styled('div')`
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		box-shadow: 0 2px 6px -1px rgba(238, 90, 104, 0.5);
+		box-shadow: 0 2px 6px -1px rgba(232, 93, 47, 0.5);
 		letter-spacing: 0.2px;
 		animation: ${badgePulse} 2s ease-in-out infinite;
 		pointer-events: none;
@@ -189,8 +207,8 @@ export const PopoverHead = styled('div')`
 	.head-count {
 		font-size: 11.5px;
 		font-weight: 700;
-		color: #dc2626;
-		background: #fee2e2;
+		color: #e85d2f;
+		background: rgba(232, 93, 47, 0.12);
 		border-radius: 999px;
 		padding: 3px 10px;
 		letter-spacing: 0.2px;
@@ -219,13 +237,21 @@ export const NotifList = styled('ul')`
 		animation: ${itemFadeIn} 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 	}
 	li:hover {
-		background: #f8fafc;
+		background: rgba(37, 45, 58, 0.03);
 	}
-	li.unread {
-		background: linear-gradient(90deg, #eff6ff 0%, #f8fafc 100%);
+	li.unread .notif-title {
+		color: #0f172a;
 	}
-	li.unread:hover {
-		background: linear-gradient(90deg, #dbeafe 0%, #f1f5f9 100%);
+	li.notif-empty {
+		display: block;
+		padding: 24px 16px;
+		text-align: center;
+		color: #94a3b8;
+		font-size: 12.5px;
+		cursor: default;
+	}
+	li.notif-empty:hover {
+		background: transparent;
 	}
 
 	li:nth-child(1) { animation-delay: 40ms; }
@@ -236,6 +262,7 @@ export const NotifList = styled('ul')`
 	li:nth-child(6) { animation-delay: 290ms; }
 
 	.notif-icon {
+		position: relative;
 		width: 36px;
 		height: 36px;
 		border-radius: 10px;
@@ -243,9 +270,26 @@ export const NotifList = styled('ul')`
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
+		background: rgba(37, 45, 58, 0.06);
+		color: #1b2230;
 	}
 	.notif-icon svg {
 		font-size: 18px !important;
+	}
+
+	/* Orange brand dot at the top-left corner of the icon chip — marks
+	 * an unread item without colouring the icon itself. */
+	.notif-unread-dot {
+		position: absolute;
+		top: -4px;
+		left: -4px;
+		width: 13px;
+		height: 13px;
+		border-radius: 50%;
+		background: #e85d2f;
+		border: 2px solid #ffffff;
+		box-shadow: 0 0 0 2px rgba(232, 93, 47, 0.14);
+		animation: ${unreadPulse} 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 	}
 
 	.notif-body {
@@ -270,22 +314,13 @@ export const NotifList = styled('ul')`
 		white-space: nowrap;
 		padding-top: 2px;
 	}
-
-	.notif-unread-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		background: #3b82f6;
-		margin-top: 6px;
-		flex-shrink: 0;
-	}
 `
 
 export const PopoverFoot = styled('div')`
 	padding: 12px 16px;
 	border-top: 1px solid #f1f5f9;
 	display: flex;
-	justify-content: space-between;
+	justify-content: flex-end;
 	align-items: center;
 	background: #fafbfc;
 
@@ -294,14 +329,15 @@ export const PopoverFoot = styled('div')`
 		background: transparent;
 		font-size: 12.5px;
 		font-weight: 700;
-		color: #1976d2;
+		color: #0369a1;
 		cursor: pointer;
 		padding: 6px 12px;
 		border-radius: 8px;
 		transition: background 0.15s ease, color 0.15s ease;
 	}
 	button:hover {
-		background: #f0f9ff;
+		background: rgba(3, 105, 161, 0.08);
+		color: #075985;
 	}
 	button.muted {
 		color: #64748b;

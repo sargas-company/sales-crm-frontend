@@ -6,6 +6,7 @@ export interface CounterpartyItem {
 	id: string
 	firstName: string
 	lastName: string
+	company: string | null
 	type: CounterpartyType
 	info: string | null
 	createdAt: string
@@ -32,6 +33,7 @@ export interface CounterpartyListParams {
 export interface CreateCounterpartyBody {
 	firstName: string
 	lastName: string
+	company?: string
 	type: CounterpartyType
 	info?: string
 }
@@ -39,6 +41,7 @@ export interface CreateCounterpartyBody {
 export interface UpdateCounterpartyBody {
 	firstName?: string
 	lastName?: string
+	company?: string | null
 	type?: CounterpartyType
 	info?: string
 }

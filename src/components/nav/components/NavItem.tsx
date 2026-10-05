@@ -1,12 +1,23 @@
 import { CircleOutlined } from '@mui/icons-material'
 import { FC, ReactNode } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, matchPath, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 import useTheme from '../../../theme/useTheme'
 import { Text } from '../../../ui'
+import { navSectionRoot } from '../navMatch'
 
 const NavItem: FC<Props> = (props) => {
-	const { label, path, icon, varient, compact, onClick, hideIcon, onHover } = props
+	const {
+		label,
+		path,
+		icon,
+		varient,
+		compact,
+		onClick,
+		hideIcon,
+		onHover,
+		isActiveOverride,
+	} = props
 	const {
 		theme: {
 			mode,
@@ -15,10 +26,19 @@ const NavItem: FC<Props> = (props) => {
 		},
 	} = useTheme()
 	const location = useLocation()
-	const normalize = (p: string) => (p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p)
-	const target = normalize(path)
-	const current = normalize(location.pathname)
-	const isActiveSection = current === target || current.startsWith(target + '/')
+	// Match every list/view/add/edit/preview sub-route of the section
+	// this nav item represents (e.g. /leads/list, /leads/add, /leads/:id
+	// all light up the "Leads" item). navSectionRoot strips a trailing
+	// "/list" segment from the configured nav path so the whole feature
+	// namespace becomes the match root. `isActiveOverride` (from
+	// NavGroup) suppresses this local computation when a sibling has a
+	// more specific match — otherwise sibling items whose section root
+	// is a shorter prefix would also light up.
+	const sectionRoot = navSectionRoot(path)
+	const computed =
+		matchPath({ path: sectionRoot, end: false }, location.pathname) !== null
+	const isActiveSection =
+		isActiveOverride !== undefined ? isActiveOverride : computed
 
 	return (
 		<StyledNavItem
@@ -59,6 +79,7 @@ interface Props {
 	compact?: boolean
 	onClick?: () => void
 	onHover?: () => void
+	isActiveOverride?: boolean
 }
 
 export default NavItem

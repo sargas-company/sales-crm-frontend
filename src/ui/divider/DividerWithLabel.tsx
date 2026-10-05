@@ -9,7 +9,7 @@ const DividerWithLabel = ({ label }: { label: string }) => {
 		},
 	} = useTheme()
 	return (
-		<StyledDividerWithLable className='divider__with_label' theme={name}>
+		<StyledDividerWithLable className='divider__with_label' theme={{ name }}>
 			<Text varient='body2' classes='divider__label'>
 				{label}
 			</Text>

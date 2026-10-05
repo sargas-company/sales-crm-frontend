@@ -16,6 +16,7 @@ export interface MeResponse {
 	email: string
 	firstName: string
 	lastName: string
+	avatarUrl: string | null
 	role: AuthRole | null
 	permissions: string[]
 }
@@ -47,7 +48,81 @@ export const authApi = baseApi.injectEndpoints({
 				method: 'GET',
 			}),
 		}),
+
+		/** Edit own first/last name. Email + role stay immutable. */
+		updateMe: builder.mutation<
+			MeResponse,
+			{ firstName?: string; lastName?: string }
+		>({
+			query: (body) => ({ url: '/auth/me', method: 'PATCH', body }),
+			async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+				try {
+					const { data } = await queryFulfilled
+					dispatch(authApi.util.updateQueryData('getMe', undefined, () => data))
+				} catch {
+					/* keep old */
+				}
+			},
+		}),
+
+		uploadAvatar: builder.mutation<MeResponse, File>({
+			query: (file) => {
+				const form = new FormData()
+				form.append('file', file)
+				return {
+					url: '/auth/me/avatar',
+					method: 'POST',
+					body: form,
+				}
+			},
+			async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+				try {
+					const { data } = await queryFulfilled
+					dispatch(authApi.util.updateQueryData('getMe', undefined, () => data))
+				} catch {
+					/* keep old */
+				}
+			},
+		}),
+
+		removeAvatar: builder.mutation<MeResponse, void>({
+			query: () => ({ url: '/auth/me/avatar', method: 'DELETE' }),
+			async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+				try {
+					const { data } = await queryFulfilled
+					dispatch(authApi.util.updateQueryData('getMe', undefined, () => data))
+				} catch {
+					/* keep old */
+				}
+			},
+		}),
+
+		/** Set the current user's avatar to one of the preset options. */
+		setAvatarPreset: builder.mutation<MeResponse, { id: string }>({
+			query: (body) => ({
+				url: '/auth/me/avatar/preset',
+				method: 'PATCH',
+				body,
+			}),
+			async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+				try {
+					const { data } = await queryFulfilled
+					dispatch(authApi.util.updateQueryData('getMe', undefined, () => data))
+				} catch {
+					/* keep old */
+				}
+			},
+		}),
 	}),
 })
 
-export const { useLoginMutation, useLogoutUserMutation, useGetMeQuery, useLazyGetMeQuery } = authApi
+export const {
+	useLoginMutation,
+	useLogoutUserMutation,
+	useGetMeQuery,
+	useLazyGetMeQuery,
+	useUpdateMeMutation,
+	useUploadAvatarMutation,
+	useRemoveAvatarMutation,
+	useSetAvatarPresetMutation,
+} = authApi

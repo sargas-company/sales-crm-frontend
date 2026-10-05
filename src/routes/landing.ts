@@ -14,6 +14,11 @@ export interface LandingCandidate {
 
 export const LANDING_CANDIDATES: LandingCandidate[] = [
 	{ path: '/dashboards/sales', permission: 'sales_analytics:view' },
+	{ path: '/dashboards/finances', permission: 'finances_weekly:view' },
+	{ path: '/dashboards/projects', permission: 'project_analytics:view' },
+	{ path: '/dashboards/time-off', permission: 'employee_analytics:view' },
+	{ path: '/dashboards/compensation', permission: 'compensation_analytics:view' },
+	{ path: '/finances/payments', permission: 'finances_weekly:view' },
 	{ path: '/platforms/list/', permission: 'platforms:view' },
 	{ path: '/job-posts/list/', permission: 'job_posts:view' },
 	{ path: '/accounts/list/', permission: 'accounts:view' },
@@ -22,7 +27,13 @@ export const LANDING_CANDIDATES: LandingCandidate[] = [
 	{ path: '/client-requests/list/', permission: 'client_requests:view' },
 	{ path: '/invoices/list/', permission: 'invoices:view' },
 	{ path: '/counterparties/list/', permission: 'counterparties:view' },
+	{ path: '/employees/list', permission: 'employees:view' },
+	{ path: '/employees/time-off', permission: 'time_off:view' },
+	{ path: '/projects/list', permission: 'projects:view' },
 	{ path: '/prompts/list', permission: 'prompts:view' },
+	{ path: '/linkedin/posts', permission: 'linkedin_posts:view' },
+	{ path: '/linkedin/ideas', permission: 'linkedin_ideas:view' },
+	{ path: '/linkedin/accounts', permission: 'linkedin_accounts:view' },
 	{ path: '/roles', permission: 'roles:view' },
 	{ path: '/audit-log/all-activity', permission: 'audit_logs:view' },
 ]

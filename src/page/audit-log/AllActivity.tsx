@@ -1,13 +1,18 @@
 import { HistoryOutlined } from '@mui/icons-material'
-import ComingSoon from '../../components/coming-soon/ComingSoon'
+import AuditActivityView from './_shared/AuditActivityView'
 
 const AllActivity = () => (
-	<ComingSoon
-		headerTitle='All activity'
-		headerSubtitle='Chronological history of application activity'
+	<AuditActivityView
+		crumbs={[
+			{ label: 'Governance' },
+			{ label: 'Audit Log' },
+			{ label: 'All activity', current: true },
+		]}
 		icon={<HistoryOutlined />}
-		title='All activity is on the way'
-		description="Every logged event across the app, ordered from newest to oldest, ready to filter and drill into."
+		title='All activity'
+		subtitle='Every important action across the platform — newest first.'
+		category='all'
+		showSummary
 	/>
 )
 

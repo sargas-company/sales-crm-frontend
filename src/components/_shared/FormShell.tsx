@@ -119,13 +119,22 @@ interface FieldProps {
 	hint?: string
 	error?: string
 	span?: FieldSpan
+	htmlFor?: string
 	children: ReactNode
 }
 
-export const Field = ({ label, required, hint, error, span = 'auto', children }: FieldProps) => (
+export const Field = ({
+	label,
+	required,
+	hint,
+	error,
+	span = 'auto',
+	htmlFor,
+	children,
+}: FieldProps) => (
 	<FieldRoot $span={span}>
 		<FieldLabelRow>
-			<FieldLabel>
+			<FieldLabel htmlFor={htmlFor}>
 				{label}
 				{required && <ReqStar>*</ReqStar>}
 			</FieldLabel>

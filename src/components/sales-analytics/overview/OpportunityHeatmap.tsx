@@ -13,6 +13,7 @@ import {
 	HeatmapSvg,
 	HeatmapTooltip,
 	MetricSwitcher,
+	MetricTapeIndicator,
 	Recommendations,
 } from '../../../page/analytics/heatmap.styled'
 import type { HeatmapDailyCell, HeatmapMetric } from '../../../store/sales-analytics/types/aggregates'
@@ -434,16 +435,50 @@ const OpportunityHeatmap = () => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [data, metric, highlightRow])
 
+	// Sliding tape-indicator — mirrors the main SalesFiltersBar
+	// behaviour so the two filters share the same spring-ease motion.
+	const metricRef = useRef<HTMLDivElement | null>(null)
+	const [metricInd, setMetricInd] = useState<{
+		left: number
+		width: number
+		opacity: number
+	}>({ left: 0, width: 0, opacity: 0 })
+	useLayoutEffect(() => {
+		if (!metricRef.current) return
+		const el = metricRef.current.querySelector<HTMLButtonElement>(
+			'[data-active="true"]',
+		)
+		if (el) {
+			setMetricInd({
+				left: el.offsetLeft,
+				width: el.offsetWidth,
+				opacity: 1,
+			})
+		}
+	}, [metric])
+
 	return (
 		<SectionCard
 			title='Opportunity heatmap'
 			action={
-				<MetricSwitcher role='tablist' aria-label='Heatmap metric'>
+				<MetricSwitcher
+					ref={metricRef}
+					role='tablist'
+					aria-label='Heatmap metric'
+				>
+					<MetricTapeIndicator
+						style={{
+							transform: `translateX(${metricInd.left}px) rotate(-1.2deg)`,
+							width: `${metricInd.width}px`,
+							opacity: metricInd.opacity,
+						}}
+					/>
 					{METRIC_OPTIONS.map((opt) => (
 						<button
 							key={opt.key}
 							type='button'
 							role='tab'
+							data-active={metric === opt.key || undefined}
 							aria-selected={metric === opt.key}
 							className={metric === opt.key ? 'active' : ''}
 							onClick={() => setMetric(opt.key)}

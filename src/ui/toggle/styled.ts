@@ -31,7 +31,7 @@ export const Circle = styled('span')<ToggleElProps>`
 	max-width: ${({ size }) => (size === 'small' ? 16 : 20)}px;
 	border-radius: 50%;
 	background: ${({ theme, toggled }) => (toggled ? theme.primaryColor.color : '#fff')};
-	box-shadow: 0px 1.5px 3px ${({ theme }) => (theme.mode.name === 'dark' ? '#484848' : '#8d8d8d')};
+	box-shadow: 0px 1.5px 3px ${({ theme }) => (theme.mode?.name === 'dark' ? '#484848' : '#8d8d8d')};
 	position: absolute;
 	top: ${({ size }) => (size === 'small' ? 3.5 : -0.5)}px;
 	left: ${({ toggled, size }) => (toggled ? (size === 'small' ? 14 : 20) : 0)}px;
@@ -64,13 +64,13 @@ export const Track = styled('span')<ToggleElProps>`
 	width: ${({ size }) => (size == 'small' ? 30 : 40)}px;
 	height: ${({ size }) => (size === 'small' ? 10 : 14)}px;
 	background: ${({ theme, toggled }) =>
-		toggled ? theme.primaryColor : theme.mode === 'dark' ? '#f4f9f96b' : '#818181'};
+		toggled ? theme.primaryColor?.color : theme.mode?.name === 'dark' ? '#f4f9f96b' : '#818181'};
 	border-radius: 10px;
 	opacity: 0.5;
 `
 
 export const Label = styled('span')<{ size?: 'small' | 'regular' }>`
-	color: ${({ theme }) => theme.mode.textColor};
+	color: ${({ theme }) => theme.mode?.textColor};
 	font-size: 1rem;
 	line-height: 0px;
 `

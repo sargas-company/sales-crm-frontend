@@ -18,8 +18,8 @@ const Toggle: FC<TogglerProps> = (props) => {
 					/>
 					<Track
 						theme={{
-							primaryColor: theme.primaryColor.color,
-							mode: theme.mode.name,
+							primaryColor: theme.primaryColor,
+							mode: theme.mode,
 						}}
 						toggled={toggled ? toggled : false}
 						size={size}

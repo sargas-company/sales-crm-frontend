@@ -37,6 +37,12 @@ interface DeleteTarget {
 }
 
 const fullName = (c: CounterpartyItem) => `${c.firstName} ${c.lastName}`.trim() || '—'
+const displayName = (c: CounterpartyItem) => {
+	const person = `${c.firstName} ${c.lastName}`.trim()
+	const company = (c.company ?? '').trim()
+	if (company && person) return `${company} · ${person}`
+	return company || person || '—'
+}
 
 const personInitials = (first: string, last: string): string => {
 	const a = (first?.[0] ?? '').toUpperCase()
@@ -86,11 +92,11 @@ const CounterpartyList = () => {
 			label: 'Counterparty',
 			minWidth: 180,
 			sortable: true,
-			sortValue: (c) => fullName(c),
+			sortValue: (c) => displayName(c),
 			render: (c) => (
 				<NameCell>
 					<Avatar>{personInitials(c.firstName, c.lastName)}</Avatar>
-					<NameText>{fullName(c)}</NameText>
+					<NameText>{displayName(c)}</NameText>
 				</NameCell>
 			),
 			skeleton: () => (

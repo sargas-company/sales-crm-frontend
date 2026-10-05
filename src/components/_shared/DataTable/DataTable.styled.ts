@@ -358,6 +358,33 @@ export const EmptyTitle = styled.p`
 	color: ${T.textSecondary};
 `
 
+export const EmptySub = styled.p`
+	margin: 0;
+	font-size: 13px;
+	color: ${T.textMuted};
+	max-width: 320px;
+`
+
+export const EmptyCta = styled.button`
+	appearance: none;
+	margin-top: 6px;
+	padding: 8px 20px;
+	border-radius: 999px;
+	background: ${T.primary};
+	color: #ffffff;
+	border: none;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
+	cursor: pointer;
+	text-transform: none;
+	transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+	&:hover {
+		transform: translateY(-1px);
+	}
+`
+
 /* ── Skeleton primitive ─────────────────────────────────────────────── */
 
 export const Skeleton = styled.span<{

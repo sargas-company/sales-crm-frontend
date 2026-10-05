@@ -21,6 +21,17 @@ const softBlink = keyframes`
 	50%      { opacity: 0.35; }
 `
 
+const nowPulse = keyframes`
+	0%, 100% {
+		box-shadow: 0 0 12px rgba(232, 93, 47, 0.5);
+		transform: scaleY(1);
+	}
+	50% {
+		box-shadow: 0 0 22px rgba(232, 93, 47, 0.9);
+		transform: scaleY(1.06);
+	}
+`
+
 export type ScannerVisualState = 'running' | 'delayed' | 'down' | 'idle'
 
 const stateTone: Record<
@@ -76,7 +87,7 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 		width: 44px;
 		height: 44px;
 		border-radius: 12px;
-		background: linear-gradient(135deg, #7c3aed 0%, #6366f1 55%, ${T.primary} 100%);
+		background: linear-gradient(135deg, #1f2937 0%, #0a0a0f 100%);
 		color: #fff;
 		display: flex;
 		align-items: center;
@@ -85,7 +96,7 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 		font-size: 18px;
 		font-weight: 800;
 		letter-spacing: -0.4px;
-		box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+		box-shadow: 0 8px 20px rgba(15, 23, 42, 0.35);
 		position: relative;
 		overflow: hidden;
 
@@ -237,7 +248,17 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 		color: rgba(255, 255, 255, 0.85);
 	}
 
-	/* ==== HERO WIDGET TILES — Pinterest style, per-tile mood via CSS vars ==== */
+	/* ==== HERO WIDGET TILES — unified cream background, orange is the only tone ==== */
+	.hw-tile,
+	.hw-tile-purple,
+	.hw-tile-teal,
+	.hw-tile-rose,
+	.hw-tile-green,
+	.hw-tile-red {
+		--hw-bg-start: #fefcf6 !important;
+		--hw-bg-end: #fef7e8 !important;
+		--hw-border: rgba(232, 93, 47, 0.14) !important;
+	}
 	.hw-tile {
 		--hw-bg-start: #fffdf5;
 		--hw-bg-end: #fef3c7;
@@ -386,17 +407,18 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 		font-weight: 800;
 		letter-spacing: 1.2px;
 		text-transform: uppercase;
-		color: var(--hw-label);
+		color: ${T.primary};
 	}
 	.hw-num-row {
-		display: inline-flex;
+		display: flex;
 		align-items: baseline;
 		gap: 8px;
+		flex-wrap: wrap;
 	}
 	.hw-num {
 		font-size: 46px;
 		font-weight: 800;
-		color: var(--hw-num);
+		color: ${T.textStrong};
 		letter-spacing: -1.6px;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
@@ -404,14 +426,54 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 	.hw-unit {
 		font-size: 14px;
 		font-weight: 700;
-		color: var(--hw-unit);
+		color: ${T.textStrong};
+		opacity: 0.75;
 	}
 	.hw-caption {
 		font-size: 12.5px;
-		font-weight: 600;
-		color: var(--hw-caption);
+		font-weight: 400;
+		color: ${T.textStrong};
 		letter-spacing: 0.1px;
 	}
+
+	.hw-trend {
+		display: inline-flex;
+		align-items: center;
+		gap: 2px;
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-size: 10.5px;
+		font-weight: 700;
+		padding: 2px 7px;
+		border-radius: 999px;
+		margin-left: auto;
+		letter-spacing: 0.2px;
+		align-self: center;
+
+		small {
+			font-family: inherit;
+			font-size: 9.5px;
+			font-weight: 500;
+			opacity: 0.75;
+			margin-left: 4px;
+		}
+	}
+	.hw-trend-arrow {
+		font-size: 12px;
+		line-height: 1;
+	}
+	.hw-trend.up {
+		background: rgba(5, 150, 105, 0.12);
+		color: #047857;
+	}
+	.hw-trend.down {
+		background: rgba(220, 38, 38, 0.12);
+		color: #b91c1c;
+	}
+	.hw-trend.flat {
+		background: rgba(100, 116, 139, 0.14);
+		color: #475569;
+	}
+
 
 	/* Sparkline (Last hour) */
 	.hw-spark {
@@ -427,12 +489,16 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 		flex: 1;
 		min-height: 6px;
 		border-radius: 3px;
-		background: linear-gradient(180deg, rgba(234, 179, 8, 0.5), rgba(217, 119, 6, 0.55));
+		background: linear-gradient(180deg, rgba(251, 191, 36, 0.5), rgba(232, 93, 47, 0.6));
 		transition: height 300ms ${T.ease};
 	}
 	.hw-bar.now {
-		background: linear-gradient(180deg, #facc15 0%, #d97706 100%);
-		box-shadow: 0 0 12px rgba(234, 179, 8, 0.55);
+		background: linear-gradient(180deg, #fbbf24 0%, #e85d2f 100%);
+		box-shadow: 0 0 12px rgba(232, 93, 47, 0.5);
+		animation: ${nowPulse} 1.8s ease-in-out infinite;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.hw-bar.now { animation: none; }
 	}
 
 	/* ---- Day timeline (Today) ---- */
@@ -447,12 +513,20 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 		align-self: center;
 		font-size: 28px;
 		font-weight: 700;
-		color: var(--hw-num);
+		color: ${T.textStrong};
 		letter-spacing: -0.9px;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
 		display: inline-flex;
-		align-items: baseline;
+		align-items: center;
+		gap: 2px;
+	}
+	.hw-day-caption {
+		font-size: 13px;
+		font-weight: 400;
+		color: ${T.textStrong};
+		letter-spacing: 0;
+		margin-left: 8px;
 	}
 	.hw-day-colon {
 		color: var(--hw-accent);
@@ -477,9 +551,9 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 		display: block;
 		height: 100%;
 		border-radius: 999px;
-		background: linear-gradient(90deg, var(--hw-icon) 0%, var(--hw-accent) 100%);
+		background: linear-gradient(90deg, #fbbf24 0%, #e85d2f 100%);
 		box-shadow:
-			0 0 16px var(--hw-shadow),
+			0 0 16px rgba(232, 93, 47, 0.35),
 			inset 0 1px 0 rgba(255, 255, 255, 0.35);
 		transition: width 600ms ${T.ease};
 		overflow: hidden;
@@ -548,24 +622,25 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 		align-self: flex-start;
 		font-size: 28px;
 		font-weight: 800;
-		color: var(--hw-tone-b);
+		color: ${T.textStrong};
 		letter-spacing: -0.9px;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
 		display: inline-flex;
-		align-items: baseline;
+		align-items: center;
 		gap: 2px;
 	}
 	.hw-pct-sign {
 		font-size: 16px;
 		font-weight: 700;
-		color: var(--hw-tone-b);
+		color: ${T.textStrong};
+		opacity: 0.75;
 		margin-right: 8px;
 	}
 	.hw-pct-caption {
 		font-size: 13px;
-		font-weight: 600;
-		color: var(--hw-caption);
+		font-weight: 400;
+		color: ${T.textStrong};
 		letter-spacing: 0;
 		align-self: center;
 	}
@@ -582,9 +657,9 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 		display: block;
 		height: 100%;
 		border-radius: 999px;
-		background: linear-gradient(90deg, var(--hw-tone-a) 0%, var(--hw-tone-b) 100%);
+		background: linear-gradient(90deg, #fbbf24 0%, #e85d2f 100%);
 		box-shadow:
-			0 0 16px var(--hw-tone-glow),
+			0 0 16px rgba(232, 93, 47, 0.35),
 			inset 0 1px 0 rgba(255, 255, 255, 0.35);
 		transition:
 			width 600ms ${T.ease},

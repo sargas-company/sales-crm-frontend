@@ -26,9 +26,12 @@ interface DefaultProps {
 }
 interface SelectProp {
 	label?: string
-	defaultValue: string
+	placeholder?: string
+	defaultValue?: string
+	value?: string
 	classes?: string
 	selectId?: string
+	id?: string
 	children: ReactNode
 	onChange?: (value: string, name?: string) => void
 	varient?: InputVarient
@@ -47,9 +50,12 @@ const Select: FC<SelectProp> = (props) => {
 	} = useTheme()
 	const {
 		label,
-		defaultValue,
+		placeholder,
+		defaultValue: _defaultValue,
+		value: _value,
 		classes,
 		selectId,
+		id,
 		children,
 		onChange,
 		varient,
@@ -58,6 +64,12 @@ const Select: FC<SelectProp> = (props) => {
 		width,
 		containerWidth,
 	} = props
+	// Accept either `value` (controlled) or `defaultValue` (uncontrolled)
+	// so both call-site idioms work.
+	const defaultValue = _value ?? _defaultValue ?? ''
+	// `id` is a convenience alias; both `selectId` and `id` land on the
+	// outer wrapper.
+	const effectiveSelectId = selectId ?? id ?? ''
 	const [selectOpen, setSelectOpen] = useState(false)
 	const wrapperRef = useRef<HTMLDivElement>(null)
 	const listRef = useRef<HTMLUListElement>(null)
@@ -68,12 +80,21 @@ const Select: FC<SelectProp> = (props) => {
 		let match = { label: '', value: '', icon: '' }
 		Children.forEach(
 			children as any,
-			(ele: { props?: { label?: string; value?: string; icon?: string } }) => {
+			(ele: {
+				props?: {
+					label?: string
+					value?: string
+					icon?: string
+					children?: unknown
+				}
+			}) => {
 				const p = ele?.props
 				if (!p || p.value === undefined) return
 				if (p.value.toLowerCase() === defaultValue.toLowerCase()) {
 					match = {
-						label: p.label ?? '',
+						label:
+							p.label ??
+							(typeof p.children === 'string' ? p.children : ''),
 						value: p.value,
 						icon: p.icon ?? '',
 					}
@@ -161,7 +182,7 @@ const Select: FC<SelectProp> = (props) => {
 				theme={{ mode, primaryColor }}
 				varient={varient}
 				className={classes ? classes : ''}
-				id={selectId ? selectId : ''}
+				id={effectiveSelectId}
 				width={width}
 				sizes={sizes}
 				containerWidth={containerWidth}
@@ -180,8 +201,21 @@ const Select: FC<SelectProp> = (props) => {
 						width={labelWidth}
 						sizes={sizes}
 					>
-						<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-							{selectedItem.label || defaultValue}
+						<span
+							style={{
+								display: 'flex',
+								alignItems: 'center',
+								gap: 6,
+								color:
+									!selectedItem.label && !defaultValue && placeholder
+										? '#94a3b8'
+										: undefined,
+							}}
+						>
+							{selectedItem.label ||
+								defaultValue ||
+								placeholder ||
+								''}
 							{selectedItem.icon && (
 								<img
 									src={selectedItem.icon}
@@ -245,12 +279,20 @@ const Select: FC<SelectProp> = (props) => {
 }
 export default Select
 
-export const SelectItem: FC<SelectItemProps> = ({ label, value, icon, textAlign }) => {
+export const SelectItem: FC<SelectItemProps> = ({
+	label,
+	value,
+	icon,
+	textAlign,
+	children,
+}) => {
 	const han = useContext(SelectCtx)
+	const displayText =
+		label ?? (typeof children === 'string' ? children : '')
 	const onClick = (evt: MouseEvent) => {
 		evt.preventDefault()
 		evt.stopPropagation()
-		han?.handleOnChange(value, label, icon)
+		han?.handleOnChange(value, displayText, icon)
 	}
 	return (
 		<li
@@ -281,7 +323,7 @@ export const SelectItem: FC<SelectItemProps> = ({ label, value, icon, textAlign 
 			}}
 		>
 			<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-				{label}
+				{label ?? children}
 				{icon && (
 					<img
 						src={icon}
@@ -301,8 +343,9 @@ export const SelectItem: FC<SelectItemProps> = ({ label, value, icon, textAlign 
 }
 
 interface SelectItemProps {
-	label: string
+	label?: string
 	value: string
 	icon?: string
 	textAlign?: 'center' | 'left' | 'right'
+	children?: ReactNode
 }

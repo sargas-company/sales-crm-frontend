@@ -14,6 +14,11 @@ const useLogout = () => {
 		} catch {
 			// Even if the server request fails, clear local state
 		} finally {
+			// Signal any live reveal-drawer / plaintext-holding
+			// component to scrub its state before the auth slice
+			// resets. Fired BEFORE navigate so listeners run while
+			// their component is still mounted.
+			window.dispatchEvent(new CustomEvent('auth:logout'))
 			dispatch(logout())
 			navigate('/auth/login/')
 		}

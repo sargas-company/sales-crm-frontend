@@ -4,9 +4,9 @@ import { ThemeProvider } from 'styled-components'
 import useTheme from '../../theme/useTheme'
 import { Tab, TabContent, TabItem, TabList } from '../../ui'
 import JobPostAnalyticsDrawer from '../../components/sales-analytics/posts/JobPostAnalyticsDrawer'
-import EmergingSignalDetails from '../../components/sales-analytics/emerging/EmergingSignalDetails'
 import SalesFiltersBar from './filters/SalesFiltersBar'
 import OverviewTab from './tabs/OverviewTab'
+import SoonCursorOverlay from './SoonCursorOverlay'
 import {
 	Crumbs,
 	PageHead,
@@ -114,7 +114,7 @@ const Analytics = () => {
 				</ShellCard>
 
 				<JobPostAnalyticsDrawer />
-				<EmergingSignalDetails />
+				<SoonCursorOverlay />
 			</ViewFade>
 		</ThemeProvider>
 	)

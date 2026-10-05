@@ -1,35 +1,56 @@
-import { createRef, FC, useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { createRef, FC, useEffect, useMemo, useState } from 'react'
+import { matchPath, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 import NavOptions, { Childrens } from '../type'
+import { navSectionRoot } from '../navMatch'
 import NavGroupButton from './NavGroupButton'
 import NavItem from './NavItem'
 
-const collectPaths = (items?: Childrens[]): string[] => {
+// Collect the match-roots contributed by a subtree: each leaf child
+// contributes its section root (list/add/edit/view all fold into the
+// same feature namespace), and each nested group contributes its own
+// rootPath plus its descendants'.
+const collectSectionRoots = (items?: Childrens[]): string[] => {
 	if (!items) return []
 	return items.flatMap((item) => {
-		const own = item.path ? [item.path.toLowerCase()] : []
-		const nested = item.childrens ? collectPaths(item.childrens) : []
-		const nestedRoot = item.parent?.rootPath ? [item.parent.rootPath.toLowerCase()] : []
+		const own = item.path ? [navSectionRoot(item.path)] : []
+		const nestedRoot = item.parent?.rootPath ? [item.parent.rootPath] : []
+		const nested = item.childrens ? collectSectionRoots(item.childrens) : []
 		return [...own, ...nestedRoot, ...nested]
 	})
 }
+
+const matchesUnder = (pathname: string, root: string): boolean =>
+	matchPath({ path: root, end: false }, pathname) !== null
 
 const NavGroup: FC<Props> = ({ navData: { childrens, parent }, onChildClick }) => {
 	const { pathname } = useLocation()
 	const [isActive, setIsActive] = useState(false)
 	const navItemContainer = createRef<HTMLDivElement>()
 
+	// Pick the single leaf child whose section root is the longest
+	// prefix of the current pathname. Siblings that also match by
+	// shorter prefix (e.g. Projects "List" at `/projects` when the URL
+	// is `/projects/reports/xxx`) get suppressed via
+	// `activeSectionRoot` so only the most specific item highlights.
+	const activeSectionRoot = useMemo(() => {
+		if (!childrens) return undefined
+		let best: string | undefined
+		for (const item of childrens) {
+			if (!item.path) continue
+			const root = navSectionRoot(item.path)
+			if (matchesUnder(pathname, root)) {
+				if (!best || root.length > best.length) best = root
+			}
+		}
+		return best
+	}, [childrens, pathname])
+
 	useEffect(() => {
-		const stripSlash = (v: string) => v.replace(/\/+$/, '')
-		const lowered = stripSlash(pathname.toLowerCase())
-		const rootMatch = parent?.rootPath
-			? lowered.startsWith(stripSlash(parent.rootPath.toLowerCase()))
-			: false
-		const childMatch = collectPaths(childrens).some((p) => {
-			const base = stripSlash(p)
-			return lowered === base || lowered.startsWith(base + '/')
-		})
+		const rootMatch = parent?.rootPath ? matchesUnder(pathname, parent.rootPath) : false
+		const childMatch = collectSectionRoots(childrens).some((root) =>
+			matchesUnder(pathname, root),
+		)
 
 		if (parent?.rootPath || childrens) {
 			setIsActive(rootMatch || childMatch)
@@ -91,6 +112,8 @@ const NavGroup: FC<Props> = ({ navData: { childrens, parent }, onChildClick }) =
 									/>
 								)
 							}
+							const itemRoot = navSectionRoot(item.path!)
+							const isActiveOverride = activeSectionRoot === itemRoot
 							return (
 								<NavItem
 									{...item}
@@ -99,6 +122,7 @@ const NavGroup: FC<Props> = ({ navData: { childrens, parent }, onChildClick }) =
 									icon={item?.icon}
 									key={key}
 									onClick={onChildClick}
+									isActiveOverride={isActiveOverride}
 								/>
 							)
 						})}

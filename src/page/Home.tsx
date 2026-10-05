@@ -11,7 +11,6 @@ import LandingRedirect from '../routes/LandingRedirect'
 const PageNotFound = lazy(() => import('./404/PageNotFound'))
 const AccessDenied = lazy(() => import('./AccessDenied'))
 const Analytics = lazy(() => import('./analytics'))
-const Finance = lazy(() => import('./analytics/Finance'))
 const Proposal = lazy(() => import('./proposal'))
 const Leads = lazy(() => import('./leads'))
 const Platforms = lazy(() => import('./platforms'))
@@ -24,21 +23,54 @@ const Prompts = lazy(() => import('./prompts'))
 const ClientCalls = lazy(() => import('./client-calls'))
 const Settings = lazy(() => import('./settings'))
 const Roles = lazy(() => import('./roles'))
-const EmployeesList = lazy(() => import('./employees/List'))
-const EmployeesTimeOff = lazy(() => import('./employees/TimeOff'))
-const EmployeesCredentials = lazy(() => import('./employees/Credentials'))
-const ProjectsList = lazy(() => import('./projects/List'))
-const ProjectsReports = lazy(() => import('./projects/Reports'))
-const FinancesPayments = lazy(() => import('./finances/Payments'))
+const Employees = lazy(() => import('./employees'))
+const Credentials = lazy(() => import('./credentials'))
+const Projects = lazy(() => import('./projects'))
+const ProjectAnalytics = lazy(() => import('./analytics/projects/ProjectAnalytics.page'))
+const FinancialPaymentsMonth = lazy(() => import('./finance-weekly/FinancialMonth.page'))
+const FinancialPaymentsList = lazy(() => import('./finance-weekly/FinancialList.page'))
+const FinancialAnalytics = lazy(() => import('./finance-weekly/FinancialAnalytics.page'))
+const TimeOffAnalytics = lazy(() => import('./analytics/time-off/TimeOffAnalytics.page'))
+const CompensationAnalytics = lazy(() => import('./analytics/compensation/CompensationAnalytics.page'))
 const FinancesSalaries = lazy(() => import('./finances/Salaries'))
+const FinancesSalariesRun = lazy(() => import('./finances/SalariesRun'))
+const FinancesSalariesAdd = lazy(() => import('./finances/SalariesAdd'))
+const FinancesSalariesEdit = lazy(() => import('./finances/SalariesEdit'))
 const FinancesPaymentSource = lazy(() => import('./finances/PaymentSource'))
+const FinancesPaymentSourceAdd = lazy(() => import('./finances/PaymentSourceAdd'))
+const FinancesPaymentSourceEdit = lazy(() => import('./finances/PaymentSourceEdit'))
 const FinancesPromotions = lazy(() => import('./finances/Promotions'))
+const FinancesPromotionsAdd = lazy(() => import('./finances/PromotionsAdd'))
+const FinancesPromotionsEdit = lazy(() => import('./finances/PromotionsEdit'))
 const LinkedInIdeas = lazy(() => import('./linkedin/Ideas'))
+const LinkedInIdeasAdd = lazy(() => import('./linkedin/IdeasAdd'))
+const LinkedInIdeasEdit = lazy(() => import('./linkedin/IdeasEdit'))
+const LinkedInIdeasView = lazy(() => import('./linkedin/IdeasView'))
 const LinkedInPosts = lazy(() => import('./linkedin/Posts'))
+const LinkedInPostsAdd = lazy(() => import('./linkedin/PostsAdd'))
+const LinkedInPostsEdit = lazy(() => import('./linkedin/PostsEdit'))
+const LinkedInPostsView = lazy(() => import('./linkedin/PostsView'))
+const LinkedInPostsCalendar = lazy(() => import('./linkedin/PostsCalendar'))
+const LinkedInAccounts = lazy(() => import('./linkedin/AccountsList'))
+const LinkedInAccountsAdd = lazy(() => import('./linkedin/AccountsAdd'))
+const LinkedInAccountsEdit = lazy(() => import('./linkedin/AccountsEdit'))
 const AuditLogAllActivity = lazy(() => import('./audit-log/AllActivity'))
 const AuditLogAccessSecurity = lazy(() => import('./audit-log/AccessSecurity'))
+const AuditLogFinancialActivity = lazy(() => import('./audit-log/FinancialActivity'))
 const AuditLogDataChanges = lazy(() => import('./audit-log/DataChanges'))
 const AuditLogSensitiveAccess = lazy(() => import('./audit-log/SensitiveAccess'))
+const AuditLogEventPage = lazy(() => import('./audit-log/_shared/AuditEventPage'))
+const PhoneNumbersList = lazy(() => import('./phone-numbers/PhoneNumbersList.page'))
+const PhoneAssignments = lazy(() => import('./phone-numbers/PhoneAssignments.page'))
+const PhoneMaintenancePage = lazy(() => import('./phone-numbers/PhoneMaintenance.page'))
+const PhoneServicesPage = lazy(() => import('./phone-numbers/PhoneServices.page'))
+const PhoneServiceForm = lazy(() => import('./phone-numbers/PhoneServiceForm.page'))
+const PhoneNumberForm = lazy(() => import('./phone-numbers/PhoneNumberForm.page'))
+const Backups = lazy(() => import('./backups'))
+const Notifications = lazy(() => import('./notifications'))
+const PortfolioList = lazy(() => import('./portfolio/PortfolioList.page'))
+const PortfolioView = lazy(() => import('./portfolio/PortfolioView.page'))
+const PortfolioForm = lazy(() => import('./portfolio/PortfolioForm.page'))
 
 const Home = () => {
 	return (
@@ -70,7 +102,38 @@ const Home = () => {
 									</ProtectedRoute>
 								}
 							/>
-							<Route path='/dashboards/finance' element={<Finance />} />
+							<Route
+								path='/dashboards/finances'
+								element={
+									<ProtectedRoute permission='finances_weekly:view'>
+										<FinancialAnalytics />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/dashboards/time-off'
+								element={
+									<ProtectedRoute permission='employee_analytics:view'>
+										<TimeOffAnalytics />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/dashboards/compensation'
+								element={
+									<ProtectedRoute permission='compensation_analytics:view'>
+										<CompensationAnalytics />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/dashboards/projects'
+								element={
+									<ProtectedRoute permission='project_analytics:view'>
+										<ProjectAnalytics />
+									</ProtectedRoute>
+								}
+							/>
 							<Route
 								path='/proposal/*'
 								element={
@@ -160,6 +223,22 @@ const Home = () => {
 								}
 							/>
 							<Route
+								path='/backups/*'
+								element={
+									<ProtectedRoute permission='backups:view'>
+										<Backups />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/notifications/*'
+								element={
+									<ProtectedRoute permission='notifications:view'>
+										<Notifications />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
 								path='/roles/*'
 								element={
 									<ProtectedRoute permission='roles:view'>
@@ -167,17 +246,238 @@ const Home = () => {
 									</ProtectedRoute>
 								}
 							/>
-							<Route path='/employees/list' element={<EmployeesList />} />
-							<Route path='/employees/time-off' element={<EmployeesTimeOff />} />
-							<Route path='/employees/credentials' element={<EmployeesCredentials />} />
-							<Route path='/projects/list' element={<ProjectsList />} />
-							<Route path='/projects/reports' element={<ProjectsReports />} />
-							<Route path='/finances/payments' element={<FinancesPayments />} />
-							<Route path='/finances/salaries' element={<FinancesSalaries />} />
-							<Route path='/finances/payment-source' element={<FinancesPaymentSource />} />
-							<Route path='/finances/promotions' element={<FinancesPromotions />} />
-							<Route path='/linkedin/ideas' element={<LinkedInIdeas />} />
-							<Route path='/linkedin/posts' element={<LinkedInPosts />} />
+							<Route
+								path='/employees/*'
+								element={
+									<ProtectedRoute permission='employees:view'>
+										<Employees />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/credentials/*'
+								element={
+									<ProtectedRoute permission='credentials:view'>
+										<Credentials />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/projects/*'
+								element={
+									<ProtectedRoute permission='projects:view'>
+										<Projects />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/payments'
+								element={
+									<ProtectedRoute permission='finances_weekly:view'>
+										<FinancialPaymentsMonth />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/payments/month/:id'
+								element={
+									<ProtectedRoute permission='finances_weekly:view'>
+										<FinancialPaymentsMonth />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/payments-list'
+								element={
+									<ProtectedRoute permission='finances_weekly:view'>
+										<FinancialPaymentsList />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/payments-list/:id'
+								element={
+									<ProtectedRoute permission='finances_weekly:view'>
+										<FinancialPaymentsList />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/salaries'
+								element={
+									<ProtectedRoute permission='salaries:view'>
+										<FinancesSalaries />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/salaries/run'
+								element={
+									<ProtectedRoute permission='salaries:view'>
+										<FinancesSalariesRun />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/salaries/add'
+								element={
+									<ProtectedRoute permission='salaries:create'>
+										<FinancesSalariesAdd />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/salaries/edit/:id'
+								element={
+									<ProtectedRoute permission='salaries:update'>
+										<FinancesSalariesEdit />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/payment-source'
+								element={
+									<ProtectedRoute permission='payment_sources:view'>
+										<FinancesPaymentSource />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/payment-source/add'
+								element={
+									<ProtectedRoute permission='payment_sources:create'>
+										<FinancesPaymentSourceAdd />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/payment-source/edit/:id'
+								element={
+									<ProtectedRoute permission='payment_sources:update'>
+										<FinancesPaymentSourceEdit />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/promotions'
+								element={
+									<ProtectedRoute permission='compensation_reviews:view'>
+										<FinancesPromotions />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/promotions/add'
+								element={
+									<ProtectedRoute permission='compensation_reviews:create'>
+										<FinancesPromotionsAdd />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/promotions/edit/:id'
+								element={
+									<ProtectedRoute permission='compensation_reviews:update'>
+										<FinancesPromotionsEdit />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/linkedin/posts'
+								element={
+									<ProtectedRoute permission='linkedin_posts:view'>
+										<LinkedInPosts />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/linkedin/posts/add'
+								element={
+									<ProtectedRoute permission='linkedin_posts:create'>
+										<LinkedInPostsAdd />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/linkedin/posts/calendar'
+								element={
+									<ProtectedRoute permission='linkedin_posts:view'>
+										<LinkedInPostsCalendar />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/linkedin/posts/edit/:id'
+								element={
+									<ProtectedRoute permission='linkedin_posts:update'>
+										<LinkedInPostsEdit />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/linkedin/posts/:id'
+								element={
+									<ProtectedRoute permission='linkedin_posts:view'>
+										<LinkedInPostsView />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/linkedin/ideas'
+								element={
+									<ProtectedRoute permission='linkedin_ideas:view'>
+										<LinkedInIdeas />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/linkedin/ideas/add'
+								element={
+									<ProtectedRoute permission='linkedin_ideas:create'>
+										<LinkedInIdeasAdd />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/linkedin/ideas/edit/:id'
+								element={
+									<ProtectedRoute permission='linkedin_ideas:update'>
+										<LinkedInIdeasEdit />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/linkedin/ideas/:id'
+								element={
+									<ProtectedRoute permission='linkedin_ideas:view'>
+										<LinkedInIdeasView />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/linkedin/accounts'
+								element={
+									<ProtectedRoute permission='linkedin_accounts:view'>
+										<LinkedInAccounts />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/linkedin/accounts/add'
+								element={
+									<ProtectedRoute permission='linkedin_accounts:create'>
+										<LinkedInAccountsAdd />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/linkedin/accounts/edit/:id'
+								element={
+									<ProtectedRoute permission='linkedin_accounts:update'>
+										<LinkedInAccountsEdit />
+									</ProtectedRoute>
+								}
+							/>
 							<Route
 								path='/audit-log/all-activity'
 								element={
@@ -195,6 +495,14 @@ const Home = () => {
 								}
 							/>
 							<Route
+								path='/audit-log/financial-activity'
+								element={
+									<ProtectedRoute permission='audit_logs:view'>
+										<AuditLogFinancialActivity />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
 								path='/audit-log/data-changes'
 								element={
 									<ProtectedRoute permission='audit_logs:view'>
@@ -207,6 +515,128 @@ const Home = () => {
 								element={
 									<ProtectedRoute permission='audit_logs:view'>
 										<AuditLogSensitiveAccess />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/audit-log/event/:eventId'
+								element={
+									<ProtectedRoute permission='audit_logs:view'>
+										<AuditLogEventPage />
+									</ProtectedRoute>
+								}
+							/>
+							{/* Phone Numbers */}
+							<Route
+								path='/phone-numbers'
+								element={
+									<ProtectedRoute permission='phone_numbers:view'>
+										<PhoneNumbersList />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/phone-numbers/new'
+								element={
+									<ProtectedRoute permission='phone_numbers:create'>
+										<PhoneNumberForm mode='create' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/phone-numbers/edit/:id'
+								element={
+									<ProtectedRoute permission='phone_numbers:update'>
+										<PhoneNumberForm mode='edit' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/phone-numbers/view/:id'
+								element={
+									<ProtectedRoute permission='phone_numbers:view'>
+										<PhoneNumberForm mode='view' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/phone-numbers/assignments'
+								element={
+									<ProtectedRoute permission='phone_numbers:view'>
+										<PhoneAssignments />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/phone-numbers/maintenance'
+								element={
+									<ProtectedRoute permission='phone_numbers:view'>
+										<PhoneMaintenancePage />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/phone-numbers/services'
+								element={
+									<ProtectedRoute permission='phone_numbers:view'>
+										<PhoneServicesPage />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/phone-numbers/services/new'
+								element={
+									<ProtectedRoute permission='phone_numbers:update'>
+										<PhoneServiceForm mode='create' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/phone-numbers/services/:id'
+								element={
+									<ProtectedRoute permission='phone_numbers:view'>
+										<PhoneServiceForm mode='view' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/phone-numbers/services/:id/edit'
+								element={
+									<ProtectedRoute permission='phone_numbers:update'>
+										<PhoneServiceForm mode='edit' />
+									</ProtectedRoute>
+								}
+							/>
+							{/* Portfolio */}
+							<Route
+								path='/portfolio'
+								element={
+									<ProtectedRoute permission='portfolio:view'>
+										<PortfolioList />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/portfolio/new'
+								element={
+									<ProtectedRoute permission='portfolio:create'>
+										<PortfolioForm mode='create' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/portfolio/:slug/edit'
+								element={
+									<ProtectedRoute permission='portfolio:update'>
+										<PortfolioForm mode='edit' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/portfolio/:slug'
+								element={
+									<ProtectedRoute permission='portfolio:view'>
+										<PortfolioView />
 									</ProtectedRoute>
 								}
 							/>

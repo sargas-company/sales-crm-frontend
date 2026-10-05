@@ -1,5 +1,5 @@
 import { Close } from '@mui/icons-material'
-import { FC, memo } from 'react'
+import { ChangeEvent, FC, memo } from 'react'
 import styled from 'styled-components'
 import { Divider, IconButton, Select, SelectItem, Text, TextField } from '../../../ui'
 import Box from '../../box/Box'
@@ -46,7 +46,12 @@ const NewItem: FC<ItemDetail> = (props) => {
 							type='number'
 							name='cost'
 							defaultValue={cost}
-							onChange={(eve) => handleChange(id, eve)}
+							onChange={(eve) =>
+								handleChange(
+									id,
+									eve as ChangeEvent<HTMLInputElement>,
+								)
+							}
 							sizes='small'
 							maxWidth='220px'
 						/>
@@ -62,7 +67,12 @@ const NewItem: FC<ItemDetail> = (props) => {
 							type='text'
 							name='hours'
 							defaultValue={hours}
-							onChange={(eve) => handleChange(id, eve)}
+							onChange={(eve) =>
+								handleChange(
+									id,
+									eve as ChangeEvent<HTMLInputElement>,
+								)
+							}
 							sizes='small'
 							maxWidth='220px'
 						/>

@@ -13,49 +13,80 @@ export const HeatmapChartWrap = styled('div')`
 	gap: 12px;
 `
 
+/* Mirrors the Fresh Paper tape-stamp pills from SalesFiltersBar — the
+ * main page filter — so the Opportunity heatmap control reads as part
+ * of the same filter vocabulary rather than its own one-off chip row. */
+const PAPER_INK = '#241E16'
+const PAPER_INK_SOFT = '#5C5243'
+const PAPER_ACCENT = '#E85D2F'
+
 export const MetricSwitcher = styled('div')`
+	position: relative;
 	display: inline-flex;
-	background: #f0f9ff;
-	border: 1px solid rgba(2, 132, 199, 0.18);
-	border-radius: 16px;
-	padding: 14px;
 	gap: 2px;
-	flex-wrap: wrap;
-	box-shadow: 0 4px 14px -6px rgba(2, 132, 199, 0.18);
+	padding: 3px;
+	border-radius: 999px;
+	background: rgba(36, 30, 22, 0.05);
+	align-items: center;
 
 	button {
+		position: relative;
+		z-index: 1;
+		padding: 7px 16px;
+		border-radius: 999px;
 		border: none;
 		background: transparent;
-		font-size: 14px;
+		color: ${PAPER_INK_SOFT};
+		font: inherit;
+		font-size: 12.5px;
 		font-weight: 600;
-		color: ${T.textSecondary};
-		padding: 8px 16px;
-		border-radius: 7px;
+		letter-spacing: 0.1px;
+		white-space: nowrap;
 		cursor: pointer;
-		text-transform: none;
-		letter-spacing: normal;
-		font-family: inherit;
-		transition:
-			color 160ms ${T.ease},
-			background 160ms ${T.ease},
-			box-shadow 160ms ${T.ease};
+		transition: color 240ms cubic-bezier(0.22, 1, 0.36, 1);
 	}
-	button:hover {
-		color: #0369a1;
+	button:hover:not(.active) {
+		color: ${PAPER_INK};
 	}
 	button.active {
-		background: ${T.cardBg};
-		color: #0369a1;
-		font-weight: 700;
-		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-	}
-	button.active:hover {
-		background: ${T.cardBg};
-		color: #0369a1;
+		color: #FDFAF2;
 	}
 	button:focus-visible {
-		outline: 2px solid #0369a1;
+		outline: 2px solid ${PAPER_ACCENT};
 		outline-offset: 2px;
+	}
+`
+
+/**
+ * Sliding orange tape stamp that transforms between the active button
+ * positions with a spring ease — identical mechanic to the one in
+ * SalesFiltersBar. The -1.2° rotation is composed in the component
+ * (`translateX(left) rotate(-1.2deg)`) so the slide animates through
+ * the rotation.
+ */
+export const MetricTapeIndicator = styled('span')`
+	position: absolute;
+	top: 3px;
+	bottom: 3px;
+	left: 0;
+	border-radius: 999px;
+	background: ${PAPER_ACCENT};
+	box-shadow:
+		0 2px 0 rgba(36, 30, 22, 0.14),
+		0 4px 10px rgba(232, 93, 47, 0.22);
+	transform-origin: center;
+	transition:
+		transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
+		width 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
+		opacity 200ms ease;
+	pointer-events: none;
+	will-change: transform, width;
+
+	@media (prefers-reduced-motion: reduce) {
+		transition:
+			transform 0ms,
+			width 0ms,
+			opacity 0ms;
 	}
 `
 

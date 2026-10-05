@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import { Bolt } from '@mui/icons-material'
 import SectionCard from '../../components/sales-analytics/_shared/SectionCard'
 import { WebhookCard, ScannerVisualState } from './webhookCard.styled'
 import type { ScannerHealth, ScannerStatus } from '../../store/sales-analytics/types/scanner'
@@ -79,16 +78,19 @@ const ScannerStatusCard = ({ data }: Props) => {
 
 				{/* Pinterest-style hero widgets */}
 				<div className='wh-hero-tiles'>
-					<LastHourTile value={data.receivedLastHour} />
+					<LastHourTile
+						value={data.receivedLastHour}
+						dayTotal={data.receivedToday}
+					/>
 					<TodayTile value={data.receivedToday} />
 					<AnalyzedTile
 						analyzed={data.analyzedInPeriod}
 						received={data.receivedToday}
 					/>
-					{/* Discord alerts count is not yet wired to notification
-					    deliveries — render an unavailable placeholder instead
-					    of showing "0 sent today" as if it were real data. */}
-					<AlertsUnavailableTile />
+					<DiscordAlertsTile
+						sent={data.discordAlertsInPeriod}
+						failed={data.discordDeliveryErrors}
+					/>
 				</div>
 			</WebhookCard>
 		</SectionCard>
@@ -100,33 +102,62 @@ const HeroBody = ({
 	value,
 	unit,
 	caption,
+	trend,
+	trendTag,
 }: {
 	label: string
 	value: number | string
 	unit: string
 	caption?: string
+	trend?: number | null
+	trendTag?: string
 }) => (
 	<div className='hw-body'>
 		<span className='hw-label'>{label}</span>
 		<div className='hw-num-row'>
-			<span className='hw-num'>{typeof value === 'number' ? value.toLocaleString() : value}</span>
+			<span className='hw-num'>
+				{typeof value === 'number' ? value.toLocaleString() : value}
+			</span>
 			<span className='hw-unit'>{unit}</span>
+			{trend !== undefined && trend !== null && (
+				<span
+					className={`hw-trend ${
+						trend > 0 ? 'up' : trend < 0 ? 'down' : 'flat'
+					}`}
+				>
+					<span className='hw-trend-arrow' aria-hidden='true'>
+						{trend > 0 ? '↑' : trend < 0 ? '↓' : '·'}
+					</span>
+					{Math.abs(trend)}%
+					{trendTag && <small>{trendTag}</small>}
+				</span>
+			)}
 		</div>
 		{caption && <span className='hw-caption'>{caption}</span>}
 	</div>
 )
 
-const LastHourTile = ({ value }: { value: number }) => {
+const LastHourTile = ({ value, dayTotal }: { value: number; dayTotal: number }) => {
 	const bars = seededBars(value * 31 + 7, 14, 80)
 	bars[bars.length - 1] = Math.max(bars[bars.length - 1], 90)
 	const maxBar = Math.max(...bars)
 
+	// vs daily-average: last hour vs (dayTotal / hoursElapsedToday)
+	const hoursElapsed = Math.max(1, hourOfDay())
+	const avgPerHour = dayTotal / hoursElapsed
+	const trend =
+		avgPerHour > 0 ? Math.round(((value - avgPerHour) / avgPerHour) * 100) : null
+
 	return (
 		<div className='hw-tile'>
-			<div className='hw-bg' aria-hidden='true'>
-				<Bolt />
-			</div>
-			<HeroBody label='Last hour' value={value} unit='events' caption='in the past 60 min' />
+			<HeroBody
+				label='Last hour'
+				value={value}
+				unit='events'
+				caption='in the past 60 min'
+				trend={trend}
+				trendTag='vs daily avg'
+			/>
 			<div className='hw-spark' aria-hidden='true'>
 				{bars.map((b, i) => (
 					<span
@@ -154,6 +185,7 @@ const TodayTile = ({ value }: { value: number }) => {
 					{String(hLabel).padStart(2, '0')}
 					<span className='hw-day-colon'>:</span>
 					{String(mLabel).padStart(2, '0')}
+					<span className='hw-day-caption'>current time</span>
 				</div>
 				<div className='hw-day-track'>
 					<span className='hw-day-fill' style={{ width: `${dayPct}%` }}>
@@ -182,22 +214,24 @@ const AnalyzedTile = ({ analyzed, received }: { analyzed: number; received: numb
 	return (
 		<div className={`hw-tile hw-tile-teal hw-tone-${toneForPct(coverage)}`}>
 			<HeroBody label='Analyzed' value={analyzed} unit='posts today' />
-			<PercentBar pct={coverage} caption='of received' />
+			<PercentBar pct={coverage} caption={`of received · last 24h`} />
 		</div>
 	)
 }
 
-const AlertsUnavailableTile = () => (
-	<div className='hw-tile hw-tile-rose hw-tone-warn'>
-		<HeroBody
-			label='Discord alerts'
-			value='—'
-			unit=''
-			caption='not wired to deliveries yet'
-		/>
-		<PercentBar pct={0} caption='awaiting integration' />
-	</div>
-)
+const DiscordAlertsTile = ({ sent, failed }: { sent: number; failed: number }) => {
+	const attempted = sent + failed
+	const deliveryRate =
+		attempted > 0 ? Math.round((sent / attempted) * 100) : 100
+	const caption =
+		failed > 0 ? `${failed} failed · last 24h` : 'all delivered · last 24h'
+	return (
+		<div className={`hw-tile hw-tile-rose hw-tone-${toneForPct(deliveryRate)}`}>
+			<HeroBody label='Discord alerts' value={sent} unit='sent today' />
+			<PercentBar pct={deliveryRate} caption={caption} />
+		</div>
+	)
+}
 
 const PercentBar = ({ pct, caption }: { pct: number; caption: string }) => (
 	<div className='hw-pct' aria-hidden='true'>

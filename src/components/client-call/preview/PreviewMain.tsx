@@ -20,7 +20,7 @@ const SectionLabel = ({ children }: { children: string }) => (
 		varient='caption'
 		weight='medium'
 		secondary
-		style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}
+		styles={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}
 	>
 		{children}
 	</Text>

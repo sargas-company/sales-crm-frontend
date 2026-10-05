@@ -6,141 +6,351 @@ const revealDown = keyframes`
 	to { opacity: 1; transform: translateY(0); }
 `
 
+const barIn = keyframes`
+	from { opacity: 0; transform: translateY(-6px); }
+	to   { opacity: 1; transform: translateY(0); }
+`
+
+const leadIconIn = keyframes`
+	0%   { opacity: 0; transform: scale(0.6) rotate(-25deg); }
+	60%  { opacity: 1; transform: scale(1.06) rotate(4deg); }
+	100% { opacity: 1; transform: scale(1) rotate(0); }
+`
+
+const iconWiggle = keyframes`
+	0%, 100% { transform: rotate(0); }
+	25%      { transform: rotate(-12deg); }
+	55%      { transform: rotate(8deg); }
+	80%      { transform: rotate(-3deg); }
+`
+
+/* ─── Fresh Paper palette (one-off for the sales toolbar) ──────── */
+const PAPER_INK = '#241E16'
+const PAPER_INK_SOFT = '#5C5243'
+const PAPER_MUTE = '#7D6E5D'
+const PAPER_ACCENT = '#E85D2F'
+const PAPER_RULE = 'rgba(36, 30, 22, 0.08)'
+const PAPER_RULE_STRONG = 'rgba(36, 30, 22, 0.14)'
+
 export const FiltersBarWrap = styled('div')`
+	position: relative;
 	display: flex;
 	align-items: center;
-	gap: 14px;
+	gap: 22px;
 	flex-wrap: wrap;
-	padding: 14px 16px;
-	background: ${T.primaryTint};
-	border: 1px solid ${T.primaryStrong};
-	border-radius: 14px;
-	box-shadow: 0 4px 14px -6px rgba(3, 105, 161, 0.18);
+	padding: 14px 22px;
+	background: #ffffff;
+	border: 1px solid ${PAPER_RULE};
+	border-radius: 18px;
+	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+	color: ${PAPER_INK};
+	overflow: hidden;
+	animation: ${barIn} 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
 
-	.filter-group {
-		display: flex;
-		align-items: center;
-		gap: 10px;
+	@media (prefers-reduced-motion: reduce) {
+		animation: none;
 	}
 
-	.filter-icon {
-		font-size: 18px !important;
-		color: #0369a1;
+	.filter-lead {
+		display: inline-flex;
+		align-items: center;
+		gap: 12px;
+		padding-right: 22px;
+		border-right: 1px solid ${PAPER_RULE};
+	}
+
+	.filter-lead .lead-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		border-radius: 11px;
+		background: ${PAPER_INK};
+		color: #fdfaf2;
+		animation: ${leadIconIn} 620ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+		animation-delay: 120ms;
+		transition:
+			transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+			background 220ms ease;
+	}
+
+	.filter-lead:hover .lead-icon {
+		transform: rotate(-6deg) scale(1.08);
+		background: ${PAPER_ACCENT};
+	}
+
+	.filter-lead .lead-icon svg {
+		font-size: 20px;
+		transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.filter-lead:hover .lead-icon svg {
+		animation: ${iconWiggle} 620ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	.filter-lead .lead-text {
+		display: flex;
+		flex-direction: column;
+		line-height: 1.15;
+		min-width: 78px;
+	}
+
+	.filter-lead .lead-text .top {
+		font-family: 'Fraunces', 'Georgia', serif;
+		font-variation-settings: 'opsz' 36;
+		font-size: 17px;
+		font-weight: 600;
+		color: ${PAPER_INK};
+		letter-spacing: -0.2px;
+	}
+
+	.filter-lead .lead-text .bot {
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-variant-numeric: tabular-nums;
+		font-size: 10.5px;
+		color: ${PAPER_MUTE};
+		letter-spacing: 0.7px;
+		text-transform: uppercase;
+		margin-top: 3px;
+		white-space: nowrap;
+		transition: color 200ms ease;
+	}
+
+	.filter-lead:hover .lead-text .bot {
+		color: ${PAPER_ACCENT};
 	}
 
 	.filter-spacer {
 		flex: 1;
 	}
 
-	.reset-btn {
+	.upwork-hint {
 		display: inline-flex;
 		align-items: center;
-		gap: 5px;
-		background: transparent;
-		border: none;
-		color: ${T.textSecondary};
-		font-size: 14px;
-		font-weight: 600;
-		text-transform: none;
-		letter-spacing: normal;
-		cursor: pointer;
-		padding: 8px 12px;
-		border-radius: 9px;
+		gap: 10px;
+		pointer-events: none;
+		align-self: center;
+		color: ${PAPER_INK};
+		animation: ${barIn} 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+		animation-delay: 180ms;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.upwork-hint {
+			animation: none;
+		}
+	}
+
+	.upwork-hint .row {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 8px;
+	}
+
+	.upwork-hint .w {
+		font-family: 'Caveat', 'Brush Script MT', cursive;
+		font-weight: 700;
+		font-size: 28px;
+		line-height: 1;
+		letter-spacing: 0.2px;
+		color: ${PAPER_INK};
+	}
+
+	.upwork-hint .amber-wrap {
+		position: relative;
+		display: inline-flex;
+		flex-direction: column;
+		align-items: center;
+		padding-bottom: 4px;
+	}
+
+	.upwork-hint .a {
+		font-family: 'Caveat', 'Brush Script MT', cursive;
+		font-weight: 700;
+		font-size: 32px;
+		line-height: 1;
+		letter-spacing: 0.3px;
+		color: ${PAPER_ACCENT};
+	}
+
+	.upwork-hint .squiggle {
+		display: block;
+		width: 100%;
+		max-width: 120px;
+		margin-top: 2px;
+		color: ${PAPER_ACCENT};
+	}
+
+	.upwork-hint .stars {
+		display: inline-flex;
+		align-items: center;
+		margin-left: 2px;
+		color: ${PAPER_ACCENT};
+	}
+
+	@media (max-width: 900px) {
+		.upwork-hint {
+			display: none;
+		}
+	}
+`
+
+/* ─── Tape-stamp segmented pills ─────────────────────────────── */
+
+const tapePillsIn = keyframes`
+	from { opacity: 0; transform: translateY(4px); }
+	to   { opacity: 1; transform: translateY(0); }
+`
+
+export const TapePills = styled('div')`
+	position: relative;
+	display: inline-flex;
+	gap: 2px;
+	padding: 3px;
+	border-radius: 999px;
+	background: rgba(36, 30, 22, 0.05);
+	align-items: center;
+	animation: ${tapePillsIn} 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+	@media (prefers-reduced-motion: reduce) {
+		animation: none;
+	}
+`
+
+/**
+ * Sliding orange tape stamp that moves to the active pill with a
+ * spring ease — same mechanic as AnimatedSegmented's SegIndicator,
+ * but with a -1.2° rotation baked in so the pill reads as a torn
+ * strip of tape rather than a chip. The transform is composed in
+ * the component (`translateX(left) rotate(-1.2deg)`) so the slide
+ * animates through the rotation.
+ */
+export const TapeIndicator = styled('span')`
+	position: absolute;
+	top: 3px;
+	bottom: 3px;
+	left: 0;
+	border-radius: 999px;
+	background: ${PAPER_ACCENT};
+	box-shadow:
+		0 2px 0 rgba(36, 30, 22, 0.14),
+		0 4px 10px rgba(232, 93, 47, 0.22);
+	transform-origin: center;
+	transition:
+		transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
+		width 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
+		opacity 200ms ease;
+	pointer-events: none;
+	will-change: transform, width;
+
+	@media (prefers-reduced-motion: reduce) {
 		transition:
-			color 160ms ${T.ease},
-			background 160ms ${T.ease};
+			transform 0ms,
+			width 0ms,
+			opacity 0ms;
 	}
-	.reset-btn:hover {
-		color: ${T.textStrong};
-		background: rgba(255, 255, 255, 0.7);
+`
+
+export const TapePill = styled('button')<{ $active: boolean }>`
+	position: relative;
+	z-index: 1;
+	padding: 7px 16px;
+	border-radius: 999px;
+	border: none;
+	background: transparent;
+	color: ${({ $active }) => ($active ? '#FDFAF2' : PAPER_INK_SOFT)};
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 600;
+	letter-spacing: 0.1px;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: color 240ms cubic-bezier(0.22, 1, 0.36, 1);
+
+	&:hover {
+		color: ${({ $active }) => ($active ? '#FDFAF2' : PAPER_INK)};
 	}
-	.reset-btn:focus-visible {
-		outline: 2px solid ${T.primary};
+
+	&:focus-visible {
+		outline: 2px solid ${PAPER_ACCENT};
 		outline-offset: 2px;
 	}
 `
 
-export const SegmentedControl = styled('div')`
-	display: inline-flex;
-	background: transparent;
-	border-radius: 10px;
-	padding: 3px;
-	gap: 2px;
+const pillIn = keyframes`
+	from { opacity: 0; transform: translateY(4px); }
+	to   { opacity: 1; transform: translateY(0); }
+`
 
-	button {
-		border: none;
-		background: transparent;
-		font-size: 14px;
-		font-weight: 600;
-		color: ${T.textSecondary};
-		padding: 8px 16px;
-		border-radius: 7px;
-		cursor: pointer;
-		text-transform: none;
-		letter-spacing: normal;
-		font-family: inherit;
-		transition:
-			color 160ms ${T.ease},
-			background 160ms ${T.ease},
-			box-shadow 160ms ${T.ease};
-	}
-	button:hover {
-		color: #0369a1;
-	}
-	button.active {
-		background: ${T.cardBg};
-		color: #0369a1;
-		font-weight: 700;
-		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-	}
-	button.active:hover {
-		background: ${T.cardBg};
-		color: #0369a1;
-	}
-	button:focus-visible {
-		outline: 2px solid #0369a1;
-		outline-offset: 2px;
-	}
+const countPop = keyframes`
+	0%   { transform: scale(0.4); opacity: 0; }
+	60%  { transform: scale(1.15); opacity: 1; }
+	100% { transform: scale(1); opacity: 1; }
 `
 
 export const MoreFiltersButton = styled('button')<{ $active?: boolean }>`
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
-	background: ${({ $active }) => ($active ? T.cardBg : 'transparent')};
-	color: #0369a1;
-	border: none;
-	border-radius: 7px;
-	padding: 8px 16px;
-	font-size: 14px;
-	font-weight: 700;
-	text-transform: none;
-	letter-spacing: normal;
-	font-family: inherit;
+	gap: 8px;
+	padding: 9px 18px;
+	border-radius: 999px;
+	background: ${({ $active }) =>
+		$active ? 'rgba(232, 93, 47, 0.08)' : '#ffffff'};
+	border: 1.5px solid
+		${({ $active }) => ($active ? PAPER_ACCENT : PAPER_RULE_STRONG)};
+	color: ${({ $active }) => ($active ? PAPER_ACCENT : PAPER_INK)};
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
 	cursor: pointer;
-	box-shadow: ${({ $active }) => ($active ? '0 1px 2px rgba(15, 23, 42, 0.06)' : 'none')};
+	align-self: center;
+	animation: ${pillIn} 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	animation-delay: 220ms;
 	transition:
-		color 160ms ${T.ease},
-		background 160ms ${T.ease},
-		box-shadow 160ms ${T.ease};
+		background 200ms ease,
+		border-color 200ms ease,
+		color 200ms ease,
+		transform 220ms cubic-bezier(0.22, 1.35, 0.36, 1);
+
+	@media (prefers-reduced-motion: reduce) {
+		animation: none;
+	}
 
 	&:hover {
-		background: ${T.cardBg};
-		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+		border-color: ${PAPER_INK};
+		color: ${PAPER_INK};
+		transform: translateY(-1px);
 	}
+
 	&:focus-visible {
-		outline: 2px solid #0369a1;
+		outline: 2px solid ${PAPER_ACCENT};
 		outline-offset: 2px;
 	}
 
+	svg {
+		font-size: 17px;
+		transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	&:hover .tune-icon {
+		animation: ${iconWiggle} 620ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
 	.count-pill {
-		background: #0369a1;
-		color: ${T.cardBg};
-		font-size: 12px;
-		font-weight: 800;
-		padding: 1px 8px;
-		border-radius: ${T.radiusPill};
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: ${PAPER_ACCENT};
+		color: #fdfaf2;
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
 		font-variant-numeric: tabular-nums;
+		font-size: 11px;
+		font-weight: 700;
+		padding: 1px 8px;
+		border-radius: 999px;
+		min-width: 18px;
+		animation: ${countPop} 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 	}
 `
 

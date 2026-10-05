@@ -5,12 +5,26 @@ import SectionCard from '../_shared/SectionCard'
 import SkeletonBlock from '../_shared/SkeletonBlock'
 import EmptyState from '../_shared/EmptyState'
 import ErrorState from '../_shared/ErrorState'
-import RelevanceControl from '../posts/RelevanceControl'
 import { emitPostDetail } from '../posts/JobPostDrawerBus'
 import { T } from '../_shared/tokens'
 import { useSalesFilters } from '../../../page/analytics/filters/useSalesFilters'
 import { useGetJobPostsPageQuery } from '../../../store/sales-analytics/salesAnalyticsApi'
-import { CLIENT_TIER_META } from '../../../store/sales-analytics/mock/selectors/posts'
+/* ClientTier label/rule lookup — inlined after the deferred-tab mock
+ * dataset (which previously exported this) was removed. The constant
+ * is still used by AllPostsList's tier-highlight tooltips. */
+const CLIENT_TIER_META: Record<
+	'elite' | 'strong' | 'standard' | 'new' | 'unverified',
+	{ label: string; rule: string }
+> = {
+	elite: {
+		label: 'Elite',
+		rule: 'Verified · spent ≥ $50k · rating ≥ 4.6 · ≥ 15 jobs posted',
+	},
+	strong: { label: 'Strong', rule: 'Verified · spent ≥ $10k · rating ≥ 4.3' },
+	standard: { label: 'Standard', rule: 'Verified · spent ≥ $1k or ≥ 3 jobs posted' },
+	new: { label: 'New', rule: 'Verified · limited history' },
+	unverified: { label: 'Unverified', rule: 'Payment method not verified' },
+}
 import type { MockJobPost } from '../../../store/sales-analytics/types/jobPost'
 
 const PAGE_SIZE = 20
@@ -265,9 +279,6 @@ const AllPostsList = ({ onClose }: Props) => {
 										<td>
 											<div className='client-country'>{p.clientCountry}</div>
 											<div className='client-tier'>{clientTierOf(p)}</div>
-										</td>
-										<td>
-											<RelevanceControl postId={p.id} compact />
 										</td>
 										<td>
 											{p.originalUrl && (

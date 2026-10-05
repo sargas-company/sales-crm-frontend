@@ -1,7 +1,5 @@
 export type SalesDateRangeKey = 'today' | '7d' | '30d' | 'custom'
 
-export type ManualRelevanceFilter = 'relevant' | 'not_relevant' | 'very_relevant' | 'unrated'
-
 export type NotificationStatusFilter = 'sent' | 'failed' | 'not_required' | 'pending'
 
 export type ContractTypeFilter = 'fixed' | 'hourly' | 'unknown'
@@ -27,6 +25,5 @@ export interface SalesFilters {
 	budgetBucket?: string
 	clientCountry?: string[]
 	clientQuality?: string[]
-	manualRelevance?: ManualRelevanceFilter
 	notificationStatus?: NotificationStatusFilter
 }

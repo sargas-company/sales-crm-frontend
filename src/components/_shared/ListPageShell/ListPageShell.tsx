@@ -6,6 +6,7 @@ import { T } from '../../sales-analytics/_shared/tokens'
 export interface Crumb {
 	label: string
 	current?: boolean
+	href?: string
 }
 
 interface Props {

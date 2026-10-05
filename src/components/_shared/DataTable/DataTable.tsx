@@ -5,7 +5,6 @@ import {
 	EmptyIconWrap,
 	EmptyState,
 	EmptyTitle,
-	InlineState,
 	Pager,
 	PagerBtn,
 	PagerButtons,
@@ -180,19 +179,25 @@ function DataTable<T>({
 	const dataColumns = columns.filter((c) => !isActions(c.key))
 	const actionsColumn = columns.find((c) => isActions(c.key))
 
-	// When there are no records (and we are not loading / erroring), hide
-	// both the header row and the pager — the card becomes a clean empty
-	// canvas rather than a bordered strip with empty rails.
-	const showEmpty = !isLoading && !isError && sortedRows.length === 0
+	// Both the error and the "empty response" paths share the same
+	// clean-canvas layout: no header row, no pager, a centered icon
+	// + text. Only the copy differs — an error gets a retry CTA.
+	const showBlank = !isLoading && (isError || sortedRows.length === 0)
 
-	if (showEmpty) {
+	if (showBlank) {
 		return (
 			<TableCard>
 				<EmptyState>
 					<EmptyIconWrap>
 						{emptyIcon ?? (searchActive ? <SearchOffOutlined /> : <InboxOutlined />)}
 					</EmptyIconWrap>
-					<EmptyTitle>{searchActive ? emptyTitleSearch : emptyTitle}</EmptyTitle>
+					<EmptyTitle>
+						{isError
+							? 'Could not load records'
+							: searchActive
+								? emptyTitleSearch
+								: emptyTitle}
+					</EmptyTitle>
 				</EmptyState>
 			</TableCard>
 		)
@@ -280,24 +285,6 @@ function DataTable<T>({
 										)}
 									</tr>
 								))}
-
-							{!isLoading && isError && (
-								<tr>
-									<td colSpan={totalCols}>
-										<InlineState>
-											<div className='state-title'>Could not load records</div>
-											<div className='state-sub'>
-												The list request failed. Retry to reload.
-											</div>
-											{onRetry && (
-												<button type='button' className='state-cta' onClick={onRetry}>
-													Retry
-												</button>
-											)}
-										</InlineState>
-									</td>
-								</tr>
-							)}
 
 							{!isLoading &&
 								!isError &&

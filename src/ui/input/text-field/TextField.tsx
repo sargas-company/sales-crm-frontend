@@ -66,11 +66,12 @@ const TextField = forwardRef<InputRef, Inputs>((props, ref) => {
 					theme={{ mode, primaryColor }}
 					value={value}
 					defaultValue={defaultValue}
-					onChange={onChange}
-					onKeyDown={onKeyDown}
-					onBlur={onBlur}
+					onChange={onChange as React.ChangeEventHandler<HTMLInputElement>}
+					onKeyDown={onKeyDown as React.KeyboardEventHandler<HTMLInputElement>}
+					onBlur={onBlur as React.FocusEventHandler<HTMLInputElement>}
 					disabled={disable}
 					error={error}
+					aria-invalid={error ? true : undefined}
 					placeholder={placeholder}
 					style={style}
 					autoFocus={autoFocus}
@@ -94,9 +95,10 @@ const TextField = forwardRef<InputRef, Inputs>((props, ref) => {
 					className='form-input body1'
 					theme={{ mode, primaryColor }}
 					hasLabel={!!label}
-					onChange={onChange}
-					onKeyDown={onKeyDown}
-					onBlur={onBlur}
+					aria-invalid={error ? true : undefined}
+					onChange={onChange as React.ChangeEventHandler<HTMLTextAreaElement>}
+					onKeyDown={onKeyDown as React.KeyboardEventHandler<HTMLTextAreaElement>}
+					onBlur={onBlur as React.FocusEventHandler<HTMLTextAreaElement>}
 				/>
 			)}
 			{label && <InputLabel label={label} isFloating={!!(value || defaultValue)} />}

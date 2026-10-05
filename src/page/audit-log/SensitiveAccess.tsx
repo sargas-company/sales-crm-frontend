@@ -1,13 +1,17 @@
 import { LockOpenOutlined } from '@mui/icons-material'
-import ComingSoon from '../../components/coming-soon/ComingSoon'
+import AuditActivityView from './_shared/AuditActivityView'
 
 const SensitiveAccess = () => (
-	<ComingSoon
-		headerTitle='Sensitive access'
-		headerSubtitle='Credentials, financial and protected-data access'
+	<AuditActivityView
+		crumbs={[
+			{ label: 'Governance' },
+			{ label: 'Audit Log' },
+			{ label: 'Sensitive access', current: true },
+		]}
 		icon={<LockOpenOutlined />}
-		title='Sensitive access log is on the way'
-		description="Every reveal, download or read of credentials, finance and other restricted data — with the actor, target and reason."
+		title='Sensitive access'
+		subtitle='Vault unlocks, secret reveals, attachments and MFA step-ups — stored forever.'
+		category='sensitive'
 	/>
 )
 

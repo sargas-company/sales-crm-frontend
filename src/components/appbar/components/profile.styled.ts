@@ -124,58 +124,56 @@ export const ProfileHead = styled('div')`
 	border-bottom: 1px solid #f1f5f9;
 	background: linear-gradient(180deg, #f4f8ff 0%, #ffffff 100%);
 
-	.p-avatar {
+	/* Wrapper lives OUTSIDE any clip zone so the pulsing status dot
+	   is never cut off by overflow on the avatar itself. */
+	.p-avatar-wrap {
 		position: relative;
-		width: 56px;
-		height: 56px;
-		border-radius: 50%;
-		background-position: center;
-		background-size: cover;
-		box-shadow: 0 6px 16px -6px rgba(15, 23, 42, 0.24);
 		flex-shrink: 0;
+	}
+	.p-avatar-wrap > .MuiAvatar-root {
+		box-shadow: 0 6px 16px -6px rgba(15, 23, 42, 0.24);
 	}
 	.p-avatar-status {
 		position: absolute;
-		bottom: 2px;
-		right: 2px;
+		bottom: 1px;
+		right: 1px;
 		width: 13px;
 		height: 13px;
 		background: #10b981;
 		border-radius: 50%;
 		border: 2.5px solid #ffffff;
 		animation: ${statusPulse} 2.4s ease-in-out infinite;
+		pointer-events: none;
+		z-index: 1;
 	}
+
 	.p-body {
 		min-width: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 4px;
+		gap: 3px;
+		flex: 1;
 	}
 	.p-name {
 		font-size: 15.5px;
 		font-weight: 800;
 		color: #0f172a;
 		letter-spacing: -0.2px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
-	.p-role {
-		display: inline-flex;
-		align-items: center;
-		gap: 5px;
-		font-size: 10.5px;
-		font-weight: 700;
-		color: #1e40af;
-		background: linear-gradient(135deg, #f0f9ff 0%, #ede9fe 100%);
-		padding: 3px 9px;
-		border-radius: 999px;
-		letter-spacing: 0.5px;
-		text-transform: uppercase;
-		border: 1px solid rgba(25, 118, 210, 0.15);
-		align-self: flex-start;
-	}
-	.p-role svg {
-		font-size: 11px !important;
+	.p-email {
+		font-size: 11.5px;
+		color: #64748b;
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		letter-spacing: 0.2px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 `
+
 
 export const MenuList = styled('ul')`
 	list-style: none;
@@ -187,18 +185,18 @@ export const MenuList = styled('ul')`
 
 	li {
 		display: grid;
-		grid-template-columns: 34px 1fr auto;
+		grid-template-columns: 20px 1fr;
 		gap: 12px;
 		align-items: center;
 		padding: 10px 12px;
-		border-radius: 12px;
+		border-radius: 10px;
 		cursor: pointer;
 		transition: background 0.18s ease, color 0.18s ease;
 		animation: ${itemFadeIn} 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
-		color: #0f172a;
+		color: #1b2230;
 	}
 	li:hover {
-		background: #f8fafc;
+		background: rgba(37, 45, 58, 0.04);
 	}
 
 	li:nth-child(1) { animation-delay: 40ms; }
@@ -208,90 +206,65 @@ export const MenuList = styled('ul')`
 	li:nth-child(5) { animation-delay: 240ms; }
 
 	.item-icon {
-		width: 34px;
-		height: 34px;
-		border-radius: 10px;
-		display: flex;
+		width: 20px;
+		height: 20px;
+		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-		background: #f0f9ff;
-		color: #1976d2;
-		transition: background 0.18s ease, color 0.18s ease;
+		color: #6c6879;
 	}
 	.item-icon svg {
 		font-size: 18px !important;
 	}
 	li:hover .item-icon {
-		background: #dfeaff;
-		color: #1e40af;
+		color: #1b2230;
 	}
 	.item-label {
 		font-size: 13.5px;
-		font-weight: 600;
+		font-weight: 500;
 		letter-spacing: -0.1px;
-	}
-	.item-arrow {
-		color: #cbd5e1;
-		font-size: 18px !important;
-		transition: color 0.15s ease, transform 0.18s ease;
-	}
-	li:hover .item-arrow {
-		color: #94a3b8;
-		transform: translateX(2px);
 	}
 `
 
 export const MenuFoot = styled('div')`
-	padding: 8px 12px 12px;
+	padding: 4px 12px 8px;
 	border-top: 1px solid #f1f5f9;
-	background: #fafbfc;
 
 	.logout-btn {
 		width: 100%;
 		display: grid;
-		grid-template-columns: 34px 1fr auto;
+		grid-template-columns: 20px 1fr;
 		gap: 12px;
 		align-items: center;
 		padding: 10px 12px;
-		border-radius: 12px;
+		border-radius: 10px;
 		background: transparent;
 		border: none;
 		cursor: pointer;
 		transition: background 0.18s ease;
 		text-align: left;
-		color: #dc2626;
+		color: #c2410c;
 		animation: ${itemFadeIn} 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 		animation-delay: 290ms;
 	}
 	.logout-btn:hover {
-		background: #fef2f2;
+		background: rgba(220, 38, 38, 0.05);
 	}
 	.logout-icon {
-		width: 34px;
-		height: 34px;
-		border-radius: 10px;
-		display: flex;
+		width: 20px;
+		height: 20px;
+		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		background: #fef2f2;
-		color: #dc2626;
+		color: #c2410c;
 	}
 	.logout-icon svg {
 		font-size: 18px !important;
 	}
 	.logout-label {
 		font-size: 13.5px;
-		font-weight: 700;
+		font-weight: 500;
 		letter-spacing: -0.1px;
-	}
-	.logout-arrow {
-		color: #fca5a5;
-		font-size: 18px !important;
-		transition: color 0.15s ease, transform 0.18s ease;
-	}
-	.logout-btn:hover .logout-arrow {
-		color: #dc2626;
-		transform: translateX(2px);
 	}
 `

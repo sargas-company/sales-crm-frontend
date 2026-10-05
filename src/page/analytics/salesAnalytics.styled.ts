@@ -232,6 +232,14 @@ export const TabsWrap = styled('div')`
 		font-weight: 700;
 		color: ${T.textStrong};
 	}
+	/* Disabled "Soon" tabs — hide the native cursor; the floating
+	   SoonCursorOverlay renders our own red circle at the mouse
+	   position and fades in/out with CSS. */
+	.tab-item:disabled,
+	.tab-item[disabled],
+	.tab-item[aria-disabled='true'] {
+		cursor: none !important;
+	}
 	.tab-content {
 		outline: none;
 		padding: 24px 0 0;

@@ -231,11 +231,23 @@ export interface AppTheme {
 	// Legacy inline-theme fields — kept optional during migration so
 	// existing `<Styled theme={{primaryColor, mode, skin, name, color}}>`
 	// callsites keep compiling. New code should not read these.
-	mode?: unknown
-	primaryColor?: unknown
-	skin?: unknown
-	name?: unknown
-	color?: unknown
+	// Shapes mirror `src/theme/type.d.ts :: SettingType` for the legacy
+	// `ui/*` primitives + a handful of `components/*` holdovers that
+	// still pull values straight off the theme root. Everything stays
+	// optional because new primitives pass `buildTheme()` output which
+	// omits these fields.
+	mode?: {
+		name?: 'dark' | 'light'
+		background?: string
+		foreground?: string
+		textColor?: string
+	}
+	primaryColor?: { name?: string; color?: string }
+	skin?: 'default' | 'bordered'
+	name?: 'dark' | 'light' | string
+	color?: string
+	textColor?: string
+	appBarBlur?: boolean
 }
 
 export function buildTheme(mode: ThemeModeName, accent: string): AppTheme {

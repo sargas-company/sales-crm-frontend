@@ -73,7 +73,9 @@ const CounterpartyViewPage = () => {
 		)
 	}
 
-	const name = fullName(counterparty.firstName, counterparty.lastName)
+	const person = fullName(counterparty.firstName, counterparty.lastName)
+	const company = (counterparty.company ?? '').trim()
+	const name = company && person ? `${company} · ${person}` : company || person
 	const badgeLabel = counterparty.type === 'client' ? 'Client' : 'Contractor'
 	const badgeTone = counterparty.type === 'client' ? 'edit' : 'new'
 
@@ -97,6 +99,15 @@ const CounterpartyViewPage = () => {
 						hint='Read-only view. Use the edit action to change name or type.'
 					/>
 					<IdentityGrid>
+						<Field label='Company'>
+							<TextField
+								name='cp-company'
+								value={counterparty.company ?? ''}
+								disable
+								sizes='small'
+								width='100%'
+							/>
+						</Field>
 						<Field label='First name'>
 							<TextField
 								name='cp-first-name'

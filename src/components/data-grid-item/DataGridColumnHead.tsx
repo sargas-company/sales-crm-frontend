@@ -3,7 +3,6 @@ import { FC, memo, ReactNode } from 'react'
 import styled from 'styled-components'
 import { IconButton, Text } from '../../ui'
 import Box from '../box/Box'
-import DataGridDropDownMain from './dropdowns/DataGridDropDownMain'
 
 const DataGridColumnHead: FC<Props> = (props) => {
 	const { onSortField, label, fieldId, sortDir, width, sorted, hidden, wrapLabel } = props

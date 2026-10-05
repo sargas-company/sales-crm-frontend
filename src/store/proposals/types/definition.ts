@@ -5,6 +5,8 @@ export type ProposalStatus = 'Draft' | 'Sent' | 'Viewed' | 'Replied'
 
 export type ProposalType = 'Bid' | 'Invite' | 'DirectMessage'
 
+export type BoostedStatus = 'Boosted' | 'Not Boosted' | 'Boosted Outbid'
+
 export interface ProposalUser {
 	id: string
 	email: string

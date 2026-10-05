@@ -10,7 +10,7 @@ const Chip: FC<ChipProps> = (props) => {
 	return (
 		<ChipWrapper
 			{...props}
-			theme={{ mode: mode.name, color: primaryColor.color }}
+			theme={{ mode, color: primaryColor.color }}
 			style={{ ...props.styles }}
 		>
 			{(props.icon || props.avatar) && (

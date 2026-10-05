@@ -21,7 +21,7 @@ const NavDropdownBtn: FC<Props> = ({ icon, label, path, hasChildren }) => {
 			className={`horizontal_nav_btn bg_secondary--hover ${
 				isActiveBtn ? 'horizontal_nav_btn--active text-light' : ''
 			}`}
-			theme={{ primaryColor: primaryColor.color }}
+			theme={{ primaryColor }}
 			space={0.4}
 			padding='0.6rem 1.4rem'
 		>
@@ -52,8 +52,8 @@ const StyledDropdownBtn = styled(Box)`
 		background: linear-gradient(
 			-90deg,
 			${({ theme }) =>
-				`${genColorShades(theme.primaryColor, { total: 1, intensity: 8 })}, ${
-					theme.primaryColor
+				`${genColorShades(theme.primaryColor?.color ?? '', { total: 1, intensity: 8 })}, ${
+					theme.primaryColor?.color ?? ''
 				}`}
 		);
 	}

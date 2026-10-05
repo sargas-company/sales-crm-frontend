@@ -46,6 +46,10 @@ export const injectStore = (_store: Store) => {
 const axiosInstance = axios.create({
 	baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
 	headers: { 'Content-Type': 'application/json' },
+	// Vault session token lives in an HttpOnly cookie set by the backend.
+	// Without withCredentials the browser strips it from cross-origin calls,
+	// which would 401 every reveal / attachment / hard-delete request.
+	withCredentials: true,
 })
 
 // ─── Request interceptor ─────────────────────────────────────────────────────
@@ -53,6 +57,19 @@ axiosInstance.interceptors.request.use((config) => {
 	const token = store?.getState().auth.accessToken
 	if (token) {
 		config.headers.Authorization = `Bearer ${token}`
+	}
+	/* FormData uploads must NOT carry the global `application/json`
+	 * Content-Type — axios needs to set `multipart/form-data; boundary=…`
+	 * automatically, otherwise multer on the backend treats the payload
+	 * as JSON and the file field never arrives. */
+	if (
+		typeof FormData !== 'undefined' &&
+		config.data instanceof FormData
+	) {
+		if (config.headers) {
+			delete (config.headers as Record<string, unknown>)['Content-Type']
+			delete (config.headers as Record<string, unknown>)['content-type']
+		}
 	}
 	return config
 })
@@ -83,6 +100,24 @@ axiosInstance.interceptors.response.use(
 		if (error.response?.status === 403 && !original?._permRefreshed) {
 			if (original) original._permRefreshed = true
 			refreshPermissionsFromServer().catch(() => undefined)
+			return Promise.reject(error)
+		}
+
+		// Vault-protected endpoints return 401 when the HttpOnly vault
+		// session cookie is missing / expired, but the user's AUTH session
+		// is still valid. Those 401s must NOT trigger the global auth
+		// refresh+logout flow — the UI handles them separately by prompting
+		// the user to unlock the vault.
+		const url: string = original?.url ?? ''
+		const isVaultProtected =
+			url.includes('/vault/') ||
+			(url.includes('/credential-accounts/') &&
+				(url.endsWith('/reveal') ||
+					url.endsWith('/copy') ||
+					url.endsWith('/hard-delete') ||
+					url.includes('/attachments')))
+
+		if (error.response?.status === 401 && isVaultProtected) {
 			return Promise.reject(error)
 		}
 

@@ -2,11 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
 	NotificationsOutlined,
-	BoltOutlined,
-	AutoAwesomeOutlined,
-	CheckCircleOutlineOutlined,
 	ErrorOutlineOutlined,
-	InsightsOutlined,
+	WarningAmberOutlined,
+	InfoOutlined,
 } from '@mui/icons-material'
 import {
 	BellWrap,
@@ -15,73 +13,33 @@ import {
 	PopoverFoot,
 	PopoverHead,
 } from './notification.styled'
+import {
+	useGetAttentionQuery,
+	type AttentionItem,
+} from '../../../store/attention/attentionApi'
+import usePermissions from '../../../hooks/usePermissions'
 
-interface Notif {
-	id: string
-	icon: JSX.Element
-	iconBg: string
-	iconColor: string
-	title: string
-	desc: string
-	time: string
-	unread?: boolean
-	to?: string
+const severityIcon = (sev: AttentionItem['severity']) =>
+	sev === 'critical' ? (
+		<ErrorOutlineOutlined />
+	) : sev === 'warn' ? (
+		<WarningAmberOutlined />
+	) : (
+		<InfoOutlined />
+	)
+
+const relTime = (iso: string): string => {
+	const diffMs = Date.now() - new Date(iso).getTime()
+	if (diffMs < 0) return 'now'
+	const s = Math.round(diffMs / 1000)
+	if (s < 60) return `${s}s`
+	const m = Math.round(s / 60)
+	if (m < 60) return `${m}m`
+	const h = Math.round(m / 60)
+	if (h < 24) return `${h}h`
+	const d = Math.round(h / 24)
+	return `${d}d`
 }
-
-const MOCK_NOTIFS: Notif[] = [
-	{
-		id: 'n1',
-		icon: <BoltOutlined />,
-		iconBg: '#eef2ff',
-		iconColor: '#6366f1',
-		title: 'Vibeworker sent 12 new job posts',
-		desc: 'Webhook processed a fresh batch a few minutes ago.',
-		time: '5m',
-		unread: true,
-		to: '/job-posts',
-	},
-	{
-		id: 'n2',
-		icon: <InsightsOutlined />,
-		iconBg: '#ecfdf5',
-		iconColor: '#10b981',
-		title: 'New job post matched at 94%',
-		desc: '“Full-stack developer for SaaS platform” — worth a look.',
-		time: '22m',
-		unread: true,
-		to: '/job-posts',
-	},
-	{
-		id: 'n3',
-		icon: <CheckCircleOutlineOutlined />,
-		iconBg: '#e0f2fe',
-		iconColor: '#0284c7',
-		title: 'Proposal #482 was accepted',
-		desc: 'Client scheduled a follow-up call.',
-		time: '1h',
-		unread: true,
-	},
-	{
-		id: 'n4',
-		icon: <ErrorOutlineOutlined />,
-		iconBg: '#fef2f2',
-		iconColor: '#ef4444',
-		title: '3 job posts failed to parse',
-		desc: 'AI evaluation errored on invalid rawText payload.',
-		time: '3h',
-		to: '/job-posts',
-	},
-	{
-		id: 'n5',
-		icon: <AutoAwesomeOutlined />,
-		iconBg: '#fef3c7',
-		iconColor: '#d97706',
-		title: 'Prompt updated: Job Evaluation v3',
-		desc: 'A new version is now active for scoring.',
-		time: '5h',
-		to: '/prompts',
-	},
-]
 
 const CLOSE_DURATION_MS = 200
 
@@ -89,12 +47,21 @@ const NotificationBell = () => {
 	const [open, setOpen] = useState(false)
 	const [closing, setClosing] = useState(false)
 	const [wiggleKey, setWiggleKey] = useState(0)
-	const [items, setItems] = useState<Notif[]>(MOCK_NOTIFS)
 	const wrapRef = useRef<HTMLDivElement | null>(null)
 	const closeTimerRef = useRef<number | null>(null)
 	const navigate = useNavigate()
+	const { has } = usePermissions()
+	const canView = has('notifications:view')
 
-	const unreadCount = items.filter((i) => i.unread).length
+	// Skip the attention request entirely when the caller lacks the
+	// gate — RTK Query's `skip` option prevents the fetch, so no 403
+	// hits the network for Regular Manager.
+	const { data } = useGetAttentionQuery(undefined, {
+		pollingInterval: 120_000,
+		skip: !canView,
+	})
+	const items = data?.items ?? []
+	const unreadCount = items.length
 
 	const triggerWiggle = () => {
 		setWiggleKey((k) => k + 1)
@@ -121,14 +88,9 @@ const NotificationBell = () => {
 		}
 	}
 
-	const handleMarkAllRead = () => {
-		setItems((prev) => prev.map((i) => ({ ...i, unread: false })))
-	}
-
-	const handleClickItem = (n: Notif) => {
-		setItems((prev) => prev.map((i) => (i.id === n.id ? { ...i, unread: false } : i)))
-		if (n.to) {
-			navigate(n.to)
+	const handleClickItem = (n: AttentionItem) => {
+		if (n.action?.route) {
+			navigate(n.action.route)
 			closePopover()
 		}
 	}
@@ -158,6 +120,14 @@ const NotificationBell = () => {
 			if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current)
 		}
 	}, [])
+
+	// Early-return MUST sit after every hook on this path. Permissions
+	// hydrate asynchronously after login (`setMe` dispatch happens on
+	// one microtask, the first NotificationBell render on the next),
+	// so a conditional return above `useEffect` would make the hook
+	// count flip between renders — exactly the "Rendered more hooks
+	// than during the previous render" crash this guard caused before.
+	if (!canView) return null
 
 	return (
 		<BellWrap ref={wrapRef}>
@@ -189,35 +159,39 @@ const NotificationBell = () => {
 					</PopoverHead>
 
 					<NotifList>
+						{items.length === 0 && (
+							<li className='notif-empty'>
+								Nothing needs your attention right now.
+							</li>
+						)}
 						{items.map((n) => (
 							<li
 								key={n.id}
-								className={n.unread ? 'unread' : ''}
+								className='unread'
 								onClick={() => handleClickItem(n)}
 							>
-								<span
-									className='notif-icon'
-									style={{ background: n.iconBg, color: n.iconColor }}
-								>
-									{n.icon}
+								<span className='notif-icon'>
+									{severityIcon(n.severity)}
+									<span className='notif-unread-dot' />
 								</span>
 								<div className='notif-body'>
 									<div className='notif-title'>{n.title}</div>
-									<div className='notif-desc'>{n.desc}</div>
+									{n.description && (
+										<div className='notif-desc'>{n.description}</div>
+									)}
 								</div>
-								<span className='notif-time'>{n.time}</span>
+								<span className='notif-time'>
+									{relTime(n.createdAt)}
+								</span>
 							</li>
 						))}
 					</NotifList>
 
 					<PopoverFoot>
-						<button className='muted' onClick={handleMarkAllRead}>
-							Mark all as read
-						</button>
 						<button
 							onClick={() => {
 								closePopover()
-								navigate('/notifications')
+								navigate('/notifications/list')
 							}}
 						>
 							View all →

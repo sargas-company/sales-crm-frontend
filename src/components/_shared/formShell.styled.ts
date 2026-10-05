@@ -130,30 +130,34 @@ export const SubTitle = styled.p<{ $dark: boolean }>`
 	color: ${({ $dark }) => ($dark ? '#8f96a8' : '#7a7591')};
 `
 
-export type ModeTone = 'edit' | 'new' | 'draft' | 'danger'
+export type ModeTone = 'edit' | 'new' | 'draft' | 'danger' | 'view'
 
 const modeBg = (tone: ModeTone, dark: boolean) => {
 	if (tone === 'edit') return dark ? 'rgba(59, 130, 246, 0.15)' : '#e0edff'
 	if (tone === 'draft') return dark ? 'rgba(245, 158, 11, 0.15)' : '#fff4e0'
 	if (tone === 'danger') return dark ? 'rgba(239, 68, 68, 0.15)' : '#fee2e2'
+	if (tone === 'view') return dark ? 'rgba(100, 116, 139, 0.18)' : '#eef2f7'
 	return dark ? 'rgba(34, 197, 94, 0.15)' : '#e5f8ec'
 }
 const modeFg = (tone: ModeTone, dark: boolean) => {
 	if (tone === 'edit') return dark ? '#93c5fd' : '#1d4ed8'
 	if (tone === 'draft') return dark ? '#fcd34d' : '#a26608'
 	if (tone === 'danger') return dark ? '#fca5a5' : '#b91c1c'
+	if (tone === 'view') return dark ? '#cbd5e1' : '#475569'
 	return dark ? '#86efac' : '#15803d'
 }
 const modeBorder = (tone: ModeTone, dark: boolean) => {
 	if (tone === 'edit') return dark ? 'rgba(59, 130, 246, 0.25)' : '#c9dcff'
 	if (tone === 'draft') return dark ? 'rgba(245, 158, 11, 0.25)' : '#ffe6b8'
 	if (tone === 'danger') return dark ? 'rgba(239, 68, 68, 0.25)' : '#fecaca'
+	if (tone === 'view') return dark ? 'rgba(100, 116, 139, 0.28)' : '#d6dde6'
 	return dark ? 'rgba(34, 197, 94, 0.25)' : '#bde5c8'
 }
 const modeDot = (tone: ModeTone) => {
 	if (tone === 'edit') return '#3b82f6'
 	if (tone === 'draft') return '#f59e0b'
 	if (tone === 'danger') return '#ef4444'
+	if (tone === 'view') return '#64748b'
 	return '#22c55e'
 }
 
@@ -375,7 +379,7 @@ export const FootBar = styled.div<{ $dark: boolean }>`
 	}
 `
 
-export const FootLeft = styled.div<{ $dark: boolean }>`
+export const FootLeft = styled.div<{ $dark?: boolean }>`
 	display: flex;
 	align-items: center;
 	gap: 8px;
@@ -441,6 +445,101 @@ export const PrimarySolidButton = styled.button`
 		opacity: 0.5;
 		cursor: not-allowed;
 		box-shadow: none;
+	}
+`
+
+/* Ghost / outlined brand-blue button — same size as
+   PrimarySolidButton, white background with a blue outline. Hover
+   only lifts the button; no color, border or shadow change so the
+   outlined family reads as quietly interactive. */
+export const PrimaryGhostButton = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	background: transparent;
+	color: rgba(3, 105, 161, 1);
+	border: 1px solid rgba(3, 105, 161, 0.35);
+	padding: 10px 17px;
+	font-family: inherit;
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+	border-radius: 12px;
+	cursor: pointer;
+	transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+
+	svg {
+		font-size: 18px;
+	}
+
+	&:hover:not(:disabled) {
+		transform: translateY(-1px);
+	}
+
+	&:active:not(:disabled) {
+		transform: translateY(0);
+	}
+
+	&:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
+	}
+`
+
+/* Icon micro-animations shared by "Edit …" and "Back …" buttons.
+   Mirrors the pattern used in the client-calls / invoices previews so
+   every mutation-CTA feels alive on hover. */
+const editWiggle = keyframes`
+	0%   { rotate: 0deg; translate: 0 0; }
+	25%  { rotate: -22deg; translate: -1px 2px; }
+	55%  { rotate: 14deg; translate: 1px -1px; }
+	80%  { rotate: -6deg; translate: 0 1px; }
+	100% { rotate: 0deg; translate: 0 0; }
+`
+
+const arrowNudgeLeft = keyframes`
+	0%   { translate: 0 0; }
+	50%  { translate: -3px 0; }
+	100% { translate: 0 0; }
+`
+
+/* PrimarySolidButton variant with an animated edit icon on hover. */
+export const EditSolidButton = styled(PrimarySolidButton)`
+	svg {
+		transform-origin: 40% 60%;
+		transition: scale 260ms cubic-bezier(0.22, 1.35, 0.36, 1);
+	}
+
+	&:hover:not(:disabled) svg {
+		scale: 1.18;
+		animation: ${editWiggle} 640ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		&:hover:not(:disabled) svg {
+			animation: none;
+			scale: 1;
+		}
+	}
+`
+
+/* PrimaryGhostButton variant with a leftwards-nudging arrow — pair
+   with a left-pointing icon (e.g. ArrowBackRounded) for "Back …"
+   buttons in view/edit surfaces. */
+export const BackGhostButton = styled(PrimaryGhostButton)`
+	svg {
+		transition: translate 220ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	&:hover:not(:disabled) svg {
+		animation: ${arrowNudgeLeft} 520ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		&:hover:not(:disabled) svg {
+			animation: none;
+		}
 	}
 `
 

@@ -22,8 +22,8 @@ const DataGridRow: FC<Props> = (props) => {
 	return (
 		<StyledRow
 			theme={{
-				mode: mode.name,
-				color: genColorShades(primaryColor.color, { intensity: 1, total: 1 }),
+				mode,
+				color: genColorShades(primaryColor.color, { intensity: 1, total: 1 })[0],
 			}}
 			key={dataId}
 			role='row'
@@ -55,7 +55,7 @@ const StyledRow = styled('div')<{ animationIndex?: number }>`
 	vertical-align: middle;
 	min-height: 64px;
 	border-bottom: 1px solid
-		${({ theme }) => (theme.mode === 'dark' ? 'rgba(177, 177, 177, 0.14)' : 'rgba(122, 122, 122, 0.14)')};
+		${({ theme }) => (theme.mode?.name === 'dark' ? 'rgba(177, 177, 177, 0.14)' : 'rgba(122, 122, 122, 0.14)')};
 	transition:
 		background 0.22s ease,
 		transform 0.22s ease,
@@ -66,7 +66,7 @@ const StyledRow = styled('div')<{ animationIndex?: number }>`
 		animationIndex !== undefined ? `${Math.min(animationIndex * 40, 400)}ms` : '0ms'};
 
 	&:hover {
-		background: ${({ theme }) => (theme.mode === 'dark' ? '#ffffff10' : '#f2f4f7')};
+		background: ${({ theme }) => (theme.mode?.name === 'dark' ? '#ffffff10' : '#f2f4f7')};
 		transform: translateX(2px);
 	}
 	&.row-selected {
