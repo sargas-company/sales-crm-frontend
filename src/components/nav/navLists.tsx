@@ -32,7 +32,6 @@ import {
 	LinkedIn,
 	LightbulbOutlined,
 	ArticleOutlined,
-	CalendarMonthOutlined,
 	HistoryEduOutlined,
 	HistoryOutlined,
 	ShieldOutlined,
@@ -53,7 +52,7 @@ const format = (
 	label: string,
 	path: string,
 	icon?: ReactNode,
-	permission?: string | string[],
+	permission?: string | string[]
 ): NavItemType => {
 	const base: NavItemType = icon ? { label, path, icon } : { label, path }
 	return permission !== undefined ? { ...base, permission } : base
@@ -73,8 +72,18 @@ const navList: NavOptions[] = [
 			format('Sales', '/dashboards/sales', <TrendingUpOutlined />, 'sales_analytics:view'),
 			format('Finances', '/dashboards/finances', <InsightsOutlined />, 'finances_weekly:view'),
 			format('Projects', '/dashboards/projects', <FolderOutlined />, 'project_analytics:view'),
-			format('Time Off', '/dashboards/time-off', <BeachAccessOutlined />, 'employee_analytics:view'),
-			format('Compensation', '/dashboards/compensation', <PaidOutlined />, 'compensation_analytics:view'),
+			format(
+				'Time Off',
+				'/dashboards/time-off',
+				<BeachAccessOutlined />,
+				'employee_analytics:view'
+			),
+			format(
+				'Compensation',
+				'/dashboards/compensation',
+				<PaidOutlined />,
+				'compensation_analytics:view'
+			),
 		],
 	},
 	{
@@ -90,14 +99,24 @@ const navList: NavOptions[] = [
 		childrens: [
 			format('List', '/leads/list/', <PeopleOutlined />, 'leads:view'),
 			format('Client Calls', '/client-calls/list/', <PhoneOutlined />, 'client_calls:view'),
-			format('Client Requests', '/client-requests/list/', <AssignmentOutlined />, 'client_requests:view'),
+			format(
+				'Client Requests',
+				'/client-requests/list/',
+				<AssignmentOutlined />,
+				'client_requests:view'
+			),
 		],
 	},
 	{
 		parent: formatGroupButton('Invoices', <ReceiptLongOutlined />, '/invoices'),
 		childrens: [
 			format('List', '/invoices/list/', <ReceiptLongOutlined />, 'invoices:view'),
-			format('Counterparties', '/counterparties/list/', <ContactsOutlined />, 'counterparties:view'),
+			format(
+				'Counterparties',
+				'/counterparties/list/',
+				<ContactsOutlined />,
+				'counterparties:view'
+			),
 		],
 	},
 	{
@@ -120,20 +139,39 @@ const navList: NavOptions[] = [
 		parent: formatGroupButton('Finances', <AccountBalanceOutlined />, '/finances'),
 		childrens: [
 			format('Payments', '/finances/payments', <PaymentOutlined />, 'finances_weekly:view'),
-			format('Payments List', '/finances/payments-list', <ListAltOutlinedFw />, 'finances_weekly:view'),
+			format(
+				'Payments List',
+				'/finances/payments-list',
+				<ListAltOutlinedFw />,
+				'finances_weekly:view'
+			),
 			format('Salaries', '/finances/salaries', <AttachMoneyOutlined />, 'salaries:view'),
 			format('Monthly run', '/finances/salaries/run', <ChecklistRtlOutlined />, 'salaries:view'),
-			format('Salary Reviews', '/finances/promotions', <LocalOfferOutlined />, 'compensation_reviews:view'),
-			format('Payment Sources', '/finances/payment-source', <AccountBalanceWalletOutlined />, 'payment_sources:view'),
+			format(
+				'Salary Reviews',
+				'/finances/promotions',
+				<LocalOfferOutlined />,
+				'compensation_reviews:view'
+			),
+			format(
+				'Payment Sources',
+				'/finances/payment-source',
+				<AccountBalanceWalletOutlined />,
+				'payment_sources:view'
+			),
 		],
 	},
 	{
 		parent: formatGroupButton('LinkedIn', <LinkedIn />, '/linkedin'),
 		childrens: [
 			format('Posts', '/linkedin/posts', <ArticleOutlined />, 'linkedin_posts:view'),
-			format('Calendar', '/linkedin/posts/calendar', <CalendarMonthOutlined />, 'linkedin_posts:view'),
 			format('Ideas', '/linkedin/ideas', <LightbulbOutlined />, 'linkedin_ideas:view'),
-			format('Accounts', '/linkedin/accounts', <AccountCircleOutlined />, 'linkedin_accounts:view'),
+			format(
+				'Accounts',
+				'/linkedin/accounts',
+				<AccountCircleOutlined />,
+				'linkedin_accounts:view'
+			),
 		],
 	},
 	{
@@ -141,8 +179,18 @@ const navList: NavOptions[] = [
 		permission: 'phone_numbers:view',
 		childrens: [
 			format('Numbers', '/phone-numbers', <PhoneAndroidOutlined />, 'phone_numbers:view'),
-			format('Service Assignments', '/phone-numbers/assignments', <AssignmentIndOutlined />, 'phone_numbers:view'),
-			format('Maintenance', '/phone-numbers/maintenance', <BuildOutlined />, 'phone_numbers:view'),
+			format(
+				'Service Assignments',
+				'/phone-numbers/assignments',
+				<AssignmentIndOutlined />,
+				'phone_numbers:view'
+			),
+			format(
+				'Maintenance',
+				'/phone-numbers/maintenance',
+				<BuildOutlined />,
+				'phone_numbers:view'
+			),
 			format('Services', '/phone-numbers/services', <AppsOutlined />, 'phone_numbers:view'),
 		],
 	},
@@ -175,9 +223,7 @@ export const secondaryNavList: NavOptions[] = [
 	{
 		parent: formatGroupButton('Backup & Recovery', <BackupOutlined />, '/backups'),
 		permission: 'backups:view',
-		childrens: [
-			format('List', '/backups/list', <ListAltOutlined />, 'backups:view'),
-		],
+		childrens: [format('List', '/backups/list', <ListAltOutlined />, 'backups:view')],
 	},
 	{
 		label: 'Notifications',

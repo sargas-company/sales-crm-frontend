@@ -52,7 +52,6 @@ const LinkedInPosts = lazy(() => import('./linkedin/Posts'))
 const LinkedInPostsAdd = lazy(() => import('./linkedin/PostsAdd'))
 const LinkedInPostsEdit = lazy(() => import('./linkedin/PostsEdit'))
 const LinkedInPostsView = lazy(() => import('./linkedin/PostsView'))
-const LinkedInPostsCalendar = lazy(() => import('./linkedin/PostsCalendar'))
 const LinkedInAccounts = lazy(() => import('./linkedin/AccountsList'))
 const LinkedInAccountsAdd = lazy(() => import('./linkedin/AccountsAdd'))
 const LinkedInAccountsEdit = lazy(() => import('./linkedin/AccountsEdit'))
@@ -401,14 +400,6 @@ const Home = () => {
 								element={
 									<ProtectedRoute permission='linkedin_posts:create'>
 										<LinkedInPostsAdd />
-									</ProtectedRoute>
-								}
-							/>
-							<Route
-								path='/linkedin/posts/calendar'
-								element={
-									<ProtectedRoute permission='linkedin_posts:view'>
-										<LinkedInPostsCalendar />
 									</ProtectedRoute>
 								}
 							/>
