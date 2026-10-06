@@ -21,11 +21,7 @@ import {
 	useListOpenMaintenanceQuery,
 	type MaintenanceTask,
 } from '../../store/phone-numbers/phoneNumbersApi'
-import {
-	DataTable,
-	TableSkeleton,
-	type DataTableColumn,
-} from '../../components/_shared/DataTable'
+import { DataTable, TableSkeleton, type DataTableColumn } from '../../components/_shared/DataTable'
 
 const PAGE_SIZE = 25
 const OPEN_PAGE_SIZE = 10
@@ -69,8 +65,7 @@ const PhoneMaintenancePage = () => {
 		page,
 		limit: PAGE_SIZE,
 	})
-	const [complete, { isLoading: isCompleting }] =
-		useCompleteMaintenanceMutation()
+	const [complete, { isLoading: isCompleting }] = useCompleteMaintenanceMutation()
 
 	const [drafts, setDrafts] = useState<
 		Record<string, { network: boolean; topup: boolean; amount: string; notes: string }>
@@ -84,10 +79,7 @@ const PhoneMaintenancePage = () => {
 			notes: '',
 		}
 
-	const updateDraft = (
-		id: string,
-		patch: Partial<ReturnType<typeof draftFor>>,
-	) => {
+	const updateDraft = (id: string, patch: Partial<ReturnType<typeof draftFor>>) => {
 		setDrafts((prev) => ({
 			...prev,
 			[id]: { ...(prev[id] ?? draftFor({ id } as MaintenanceTask)), ...patch },
@@ -118,9 +110,9 @@ const PhoneMaintenancePage = () => {
 		{
 			key: 'number',
 			label: 'Number',
-			minWidth: 150,
-			render: (r) => <Mono>{r.phoneNumber.number}</Mono>,
-			skeleton: () => <TableSkeleton $w='120px' $h='14px' />,
+			minWidth: 170,
+			render: (r) => <Mono>{formatPhoneMask(r.phoneNumber.number)}</Mono>,
+			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
 		},
 		{
 			key: 'operator',
@@ -138,8 +130,7 @@ const PhoneMaintenancePage = () => {
 			key: 'completedAt',
 			label: 'Completed',
 			minWidth: 110,
-			render: (r) =>
-				r.completedAt ? new Date(r.completedAt).toLocaleDateString() : '—',
+			render: (r) => (r.completedAt ? new Date(r.completedAt).toLocaleDateString() : '—'),
 		},
 		{
 			key: 'topupAmount',
@@ -151,9 +142,7 @@ const PhoneMaintenancePage = () => {
 			key: 'status',
 			label: 'Status',
 			minWidth: 100,
-			render: (r) => (
-				<HistoryPill $status={r.status}>{r.status.toLowerCase()}</HistoryPill>
-			),
+			render: (r) => <HistoryPill $status={r.status}>{r.status.toLowerCase()}</HistoryPill>,
 		},
 	]
 
@@ -179,182 +168,152 @@ const PhoneMaintenancePage = () => {
 		>
 			<FadeBlock $delay={60}>
 				<HeroCards>
-				<HeroCard>
-					<HeroIcon>
-						<WarningAmberRounded />
-					</HeroIcon>
-					<HeroBody>
-						<HeroLabel>Due · overdue</HeroLabel>
-						<HeroValue>{total}</HeroValue>
-					</HeroBody>
-				</HeroCard>
-				<HeroCard>
-					<HeroIcon>
-						<ScheduleOutlined />
-					</HeroIcon>
-					<HeroBody>
-						<HeroLabel>Next scheduled</HeroLabel>
-						<HeroValue>
-							{summary?.nextMaintenanceDate
-								? new Date(
-										summary.nextMaintenanceDate,
-									).toLocaleDateString()
-								: '—'}
-						</HeroValue>
-					</HeroBody>
-				</HeroCard>
-				<HeroCard>
-					<HeroIcon>
-						<NotificationsActiveOutlined />
-					</HeroIcon>
-					<HeroBody>
-						<HeroLabel>Discord reminder</HeroLabel>
-						<HeroValue>Daily until closed</HeroValue>
-					</HeroBody>
-				</HeroCard>
-			</HeroCards>
+					<HeroCard>
+						<HeroIcon>
+							<WarningAmberRounded />
+						</HeroIcon>
+						<HeroBody>
+							<HeroLabel>Due · overdue</HeroLabel>
+							<HeroValue>{total}</HeroValue>
+						</HeroBody>
+					</HeroCard>
+					<HeroCard>
+						<HeroIcon>
+							<ScheduleOutlined />
+						</HeroIcon>
+						<HeroBody>
+							<HeroLabel>Next scheduled</HeroLabel>
+							<HeroValue>
+								{summary?.nextMaintenanceDate
+									? new Date(summary.nextMaintenanceDate).toLocaleDateString()
+									: '—'}
+							</HeroValue>
+						</HeroBody>
+					</HeroCard>
+					<HeroCard>
+						<HeroIcon>
+							<NotificationsActiveOutlined />
+						</HeroIcon>
+						<HeroBody>
+							<HeroLabel>Discord reminder</HeroLabel>
+							<HeroValue>Daily until closed</HeroValue>
+						</HeroBody>
+					</HeroCard>
+				</HeroCards>
 			</FadeBlock>
 
 			<FadeBlock $delay={160}>
-			{isLoading ? (
-				<EmptyPanel>Loading…</EmptyPanel>
-			) : closed ? (
-				<EmptyPanel>
-					<CheckRounded style={{ color: '#047857' }} />
-					All maintenance complete. See you next quarter.
-				</EmptyPanel>
-			) : (
-				<TaskList>
-					{open
-						.slice(
-							(openPage - 1) * OPEN_PAGE_SIZE,
-							openPage * OPEN_PAGE_SIZE,
-						)
-						.map((t) => {
-						const draft = draftFor(t)
-						const bothDone = draft.network && draft.topup
-						const due = dueLabel(t.dueAt)
-						const holderText = t.phoneNumber.holder
-							? `${t.phoneNumber.holder.firstName} ${t.phoneNumber.holder.lastName}`
-							: 'no holder'
-						const progress =
-							(draft.network ? 1 : 0) + (draft.topup ? 1 : 0)
-						return (
-							<V3bCard key={t.id} $overdue={t.status === 'OVERDUE'}>
-								<V3bAccent $overdue={t.status === 'OVERDUE'} />
-								<V3bHero>
-									<V3bHeroLeft>
-										<V3bPhone>
-											{formatPhoneMask(t.phoneNumber.number)}
-										</V3bPhone>
-										<V3bSub>
-											{OPERATOR_LABEL[t.phoneNumber.operator]} ·{' '}
-											{holderText} · due{' '}
-											{new Date(t.dueAt).toLocaleDateString()}
-										</V3bSub>
-									</V3bHeroLeft>
-									<V3bHeroRight>
-										<V3bProgress $empty={progress === 0}>
-											<em>{progress}</em>/2
-										</V3bProgress>
-										<V3bDueTag $overdue={due.overdue}>
-											{due.text}
-										</V3bDueTag>
-									</V3bHeroRight>
-								</V3bHero>
-								<V3bDivider />
-								<V3bToolbar>
-									<V3bToggle
-										$active={draft.network}
-										onClick={() =>
-											updateDraft(t.id, { network: !draft.network })
-										}
-									>
-										<span className='mark'>
-											{draft.network ? '✓' : '○'}
-										</span>
-										Register
-									</V3bToggle>
-									<V3bToggle
-										$active={draft.topup}
-										onClick={() =>
-											updateDraft(t.id, { topup: !draft.topup })
-										}
-									>
-										<span className='mark'>
-											{draft.topup ? '✓' : '○'}
-										</span>
-										Top-up
-									</V3bToggle>
-									<V3bAmountWrap
-										title='How much you topped up the SIM balance, in UAH (₴). Default is 10.'
-									>
-										<span className='prefix'>Top-up ₴</span>
-										<V3bAmount
-											type='number'
-											inputMode='decimal'
-											placeholder='10'
-											value={draft.amount}
-											size={Math.max(
-												2,
-												String(draft.amount ?? '').length || 2,
-											)}
-											aria-label='Top-up amount in UAH'
-											onChange={(e) =>
-												updateDraft(t.id, { amount: e.target.value })
-											}
-										/>
-									</V3bAmountWrap>
-									<V3bSpacer />
-									<PermissionGate permission='phone_numbers:maintain'>
-										<PrimarySolidButton
-											type='button'
-											onClick={() => submitTask(t)}
-											disabled={isCompleting || !bothDone}
-										>
-											Mark complete
-										</PrimarySolidButton>
-									</PermissionGate>
-								</V3bToolbar>
-							</V3bCard>
-						)
-					})}
-				</TaskList>
-			)}
+				{isLoading ? (
+					<EmptyPanel>Loading…</EmptyPanel>
+				) : closed ? (
+					<EmptyPanel>
+						<CheckRounded style={{ color: '#047857' }} />
+						All maintenance complete. See you next quarter.
+					</EmptyPanel>
+				) : (
+					<TaskList>
+						{open
+							.slice((openPage - 1) * OPEN_PAGE_SIZE, openPage * OPEN_PAGE_SIZE)
+							.map((t) => {
+								const draft = draftFor(t)
+								const bothDone = draft.network && draft.topup
+								const due = dueLabel(t.dueAt)
+								const holderText = t.phoneNumber.holder
+									? `${t.phoneNumber.holder.firstName} ${t.phoneNumber.holder.lastName}`
+									: 'no holder'
+								const progress = (draft.network ? 1 : 0) + (draft.topup ? 1 : 0)
+								return (
+									<V3bCard key={t.id} $overdue={t.status === 'OVERDUE'}>
+										<V3bAccent $overdue={t.status === 'OVERDUE'} />
+										<V3bHero>
+											<V3bHeroLeft>
+												<V3bPhone>{formatPhoneMask(t.phoneNumber.number)}</V3bPhone>
+												<V3bSub>
+													{OPERATOR_LABEL[t.phoneNumber.operator]} · {holderText} · due{' '}
+													{new Date(t.dueAt).toLocaleDateString()}
+												</V3bSub>
+											</V3bHeroLeft>
+											<V3bHeroRight>
+												<V3bProgress $empty={progress === 0}>
+													<em>{progress}</em>/2
+												</V3bProgress>
+												<V3bDueTag $overdue={due.overdue}>{due.text}</V3bDueTag>
+											</V3bHeroRight>
+										</V3bHero>
+										<V3bDivider />
+										<V3bToolbar>
+											<V3bToggle
+												$active={draft.network}
+												onClick={() => updateDraft(t.id, { network: !draft.network })}
+											>
+												<span className='mark'>{draft.network ? '✓' : '○'}</span>
+												Register
+											</V3bToggle>
+											<V3bToggle
+												$active={draft.topup}
+												onClick={() => updateDraft(t.id, { topup: !draft.topup })}
+											>
+												<span className='mark'>{draft.topup ? '✓' : '○'}</span>
+												Top-up
+											</V3bToggle>
+											<V3bAmountWrap title='How much you topped up the SIM balance, in UAH (₴). Default is 10.'>
+												<span className='prefix'>Top-up ₴</span>
+												<V3bAmount
+													type='number'
+													inputMode='decimal'
+													placeholder='10'
+													value={draft.amount}
+													size={Math.max(2, String(draft.amount ?? '').length || 2)}
+													aria-label='Top-up amount in UAH'
+													onChange={(e) =>
+														updateDraft(t.id, { amount: e.target.value })
+													}
+												/>
+											</V3bAmountWrap>
+											<V3bSpacer />
+											<PermissionGate permission='phone_numbers:maintain'>
+												<PrimarySolidButton
+													type='button'
+													onClick={() => submitTask(t)}
+													disabled={isCompleting || !bothDone}
+												>
+													Mark complete
+												</PrimarySolidButton>
+											</PermissionGate>
+										</V3bToolbar>
+									</V3bCard>
+								)
+							})}
+					</TaskList>
+				)}
 			</FadeBlock>
 
 			{open.length > 0 && (
 				<FadeBlock $delay={240}>
-				<Pager>
-					<PagerBtn
-						type='button'
-						onClick={() => setOpenPage((p) => Math.max(1, p - 1))}
-						disabled={openPage <= 1}
-					>
-						← Prev
-					</PagerBtn>
-					<PagerLabel>
-						Page <em>{openPage}</em> of{' '}
-						{Math.max(1, Math.ceil(open.length / OPEN_PAGE_SIZE))}
-					</PagerLabel>
-					<PagerBtn
-						type='button'
-						onClick={() =>
-							setOpenPage((p) =>
-								Math.min(
-									Math.max(
-										1,
-										Math.ceil(open.length / OPEN_PAGE_SIZE),
-									),
-									p + 1,
-								),
-							)
-						}
-						disabled={openPage * OPEN_PAGE_SIZE >= open.length}
-					>
-						Next →
-					</PagerBtn>
-				</Pager>
+					<Pager>
+						<PagerBtn
+							type='button'
+							onClick={() => setOpenPage((p) => Math.max(1, p - 1))}
+							disabled={openPage <= 1}
+						>
+							← Prev
+						</PagerBtn>
+						<PagerLabel>
+							Page <em>{openPage}</em> of{' '}
+							{Math.max(1, Math.ceil(open.length / OPEN_PAGE_SIZE))}
+						</PagerLabel>
+						<PagerBtn
+							type='button'
+							onClick={() =>
+								setOpenPage((p) =>
+									Math.min(Math.max(1, Math.ceil(open.length / OPEN_PAGE_SIZE)), p + 1)
+								)
+							}
+							disabled={openPage * OPEN_PAGE_SIZE >= open.length}
+						>
+							Next →
+						</PagerBtn>
+					</Pager>
 				</FadeBlock>
 			)}
 
@@ -563,8 +522,7 @@ const V3bDueTag = styled.span<{ $overdue: boolean }>`
 	font-size: 11.5px;
 	font-weight: 700;
 	letter-spacing: 0.5px;
-	background: ${(p) =>
-		p.$overdue ? 'rgba(220, 38, 38, 0.1)' : 'rgba(217, 119, 6, 0.12)'};
+	background: ${(p) => (p.$overdue ? 'rgba(220, 38, 38, 0.1)' : 'rgba(217, 119, 6, 0.12)')};
 	color: ${(p) => (p.$overdue ? '#b91c1c' : '#b45309')};
 `
 const V3bDivider = styled.div`
@@ -584,10 +542,8 @@ const V3bToggle = styled.button<{ $active: boolean }>`
 	gap: 6px;
 	padding: 7px 14px;
 	border-radius: 10px;
-	border: 1.5px solid
-		${(p) => (p.$active ? T.primary : 'rgba(15, 23, 42, 0.1)')};
-	background: ${(p) =>
-		p.$active ? 'rgba(3, 105, 161, 0.08)' : '#ffffff'};
+	border: 1.5px solid ${(p) => (p.$active ? T.primary : 'rgba(15, 23, 42, 0.1)')};
+	background: ${(p) => (p.$active ? 'rgba(3, 105, 161, 0.08)' : '#ffffff')};
 	color: ${(p) => (p.$active ? T.primary : T.textStrong)};
 	font: inherit;
 	font-size: 12.5px;
