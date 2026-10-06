@@ -235,14 +235,11 @@ const RoleCreateForm = () => {
 							Role will appear in the list right away.
 						</FootLeft>
 						<FootActions>
-							<Button
-								varient='outlined'
-								color='info'
-								type='button'
-								onClick={() => navigate('/roles')}
-							>
-								Cancel
-							</Button>
+							<CancelSlot>
+								<Button varient='outlined' type='button' onClick={() => navigate('/roles')}>
+									Cancel
+								</Button>
+							</CancelSlot>
 							<PrimarySolidButton type='submit' disabled={submitDisabled}>
 								{isLoading ? 'Creating…' : 'Create role'}
 							</PrimarySolidButton>
@@ -255,6 +252,16 @@ const RoleCreateForm = () => {
 }
 
 export default RoleCreateForm
+
+/* Keeps the outlined Cancel button fully transparent on hover —
+   the shared UI Button fills a light-primary tint by default. */
+const CancelSlot = styled.div`
+	display: inline-block;
+
+	& > button:hover:not(:disabled) {
+		background: transparent !important;
+	}
+`
 
 const IdentityGrid = styled.div`
 	display: grid;
