@@ -27,10 +27,7 @@ interface RoleSortState {
 	direction: RoleSortDirection
 }
 
-const cycleSortState = (
-	current: RoleSortState | null,
-	next: RoleSortKey,
-): RoleSortState | null => {
+const cycleSortState = (current: RoleSortState | null, next: RoleSortKey): RoleSortState | null => {
 	if (!current || current.key !== next) return { key: next, direction: 'asc' }
 	if (current.direction === 'asc') return { key: next, direction: 'desc' }
 	return null
@@ -661,11 +658,58 @@ const Table = styled.table`
 	}
 `
 
+const rowStagger = keyframes`
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+`
+
 const DataRow = styled.tr`
 	transition: background 120ms ${T.ease};
+	animation: ${rowStagger} 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+	&:nth-of-type(1) {
+		animation-delay: 20ms;
+	}
+	&:nth-of-type(2) {
+		animation-delay: 60ms;
+	}
+	&:nth-of-type(3) {
+		animation-delay: 100ms;
+	}
+	&:nth-of-type(4) {
+		animation-delay: 140ms;
+	}
+	&:nth-of-type(5) {
+		animation-delay: 180ms;
+	}
+	&:nth-of-type(6) {
+		animation-delay: 220ms;
+	}
+	&:nth-of-type(7) {
+		animation-delay: 260ms;
+	}
+	&:nth-of-type(8) {
+		animation-delay: 300ms;
+	}
+	&:nth-of-type(9) {
+		animation-delay: 340ms;
+	}
+	&:nth-of-type(n + 10) {
+		animation-delay: 380ms;
+	}
 
 	&:hover {
 		background: #fbfafc;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		animation: none;
 	}
 `
 
