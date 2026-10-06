@@ -1,10 +1,12 @@
-import React, { FC, ReactNode, useEffect, useState } from 'react'
+import React, { FC, ReactNode, useEffect, useRef, useState } from 'react'
 import { Icon } from '@iconify/react'
 import styled, { keyframes } from 'styled-components'
 import useTogglePassword from '../../hooks/useTogglePassword'
 import { Alert, Button, IconButton, TextField } from '../../ui'
 import Box from '../box/Box'
 import Form from '../form/Form'
+
+const ALERT_EXIT_MS = 240
 
 const GoogleIcon = () => (
 	<svg viewBox='0 0 48 48' width='20' height='20' aria-hidden='true'>
@@ -49,6 +51,34 @@ const Login: FC<Props> = ({ onSubmit, hyperComponent, isLoading, serverError }) 
 
 	const [isRemember, setIsRemember] = useState(false)
 	const [error, setError] = useState<string>('')
+	// `displayedError` lives one unmount-cycle behind `error || serverError`
+	// so the alert can play its exit animation BEFORE the DOM node is
+	// removed. `phase` drives the enter / exit CSS classes.
+	const [displayedError, setDisplayedError] = useState<string>('')
+	const [phase, setPhase] = useState<'enter' | 'exit'>('enter')
+	const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	useEffect(() => {
+		const current = error || serverError || ''
+		if (exitTimer.current) {
+			clearTimeout(exitTimer.current)
+			exitTimer.current = null
+		}
+		if (current) {
+			setDisplayedError(current)
+			setPhase('enter')
+			return
+		}
+		if (displayedError) {
+			setPhase('exit')
+			exitTimer.current = setTimeout(() => {
+				setDisplayedError('')
+			}, ALERT_EXIT_MS)
+		}
+		return () => {
+			if (exitTimer.current) clearTimeout(exitTimer.current)
+		}
+	}, [error, serverError, displayedError])
 
 	const handleChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { name, value } = e.currentTarget
@@ -59,7 +89,7 @@ const Login: FC<Props> = ({ onSubmit, hyperComponent, isLoading, serverError }) 
 	const handleSubmit = () => {
 		const { email, password } = inputs
 		if (!email || !password) {
-			setError('Please enter email & password')
+			setError('Email and password are required.')
 			return
 		}
 		onSubmit({ email, password, remember: isRemember })
@@ -85,10 +115,12 @@ const Login: FC<Props> = ({ onSubmit, hyperComponent, isLoading, serverError }) 
 				<Form onSubmit={handleSubmit} preventDefault>
 					{hyperComponent}
 					<Box display='flex' flexDirection='column' space={1}>
-						{(error || serverError) && (
-							<Alert severity='error' alertTitle='Authentication Failure!'>
-								{error || serverError}
-							</Alert>
+						{displayedError && (
+							<AlertWrap className={phase}>
+								<Alert severity='error' alertTitle="Can't sign you in">
+									{displayedError}
+								</Alert>
+							</AlertWrap>
 						)}
 						<FieldSlot>
 							<TextField
@@ -172,6 +204,65 @@ const shineText = keyframes`
 const footDotPulse = keyframes`
 	0%, 100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
 	50%      { transform: scale(1.3); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+`
+
+const alertEnter = keyframes`
+	0%   { opacity: 0; transform: translateY(-6px) scale(0.98); max-height: 0; margin-bottom: 0; }
+	60%  { opacity: 1; }
+	100% { opacity: 1; transform: translateY(0) scale(1); max-height: 160px; margin-bottom: 0; }
+`
+
+const alertExit = keyframes`
+	0%   { opacity: 1; transform: translateY(0) scale(1); max-height: 160px; margin-bottom: 0; }
+	100% { opacity: 0; transform: translateY(-6px) scale(0.98); max-height: 0; margin-bottom: 0; padding: 0; }
+`
+
+/**
+ * Wraps the shared Alert so the login screen gets:
+ *   - a softer 14px border-radius instead of the default 6px;
+ *   - enter animation on mount (slide + fade + height grow);
+ *   - exit animation before unmount (same, reversed).
+ *
+ * The actual unmount is deferred by ALERT_EXIT_MS inside the
+ * component so the exit keyframes can complete.
+ */
+const AlertWrap = styled('div')`
+	overflow: hidden;
+	transform-origin: top center;
+	will-change: opacity, transform, max-height;
+
+	& .alert__wrapper {
+		border-radius: 14px;
+		padding: 10px 14px;
+	}
+	/* Make the title read as a tracked section label rather than a
+	   shouty H4 — matches "internal console access" subcaps tone. */
+	& .alert__title {
+		font-family: 'Inter', system-ui, sans-serif;
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 1.6px;
+		text-transform: uppercase;
+		margin-bottom: 0.2rem;
+	}
+	& .alert__message {
+		font-size: 13px;
+		line-height: 1.45;
+	}
+
+	&.enter {
+		animation: ${alertEnter} 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+	&.exit {
+		animation: ${alertExit} ${ALERT_EXIT_MS}ms cubic-bezier(0.4, 0, 1, 1) both;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		&.enter,
+		&.exit {
+			animation: none;
+		}
+	}
 `
 
 const Page = styled('div')`
@@ -343,9 +434,15 @@ const Divider = styled('div')`
 const FieldSlot = styled('div')`
 	animation: ${fieldFade} 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 
-	&:nth-child(1) { animation-delay: 480ms; }
-	&:nth-child(2) { animation-delay: 560ms; }
-	&:nth-child(3) { animation-delay: 640ms; }
+	&:nth-child(1) {
+		animation-delay: 480ms;
+	}
+	&:nth-child(2) {
+		animation-delay: 560ms;
+	}
+	&:nth-child(3) {
+		animation-delay: 640ms;
+	}
 `
 
 const ButtonSlot = styled('div')`
@@ -360,7 +457,10 @@ const ButtonSlot = styled('div')`
 		font-size: 18px !important;
 		letter-spacing: 3px !important;
 		text-transform: uppercase;
-		transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease !important;
+		transition:
+			transform 0.15s ease,
+			box-shadow 0.2s ease,
+			background 0.2s ease !important;
 	}
 	button:hover:not(:disabled) {
 		transform: translateY(-1px);
@@ -406,6 +506,8 @@ const FootLine = styled('div')`
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.foot-dot { animation: none; }
+		.foot-dot {
+			animation: none;
+		}
 	}
 `
