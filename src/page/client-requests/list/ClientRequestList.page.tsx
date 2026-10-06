@@ -2,7 +2,33 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { DeleteOutline, VisibilityOutlined, EditOutlined, MailOutline } from '@mui/icons-material'
+import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
+
+/** 2-letter ISO country code → Unicode flag emoji (regional indicators). */
+const countryToFlag = (code: string): string => {
+	if (!code || code.length !== 2) return ''
+	const base = 0x1f1e6 - 'A'.charCodeAt(0)
+	const chars = code.toUpperCase().split('')
+	if (chars.some((c) => c < 'A' || c > 'Z')) return ''
+	return String.fromCodePoint(...chars.map((c) => base + c.charCodeAt(0)))
+}
+
+/** Try to format a phone to the standard international shape for the
+ *  given ISO country code. Falls back to the raw string if parsing
+ *  fails — never throws. */
+const formatPhone = (raw: string, country?: string | null): string => {
+	if (!raw) return ''
+	try {
+		const cc =
+			country && country.length === 2 ? (country.toUpperCase() as CountryCode) : undefined
+		const parsed = parsePhoneNumberFromString(raw, cc)
+		if (parsed) return parsed.formatInternational()
+	} catch {
+		// ignore and fall back
+	}
+	return raw
+}
 import { ListPageShell } from '../../../components/_shared/ListPageShell'
 import {
 	DataTable,
@@ -89,30 +115,23 @@ const ClientRequestList = () => {
 		{
 			key: 'phone',
 			label: 'Phone',
-			minWidth: 160,
+			minWidth: 180,
 			sortable: true,
 			sortValue: (r) => `${r.phoneCountry}${r.phone}`,
-			render: (r) => (
-				<Muted>
-					{r.phoneCountry}
-					{r.phone}
-				</Muted>
-			),
-			skeleton: () => <TableSkeleton $w='120px' $h='13px' />,
-		},
-		{
-			key: 'services',
-			label: 'Services',
-			minWidth: 220,
-			render: (r) => (
-				<TagRow>
-					{r.services.slice(0, 3).map((s) => (
-						<Tag key={s}>{s}</Tag>
-					))}
-					{r.services.length > 3 && <Tag $more>+{r.services.length - 3}</Tag>}
-				</TagRow>
-			),
-			skeleton: () => <TableSkeleton $w='160px' $h='20px' style={{ borderRadius: 6 }} />,
+			render: (r) =>
+				r.phone ? (
+					<PhoneCell>
+						{r.phoneCountry && (
+							<CountryFlag title={r.phoneCountry.toUpperCase()}>
+								{countryToFlag(r.phoneCountry)}
+							</CountryFlag>
+						)}
+						<PhoneNumber>{formatPhone(r.phone, r.phoneCountry)}</PhoneNumber>
+					</PhoneCell>
+				) : (
+					<Muted>—</Muted>
+				),
+			skeleton: () => <TableSkeleton $w='130px' $h='13px' />,
 		},
 		{
 			key: 'files',
@@ -240,6 +259,36 @@ const ContactMeta = styled.span`
 	color: ${T.textSecondary};
 `
 
+const PhoneCell = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+`
+
+const CountryFlag = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 4px;
+	background: rgba(15, 23, 42, 0.04);
+	font-size: 14px;
+	line-height: 1;
+	user-select: none;
+	flex-shrink: 0;
+`
+
+const PhoneNumber = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: ${T.textStrong};
+	letter-spacing: 0.2px;
+	white-space: nowrap;
+`
+
 const Muted = styled.span`
 	font-size: 13.5px;
 	color: ${T.textSecondary};
@@ -251,25 +300,6 @@ const Num = styled.span`
 	font-weight: 700;
 	color: ${T.textStrong};
 	font-variant-numeric: tabular-nums;
-`
-
-const TagRow = styled.div`
-	display: inline-flex;
-	gap: 4px;
-	flex-wrap: nowrap;
-`
-
-const Tag = styled.span<{ $more?: boolean }>`
-	display: inline-flex;
-	align-items: center;
-	padding: 2px 8px;
-	border-radius: 6px;
-	background: ${({ $more }) => ($more ? T.primaryTint : T.subtleBg)};
-	border: 1px solid ${({ $more }) => ($more ? '#d5e5f3' : T.border)};
-	font-size: 11px;
-	color: ${({ $more }) => ($more ? T.primary : T.textSecondary)};
-	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-	font-weight: ${({ $more }) => ($more ? 700 : 500)};
 `
 
 const StatusPill = styled.span<{ $status: string }>`
