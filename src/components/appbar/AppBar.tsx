@@ -1,10 +1,11 @@
-import { createRef, useEffect } from 'react'
 import styled, { ThemeProvider as StyledThemeProvider } from 'styled-components'
+import { useNavigate } from 'react-router-dom'
 import useTheme from '../../theme/useTheme'
 import Box from '../box/Box'
 import Card from '../card/Card'
 import ProfileDropdown from './components/ProfileDropdown'
 import NotificationBell from './components/NotificationBell'
+import { T } from '../sales-analytics/_shared/tokens'
 
 const AppBar = () => {
 	const {
@@ -14,29 +15,11 @@ const AppBar = () => {
 			menuStyle: { layout },
 		},
 	} = useTheme()
-	const contentRef = createRef<HTMLHeadElement>()
-
-	const changeBarBg = (event: any) => {
-		if (event.currentTarget!.scrollY > 10) {
-			contentRef.current?.classList.remove('appbar-content-hide')
-		} else {
-			contentRef.current?.classList.add('appbar-content-hide')
-		}
-	}
-	useEffect(() => {
-		if (appBarPosition === 'fixed') {
-			window.addEventListener('scroll', (event: Event) => {
-				changeBarBg(event)
-			})
-		}
-		window.removeEventListener('scroll', changeBarBg)
-		return () => void window.removeEventListener('scroll', changeBarBg)
-	}, [contentRef, layout])
+	const navigate = useNavigate()
 
 	return (
 		<StyledThemeProvider theme={(outer) => ({ ...outer, mode, appBarBlur })}>
 			<StyledAppBar
-				ref={contentRef}
 				className={`${
 					appBarPosition === 'hidden'
 						? 'appbar-hidden'
@@ -54,6 +37,23 @@ const AppBar = () => {
 						px={layout === 'horizontal' ? 20 : 0}
 					>
 						<Box display='flex' align='center' space={0.6}>
+							<ResourceGroup aria-label='Resources'>
+								<HashLink
+									type='button'
+									onClick={() => navigate('/runbook')}
+									aria-label='Runbook'
+								>
+									<Hash aria-hidden='true'>#</Hash>runbook
+								</HashLink>
+								<HashLink
+									type='button'
+									onClick={() => navigate('/help')}
+									aria-label='Help and FAQ'
+								>
+									<Hash aria-hidden='true'>#</Hash>help
+								</HashLink>
+							</ResourceGroup>
+
 							<NotificationBell />
 							<ProfileDropdown />
 						</Box>
@@ -65,6 +65,50 @@ const AppBar = () => {
 }
 
 export default AppBar
+
+/* Resource links in the header — mono hashtag style (V14):
+   #runbook  #help  #sargas  #upwork  #clutch
+   Orange "#" accent, textSecondary body → primary blue on hover. */
+
+const ResourceGroup = styled('div')`
+	display: inline-flex;
+	align-items: center;
+	gap: 14px;
+	margin-right: 10px;
+`
+
+const HashLink = styled('button')`
+	display: inline-flex;
+	align-items: baseline;
+	padding: 4px 2px;
+	border: 0;
+	background: transparent;
+	color: ${T.textSecondary};
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 0.2px;
+	cursor: pointer;
+	transition: color 160ms ease;
+
+	&:hover {
+		color: ${T.primary};
+	}
+
+	[data-theme='dark'] & {
+		color: rgba(226, 232, 240, 0.72);
+
+		&:hover {
+			color: #ffffff;
+		}
+	}
+`
+
+const Hash = styled('span')`
+	color: #e85d2f;
+	opacity: 0.75;
+	margin-right: 5px;
+`
 
 const StyledAppBar = styled('header')`
 	min-height: ${({ theme }) => `${theme.spacing!.xxxl + theme.spacing!.lg}px`};
@@ -103,16 +147,10 @@ const StyledAppBar = styled('header')`
 		height: 100%;
 		flex: 0 0 auto;
 		padding: 0 ${({ theme }) => `${theme.spacing!.lg}px`};
+		border-radius: 0 0 28px 28px;
 		transition: padding 300ms;
 		${({ theme }) => (theme.appBarBlur ? `backdrop-filter: blur(10px);` : '')}
 		z-index: ${({ theme }) => theme.zIndex!.overlay};
-	}
-
-	&.appbar-content-hide > .appbar-content {
-		background: none;
-		border-width: 0;
-		padding: 0 !important;
-		box-shadow: unset;
 	}
 
 	.horizontal_nav_bar {

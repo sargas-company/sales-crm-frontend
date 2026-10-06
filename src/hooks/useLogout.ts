@@ -1,3 +1,4 @@
+import { baseApi } from '../api/baseApi'
 import { useLogoutUserMutation } from '../store/auth/authApi'
 import { logout } from '../store/auth/authSlice'
 import { useAppDispatch } from '.'
@@ -20,6 +21,9 @@ const useLogout = () => {
 			// their component is still mounted.
 			window.dispatchEvent(new CustomEvent('auth:logout'))
 			dispatch(logout())
+			// Wipe RTK Query cache so the next user's session doesn't
+			// inherit this user's per-user data (e.g. job-post viewedAt).
+			dispatch(baseApi.util.resetApiState())
 			navigate('/auth/login/')
 		}
 	}

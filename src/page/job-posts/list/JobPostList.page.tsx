@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import {
@@ -6,6 +6,8 @@ import {
 	VisibilityOutlined,
 	SearchOutlined,
 	WorkOutlineOutlined,
+	AutoAwesomeOutlined,
+	ClearRounded,
 } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
@@ -19,12 +21,28 @@ import type { DataTableColumn, SortState } from '../../../components/_shared/Dat
 import JobPostDeleteModal from '../../../components/job-posts/list/JobPostDeleteModal'
 import PermissionGate from '../../../components/auth/PermissionGate'
 import type {
+	JobPostDecision,
 	JobPostItem,
+	JobPostPriority,
 	JobPostSortBy,
+	JobPostStatus,
 } from '../../../store/job-posts/types/definition'
-import { useGetJobPostListQuery } from '../../../store/job-posts/jobPostsApi'
+import {
+	useGetJobPostListQuery,
+	useMarkJobPostViewedMutation,
+} from '../../../store/job-posts/jobPostsApi'
 import { formatDate } from '../../../utils/formatDate'
-import { getJobPostViewedAt, markJobPostViewed } from '../../../hooks/useViewedJobPosts'
+import { TapeIndicator, TapePill, TapePills } from '../../analytics/filters/filters.styled'
+import {
+	BottomSlot,
+	ClearBtn,
+	FreshFiltersWrap,
+	InlineField,
+	InlineSelect,
+	RowBreak,
+	SearchPill,
+} from '../../../components/_shared/filters/freshPaperFilters'
+import DatePickerPill from '../../finance-weekly/DatePickerPill'
 
 const PAGE_SIZE = 20
 const SEARCH_DEBOUNCE_MS = 300
@@ -34,6 +52,36 @@ interface DeleteTarget {
 	title: string
 }
 
+const DECISION_OPTIONS: { value: JobPostDecision | ''; label: string }[] = [
+	{ value: '', label: 'All' },
+	{ value: 'approve', label: 'Approve' },
+	{ value: 'maybe', label: 'Maybe' },
+	{ value: 'decline', label: 'Decline' },
+]
+
+const PRIORITY_OPTIONS: { value: JobPostPriority | ''; label: string }[] = [
+	{ value: '', label: 'Any' },
+	{ value: 'high', label: 'High' },
+	{ value: 'medium', label: 'Medium' },
+	{ value: 'low', label: 'Low' },
+]
+
+const STATUS_OPTIONS: { value: JobPostStatus; label: string }[] = [
+	{ value: 'PROCESSED', label: 'Processed' },
+	{ value: 'NEW', label: 'New' },
+	{ value: 'PROCESSING', label: 'Processing' },
+	{ value: 'FAILED', label: 'Failed' },
+]
+
+const DEFAULT_STATUS: JobPostStatus = 'PROCESSED'
+
+const clampScore = (raw: string): number | null => {
+	if (!raw.trim()) return null
+	const n = Number(raw)
+	if (!Number.isFinite(n)) return null
+	return Math.min(100, Math.max(0, Math.round(n)))
+}
+
 const JobPostList = () => {
 	const navigate = useNavigate()
 	const [searchInput, setSearchInput] = useState('')
@@ -41,6 +89,13 @@ const JobPostList = () => {
 	const [page, setPage] = useState(1)
 	const [sort, setSort] = useState<SortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+	const [filterDecision, setFilterDecision] = useState<JobPostDecision | ''>('')
+	const [filterPriority, setFilterPriority] = useState<JobPostPriority | ''>('')
+	const [filterStatus, setFilterStatus] = useState<JobPostStatus>(DEFAULT_STATUS)
+	const [filterMinScore, setFilterMinScore] = useState<string>('')
+	const [filterMaxScore, setFilterMaxScore] = useState<string>('')
+	const [filterFrom, setFilterFrom] = useState<string>('')
+	const [filterTo, setFilterTo] = useState<string>('')
 
 	// Debounce search input → server request; also snap back to page 1 whenever
 	// the effective query (search or sort) changes.
@@ -52,18 +107,93 @@ const JobPostList = () => {
 		return () => clearTimeout(h)
 	}, [searchInput])
 
+	// Reset to page 1 whenever any filter changes.
+	useEffect(() => {
+		setPage(1)
+	}, [
+		filterDecision,
+		filterPriority,
+		filterStatus,
+		filterMinScore,
+		filterMaxScore,
+		filterFrom,
+		filterTo,
+	])
+
+	/* Sliding orange tape indicator for the primary (decision) filter. */
+	const pillsRef = useRef<HTMLDivElement>(null)
+	const [ind, setInd] = useState<{
+		left: number
+		width: number
+		opacity: number
+	}>({ left: 0, width: 0, opacity: 0 })
+	useLayoutEffect(() => {
+		if (!pillsRef.current) return
+		const el = pillsRef.current.querySelector<HTMLButtonElement>('[data-active="true"]')
+		if (el) {
+			setInd({ left: el.offsetLeft, width: el.offsetWidth, opacity: 1 })
+		}
+	}, [filterDecision])
+
+	const activeDecisionLabel =
+		DECISION_OPTIONS.find((o) => o.value === filterDecision)?.label ?? '—'
+
+	const minScoreNum = useMemo(() => clampScore(filterMinScore), [filterMinScore])
+	const maxScoreNum = useMemo(() => clampScore(filterMaxScore), [filterMaxScore])
+
+	const activeFilterCount = useMemo(() => {
+		return [
+			searchInput.trim() ? 1 : 0,
+			filterDecision ? 1 : 0,
+			filterPriority ? 1 : 0,
+			filterStatus !== DEFAULT_STATUS ? 1 : 0,
+			minScoreNum != null ? 1 : 0,
+			maxScoreNum != null ? 1 : 0,
+			filterFrom ? 1 : 0,
+			filterTo ? 1 : 0,
+		].reduce((a, b) => a + b, 0)
+	}, [
+		searchInput,
+		filterDecision,
+		filterPriority,
+		filterStatus,
+		minScoreNum,
+		maxScoreNum,
+		filterFrom,
+		filterTo,
+	])
+
+	const clearAll = () => {
+		setSearchInput('')
+		setFilterDecision('')
+		setFilterPriority('')
+		setFilterStatus(DEFAULT_STATUS)
+		setFilterMinScore('')
+		setFilterMaxScore('')
+		setFilterFrom('')
+		setFilterTo('')
+	}
+
 	const offset = (page - 1) * PAGE_SIZE
 
 	const { data, isLoading, isError, refetch } = useGetJobPostListQuery({
 		limit: PAGE_SIZE,
 		offset,
 		search: search || undefined,
+		decision: filterDecision || undefined,
+		priority: filterPriority || undefined,
+		status: filterStatus,
+		minScore: minScoreNum ?? undefined,
+		maxScore: maxScoreNum ?? undefined,
+		createdFrom: filterFrom ? new Date(filterFrom).toISOString() : undefined,
+		createdTo: filterTo ? new Date(`${filterTo}T23:59:59`).toISOString() : undefined,
 		sortBy: (sort?.key as JobPostSortBy | undefined) ?? undefined,
 		sortDirection: sort?.direction,
 	})
 
+	const [markViewed] = useMarkJobPostViewedMutation()
 	const openJobPost = (id: string) => {
-		markJobPostViewed(id)
+		markViewed(id)
 		navigate(`/job-posts/preview/${id}`)
 	}
 	const items = data?.data ?? []
@@ -82,7 +212,7 @@ const JobPostList = () => {
 			sortable: true,
 			sortValue: (r) => r.title ?? '',
 			render: (r) => {
-				const viewedAt = getJobPostViewedAt(r.id)
+				const viewedAt = r.viewedAt ?? null
 				return (
 					<TitleRow>
 						{viewedAt ? (
@@ -167,24 +297,8 @@ const JobPostList = () => {
 			minWidth: 100,
 			sortable: true,
 			sortValue: (r) => r.hireRate,
-			render: (r) => <Num>{r.hireRate != null ? `${r.hireRate}%` : '—'}</Num>,
+			render: (r) => <Num>{r.hireRate != null ? `${r.hireRate.toFixed(2)}%` : '—'}</Num>,
 			skeleton: () => <TableSkeleton $w='44px' $h='13px' />,
-		},
-		{
-			key: 'skills',
-			label: 'Skills',
-			minWidth: 220,
-			render: (r) => (
-				<SkillsRow>
-					{r.hSkillsKeywords.slice(0, 3).map((s) => (
-						<Skill key={s}>{s}</Skill>
-					))}
-					{r.hSkillsKeywords.length > 3 && (
-						<Skill $more>+{r.hSkillsKeywords.length - 3}</Skill>
-					)}
-				</SkillsRow>
-			),
-			skeleton: () => <TableSkeleton $w='160px' $h='18px' style={{ borderRadius: 6 }} />,
 		},
 		{
 			key: 'scanner',
@@ -229,7 +343,9 @@ const JobPostList = () => {
 						<IconAction
 							type='button'
 							$danger
-							onClick={() => setDeleteTarget({ id: r.id, title: r.title ?? 'this job post' })}
+							onClick={() =>
+								setDeleteTarget({ id: r.id, title: r.title ?? 'this job post' })
+							}
 							aria-label='Delete job post'
 						>
 							<DeleteOutline />
@@ -288,19 +404,189 @@ const JobPostList = () => {
 							</div>
 						</PageHead>
 
-						<FiltersBar>
-							<SearchField>
-								<SearchOutlined />
+						<FreshFiltersWrap role='region' aria-label='Job post filters'>
+							<div className='filter-lead'>
+								<span className='lead-icon'>
+									<AutoAwesomeOutlined />
+								</span>
+								<div className='lead-text'>
+									<span className='top'>Decision</span>
+									<span className='bot'>{activeDecisionLabel}</span>
+								</div>
+							</div>
+
+							<TapePills ref={pillsRef} role='tablist' aria-label='Decision'>
+								<TapeIndicator
+									style={{
+										transform: `translateX(${ind.left}px) rotate(-1.2deg)`,
+										width: `${ind.width}px`,
+										opacity: ind.opacity,
+									}}
+								/>
+								{DECISION_OPTIONS.map((opt) => (
+									<TapePill
+										key={opt.value || 'all'}
+										type='button'
+										role='tab'
+										data-active={filterDecision === opt.value || undefined}
+										aria-selected={filterDecision === opt.value}
+										$active={filterDecision === opt.value}
+										onClick={() => setFilterDecision(opt.value)}
+									>
+										{opt.label}
+									</TapePill>
+								))}
+							</TapePills>
+
+							<SearchPill>
+								<SearchOutlined className='ico' />
 								<input
 									type='text'
 									name='search-job-post'
-									placeholder='Search by title'
+									placeholder='Search'
 									value={searchInput}
 									onChange={(e) => setSearchInput(e.target.value)}
-									aria-label='Search job posts'
+									aria-label='Search job posts by title'
 								/>
-							</SearchField>
-						</FiltersBar>
+							</SearchPill>
+
+							<div className='filter-spacer' />
+
+							<div className='upwork-hint' aria-hidden='true'>
+								<span className='row'>
+									<span className='w'>signal</span>
+									<span className='amber-wrap'>
+										<span className='a'>not</span>
+										<svg
+											className='squiggle'
+											viewBox='0 0 120 12'
+											width='120'
+											height='12'
+											preserveAspectRatio='none'
+										>
+											<path
+												d='M2 8 Q 12 2, 22 8 T 42 8 T 62 8 T 82 8 T 102 8 T 118 8'
+												fill='none'
+												stroke='currentColor'
+												strokeWidth='2.2'
+												strokeLinecap='round'
+											/>
+										</svg>
+									</span>
+									<span className='w'>noise</span>
+								</span>
+								<span className='stars'>
+									<svg
+										className='s'
+										width='14'
+										height='14'
+										viewBox='0 0 24 24'
+										fill='currentColor'
+									>
+										<path d='M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.9l-6.2 4.4 2.4-7.4L2 9.4h7.6z' />
+									</svg>
+								</span>
+							</div>
+
+							<RowBreak />
+
+							<InlineField>
+								<span className='l'>Priority</span>
+								<InlineSelect
+									value={filterPriority}
+									onChange={(e) =>
+										setFilterPriority(e.target.value as JobPostPriority | '')
+									}
+								>
+									{PRIORITY_OPTIONS.map((opt) => (
+										<option key={opt.value || 'any'} value={opt.value}>
+											{opt.label}
+										</option>
+									))}
+								</InlineSelect>
+							</InlineField>
+
+							<InlineField>
+								<span className='l'>Status</span>
+								<InlineSelect
+									value={filterStatus}
+									onChange={(e) => setFilterStatus(e.target.value as JobPostStatus)}
+								>
+									{STATUS_OPTIONS.map((opt) => (
+										<option key={opt.value} value={opt.value}>
+											{opt.label}
+										</option>
+									))}
+								</InlineSelect>
+							</InlineField>
+
+							<RangeGroup aria-label='Score range'>
+								<InlineField>
+									<span className='l'>Score min</span>
+									<ScoreInput
+										type='number'
+										inputMode='numeric'
+										min={0}
+										max={100}
+										step={1}
+										placeholder='0'
+										value={filterMinScore}
+										onChange={(e) => setFilterMinScore(e.target.value)}
+										aria-label='Minimum match score'
+									/>
+								</InlineField>
+
+								<RangeDash aria-hidden='true'>—</RangeDash>
+
+								<InlineField>
+									<span className='l'>Score max</span>
+									<ScoreInput
+										type='number'
+										inputMode='numeric'
+										min={0}
+										max={100}
+										step={1}
+										placeholder='100'
+										value={filterMaxScore}
+										onChange={(e) => setFilterMaxScore(e.target.value)}
+										aria-label='Maximum match score'
+									/>
+								</InlineField>
+							</RangeGroup>
+
+							<RangeGroup aria-label='Date range'>
+								<BottomSlot>
+									<DatePickerPill
+										label='From'
+										value={filterFrom}
+										onChange={setFilterFrom}
+										accent='orange'
+										size='lg'
+										placeholder='Any'
+									/>
+								</BottomSlot>
+
+								<RangeDash aria-hidden='true'>—</RangeDash>
+
+								<BottomSlot>
+									<DatePickerPill
+										label='To'
+										value={filterTo}
+										onChange={setFilterTo}
+										accent='orange'
+										size='lg'
+										placeholder='Any'
+									/>
+								</BottomSlot>
+							</RangeGroup>
+
+							<div className='filter-spacer' />
+
+							<ClearBtn type='button' onClick={clearAll} disabled={activeFilterCount === 0}>
+								<ClearRounded style={{ fontSize: 15 }} />
+								Clear
+							</ClearBtn>
+						</FreshFiltersWrap>
 
 						<DataTable
 							columns={columns}
@@ -309,7 +595,7 @@ const JobPostList = () => {
 							isLoading={isLoading}
 							isError={isError}
 							onRetry={refetch}
-							searchActive={!!search}
+							searchActive={activeFilterCount > 0}
 							sort={sort}
 							onSortChange={handleSortChange}
 							pagination={{
@@ -511,58 +797,6 @@ const HeadIcon = styled.span`
 	}
 `
 
-const FiltersBar = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	flex-wrap: wrap;
-`
-
-const SearchField = styled.label`
-	position: relative;
-	display: inline-flex;
-	align-items: center;
-	background: transparent;
-	border: 1.5px solid #cec9d8;
-	border-radius: ${T.radiusPill};
-	padding: 10px 16px 10px 14px;
-	gap: 10px;
-	min-width: 280px;
-	max-width: 380px;
-	flex: 1;
-	transition:
-		border-color 120ms ${T.ease},
-		box-shadow 160ms ${T.ease};
-
-	svg {
-		font-size: 19px;
-		color: ${T.textSecondary};
-	}
-	input {
-		flex: 1;
-		background: transparent;
-		border: none;
-		outline: none;
-		font-family: inherit;
-		font-size: 13.5px;
-		color: ${T.textStrong};
-		min-width: 0;
-
-		&::placeholder {
-			color: ${T.textSecondary};
-		}
-	}
-
-	&:hover {
-		border-color: #b3adc2;
-	}
-
-	&:focus-within {
-		border-color: ${T.primary};
-		box-shadow: 0 0 0 3px ${T.primaryTint};
-	}
-`
-
 const TitleRow = styled.div`
 	display: flex;
 	align-items: center;
@@ -628,6 +862,76 @@ const Muted = styled.span`
 	color: ${T.textSecondary};
 `
 
+/* Soft outlined group hinting that the two controls inside form a
+ * single range (min—max / From—To). Dashed border + feather-light
+ * tint — enough to read as a block, not loud enough to compete with
+ * the inline controls. */
+const RangeGroup = styled.div`
+	display: inline-flex;
+	align-items: flex-end;
+	gap: 10px;
+	align-self: flex-end;
+	padding: 4px 10px;
+	border: 1px dashed rgba(36, 30, 22, 0.14);
+	border-radius: 14px;
+`
+
+/* Dash separator between the two halves of a range control (score
+ * min / max, date From / To). Pins to the pill baseline — same
+ * align-self: flex-end as the inline controls on either side. */
+const RangeDash = styled.span`
+	align-self: flex-end;
+	display: inline-flex;
+	align-items: center;
+	min-height: 42px;
+	padding: 0 2px;
+	color: #7d6e5d;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1;
+	user-select: none;
+`
+
+const ScoreInput = styled.input`
+	appearance: none;
+	-webkit-appearance: none;
+	box-sizing: border-box;
+	min-height: 42px;
+	width: 92px;
+	border: 1.5px solid rgba(36, 30, 22, 0.14);
+	border-radius: 999px;
+	background: #ffffff;
+	padding: 10px 16px;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	color: #241e16;
+	line-height: 1.2;
+	font-variant-numeric: tabular-nums;
+	transition: border-color 180ms ease;
+
+	&:hover,
+	&:focus,
+	&:focus-visible {
+		outline: none;
+		border-color: #241e16;
+	}
+
+	&::-webkit-outer-spin-button,
+	&::-webkit-inner-spin-button {
+		-webkit-appearance: none;
+		margin: 0;
+	}
+	&[type='number'] {
+		-moz-appearance: textfield;
+	}
+
+	&::placeholder {
+		color: #7d6e5d;
+	}
+`
+
 const BudgetPill = styled.span`
 	display: inline-flex;
 	align-items: center;
@@ -637,9 +941,9 @@ const BudgetPill = styled.span`
 	font-size: 13px;
 	font-weight: 700;
 	letter-spacing: 0.1px;
-	color: ${T.primary};
-	background: ${T.primaryTint};
-	border: 1px solid rgba(3, 105, 161, 0.28);
+	color: ${T.textStrong};
+	background: transparent;
+	border: 0;
 	white-space: nowrap;
 `
 
@@ -662,13 +966,7 @@ const ScorePill = styled.span<{ $v: number }>`
 				? 'rgba(245, 158, 11, 0.16)'
 				: 'rgba(239, 68, 68, 0.12)'};
 	color: ${({ $v }) => ($v >= 75 ? '#15803d' : $v >= 50 ? '#a26608' : '#b91c1c')};
-	border: 1px solid
-		${({ $v }) =>
-			$v >= 75
-				? 'rgba(34, 197, 94, 0.28)'
-				: $v >= 50
-					? 'rgba(245, 158, 11, 0.32)'
-					: 'rgba(239, 68, 68, 0.28)'};
+	border: 0;
 `
 
 const StatusPill = styled.span<{ $status: string }>`
@@ -696,23 +994,4 @@ const StatusPill = styled.span<{ $status: string }>`
 		if (s === 'failed') return '#b91c1c'
 		return '#475569'
 	}};
-`
-
-const SkillsRow = styled.div`
-	display: inline-flex;
-	gap: 4px;
-	flex-wrap: nowrap;
-`
-
-const Skill = styled.span<{ $more?: boolean }>`
-	display: inline-flex;
-	align-items: center;
-	padding: 2px 8px;
-	border-radius: 6px;
-	background: ${({ $more }) => ($more ? T.primaryTint : T.subtleBg)};
-	border: 1px solid ${({ $more }) => ($more ? '#d5e5f3' : T.border)};
-	font-size: 11px;
-	color: ${({ $more }) => ($more ? T.primary : T.textSecondary)};
-	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-	font-weight: ${({ $more }) => ($more ? 700 : 500)};
 `

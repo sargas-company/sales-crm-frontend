@@ -1,4 +1,5 @@
 import styled, { keyframes } from 'styled-components'
+import logoUrl from '../../../assets/logo.png'
 
 const popIn = keyframes`
 	from {
@@ -50,7 +51,9 @@ export const Trigger = styled('button')<{ isOpen?: boolean }>`
 	border-radius: 999px;
 	background: #ffffff;
 	border: 1px solid #e7e7e7;
-	transition: background 0.2s ease, border-color 0.2s ease;
+	transition:
+		background 0.2s ease,
+		border-color 0.2s ease;
 
 	&:hover {
 		background: rgba(0, 0, 0, 0.03);
@@ -95,9 +98,9 @@ export const Popover = styled('div')<{ closing?: boolean }>`
 		0 8px 24px -12px rgba(15, 23, 42, 0.1);
 	z-index: 999;
 	overflow: hidden;
+	isolation: isolate;
 	animation: ${({ closing }) => (closing ? popOut : popIn)}
-		${({ closing }) => (closing ? '0.2s' : '0.28s')}
-		cubic-bezier(0.22, 1, 0.36, 1) both;
+		${({ closing }) => (closing ? '0.2s' : '0.28s')} cubic-bezier(0.22, 1, 0.36, 1) both;
 	transform-origin: top right;
 	border: 1px solid rgba(15, 23, 42, 0.06);
 
@@ -113,6 +116,23 @@ export const Popover = styled('div')<{ closing?: boolean }>`
 		transform: rotate(45deg);
 		border-top: 1px solid rgba(15, 23, 42, 0.06);
 		border-left: 1px solid rgba(15, 23, 42, 0.06);
+		z-index: 2;
+	}
+
+	/* Faint stretched brand logo behind the whole dropdown — 10%
+	   visible (90% transparent) so it reads as a watermark. */
+	&::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: url(${logoUrl}) center / cover no-repeat;
+		opacity: 0.03;
+		pointer-events: none;
+		z-index: 0;
+	}
+	& > * {
+		position: relative;
+		z-index: 1;
 	}
 `
 
@@ -122,7 +142,7 @@ export const ProfileHead = styled('div')`
 	align-items: center;
 	gap: 14px;
 	border-bottom: 1px solid #f1f5f9;
-	background: linear-gradient(180deg, #f4f8ff 0%, #ffffff 100%);
+	background: transparent;
 
 	/* Wrapper lives OUTSIDE any clip zone so the pulsing status dot
 	   is never cut off by overflow on the avatar itself. */
@@ -174,7 +194,6 @@ export const ProfileHead = styled('div')`
 	}
 `
 
-
 export const MenuList = styled('ul')`
 	list-style: none;
 	margin: 0;
@@ -191,7 +210,9 @@ export const MenuList = styled('ul')`
 		padding: 10px 12px;
 		border-radius: 10px;
 		cursor: pointer;
-		transition: background 0.18s ease, color 0.18s ease;
+		transition:
+			background 0.18s ease,
+			color 0.18s ease;
 		animation: ${itemFadeIn} 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 		color: #1b2230;
 	}
@@ -199,11 +220,76 @@ export const MenuList = styled('ul')`
 		background: rgba(37, 45, 58, 0.04);
 	}
 
-	li:nth-child(1) { animation-delay: 40ms; }
-	li:nth-child(2) { animation-delay: 90ms; }
-	li:nth-child(3) { animation-delay: 140ms; }
-	li:nth-child(4) { animation-delay: 190ms; }
-	li:nth-child(5) { animation-delay: 240ms; }
+	li:nth-child(1) {
+		animation-delay: 40ms;
+	}
+	li:nth-child(2) {
+		animation-delay: 90ms;
+	}
+	li:nth-child(3) {
+		animation-delay: 140ms;
+	}
+	li:nth-child(4) {
+		animation-delay: 190ms;
+	}
+	li:nth-child(5) {
+		animation-delay: 240ms;
+	}
+	li:nth-child(6) {
+		animation-delay: 290ms;
+	}
+	li:nth-child(7) {
+		animation-delay: 340ms;
+	}
+	li:nth-child(8) {
+		animation-delay: 390ms;
+	}
+	li:nth-child(9) {
+		animation-delay: 440ms;
+	}
+	li:nth-child(10) {
+		animation-delay: 490ms;
+	}
+
+	/* Hairline divider between menu groups — rendered as an li so the
+	   stagger animation keeps alignment and nothing has to re-key. */
+	li.menu-sep {
+		height: 1px;
+		margin: 6px 0;
+		padding: 0;
+		background: #f1f5f9;
+		cursor: default;
+		border-radius: 0;
+		pointer-events: none;
+		display: block;
+	}
+	li.menu-sep:hover {
+		background: #f1f5f9;
+	}
+
+	/* External links have an extra "open in new tab" icon pinned to
+	   the right edge of the row. */
+	li.menu-external {
+		grid-template-columns: 20px 1fr 16px;
+	}
+	li.menu-external .item-external {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		color: #a5a1b0;
+		opacity: 0;
+		transform: translateX(-3px);
+		transition:
+			opacity 180ms ease,
+			transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	li.menu-external .item-external svg {
+		font-size: 14px !important;
+	}
+	li.menu-external:hover .item-external {
+		opacity: 1;
+		transform: translateX(0);
+	}
 
 	.item-icon {
 		width: 20px;

@@ -1,5 +1,6 @@
 import { baseApi } from '../../api/baseApi'
 import type { EmployeeStatus } from '../employees/employeesApi'
+import type { ProjectReportSource } from '../project-reports/projectReportsApi'
 
 export type ProjectStatus = 'planned' | 'active' | 'paused' | 'completed' | 'archived'
 
@@ -23,12 +24,17 @@ export interface ProjectRecentReport {
 	content: string
 	createdAt: string
 	updatedAt: string
-	employeeId: string
+	source: ProjectReportSource
+	// MANUAL rows carry an Employee author; DISCORD rows carry a
+	// Discord username instead and leave `employee` null.
+	employeeId: string | null
 	employee: {
 		id: string
 		firstName: string
 		lastName: string
-	}
+	} | null
+	discordUserId: string | null
+	discordUsername: string | null
 }
 
 export interface ProjectItem {
@@ -57,13 +63,7 @@ export interface ProjectPage {
 	total: number
 }
 
-export type ProjectSortBy =
-	| 'name'
-	| 'status'
-	| 'startDate'
-	| 'endDate'
-	| 'createdAt'
-	| 'updatedAt'
+export type ProjectSortBy = 'name' | 'status' | 'startDate' | 'endDate' | 'createdAt' | 'updatedAt'
 
 export type ProjectSortDirection = 'asc' | 'desc'
 
@@ -115,10 +115,7 @@ export const projectsApi = baseApi.injectEndpoints({
 			query: (body) => ({ url: '/projects', method: 'POST', body }),
 			invalidatesTags: ['Project'],
 		}),
-		updateProject: builder.mutation<
-			ProjectItem,
-			{ id: string; body: UpdateProjectBody }
-		>({
+		updateProject: builder.mutation<ProjectItem, { id: string; body: UpdateProjectBody }>({
 			query: ({ id, body }) => ({ url: `/projects/${id}`, method: 'PATCH', body }),
 			invalidatesTags: (_r, _e, { id }) => ['Project', { type: 'Project', id }],
 		}),

@@ -1,5 +1,6 @@
 import { ChangeEvent, FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import styled from 'styled-components'
 import { TextField, Button, Select, SelectItem } from '../../../ui'
 import {
 	useGetClientRequestByIdQuery,
@@ -197,14 +198,15 @@ const ClientRequestFormInner = ({
 							Changes are saved when you press Save
 						</FootLeft>
 						<FootActions>
-							<Button
-								varient='outlined'
-								color='info'
-								type='button'
-								onClick={() => navigate(`/client-requests/preview/${id}`)}
-							>
-								Cancel
-							</Button>
+							<CancelSlot>
+								<Button
+									varient='outlined'
+									type='button'
+									onClick={() => navigate(`/client-requests/preview/${id}`)}
+								>
+									Cancel
+								</Button>
+							</CancelSlot>
 							<PrimarySolidButton type='submit' disabled={isLoading}>
 								{isLoading ? 'Saving…' : 'Save changes'}
 							</PrimarySolidButton>
@@ -224,3 +226,13 @@ const ClientRequestForm = ({ id }: { id: string }) => {
 }
 
 export default ClientRequestForm
+
+/* Keeps the outlined Cancel button fully transparent on hover —
+   the shared UI Button fills a light-primary tint by default. */
+const CancelSlot = styled.div`
+	display: inline-block;
+
+	& > button:hover:not(:disabled) {
+		background: transparent !important;
+	}
+`

@@ -1,23 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Avatar } from '@mui/material'
+import { Icon as IconifyIcon } from '@iconify/react'
 import {
 	ExitToApp,
+	HelpOutlineOutlined,
 	KeyboardArrowDownRounded,
+	LanguageRounded,
+	MenuBookOutlined,
+	OpenInNewRounded,
 	PersonOutlineOutlined,
 	SettingsOutlined,
+	VerifiedOutlined,
 	VpnKeyOutlined,
 } from '@mui/icons-material'
 import useLogout from '../../../hooks/useLogout'
 import { useGetMeQuery } from '../../../store/auth/authApi'
-import {
-	TriggerWrap,
-	Trigger,
-	Popover,
-	ProfileHead,
-	MenuList,
-	MenuFoot,
-} from './profile.styled'
+import { TriggerWrap, Trigger, Popover, ProfileHead, MenuList, MenuFoot } from './profile.styled'
 
 const CLOSE_DURATION_MS = 200
 
@@ -87,13 +86,10 @@ const ProfileDropdown = () => {
 		}
 	}, [])
 
-	const fullName = me
-		? `${me.firstName} ${me.lastName}`.trim() || me.email
-		: '—'
+	const fullName = me ? `${me.firstName} ${me.lastName}`.trim() || me.email : '—'
 	const initials = me
-		? (
-				(me.firstName?.[0] ?? '') + (me.lastName?.[0] ?? '')
-			).toUpperCase() || me.email.slice(0, 2).toUpperCase()
+		? ((me.firstName?.[0] ?? '') + (me.lastName?.[0] ?? '')).toUpperCase() ||
+			me.email.slice(0, 2).toUpperCase()
 		: '?'
 	const avatarSrc = me?.avatarUrl ?? undefined
 
@@ -164,6 +160,74 @@ const ProfileDropdown = () => {
 								<VpnKeyOutlined />
 							</span>
 							<span className='item-label'>My vault access</span>
+						</li>
+
+						<li className='menu-sep' aria-hidden='true' />
+
+						<li onClick={() => handleNavigate('/runbook')}>
+							<span className='item-icon'>
+								<MenuBookOutlined />
+							</span>
+							<span className='item-label'>Runbook</span>
+						</li>
+						<li onClick={() => handleNavigate('/help')}>
+							<span className='item-icon'>
+								<HelpOutlineOutlined />
+							</span>
+							<span className='item-label'>Help &amp; FAQ</span>
+						</li>
+
+						<li className='menu-sep' aria-hidden='true' />
+
+						<li
+							className='menu-external'
+							onClick={() =>
+								window.open('https://sargas.io', '_blank', 'noopener,noreferrer')
+							}
+						>
+							<span className='item-icon'>
+								<LanguageRounded />
+							</span>
+							<span className='item-label'>sargas.io</span>
+							<span className='item-external' aria-hidden='true'>
+								<OpenInNewRounded />
+							</span>
+						</li>
+						<li
+							className='menu-external'
+							onClick={() =>
+								window.open(
+									'https://www.upwork.com/agencies/1772989322229334016/',
+									'_blank',
+									'noopener,noreferrer'
+								)
+							}
+						>
+							<span className='item-icon'>
+								<IconifyIcon icon='simple-icons:upwork' />
+							</span>
+							<span className='item-label'>Upwork profile</span>
+							<span className='item-external' aria-hidden='true'>
+								<OpenInNewRounded />
+							</span>
+						</li>
+						<li
+							className='menu-external'
+							onClick={() =>
+								window.open(
+									'https://clutch.co/profile/sargas-agency-o',
+									'_blank',
+									'noopener,noreferrer'
+								)
+							}
+						>
+							<span className='item-icon'>
+								<VerifiedOutlined />
+							</span>
+							<span className='item-label'>Clutch profile</span>
+							<span className='item-external' aria-hidden='true'>
+								<OpenInNewRounded />
+							</span>
 						</li>
 					</MenuList>
 

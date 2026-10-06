@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import {
@@ -25,7 +25,10 @@ import ErrorState from '../../../ui/state/ErrorState'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
 import JobPostToProposalModal from '../../../components/job-posts/JobPostToProposalModal'
 import PermissionGate from '../../../components/auth/PermissionGate'
-import { useGetJobPostByIdQuery } from '../../../store/job-posts/jobPostsApi'
+import {
+	useGetJobPostByIdQuery,
+	useMarkJobPostViewedMutation,
+} from '../../../store/job-posts/jobPostsApi'
 import { formatDate } from '../../../utils/formatDate'
 import type {
 	JobPostDecision,
@@ -33,7 +36,6 @@ import type {
 	JobPostStatus,
 } from '../../../store/job-posts/types/definition'
 import { useToast } from '../../../context/toast/ToastContext'
-import { getJobPostViewedAt, markJobPostViewed } from '../../../hooks/useViewedJobPosts'
 
 /* ── Tokens ─────────────────────────────────────────────────────── */
 
@@ -138,12 +140,21 @@ const JobPostPreview = () => {
 	const [showProposalModal, setShowProposalModal] = useState(false)
 
 	const { data: post, isLoading, isError } = useGetJobPostByIdQuery(id!, { skip: !id })
+	const [markViewed] = useMarkJobPostViewedMutation()
 
-	const previouslyViewedAt = useMemo(() => (id ? getJobPostViewedAt(id) : null), [id])
+	/* Snapshot the server's `viewedAt` at the moment we first see the
+	 * post, so the "previously viewed on …" line keeps showing the
+	 * pre-visit timestamp even after we mark it viewed on mount. */
+	const [previouslyViewedAt, setPreviouslyViewedAt] = useState<string | null>(null)
+	useEffect(() => {
+		if (post && previouslyViewedAt === null) {
+			setPreviouslyViewedAt(post.viewedAt ?? null)
+		}
+	}, [post, previouslyViewedAt])
 
 	useEffect(() => {
-		if (id) markJobPostViewed(id)
-	}, [id])
+		if (id) markViewed(id)
+	}, [id, markViewed])
 
 	if (isLoading) {
 		return (
@@ -222,7 +233,8 @@ const JobPostPreview = () => {
 								{post.processedAt ? (
 									<>
 										{' '}
-										<Bullet>·</Bullet> processed <strong>{formatDate(post.processedAt)}</strong>
+										<Bullet>·</Bullet> processed{' '}
+										<strong>{formatDate(post.processedAt)}</strong>
 									</>
 								) : null}
 							</HeaderSub>
@@ -259,11 +271,7 @@ const JobPostPreview = () => {
 					{previouslyViewedAt ? (
 						<Tooltip title={`Last opened ${formatDate(previouslyViewedAt)}`} placement='top'>
 							<span>
-								<Pill
-									$bg={PRIMARY_TINT}
-									$fg={PRIMARY}
-									$border={'rgba(3, 105, 161, 0.32)'}
-								>
+								<Pill $bg={PRIMARY_TINT} $fg={PRIMARY} $border={'rgba(3, 105, 161, 0.32)'}>
 									<VisibilityOutlined sx={{ fontSize: 14 }} />
 									Viewed on {formatDate(previouslyViewedAt)}
 								</Pill>
@@ -358,9 +366,7 @@ const JobPostPreview = () => {
 							<HeroMiniStat>
 								<HeroMiniLabel>Total spent</HeroMiniLabel>
 								<HeroMiniValue>
-									{post.totalSpent != null
-										? `$${post.totalSpent.toLocaleString()}`
-										: '—'}
+									{post.totalSpent != null ? `$${post.totalSpent.toLocaleString()}` : '—'}
 								</HeroMiniValue>
 							</HeroMiniStat>
 							<HeroMiniStat>
@@ -423,7 +429,13 @@ const JobPostPreview = () => {
 							>
 								<ContentCopyRounded sx={{ fontSize: 16 }} />
 							</LinkAction>
-							<LinkAction as='a' href={proposalUrl} target='_blank' rel='noopener noreferrer' aria-label='Open proposal'>
+							<LinkAction
+								as='a'
+								href={proposalUrl}
+								target='_blank'
+								rel='noopener noreferrer'
+								aria-label='Open proposal'
+							>
 								<OpenInNewRounded sx={{ fontSize: 16 }} />
 							</LinkAction>
 						</LinkCard>
@@ -472,7 +484,9 @@ const JobPostPreview = () => {
 										<SubscoreBarWrap>
 											<SubscoreBar $pct={pct} $fg={c.fg} />
 										</SubscoreBarWrap>
-										<SubscoreValue $fg={c.fg}>{Number.isFinite(n) ? n : value}</SubscoreValue>
+										<SubscoreValue $fg={c.fg}>
+											{Number.isFinite(n) ? n : value}
+										</SubscoreValue>
 									</SubscoreRow>
 								)
 							})}
@@ -1087,8 +1101,13 @@ const LinkCard = styled.div`
 	animation: linkShift 8s ease-in-out infinite;
 
 	@keyframes linkShift {
-		0%, 100% { background-position: 0% 50%; }
-		50%      { background-position: 100% 50%; }
+		0%,
+		100% {
+			background-position: 0% 50%;
+		}
+		50% {
+			background-position: 100% 50%;
+		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
@@ -1171,7 +1190,12 @@ const AiCard = styled.div`
 	gap: 14px;
 	padding: 18px 20px;
 	border-radius: 14px;
-	background: linear-gradient(135deg, rgba(139, 92, 246, 0.06) 0%, #ffffff 60%, rgba(139, 92, 246, 0.08) 130%);
+	background: linear-gradient(
+		135deg,
+		rgba(139, 92, 246, 0.06) 0%,
+		#ffffff 60%,
+		rgba(139, 92, 246, 0.08) 130%
+	);
 	border: 1px solid rgba(139, 92, 246, 0.22);
 `
 
@@ -1220,7 +1244,7 @@ const HardStop = styled.div`
 	gap: 8px;
 	padding: 8px 12px;
 	border-radius: 10px;
-	background: rgba(239, 68, 68, 0.10);
+	background: rgba(239, 68, 68, 0.1);
 	border: 1px solid rgba(239, 68, 68, 0.28);
 	color: ${DANGER};
 	font-size: 12.5px;

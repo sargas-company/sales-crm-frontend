@@ -21,10 +21,7 @@ import { PrimarySolidButton } from '../../../components/_shared/formShell.styled
 import PermissionGate from '../../../components/auth/PermissionGate'
 import ConfirmModal from '../../../components/_shared/ConfirmModal'
 import { useToast } from '../../../context/toast/ToastContext'
-import type {
-	EmployeeItem,
-	EmployeeSortBy,
-} from '../../../store/employees/employeesApi'
+import type { EmployeeItem, EmployeeSortBy } from '../../../store/employees/employeesApi'
 import {
 	useGetEmployeesQuery,
 	useDeleteEmployeeMutation,
@@ -233,7 +230,9 @@ const EmployeeList = () => {
 					title='Delete employee?'
 					description={
 						<>
-							Are you sure you want to delete <strong>&quot;{deleteTarget.title}&quot;</strong>? This action cannot be undone.
+							Are you sure you want to delete{' '}
+							<strong>&quot;{deleteTarget.title}&quot;</strong>? This action cannot be
+							undone.
 						</>
 					}
 					confirmLabel='Delete'
@@ -309,7 +308,7 @@ const Tag = styled.span`
 	font-weight: 600;
 	background: ${T.primaryTint};
 	color: ${T.primary};
-	border: 1px solid #d5e5f3;
+	border: 0;
 `
 
 const StatusPill = styled.span<{ $status: string }>`

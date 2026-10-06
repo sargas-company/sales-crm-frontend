@@ -6,7 +6,7 @@ import useAuth from '../../hooks/useAuth'
 import useNavigation from '../../hooks/useNavigation'
 import { useLoginMutation, useLazyGetMeQuery } from '../../store/auth/authApi'
 import { useAppDispatch } from '../../hooks'
-import { setCredentials, setMe } from '../../store/auth/authSlice'
+import { setCredentials, setInitialized, setLoggingIn, setMe } from '../../store/auth/authSlice'
 import PageLoading from '../../components/loading/PageLoading'
 
 const Signin = () => {
@@ -24,16 +24,27 @@ const Signin = () => {
 	const handleSubmit = async (inputs: LoginFormData) => {
 		try {
 			const tokens = await login({ email: inputs.email, password: inputs.password }).unwrap()
+			// Hold the hydration gate shut while we fetch /auth/me, so
+			// `useAuth` returns `isAuthenticated === null` and
+			// `<ProtectedRoute>` shows `<PageLoading />` instead of
+			// flashing `/access-denied` between tokens arriving and
+			// permissions arriving.
+			dispatch(setLoggingIn())
 			dispatch(setCredentials(tokens))
-			// Hydrate role + permissions from backend before entering
-			// the app so `<ProtectedRoute permission=…>` and sidebar
-			// filtering (T-05, T-06) have a source of truth ready.
 			try {
 				const me = await getMe().unwrap()
 				dispatch(setMe({ role: me.role, permissions: me.permissions }))
 			} catch {}
+			// Reopen the gate — permissions are either in Redux now or
+			// legitimately empty (the backend answered). Only now may
+			// the authenticated UI render.
+			dispatch(setInitialized())
 			navigate('/dashboards/sales')
-		} catch {}
+		} catch {
+			// Login itself failed — gate was never closed, but calling
+			// setInitialized is a safe no-op if it is already true.
+			dispatch(setInitialized())
+		}
 	}
 
 	const serverError = error

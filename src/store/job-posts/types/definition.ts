@@ -38,6 +38,7 @@ export interface JobPostItem {
 	rawPayload?: Record<string, unknown>
 	aiResponse?: JobPostAiResponse
 	proposal?: { id: string } | null
+	viewedAt?: string | null
 }
 
 export interface JobPostMeta {
@@ -71,6 +72,11 @@ export interface JobPostListParams {
 	offset: number
 	decision?: JobPostDecision
 	priority?: JobPostPriority
+	status?: JobPostStatus
+	minScore?: number
+	maxScore?: number
+	createdFrom?: string
+	createdTo?: string
 	sortBy?: JobPostSortBy
 	sortDirection?: JobPostSortDirection
 	search?: string

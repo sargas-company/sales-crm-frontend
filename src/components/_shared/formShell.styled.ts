@@ -133,28 +133,28 @@ export const SubTitle = styled.p<{ $dark: boolean }>`
 export type ModeTone = 'edit' | 'new' | 'draft' | 'danger' | 'view'
 
 const modeBg = (tone: ModeTone, dark: boolean) => {
-	if (tone === 'edit') return dark ? 'rgba(59, 130, 246, 0.15)' : '#e0edff'
+	if (tone === 'edit') return dark ? 'rgba(3, 105, 161, 0.18)' : 'rgba(3, 105, 161, 0.10)'
 	if (tone === 'draft') return dark ? 'rgba(245, 158, 11, 0.15)' : '#fff4e0'
 	if (tone === 'danger') return dark ? 'rgba(239, 68, 68, 0.15)' : '#fee2e2'
 	if (tone === 'view') return dark ? 'rgba(100, 116, 139, 0.18)' : '#eef2f7'
 	return dark ? 'rgba(34, 197, 94, 0.15)' : '#e5f8ec'
 }
 const modeFg = (tone: ModeTone, dark: boolean) => {
-	if (tone === 'edit') return dark ? '#93c5fd' : '#1d4ed8'
+	if (tone === 'edit') return dark ? '#38bdf8' : '#0369a1'
 	if (tone === 'draft') return dark ? '#fcd34d' : '#a26608'
 	if (tone === 'danger') return dark ? '#fca5a5' : '#b91c1c'
 	if (tone === 'view') return dark ? '#cbd5e1' : '#475569'
 	return dark ? '#86efac' : '#15803d'
 }
 const modeBorder = (tone: ModeTone, dark: boolean) => {
-	if (tone === 'edit') return dark ? 'rgba(59, 130, 246, 0.25)' : '#c9dcff'
+	if (tone === 'edit') return dark ? 'rgba(56, 189, 248, 0.3)' : 'rgba(3, 105, 161, 0.25)'
 	if (tone === 'draft') return dark ? 'rgba(245, 158, 11, 0.25)' : '#ffe6b8'
 	if (tone === 'danger') return dark ? 'rgba(239, 68, 68, 0.25)' : '#fecaca'
 	if (tone === 'view') return dark ? 'rgba(100, 116, 139, 0.28)' : '#d6dde6'
 	return dark ? 'rgba(34, 197, 94, 0.25)' : '#bde5c8'
 }
 const modeDot = (tone: ModeTone) => {
-	if (tone === 'edit') return '#3b82f6'
+	if (tone === 'edit') return '#0369a1'
 	if (tone === 'draft') return '#f59e0b'
 	if (tone === 'danger') return '#ef4444'
 	if (tone === 'view') return '#64748b'

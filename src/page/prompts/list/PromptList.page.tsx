@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import {
 	DeleteOutline,
 	VisibilityOutlined,
+	EditOutlined,
 	AutoAwesomeOutlined,
 	AddRounded,
 } from '@mui/icons-material'
@@ -20,11 +21,7 @@ import { PrimarySolidButton } from '../../../components/_shared/formShell.styled
 import PromptDeleteModal from '../../../components/prompts/list/PromptDeleteModal'
 import PermissionGate from '../../../components/auth/PermissionGate'
 import { useGetPromptListQuery } from '../../../store/prompts/promptsApi'
-import type {
-	PromptType,
-	PromptItem,
-	PromptSortBy,
-} from '../../../store/prompts/types/definition'
+import type { PromptType, PromptItem, PromptSortBy } from '../../../store/prompts/types/definition'
 import { formatDate } from '../../../utils/format'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
 
@@ -103,7 +100,9 @@ const PromptList = () => {
 			minWidth: 100,
 			sortable: true,
 			sortValue: (p) => (p.isActive ? 1 : 0),
-			render: (p) => (p.isActive ? <ActiveDot>● active</ActiveDot> : <Muted>inactive</Muted>),
+			render: (p) => (
+				<ActivePill $active={p.isActive}>{p.isActive ? 'active' : 'inactive'}</ActivePill>
+			),
 			skeleton: () => <TableSkeleton $w='60px' $h='13px' />,
 		},
 		{
@@ -145,6 +144,15 @@ const PromptList = () => {
 					>
 						<VisibilityOutlined />
 					</IconAction>
+					<PermissionGate permission='prompts:update'>
+						<IconAction
+							type='button'
+							onClick={() => navigate(`/prompts/edit/${p.id}`)}
+							aria-label='Edit prompt'
+						>
+							<EditOutlined />
+						</IconAction>
+					</PermissionGate>
 					<PermissionGate permission='prompts:delete'>
 						<IconAction
 							type='button'
@@ -245,14 +253,19 @@ const Num = styled.span`
 	font-variant-numeric: tabular-nums;
 `
 
-const ActiveDot = styled.span`
+const ActivePill = styled.span<{ $active: boolean }>`
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
-	font-size: 12.5px;
+	padding: 3px 11px;
+	border-radius: 999px;
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-size: 11px;
 	font-weight: 700;
-	color: #15803d;
-	letter-spacing: 0.2px;
+	letter-spacing: 0.3px;
+	text-transform: uppercase;
+	color: ${({ $active }) => ($active ? '#15803d' : T.textMuted)};
+	background: ${({ $active }) => ($active ? 'rgba(22, 163, 74, 0.12)' : 'rgba(15, 23, 42, 0.05)')};
+	white-space: nowrap;
 `
 
 const TypePill = styled.span<{ $type: string }>`

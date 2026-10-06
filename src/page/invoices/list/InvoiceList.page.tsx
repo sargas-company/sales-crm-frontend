@@ -281,7 +281,7 @@ const MoneyPill = styled.span`
 	font-weight: 700;
 	color: ${T.primary};
 	background: ${T.primaryTint};
-	border: 1px solid rgba(3, 105, 161, 0.28);
+	border: 0;
 	white-space: nowrap;
 `
 

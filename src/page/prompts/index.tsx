@@ -3,6 +3,7 @@ import PageNotFound from '../404/PageNotFound'
 import ProtectedRoute from '../../routes/ProtectedRoute'
 import PromptList from './list/PromptList.page'
 import PromptAdd from './add/PromptAdd'
+import PromptEdit from './edit/PromptEdit'
 import PromptPreview from './preview/PromptPreview'
 
 const Prompts = () => {
@@ -15,6 +16,14 @@ const Prompts = () => {
 				element={
 					<ProtectedRoute permission='prompts:create'>
 						<PromptAdd />
+					</ProtectedRoute>
+				}
+			/>
+			<Route
+				path='/edit/:id'
+				element={
+					<ProtectedRoute permission='prompts:update'>
+						<PromptEdit />
 					</ProtectedRoute>
 				}
 			/>

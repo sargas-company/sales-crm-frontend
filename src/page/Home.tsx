@@ -31,7 +31,9 @@ const FinancialPaymentsMonth = lazy(() => import('./finance-weekly/FinancialMont
 const FinancialPaymentsList = lazy(() => import('./finance-weekly/FinancialList.page'))
 const FinancialAnalytics = lazy(() => import('./finance-weekly/FinancialAnalytics.page'))
 const TimeOffAnalytics = lazy(() => import('./analytics/time-off/TimeOffAnalytics.page'))
-const CompensationAnalytics = lazy(() => import('./analytics/compensation/CompensationAnalytics.page'))
+const CompensationAnalytics = lazy(
+	() => import('./analytics/compensation/CompensationAnalytics.page')
+)
 const FinancesSalaries = lazy(() => import('./finances/Salaries'))
 const FinancesSalariesRun = lazy(() => import('./finances/SalariesRun'))
 const FinancesSalariesAdd = lazy(() => import('./finances/SalariesAdd'))
@@ -71,6 +73,10 @@ const Notifications = lazy(() => import('./notifications'))
 const PortfolioList = lazy(() => import('./portfolio/PortfolioList.page'))
 const PortfolioView = lazy(() => import('./portfolio/PortfolioView.page'))
 const PortfolioForm = lazy(() => import('./portfolio/PortfolioForm.page'))
+const Runbook = lazy(() => import('./runbook/Runbook.page'))
+const RunbookDetail = lazy(() => import('./runbook/RunbookDetail.page'))
+const Help = lazy(() => import('./help/Help.page'))
+const HelpDetail = lazy(() => import('./help/HelpDetail.page'))
 
 const Home = () => {
 	return (
@@ -637,6 +643,38 @@ const Home = () => {
 								element={
 									<ProtectedRoute permission='portfolio:view'>
 										<PortfolioView />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/runbook'
+								element={
+									<ProtectedRoute>
+										<Runbook />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/runbook/:slug'
+								element={
+									<ProtectedRoute>
+										<RunbookDetail />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/help'
+								element={
+									<ProtectedRoute>
+										<Help />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/help/:slug'
+								element={
+									<ProtectedRoute>
+										<HelpDetail />
 									</ProtectedRoute>
 								}
 							/>

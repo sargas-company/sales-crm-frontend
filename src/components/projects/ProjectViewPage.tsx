@@ -25,13 +25,24 @@ import {
 	Shell,
 	Surface,
 } from '../_shared/formShell.styled'
-import { useGetProjectByIdQuery } from '../../store/projects/projectsApi'
+import { useGetProjectByIdQuery, type ProjectRecentReport } from '../../store/projects/projectsApi'
 import { formatDate } from '../../utils/format'
 import { T } from '../sales-analytics/_shared/tokens'
 
-const clientName = (p: {
-	client: { firstName: string; lastName: string } | null
-}) => (p.client ? `${p.client.firstName} ${p.client.lastName}`.trim() || '—' : '—')
+/** Author label for a recent report row — MANUAL rows carry an
+ * Employee relation; DISCORD rows carry a Discord username instead
+ * (and leave `employee` null). Fall back to a dash if the server
+ * returns neither — shouldn't happen in practice. */
+const reportAuthorLabel = (r: ProjectRecentReport): string => {
+	if (r.employee) {
+		return `${r.employee.firstName} ${r.employee.lastName}`.trim() || '—'
+	}
+	if (r.discordUsername) return `@${r.discordUsername}`
+	return '—'
+}
+
+const clientName = (p: { client: { firstName: string; lastName: string } | null }) =>
+	p.client ? `${p.client.firstName} ${p.client.lastName}`.trim() || '—' : '—'
 
 const statusLabel = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
@@ -46,7 +57,7 @@ const initials = (first: string, last: string): string => {
 // pre-baked rgba strings so styled-components can compose them without
 // runtime string math.
 const BLUE = {
-	fg: 'rgb(3, 105, 161)',        // primary
+	fg: 'rgb(3, 105, 161)', // primary
 	border: 'rgba(3, 105, 161, 0.35)',
 	bgSoft: 'rgba(3, 105, 161, 0.10)',
 	bgMid: 'rgba(3, 105, 161, 0.18)',
@@ -82,7 +93,9 @@ const ProjectViewPage = () => {
 						<ErrorState
 							title='Project not available'
 							description='Could not load project.'
-							action={<Button onClick={() => navigate('/projects/list')}>Back to list</Button>}
+							action={
+								<Button onClick={() => navigate('/projects/list')}>Back to list</Button>
+							}
 						/>
 					</Center>
 				</Surface>
@@ -107,7 +120,13 @@ const ProjectViewPage = () => {
 					<SectionHead num='01' title='Overview' hint='Client, timeline and status' />
 					<Grid>
 						<Field label='Client'>
-							<TextField name='cli' value={clientName(project)} disable sizes='small' width='100%' />
+							<TextField
+								name='cli'
+								value={clientName(project)}
+								disable
+								sizes='small'
+								width='100%'
+							/>
 						</Field>
 						<Field label='Status'>
 							<TextField
@@ -163,9 +182,7 @@ const ProjectViewPage = () => {
 							{project.members.map((m) => {
 								const isInactive = m.employee.status === 'inactive'
 								const positionsLine =
-									m.employee.positions.length > 0
-										? m.employee.positions.join(' · ')
-										: null
+									m.employee.positions.length > 0 ? m.employee.positions.join(' · ') : null
 								return (
 									<MemberCard
 										key={m.employeeId}
@@ -220,9 +237,7 @@ const ProjectViewPage = () => {
 									<ReportBody>
 										<ReportHead>
 											<ReportDate>{formatDate(r.reportDate, 'short')}</ReportDate>
-											<ReportAuthor>
-												{r.employee.firstName} {r.employee.lastName}
-											</ReportAuthor>
+											<ReportAuthor>{reportAuthorLabel(r)}</ReportAuthor>
 										</ReportHead>
 										<ReportContent>{r.content}</ReportContent>
 									</ReportBody>

@@ -30,7 +30,13 @@ import BackupsSettingsPanel, {
 	BACKUPS_DEFAULTS,
 	type BackupSettings,
 } from './BackupsSettingsPanel'
-import DiscordIntegrationPanel from './DiscordIntegrationPanel'
+import DiscordIntegrationPanel, { parseDiscordPendingKey } from './DiscordIntegrationPanel'
+import {
+	useListDiscordProfilesQuery,
+	useUpdateDiscordProfileMutation,
+	type DiscordProfileName,
+	type UpdateDiscordProfileBody,
+} from '../../store/discord-integration/discordIntegrationApi'
 import { atom, nthStagger } from './_shared/stagger'
 import { T } from '../../components/sales-analytics/_shared/tokens'
 import {
@@ -69,20 +75,14 @@ const SECTION_ICON: Record<RegistrySection, JSX.Element> = {
 }
 
 const SettingsPage = () => {
-	const {
-		data: sections = [],
-		isLoading,
-		isError,
-		refetch,
-	} = useGetSettingsSectionsQuery()
+	const { data: sections = [], isLoading, isError, refetch } = useGetSettingsSectionsQuery()
 	const { data: status } = useGetSettingsStatusQuery()
-	const [updateSection, { isLoading: isSaving }] =
-		useUpdateSettingsSectionMutation()
+	const [updateSection, { isLoading: isSavingSection }] = useUpdateSettingsSectionMutation()
+	const [updateDiscord, { isLoading: isSavingDiscord }] = useUpdateDiscordProfileMutation()
+	const isSaving = isSavingSection || isSavingDiscord
 	const [testDiscord, { isLoading: isTesting }] = useTestDiscordMutation()
-	const [testPhoneAlertPing, { isLoading: isPhonePinging }] =
-		useTestPhoneAlertPingMutation()
-	const [endSessions, { isLoading: isEnding }] =
-		useEndAllVaultSessionsMutation()
+	const [testPhoneAlertPing, { isLoading: isPhonePinging }] = useTestPhoneAlertPingMutation()
+	const [endSessions, { isLoading: isEnding }] = useEndAllVaultSessionsMutation()
 	const { showToast } = useToast()
 
 	const [pending, setPending] = useState<Record<string, unknown>>({})
@@ -109,9 +109,7 @@ const SettingsPage = () => {
 	const [searchParams, setSearchParams] = useSearchParams()
 	const urlKey = searchParams.get('s')
 
-	const activeKey = useMemo<
-		RegistrySection | 'my_account' | 'backups' | 'discord' | null
-	>(() => {
+	const activeKey = useMemo<RegistrySection | 'my_account' | 'backups' | 'discord' | null>(() => {
 		if (urlKey === 'my_account') return 'my_account'
 		if (urlKey === 'backups') return 'backups'
 		if (urlKey === 'discord') return 'discord'
@@ -127,9 +125,7 @@ const SettingsPage = () => {
 		return 'my_account'
 	}, [urlKey, sections, isLoading])
 
-	const setActiveKey = (
-		key: RegistrySection | 'my_account' | 'backups' | 'discord',
-	) => {
+	const setActiveKey = (key: RegistrySection | 'my_account' | 'backups' | 'discord') => {
 		const next = new URLSearchParams(searchParams)
 		next.set('s', key)
 		setSearchParams(next, { replace: true })
@@ -152,15 +148,19 @@ const SettingsPage = () => {
 	}, [activeKey, isLoading])
 
 	const section =
-		activeKey &&
-		activeKey !== 'my_account' &&
-		activeKey !== 'backups' &&
-		activeKey !== 'discord'
-			? sections.find((s) => s.key === activeKey) ?? null
+		activeKey && activeKey !== 'my_account' && activeKey !== 'backups' && activeKey !== 'discord'
+			? (sections.find((s) => s.key === activeKey) ?? null)
 			: null
 	const isMyAccountActive = activeKey === 'my_account'
 	const isBackupsActive = activeKey === 'backups'
 	const isDiscordActive = activeKey === 'discord'
+	/* Pulled only when the Discord tab is open — the panel renders its
+	   own list independently; we need these here to resolve the saved
+	   value of a `discord.{profile}.{field}` pending key for revert-
+	   cleanup and per-profile save at submit time. */
+	const { data: discordProfiles = [] } = useListDiscordProfilesQuery(undefined, {
+		skip: !isDiscordActive,
+	})
 	const pendingCount = Object.keys(pending).length
 	const dirty = pendingCount > 0
 
@@ -180,16 +180,92 @@ const SettingsPage = () => {
 			(e) =>
 				e.label.toLowerCase().includes(q) ||
 				e.description.toLowerCase().includes(q) ||
-				e.key.toLowerCase().includes(q),
+				e.key.toLowerCase().includes(q)
 		)
 	}, [section, search])
 
+	/**
+	 * Returns the currently-saved value for a given setting key —
+	 * either from the Backups local snapshot (virtual section) or
+	 * from the registry entry when a dynamic section is active. Used
+	 * by handleFieldChange below to detect "the user typed the field
+	 * back to its original value" and drop the key from `pending` so
+	 * the SaveBar fades out.
+	 */
+	const getSavedValue = (key: string): unknown => {
+		if (isBackupsActive) {
+			return (backupsSaved as unknown as Record<string, unknown>)[key]
+		}
+		const d = parseDiscordPendingKey(key)
+		if (d) {
+			const p = discordProfiles.find((x) => x.name === d.profile)
+			return p ? (p as unknown as Record<string, unknown>)[d.field] : undefined
+		}
+		const entry = section?.entries.find((e) => e.key === key)
+		return entry?.value
+	}
+
+	const isSameAsSaved = (a: unknown, b: unknown): boolean => {
+		const norm = (x: unknown) => (x === '' || x === undefined ? null : x)
+		const na = norm(a)
+		const nb = norm(b)
+		if (Array.isArray(na) && Array.isArray(nb)) {
+			return (
+				JSON.stringify([...(na as unknown[])].slice().sort()) ===
+				JSON.stringify([...(nb as unknown[])].slice().sort())
+			)
+		}
+		return na === nb
+	}
+
 	const handleFieldChange = (key: string, value: unknown) => {
+		const saved = getSavedValue(key)
+		if (isSameAsSaved(value, saved)) {
+			setPending((prev) => {
+				if (!Object.prototype.hasOwnProperty.call(prev, key)) return prev
+				const next = { ...prev }
+				delete next[key]
+				return next
+			})
+			return
+		}
 		setPending((prev) => ({ ...prev, [key]: value }))
 	}
 	const handleDiscard = () => setPending({})
 
 	const handleSave = async () => {
+		if (isDiscordActive) {
+			const byProfile = new Map<DiscordProfileName, Record<string, unknown>>()
+			for (const [k, v] of Object.entries(pending)) {
+				const d = parseDiscordPendingKey(k)
+				if (!d) continue
+				const bucket = byProfile.get(d.profile) ?? {}
+				bucket[d.field] = v
+				byProfile.set(d.profile, bucket)
+			}
+			if (byProfile.size === 0) return
+			try {
+				await Promise.all(
+					Array.from(byProfile.entries()).map(([name, body]) =>
+						updateDiscord({
+							name,
+							body: body as UpdateDiscordProfileBody,
+						}).unwrap()
+					)
+				)
+				setPending((prev) => {
+					const next: Record<string, unknown> = {}
+					for (const [k, v] of Object.entries(prev)) {
+						if (!parseDiscordPendingKey(k)) next[k] = v
+					}
+					return next
+				})
+				showToast('Discord profiles saved', 'success')
+			} catch (err) {
+				showToast(parseServerError(err), 'error')
+			}
+			return
+		}
 		if (isBackupsActive) {
 			try {
 				const next = { ...backupsSaved, ...pending } as BackupSettings
@@ -257,8 +333,7 @@ const SettingsPage = () => {
 					<SideItem
 						$active={isMyAccountActive}
 						onClick={() => {
-							if (dirty && !window.confirm('Discard unsaved changes?'))
-								return
+							if (dirty && !window.confirm('Discard unsaved changes?')) return
 							setPending({})
 							setActiveKey('my_account')
 						}}
@@ -276,8 +351,7 @@ const SettingsPage = () => {
 							key={s.key}
 							$active={s.key === activeKey}
 							onClick={() => {
-								if (dirty && !window.confirm('Discard unsaved changes?'))
-									return
+								if (dirty && !window.confirm('Discard unsaved changes?')) return
 								setPending({})
 								setActiveKey(s.key)
 							}}
@@ -288,18 +362,14 @@ const SettingsPage = () => {
 							</SideIcon>
 							<SideTitle>{s.title}</SideTitle>
 							{s.ownerOnly && (
-								<OwnerDot
-									$onDark={s.key === activeKey}
-									title='Owner managed'
-								/>
+								<OwnerDot $onDark={s.key === activeKey} title='Owner managed' />
 							)}
 						</SideItem>
 					))}
 					<SideItem
 						$active={isBackupsActive}
 						onClick={() => {
-							if (dirty && !window.confirm('Discard unsaved changes?'))
-								return
+							if (dirty && !window.confirm('Discard unsaved changes?')) return
 							setPending({})
 							setActiveKey('backups')
 						}}
@@ -309,16 +379,12 @@ const SettingsPage = () => {
 							<BackupOutlined />
 						</SideIcon>
 						<SideTitle>Backups</SideTitle>
-						<OwnerDot
-							$onDark={isBackupsActive}
-							title='Owner managed'
-						/>
+						<OwnerDot $onDark={isBackupsActive} title='Owner managed' />
 					</SideItem>
 					<SideItem
 						$active={isDiscordActive}
 						onClick={() => {
-							if (dirty && !window.confirm('Discard unsaved changes?'))
-								return
+							if (dirty && !window.confirm('Discard unsaved changes?')) return
 							setPending({})
 							setActiveKey('discord')
 						}}
@@ -328,10 +394,7 @@ const SettingsPage = () => {
 							<HubOutlined />
 						</SideIcon>
 						<SideTitle>Discord Integration</SideTitle>
-						<OwnerDot
-							$onDark={isDiscordActive}
-							title='Owner managed'
-						/>
+						<OwnerDot $onDark={isDiscordActive} title='Owner managed' />
 					</SideItem>
 				</SideNav>
 
@@ -353,8 +416,8 @@ const SettingsPage = () => {
 							<SectionHead>
 								<SectionTitle>My account</SectionTitle>
 								<SectionSubtitle>
-									Your personal profile — avatar, display name and the
-									role granted to you by an administrator.
+									Your personal profile — avatar, display name and the role granted to you
+									by an administrator.
 								</SectionSubtitle>
 							</SectionHead>
 							<MyAccountPanel />
@@ -364,8 +427,8 @@ const SettingsPage = () => {
 							<SectionHead>
 								<SectionTitle>Backups</SectionTitle>
 								<SectionSubtitle>
-									Snapshot schedule, remote storage, retention and the
-									failure alerts behind the Backup &amp; Recovery panel.
+									Snapshot schedule, remote storage, retention and the failure alerts
+									behind the Backup &amp; Recovery panel.
 								</SectionSubtitle>
 							</SectionHead>
 							<BackupsSettingsPanel
@@ -379,22 +442,18 @@ const SettingsPage = () => {
 							<SectionHead>
 								<SectionTitle>Discord Integration</SectionTitle>
 								<SectionSubtitle>
-									TEST and PRODUCTION profiles — guild &amp; channel ids,
-									schedules, access verification, test send and preview
-									messages. The active profile drives every outbound
-									notification.
+									TEST and PRODUCTION profiles — guild &amp; channel ids, schedules, access
+									verification, test send and preview messages. The active profile drives
+									every outbound notification.
 								</SectionSubtitle>
 							</SectionHead>
-							<DiscordIntegrationPanel />
+							<DiscordIntegrationPanel pending={pending} onFieldChange={handleFieldChange} />
 						</SectionHero>
 					) : !section ? (
 						<EmptyState>
 							<WarningAmberRounded style={{ fontSize: 32, color: T.warning }} />
 							<h3>No sections available</h3>
-							<p>
-								You don&apos;t have permission to see any settings sections
-								yet.
-							</p>
+							<p>You don&apos;t have permission to see any settings sections yet.</p>
 						</EmptyState>
 					) : (
 						<SectionHero key={section.key}>
@@ -407,18 +466,14 @@ const SettingsPage = () => {
 										<SectionTitle>
 											{section.title}
 											<SectionTitleAccent>settings</SectionTitleAccent>
-											{section.ownerOnly && (
-												<OwnerBadge>Owner managed</OwnerBadge>
-											)}
+											{section.ownerOnly && <OwnerBadge>Owner managed</OwnerBadge>}
 										</SectionTitle>
 										<SectionSubtitle>{section.description}</SectionSubtitle>
 									</div>
 									<FieldCount>
 										<b>
 											{String(
-												section.key === 'integrations'
-													? 3
-													: section.entries.length,
+												section.key === 'integrations' ? 3 : section.entries.length
 											).padStart(2, '0')}
 										</b>
 										<span>
@@ -452,15 +507,8 @@ const SettingsPage = () => {
 									onTest={() =>
 										testDiscord()
 											.unwrap()
-											.then(() =>
-												showToast(
-													'Test notification sent',
-													'success',
-												),
-											)
-											.catch((e) =>
-												showToast(parseServerError(e), 'error'),
-											)
+											.then(() => showToast('Test notification sent', 'success'))
+											.catch((e) => showToast(parseServerError(e), 'error'))
 									}
 									onEndSessions={() =>
 										endSessions()
@@ -468,12 +516,10 @@ const SettingsPage = () => {
 											.then((r) =>
 												showToast(
 													`Ended ${r.endedSessionCount} vault sessions`,
-													'success',
-												),
+													'success'
+												)
 											)
-											.catch((e) =>
-												showToast(parseServerError(e), 'error'),
-											)
+											.catch((e) => showToast(parseServerError(e), 'error'))
 									}
 									testing={isTesting}
 									ending={isEnding}
@@ -491,9 +537,7 @@ const SettingsPage = () => {
 												key={entry.key}
 												entry={entry}
 												pending={pending[entry.key]}
-												onChange={(v) =>
-													handleFieldChange(entry.key, v)
-												}
+												onChange={(v) => handleFieldChange(entry.key, v)}
 											/>
 										))
 									)}
@@ -502,8 +546,8 @@ const SettingsPage = () => {
 											<div className='info'>
 												<strong>Verify webhook</strong>
 												<span>
-													Sends a single test message to the configured
-													URL — doesn't bump the daily counter.
+													Sends a single test message to the configured URL — doesn't
+													bump the daily counter.
 												</span>
 											</div>
 											<TestPingBtn
@@ -516,18 +560,13 @@ const SettingsPage = () => {
 															if (r.success) {
 																showToast(
 																	'Test ping sent — check Discord',
-																	'success',
+																	'success'
 																)
 															} else {
-																showToast(
-																	r.message ?? 'Ping failed',
-																	'error',
-																)
+																showToast(r.message ?? 'Ping failed', 'error')
 															}
 														})
-														.catch((e) =>
-															showToast(parseServerError(e), 'error'),
-														)
+														.catch((e) => showToast(parseServerError(e), 'error'))
 												}
 											>
 												{isPhonePinging ? 'Sending…' : 'Send test ping'}
@@ -604,26 +643,18 @@ const SettingRow = ({
 						<OwnerManagedTag>Owner managed</OwnerManagedTag>
 					)}
 					{entry.dangerous && (
-						<DangerTag title='Changing this affects live traffic.'>
-							Dangerous
-						</DangerTag>
+						<DangerTag title='Changing this affects live traffic.'>Dangerous</DangerTag>
 					)}
 				</RowTitle>
 				<RowDescription>{entry.description}</RowDescription>
 				{entry.effectHint && <EffectHint>{entry.effectHint}</EffectHint>}
 			</RowLabel>
 			<RowControl>
-				<Control
-					entry={entry}
-					value={value}
-					disabled={disabled}
-					onChange={onChange}
-				/>
+				<Control entry={entry} value={value} disabled={disabled} onChange={onChange} />
 				<MetaSlot>
 					{entry.updatedAt && (
 						<RowMeta $visible={!dirty} aria-hidden={dirty}>
-							Last updated{' '}
-							{new Date(entry.updatedAt).toLocaleString()}
+							Last updated {new Date(entry.updatedAt).toLocaleString()}
 						</RowMeta>
 					)}
 					<DirtyTape $visible={dirty} aria-hidden={!dirty}>
@@ -668,9 +699,7 @@ const Control = ({
 					<input
 						type='number'
 						value={value as number | string}
-						onChange={(e) =>
-							onChange(e.target.value === '' ? '' : Number(e.target.value))
-						}
+						onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
 						disabled={disabled}
 						min={entry.min}
 						max={entry.max}
@@ -680,10 +709,7 @@ const Control = ({
 					{(entry.unit ||
 						entry.type === 'duration_minutes' ||
 						entry.type === 'duration_seconds') && (
-						<Unit>
-							{entry.unit ??
-								(entry.type === 'duration_minutes' ? 'min' : 'sec')}
-						</Unit>
+						<Unit>{entry.unit ?? (entry.type === 'duration_minutes' ? 'min' : 'sec')}</Unit>
 					)}
 				</NumberCell>
 			)
@@ -693,9 +719,7 @@ const Control = ({
 					<input
 						type='number'
 						value={value as number | string}
-						onChange={(e) =>
-							onChange(e.target.value === '' ? '' : Number(e.target.value))
-						}
+						onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
 						disabled={disabled}
 						min={entry.min}
 						max={entry.max}
@@ -723,34 +747,28 @@ const Control = ({
 		case 'weekdays':
 			return (
 				<WeekdayRow>
-					{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(
-						(label, i) => {
-							const day = i === 6 ? 0 : i + 1 // ISO: 0=Sun,1=Mon
-							const current = Array.isArray(value)
-								? (value as number[])
-								: []
-							const on = current.includes(day)
-							return (
-								<WeekdayPill
-									type='button'
-									key={label}
-									$on={on}
-									disabled={disabled}
-									aria-label={label}
-									title={label}
-									onClick={() => {
-										if (disabled) return
-										const next = on
-											? current.filter((n) => n !== day)
-											: [...current, day]
-										onChange(next.sort((a, b) => a - b))
-									}}
-								>
-									{label[0]}
-								</WeekdayPill>
-							)
-						},
-					)}
+					{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label, i) => {
+						const day = i === 6 ? 0 : i + 1 // ISO: 0=Sun,1=Mon
+						const current = Array.isArray(value) ? (value as number[]) : []
+						const on = current.includes(day)
+						return (
+							<WeekdayPill
+								type='button'
+								key={label}
+								$on={on}
+								disabled={disabled}
+								aria-label={label}
+								title={label}
+								onClick={() => {
+									if (disabled) return
+									const next = on ? current.filter((n) => n !== day) : [...current, day]
+									onChange(next.sort((a, b) => a - b))
+								}}
+							>
+								{label[0]}
+							</WeekdayPill>
+						)
+					})}
 				</WeekdayRow>
 			)
 		case 'string':
@@ -759,14 +777,11 @@ const Control = ({
 			// hint so the user still sees what the field is for — otherwise
 			// the input would show no placeholder on sections like Client
 			// invoicing where many strings are not configured yet.
-			const stored =
-				entry.value === null || entry.value === undefined
-					? ''
-					: String(entry.value)
+			const stored = entry.value === null || entry.value === undefined ? '' : String(entry.value)
 			const placeholder = stored || entry.label
 			return (
 				<TextCell
-					value={value as string | undefined | null ?? ''}
+					value={(value as string | undefined | null) ?? ''}
 					onChange={(e) => onChange(e.target.value)}
 					disabled={disabled}
 					placeholder={placeholder}
@@ -791,13 +806,10 @@ const IntegrationsBlock = ({
 	testing: boolean
 	ending: boolean
 }) => {
-	const [confirmAction, setConfirmAction] = useState<
-		'test' | 'end' | null
-	>(null)
+	const [confirmAction, setConfirmAction] = useState<'test' | 'end' | null>(null)
 
 	if (!status) return <ContentSkeleton />
-	const vibeOk =
-		status.vibeWorker.configured && !!status.vibeWorker.lastEventReceivedAt
+	const vibeOk = status.vibeWorker.configured && !!status.vibeWorker.lastEventReceivedAt
 	const vibeNotConf = !status.vibeWorker.configured
 	const discordNotConf = !status.discord.configured
 	const vaultBusy = status.vault.activeSessions > 0
@@ -819,14 +831,8 @@ const IntegrationsBlock = ({
 				<IntBody>
 					<VibeWebhookBlock />
 					<IntFoot>
-						<IntStatusDot
-							$tone={vibeNotConf ? 'warn' : vibeOk ? 'ok' : 'neutral'}
-						>
-							{vibeNotConf
-								? 'Not configured'
-								: vibeOk
-									? 'Receiving'
-									: 'Idle'}
+						<IntStatusDot $tone={vibeNotConf ? 'warn' : vibeOk ? 'ok' : 'neutral'}>
+							{vibeNotConf ? 'Not configured' : vibeOk ? 'Receiving' : 'Idle'}
 						</IntStatusDot>
 					</IntFoot>
 				</IntBody>
@@ -842,35 +848,31 @@ const IntegrationsBlock = ({
 					<IntStripKey>discord.bot</IntStripKey>
 				</IntStrip>
 				<IntBody>
-				<IntMetric>
-					<b>{status.discord.usedBy?.length ?? 0}</b>
-					<em>use cases</em>
-				</IntMetric>
-				<IntFoot>
-					<IntStatusDot
-						$tone={
-							discordNotConf
-								? 'warn'
+					<IntMetric>
+						<b>{status.discord.usedBy?.length ?? 0}</b>
+						<em>use cases</em>
+					</IntMetric>
+					<IntFoot>
+						<IntStatusDot
+							$tone={
+								discordNotConf ? 'warn' : status.discord.alertsEnabled ? 'ok' : 'neutral'
+							}
+						>
+							{discordNotConf
+								? 'Not configured'
 								: status.discord.alertsEnabled
-									? 'ok'
-									: 'neutral'
-						}
-					>
-						{discordNotConf
-							? 'Not configured'
-							: status.discord.alertsEnabled
-								? 'Connected'
-								: 'Disabled'}
-					</IntStatusDot>
-					<IntBtn
-						type='button'
-						$tone='accent'
-						onClick={() => setConfirmAction('test')}
-						disabled={testing || !status.discord.configured}
-					>
-						{testing ? 'Sending…' : 'Send test'}
-					</IntBtn>
-				</IntFoot>
+									? 'Connected'
+									: 'Disabled'}
+						</IntStatusDot>
+						<IntBtn
+							type='button'
+							$tone='accent'
+							onClick={() => setConfirmAction('test')}
+							disabled={testing || !status.discord.configured}
+						>
+							{testing ? 'Sending…' : 'Send test'}
+						</IntBtn>
+					</IntFoot>
 				</IntBody>
 			</IntCard>
 
@@ -884,28 +886,28 @@ const IntegrationsBlock = ({
 					<IntStripKey>vault.sessions</IntStripKey>
 				</IntStrip>
 				<IntBody>
-				<IntMetric>
-					<b>{status.vault.activeSessions}</b>
-					<em>active now</em>
-				</IntMetric>
-				<IntSub>
-					{vaultBusy
-						? 'Ending all sessions forces every user to re-authenticate with MFA.'
-						: 'No active unlocks right now.'}
-				</IntSub>
-				<IntFoot>
-					<IntStatusDot $tone={vaultBusy ? 'warn' : 'ok'}>
-						{vaultBusy ? `${status.vault.activeSessions} active` : 'Idle'}
-					</IntStatusDot>
-					<IntBtn
-						type='button'
-						$tone='ink'
-						onClick={() => setConfirmAction('end')}
-						disabled={ending || status.vault.activeSessions === 0}
-					>
-						{ending ? 'Ending…' : 'End all'}
-					</IntBtn>
-				</IntFoot>
+					<IntMetric>
+						<b>{status.vault.activeSessions}</b>
+						<em>active now</em>
+					</IntMetric>
+					<IntSub>
+						{vaultBusy
+							? 'Ending all sessions forces every user to re-authenticate with MFA.'
+							: 'No active unlocks right now.'}
+					</IntSub>
+					<IntFoot>
+						<IntStatusDot $tone={vaultBusy ? 'warn' : 'ok'}>
+							{vaultBusy ? `${status.vault.activeSessions} active` : 'Idle'}
+						</IntStatusDot>
+						<IntBtn
+							type='button'
+							$tone='ink'
+							onClick={() => setConfirmAction('end')}
+							disabled={ending || status.vault.activeSessions === 0}
+						>
+							{ending ? 'Ending…' : 'End all'}
+						</IntBtn>
+					</IntFoot>
 				</IntBody>
 			</IntCard>
 
@@ -916,8 +918,8 @@ const IntegrationsBlock = ({
 					title='Send a test notification?'
 					description={
 						<>
-							A single test message will be posted to the configured
-							Discord webhook so you can verify delivery.
+							A single test message will be posted to the configured Discord webhook so you
+							can verify delivery.
 						</>
 					}
 					confirmLabel='Send test'
@@ -943,9 +945,8 @@ const IntegrationsBlock = ({
 					}
 					description={
 						<>
-							Every user with an open unlock will be forced to
-							re-authenticate with MFA before revealing another secret.
-							Current in-flight reveals are not interrupted.
+							Every user with an open unlock will be forced to re-authenticate with MFA
+							before revealing another secret. Current in-flight reveals are not interrupted.
 						</>
 					}
 					confirmLabel='End sessions'
@@ -962,7 +963,6 @@ const IntegrationsBlock = ({
 		</IntGrid>
 	)
 }
-
 
 /* ─── Styles ──────────────────────────────────────────────────── */
 
@@ -1096,7 +1096,10 @@ const PageHead = styled.div`
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.hand-line { animation: none; transform: rotate(-6deg); }
+		.hand-line {
+			animation: none;
+			transform: rotate(-6deg);
+		}
 		.hand-flourish svg path {
 			animation: none;
 			stroke-dashoffset: 0;
@@ -1170,13 +1173,9 @@ const SideItem = styled.button<{ $active: boolean }>`
 	 *   theme.textColor (light mode #3a3541de).
 	 * Active = main sidebar's filled look: blue gradient, white text,
 	 *   soft blue glow. */
-	background: ${(p) =>
-		p.$active
-			? 'linear-gradient(270deg, #0284c7, #075985)'
-			: 'transparent'};
+	background: ${(p) => (p.$active ? 'linear-gradient(270deg, #0284c7, #075985)' : 'transparent')};
 	color: ${(p) => (p.$active ? '#f5f5f5' : '#3a3541de')};
-	box-shadow: ${(p) =>
-		p.$active ? 'rgba(3, 105, 161, 0.28) -2px 6px 16px -4px' : 'none'};
+	box-shadow: ${(p) => (p.$active ? 'rgba(3, 105, 161, 0.28) -2px 6px 16px -4px' : 'none')};
 	font: inherit;
 	font-size: 14px;
 	font-weight: 500;
@@ -1192,9 +1191,7 @@ const SideItem = styled.button<{ $active: boolean }>`
 
 	&:hover {
 		background: ${(p) =>
-			p.$active
-				? 'linear-gradient(270deg, #0284c7, #075985)'
-				: 'rgba(3, 105, 161, 0.04)'};
+			p.$active ? 'linear-gradient(270deg, #0284c7, #075985)' : 'rgba(3, 105, 161, 0.04)'};
 		color: ${(p) => (p.$active ? '#f5f5f5' : T.primary)};
 	}
 
@@ -1212,7 +1209,9 @@ const SideIcon = styled.span<{ $active?: boolean }>`
 	border-radius: 8px;
 	background: ${(p) => (p.$active ? 'transparent' : 'rgba(3, 105, 161, 0.08)')};
 	color: ${(p) => (p.$active ? '#f5f5f5' : T.primary)};
-	transition: background 220ms ${T.ease}, color 220ms ${T.ease};
+	transition:
+		background 220ms ${T.ease},
+		color 220ms ${T.ease};
 
 	svg {
 		font-size: 18px;
@@ -1662,8 +1661,7 @@ const DirtyTape = styled.span<{ $visible: boolean }>`
 	transform-origin: right top;
 	opacity: ${(p) => (p.$visible ? 1 : 0)};
 	transform: rotate(${(p) => (p.$visible ? '-2deg' : '-6deg')})
-		translateY(${(p) => (p.$visible ? 0 : '-4px')})
-		scale(${(p) => (p.$visible ? 1 : 0.85)});
+		translateY(${(p) => (p.$visible ? 0 : '-4px')}) scale(${(p) => (p.$visible ? 1 : 0.85)});
 	transition:
 		opacity 240ms cubic-bezier(0.22, 1, 0.36, 1),
 		transform 360ms cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1867,8 +1865,7 @@ const SaveBar = styled.div<{ $visible: boolean }>`
 	transform: translate(-50%, ${(p) => (p.$visible ? '0' : '24px')});
 	opacity: ${(p) => (p.$visible ? 1 : 0)};
 	transition:
-		opacity 240ms cubic-bezier(0.22, 1, 0.36, 1)
-			${(p) => (p.$visible ? '60ms' : '0ms')},
+		opacity 240ms cubic-bezier(0.22, 1, 0.36, 1) ${(p) => (p.$visible ? '60ms' : '0ms')},
 		transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
 	will-change: opacity, transform;
 
@@ -2009,9 +2006,7 @@ const VibeWebhookBlock = () => {
 			<WebhookRow>
 				<label>Required header</label>
 				<div className='value'>
-					<code>
-						{VIBE_SECRET_HEADER}: &lt;VIBE_WORKER_WEBHOOK_SECRET&gt;
-					</code>
+					<code>{VIBE_SECRET_HEADER}: &lt;VIBE_WORKER_WEBHOOK_SECRET&gt;</code>
 					<CopyBtn
 						type='button'
 						onClick={() => copy(VIBE_SECRET_HEADER, 'Header name')}
@@ -2022,8 +2017,8 @@ const VibeWebhookBlock = () => {
 				</div>
 			</WebhookRow>
 			<WebhookHint>
-				Send one JSON job-post per request. Include{' '}
-				<code>x-vibe-worker-event-id</code> for idempotency.
+				Send one JSON job-post per request. Include <code>x-vibe-worker-event-id</code> for
+				idempotency.
 			</WebhookHint>
 		</WebhookBlock>
 	)
@@ -2079,11 +2074,7 @@ const IntStrip = styled.div<{ $tone: 'sky' | 'accent' | 'ink' }>`
 	padding: 14px 20px;
 	color: #ffffff;
 	background: ${(p) =>
-		p.$tone === 'sky'
-			? T.primary
-			: p.$tone === 'accent'
-				? '#e85d2f'
-				: '#0f172a'};
+		p.$tone === 'sky' ? T.primary : p.$tone === 'accent' ? '#e85d2f' : '#0f172a'};
 `
 
 const IntStripTitle = styled.div`
@@ -2166,12 +2157,7 @@ const IntIc = styled.span<{ $tone: 'sky' | 'accent' | 'rose' }>`
 			: p.$tone === 'accent'
 				? 'rgba(232, 93, 47, 0.14)'
 				: 'rgba(225, 29, 72, 0.12)'};
-	color: ${(p) =>
-		p.$tone === 'sky'
-			? T.primary
-			: p.$tone === 'accent'
-				? INT_ACCENT
-				: '#c2410c'};
+	color: ${(p) => (p.$tone === 'sky' ? T.primary : p.$tone === 'accent' ? INT_ACCENT : '#c2410c')};
 
 	svg {
 		font-size: 15px;
@@ -2246,12 +2232,7 @@ const IntStatusDot = styled.span<{ $tone: 'ok' | 'warn' | 'neutral' }>`
 			: p.$tone === 'warn'
 				? 'rgba(217, 119, 6, 0.1)'
 				: 'rgba(100, 116, 139, 0.08)'};
-	color: ${(p) =>
-		p.$tone === 'ok'
-			? '#047857'
-			: p.$tone === 'warn'
-				? '#b45309'
-				: '#475569'};
+	color: ${(p) => (p.$tone === 'ok' ? '#047857' : p.$tone === 'warn' ? '#b45309' : '#475569')};
 
 	&::before {
 		content: '';
@@ -2259,11 +2240,7 @@ const IntStatusDot = styled.span<{ $tone: 'ok' | 'warn' | 'neutral' }>`
 		height: 8px;
 		border-radius: 50%;
 		background: ${(p) =>
-			p.$tone === 'ok'
-				? '#10b981'
-				: p.$tone === 'warn'
-					? '#d97706'
-					: '#94a3b8'};
+			p.$tone === 'ok' ? '#10b981' : p.$tone === 'warn' ? '#d97706' : '#94a3b8'};
 		box-shadow: 0 0 0 3px
 			${(p) =>
 				p.$tone === 'ok'
@@ -2332,7 +2309,10 @@ const CopyBtn = styled.button`
 	border: 1px solid ${T.border};
 	color: ${T.textSecondary};
 	cursor: pointer;
-	transition: color 160ms, border-color 160ms, background 160ms;
+	transition:
+		color 160ms,
+		border-color 160ms,
+		background 160ms;
 
 	&:hover {
 		color: ${T.primary};
@@ -2370,12 +2350,7 @@ const IntBtn = styled.button<{ $tone?: 'sky' | 'accent' | 'ink' }>`
 	font-size: 12.5px;
 	cursor: pointer;
 	background: transparent;
-	color: ${(p) =>
-		p.$tone === 'accent'
-			? '#e85d2f'
-			: p.$tone === 'ink'
-				? '#0f172a'
-				: T.primary};
+	color: ${(p) => (p.$tone === 'accent' ? '#e85d2f' : p.$tone === 'ink' ? '#0f172a' : T.primary)};
 	border: 1.5px solid
 		${(p) =>
 			p.$tone === 'accent'
@@ -2383,7 +2358,9 @@ const IntBtn = styled.button<{ $tone?: 'sky' | 'accent' | 'ink' }>`
 				: p.$tone === 'ink'
 					? 'rgba(15, 23, 42, 0.3)'
 					: 'rgba(3, 105, 161, 0.3)'};
-	transition: background 160ms, border-color 160ms;
+	transition:
+		background 160ms,
+		border-color 160ms;
 
 	&:hover:not(:disabled) {
 		background: ${(p) =>
@@ -2393,11 +2370,7 @@ const IntBtn = styled.button<{ $tone?: 'sky' | 'accent' | 'ink' }>`
 					? 'rgba(15, 23, 42, 0.04)'
 					: 'rgba(3, 105, 161, 0.06)'};
 		border-color: ${(p) =>
-			p.$tone === 'accent'
-				? '#e85d2f'
-				: p.$tone === 'ink'
-					? '#0f172a'
-					: T.primary};
+			p.$tone === 'accent' ? '#e85d2f' : p.$tone === 'ink' ? '#0f172a' : T.primary};
 	}
 
 	&:disabled {

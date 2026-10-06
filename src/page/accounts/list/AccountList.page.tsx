@@ -172,7 +172,10 @@ const AccountList = () => {
 								</div>
 							</div>
 							<PermissionGate permission='accounts:create'>
-								<PrimarySolidButton type='button' onClick={() => navigate('/accounts/add/')}>
+								<PrimarySolidButton
+									type='button'
+									onClick={() => navigate('/accounts/add/')}
+								>
 									<AddRounded />
 									New account
 								</PrimarySolidButton>
@@ -439,7 +442,7 @@ const PlatformChip = styled.span`
 	border-radius: 999px;
 	background: ${T.primaryTint};
 	color: ${T.primary};
-	border: 1px solid #d5e5f3;
+	border: 0;
 	font-size: 12px;
 	font-weight: 600;
 `

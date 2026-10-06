@@ -13,6 +13,9 @@ dist-ssr
 .env
 *.local
 
+# Local-only backups of large original assets (e.g. uncompressed .glb)
+/_originals/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

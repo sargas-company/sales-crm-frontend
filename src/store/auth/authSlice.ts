@@ -67,8 +67,21 @@ const authSlice = createSlice({
 		setInitialized: (state) => {
 			state.isInitialized = true
 		},
+		// Fresh-login hydration gate. On cold-boot with a stored refresh
+		// token `isInitialized` already starts `false` so `ProtectedRoute`
+		// waits for `setMe` before letting the user through; a fresh login
+		// path never hits that gate because at page load there was no
+		// refresh token to park on. Calling `setLoggingIn` just before
+		// `setCredentials` reopens the same gate for the brief window
+		// between tokens being committed and `/auth/me` returning — so
+		// the authenticated-but-empty-permissions state cannot leak out
+		// and flash `/access-denied` between the two. `setInitialized`
+		// closes the gate afterwards (or on login failure).
+		setLoggingIn: (state) => {
+			state.isInitialized = false
+		},
 	},
 })
 
-export const { setCredentials, setMe, logout, setInitialized } = authSlice.actions
+export const { setCredentials, setMe, logout, setInitialized, setLoggingIn } = authSlice.actions
 export default authSlice.reducer

@@ -86,10 +86,22 @@ const Grid = styled('div')`
 	background-image:
 		linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
 		linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-	background-size: 40px 40px, 40px 40px;
+	background-size:
+		40px 40px,
+		40px 40px;
 	animation: ${gridDrift} 24s linear infinite;
-	mask-image: radial-gradient(circle at center, #000 30%, rgba(0, 0, 0, 0.35) 70%, transparent 100%);
-	-webkit-mask-image: radial-gradient(circle at center, #000 30%, rgba(0, 0, 0, 0.35) 70%, transparent 100%);
+	mask-image: radial-gradient(
+		circle at center,
+		#000 30%,
+		rgba(0, 0, 0, 0.35) 70%,
+		transparent 100%
+	);
+	-webkit-mask-image: radial-gradient(
+		circle at center,
+		#000 30%,
+		rgba(0, 0, 0, 0.35) 70%,
+		transparent 100%
+	);
 `
 
 const Spotlight = styled('div')`
@@ -99,7 +111,12 @@ const Spotlight = styled('div')`
 	width: 720px;
 	height: 720px;
 	transform: translate(-50%, -50%);
-	background: radial-gradient(circle at center, rgba(255, 255, 255, 0.16) 0%, rgba(56, 189, 248, 0.06) 40%, transparent 70%);
+	background: radial-gradient(
+		circle at center,
+		rgba(255, 255, 255, 0.16) 0%,
+		rgba(56, 189, 248, 0.06) 40%,
+		transparent 70%
+	);
 	filter: blur(30px);
 	animation: ${spotlightPulse} 4.2s ease-in-out infinite;
 	pointer-events: none;
@@ -124,7 +141,11 @@ const Watermark = styled('span')`
 	white-space: nowrap;
 	color: transparent;
 	-webkit-text-stroke: 1px rgba(255, 255, 255, 0.04);
-	background: linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.01) 100%);
+	background: linear-gradient(
+		180deg,
+		rgba(255, 255, 255, 0.045) 0%,
+		rgba(255, 255, 255, 0.01) 100%
+	);
 	-webkit-background-clip: text;
 	background-clip: text;
 	animation: ${watermarkFloat} 9s ease-in-out infinite;
@@ -187,7 +208,9 @@ const Wordmark = styled('div')`
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.dot { animation: none; }
+		.dot {
+			animation: none;
+		}
 	}
 `
 
@@ -205,7 +228,10 @@ const CornerLink = styled('a')`
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	background: rgba(255, 255, 255, 0.02);
 	backdrop-filter: blur(4px);
-	transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+	transition:
+		color 0.2s ease,
+		border-color 0.2s ease,
+		background 0.2s ease;
 	cursor: pointer;
 
 	&:hover {
@@ -431,7 +457,9 @@ const BottomBar = styled('div')`
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.status-dot { animation: none; }
+		.status-dot {
+			animation: none;
+		}
 	}
 `
 
@@ -512,11 +540,7 @@ const AuthBanner: FC<Props> = () => {
 			</HeroWrap>
 
 			<BottomBar>
-				<span className='copy'>
-					Last deploy · 2h ago
-					<span className='copy-dot' />
-					commit&nbsp;<code>a7f3c9d</code>
-				</span>
+				<span className='copy'>Last deploy · 2h ago</span>
 				<span className='status'>
 					<span className='status-dot' />
 					All systems operational

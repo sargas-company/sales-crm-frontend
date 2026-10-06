@@ -1,20 +1,8 @@
-import {
-	CSSProperties,
-	useEffect,
-	useLayoutEffect,
-	useMemo,
-	useRef,
-	useState,
-} from 'react'
+import { CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { STAGGER_STEP, atom } from './_shared/stagger'
 import { Avatar } from '@mui/material'
-import {
-	CheckRounded,
-	DeleteOutline,
-	FaceOutlined,
-	ShieldOutlined,
-} from '@mui/icons-material'
+import { CheckRounded, DeleteOutline, FaceOutlined, ShieldOutlined } from '@mui/icons-material'
 import { T } from '../../components/sales-analytics/_shared/tokens'
 import { useToast } from '../../context/toast/ToastContext'
 import parseServerError from '../../utils/parseServerError'
@@ -27,11 +15,7 @@ import {
 import Modal from '../../components/modal/Modal'
 import ConfirmModal from '../../components/_shared/ConfirmModal'
 import OwnerRatOverlay, { shouldShowRat } from './OwnerRatOverlay'
-import {
-	AVATAR_PRESETS,
-	type AvatarGender,
-	avatarUrlFor,
-} from './avatarPresets'
+import { AVATAR_PRESETS, type AvatarGender, avatarUrlFor } from './avatarPresets'
 
 /**
  * "My account" — personal settings section for the current authenticated
@@ -46,8 +30,7 @@ const MyAccountPanel = () => {
 	const { data: me, refetch } = useGetMeQuery()
 	const { showToast } = useToast()
 	const [updateMe, { isLoading: isSaving }] = useUpdateMeMutation()
-	const [setAvatarPreset, { isLoading: isPicking }] =
-		useSetAvatarPresetMutation()
+	const [setAvatarPreset, { isLoading: isPicking }] = useSetAvatarPresetMutation()
 	const [removeAvatar, { isLoading: isRemoving }] = useRemoveAvatarMutation()
 
 	const [firstName, setFirstName] = useState('')
@@ -66,7 +49,11 @@ const MyAccountPanel = () => {
 
 	// Owner-only easter egg: once per device per day, when My account
 	// mounts, scamper a little rat across the viewport bottom.
+	// Temporarily disabled — flip RAT_EASTER_EGG_ENABLED back to `true`
+	// when we want it back.
+	const RAT_EASTER_EGG_ENABLED = false
 	useEffect(() => {
+		if (!RAT_EASTER_EGG_ENABLED) return
 		if (!me) return
 		if (!shouldShowRat(me.role?.name, me.id)) return
 		setShowRat(true)
@@ -79,8 +66,7 @@ const MyAccountPanel = () => {
 		me.email.slice(0, 2).toUpperCase()
 
 	const dirty =
-		firstName.trim() !== (me.firstName ?? '') ||
-		lastName.trim() !== (me.lastName ?? '')
+		firstName.trim() !== (me.firstName ?? '') || lastName.trim() !== (me.lastName ?? '')
 
 	const handleSave = async () => {
 		if (!firstName.trim() || !lastName.trim()) {
@@ -133,120 +119,118 @@ const MyAccountPanel = () => {
 
 	return (
 		<>
-		<Shell>
-			<Card>
-				<CardTitle style={delay()}>Avatar</CardTitle>
-				<CardSubtitle style={delay()}>
-					Pick one from the gallery — custom uploads are not available.
-				</CardSubtitle>
-				<AvatarRow style={delay()}>
-					<AvatarWrap>
-						<Avatar
-							src={me.avatarUrl ?? undefined}
-							alt={`${me.firstName} ${me.lastName}`}
-							sx={{
-								width: 92,
-								height: 92,
-								bgcolor: T.primary,
-								fontSize: 32,
-								fontWeight: 700,
-							}}
-						>
-							{!me.avatarUrl && initials}
-						</Avatar>
-					</AvatarWrap>
-					<AvatarActions ref={avatarActionsRef}>
-						<UploadBtn
-							type='button'
-							onClick={() => setPickerOpen(true)}
-							disabled={isPicking}
-						>
-							<FaceOutlined style={{ fontSize: 16 }} />
-							{me.avatarUrl ? 'Change avatar' : 'Choose avatar'}
-						</UploadBtn>
-						{me.avatarUrl && (
-							<RemoveBtn
-								type='button'
-								onClick={() => setRemoveOpen(true)}
-								disabled={isRemoving}
+			<Shell>
+				<Card>
+					<CardTitle style={delay()}>Avatar</CardTitle>
+					<CardSubtitle style={delay()}>
+						Pick one from the gallery — custom uploads are not available.
+					</CardSubtitle>
+					<AvatarRow style={delay()}>
+						<AvatarWrap>
+							<Avatar
+								src={me.avatarUrl ?? undefined}
+								alt={`${me.firstName} ${me.lastName}`}
+								sx={{
+									width: 92,
+									height: 92,
+									bgcolor: T.primary,
+									fontSize: 32,
+									fontWeight: 700,
+								}}
 							>
-								<DeleteOutline style={{ fontSize: 16 }} />
-								Remove
-							</RemoveBtn>
-						)}
-					</AvatarActions>
-				</AvatarRow>
-			</Card>
+								{!me.avatarUrl && initials}
+							</Avatar>
+						</AvatarWrap>
+						<AvatarActions ref={avatarActionsRef}>
+							<UploadBtn
+								type='button'
+								onClick={() => setPickerOpen(true)}
+								disabled={isPicking}
+							>
+								<FaceOutlined style={{ fontSize: 16 }} />
+								{me.avatarUrl ? 'Change avatar' : 'Choose avatar'}
+							</UploadBtn>
+							{me.avatarUrl && (
+								<RemoveBtn
+									type='button'
+									onClick={() => setRemoveOpen(true)}
+									disabled={isRemoving}
+								>
+									<DeleteOutline style={{ fontSize: 16 }} />
+									Remove
+								</RemoveBtn>
+							)}
+						</AvatarActions>
+					</AvatarRow>
+				</Card>
 
-			{pickerOpen && (
-				<AvatarPickerModal
-					currentUrl={me.avatarUrl ?? null}
-					onPick={handlePickPreset}
-					onClose={() => setPickerOpen(false)}
-					loading={isPicking}
-				/>
-			)}
+				{pickerOpen && (
+					<AvatarPickerModal
+						currentUrl={me.avatarUrl ?? null}
+						onPick={handlePickPreset}
+						onClose={() => setPickerOpen(false)}
+						loading={isPicking}
+					/>
+				)}
 
-			{removeOpen && (
-				<ConfirmModal
-					icon={<DeleteOutline />}
-					iconTone='danger'
-					title='Remove your avatar?'
-					description={
-						<>
-							Your profile will fall back to the colored initials{' '}
-							<strong>{initials}</strong>. You can pick a new one any time.
-						</>
-					}
-					confirmLabel='Remove'
-					confirmLoadingLabel='Removing…'
-					confirmColor='error'
-					isLoading={isRemoving}
-					onClose={() => setRemoveOpen(false)}
-					onConfirm={handleRemoveAvatar}
-				/>
-			)}
+				{removeOpen && (
+					<ConfirmModal
+						icon={<DeleteOutline />}
+						iconTone='danger'
+						title='Remove your avatar?'
+						description={
+							<>
+								Your profile will fall back to the colored initials{' '}
+								<strong>{initials}</strong>. You can pick a new one any time.
+							</>
+						}
+						confirmLabel='Remove'
+						confirmLoadingLabel='Removing…'
+						confirmColor='error'
+						isLoading={isRemoving}
+						onClose={() => setRemoveOpen(false)}
+						onConfirm={handleRemoveAvatar}
+					/>
+				)}
 
-			<Card>
-				<CardTitle style={delay()}>Identity</CardTitle>
-				<CardSubtitle style={delay()}>
-					Changes here only affect your own profile. Email and role are
-					managed elsewhere.
-				</CardSubtitle>
-				<FieldGrid>
-					<Field style={delay()}>
-						<label htmlFor='me-first'>First name</label>
-						<input
-							id='me-first'
-							value={firstName}
-							onChange={(e) => setFirstName(e.target.value)}
-							placeholder='First name'
-						/>
-					</Field>
-					<Field style={delay()}>
-						<label htmlFor='me-last'>Last name</label>
-						<input
-							id='me-last'
-							value={lastName}
-							onChange={(e) => setLastName(e.target.value)}
-							placeholder='Last name'
-						/>
-					</Field>
-					<Field style={delay()}>
-						<label>Email</label>
-						<ReadOnlyValue>{me.email}</ReadOnlyValue>
-					</Field>
-					<Field style={delay()}>
-						<label>Role</label>
-						<ReadOnlyRole>
-							<ShieldOutlined style={{ fontSize: 14 }} />
-							{me.role?.label ?? '—'}
-						</ReadOnlyRole>
-					</Field>
-				</FieldGrid>
-
-			</Card>
-		</Shell>
+				<Card>
+					<CardTitle style={delay()}>Identity</CardTitle>
+					<CardSubtitle style={delay()}>
+						Changes here only affect your own profile. Email and role are managed elsewhere.
+					</CardSubtitle>
+					<FieldGrid>
+						<Field style={delay()}>
+							<label htmlFor='me-first'>First name</label>
+							<input
+								id='me-first'
+								value={firstName}
+								onChange={(e) => setFirstName(e.target.value)}
+								placeholder='First name'
+							/>
+						</Field>
+						<Field style={delay()}>
+							<label htmlFor='me-last'>Last name</label>
+							<input
+								id='me-last'
+								value={lastName}
+								onChange={(e) => setLastName(e.target.value)}
+								placeholder='Last name'
+							/>
+						</Field>
+						<Field style={delay()}>
+							<label>Email</label>
+							<ReadOnlyValue>{me.email}</ReadOnlyValue>
+						</Field>
+						<Field style={delay()}>
+							<label>Role</label>
+							<ReadOnlyRole>
+								<ShieldOutlined style={{ fontSize: 14 }} />
+								{me.role?.label ?? '—'}
+							</ReadOnlyRole>
+						</Field>
+					</FieldGrid>
+				</Card>
+			</Shell>
 
 			<FloatingSaveBar $visible={dirty} aria-hidden={!dirty}>
 				<div className='savebar-pill'>
@@ -302,10 +286,7 @@ const AvatarPickerModal = ({
 }) => {
 	const [tab, setTab] = useState<AvatarGender>('male')
 	const [closing, setClosing] = useState(false)
-	const items = useMemo(
-		() => AVATAR_PRESETS.filter((p) => p.gender === tab),
-		[tab],
-	)
+	const items = useMemo(() => AVATAR_PRESETS.filter((p) => p.gender === tab), [tab])
 
 	// Delay the parent unmount until the exit animation finishes so
 	// the fade-out actually plays. A second call during a close is a
@@ -339,9 +320,7 @@ const AvatarPickerModal = ({
 		const measure = () => {
 			const root = pillsRef.current
 			if (!root) return
-			const el = root.querySelector<HTMLButtonElement>(
-				'[data-active="true"]',
-			)
+			const el = root.querySelector<HTMLButtonElement>('[data-active="true"]')
 			if (el && el.offsetWidth > 0) {
 				setInd({ left: el.offsetLeft, width: el.offsetWidth })
 				setMeasured(true)
@@ -361,11 +340,7 @@ const AvatarPickerModal = ({
 						<h3>Choose avatar</h3>
 						<p>Pick one from the gallery.</p>
 					</div>
-					<PickerClose
-						type='button'
-						onClick={requestClose}
-						aria-label='Close'
-					>
+					<PickerClose type='button' onClick={requestClose} aria-label='Close'>
 						×
 					</PickerClose>
 				</PickerHead>
@@ -650,8 +625,7 @@ const PickerSurface = styled.div<{ $closing: boolean }>`
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
-	animation: ${(p) => (p.$closing ? popOut : popIn)}
-		${(p) => (p.$closing ? '220ms' : '360ms')}
+	animation: ${(p) => (p.$closing ? popOut : popIn)} ${(p) => (p.$closing ? '220ms' : '360ms')}
 		cubic-bezier(0.22, 1, 0.36, 1) both;
 `
 
@@ -692,7 +666,9 @@ const PickerClose = styled.button`
 	line-height: 1;
 	font-weight: 400;
 	cursor: pointer;
-	transition: background 160ms, color 160ms;
+	transition:
+		background 160ms,
+		color 160ms;
 
 	&:hover {
 		background: rgba(15, 23, 42, 0.05);
@@ -778,26 +754,66 @@ const PickerGrid = styled.div`
 	& > * {
 		animation-delay: 0ms;
 	}
-	& > *:nth-child(1) { animation-delay: 20ms; }
-	& > *:nth-child(2) { animation-delay: 50ms; }
-	& > *:nth-child(3) { animation-delay: 80ms; }
-	& > *:nth-child(4) { animation-delay: 110ms; }
-	& > *:nth-child(5) { animation-delay: 140ms; }
-	& > *:nth-child(6) { animation-delay: 170ms; }
-	& > *:nth-child(7) { animation-delay: 200ms; }
-	& > *:nth-child(8) { animation-delay: 230ms; }
-	& > *:nth-child(9) { animation-delay: 260ms; }
-	& > *:nth-child(10) { animation-delay: 290ms; }
-	& > *:nth-child(11) { animation-delay: 320ms; }
-	& > *:nth-child(12) { animation-delay: 350ms; }
-	& > *:nth-child(13) { animation-delay: 380ms; }
-	& > *:nth-child(14) { animation-delay: 410ms; }
-	& > *:nth-child(15) { animation-delay: 440ms; }
-	& > *:nth-child(16) { animation-delay: 470ms; }
-	& > *:nth-child(17) { animation-delay: 500ms; }
-	& > *:nth-child(18) { animation-delay: 530ms; }
-	& > *:nth-child(19) { animation-delay: 560ms; }
-	& > *:nth-child(20) { animation-delay: 590ms; }
+	& > *:nth-child(1) {
+		animation-delay: 20ms;
+	}
+	& > *:nth-child(2) {
+		animation-delay: 50ms;
+	}
+	& > *:nth-child(3) {
+		animation-delay: 80ms;
+	}
+	& > *:nth-child(4) {
+		animation-delay: 110ms;
+	}
+	& > *:nth-child(5) {
+		animation-delay: 140ms;
+	}
+	& > *:nth-child(6) {
+		animation-delay: 170ms;
+	}
+	& > *:nth-child(7) {
+		animation-delay: 200ms;
+	}
+	& > *:nth-child(8) {
+		animation-delay: 230ms;
+	}
+	& > *:nth-child(9) {
+		animation-delay: 260ms;
+	}
+	& > *:nth-child(10) {
+		animation-delay: 290ms;
+	}
+	& > *:nth-child(11) {
+		animation-delay: 320ms;
+	}
+	& > *:nth-child(12) {
+		animation-delay: 350ms;
+	}
+	& > *:nth-child(13) {
+		animation-delay: 380ms;
+	}
+	& > *:nth-child(14) {
+		animation-delay: 410ms;
+	}
+	& > *:nth-child(15) {
+		animation-delay: 440ms;
+	}
+	& > *:nth-child(16) {
+		animation-delay: 470ms;
+	}
+	& > *:nth-child(17) {
+		animation-delay: 500ms;
+	}
+	& > *:nth-child(18) {
+		animation-delay: 530ms;
+	}
+	& > *:nth-child(19) {
+		animation-delay: 560ms;
+	}
+	& > *:nth-child(20) {
+		animation-delay: 590ms;
+	}
 
 	@media (max-width: 560px) {
 		grid-template-columns: repeat(4, 1fr);
@@ -811,13 +827,15 @@ const PickerCell = styled.button<{ $picked: boolean }>`
 	position: relative;
 	aspect-ratio: 1 / 1;
 	border-radius: 14px;
-	border: 2px solid
-		${(p) => (p.$picked ? T.primary : 'rgba(37, 45, 58, 0.08)')};
+	border: 2px solid ${(p) => (p.$picked ? T.primary : 'rgba(37, 45, 58, 0.08)')};
 	background: #ffffff;
 	padding: 4px;
 	cursor: pointer;
 	animation: ${cellIn} 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
-	transition: border-color 160ms, transform 160ms, background 160ms;
+	transition:
+		border-color 160ms,
+		transform 160ms,
+		background 160ms;
 
 	img {
 		width: 100%;
@@ -863,8 +881,7 @@ const FloatingSaveBar = styled.div<{ $visible: boolean }>`
 	transform: translate(-50%, ${(p) => (p.$visible ? '0' : '24px')});
 	opacity: ${(p) => (p.$visible ? 1 : 0)};
 	transition:
-		opacity 240ms cubic-bezier(0.22, 1, 0.36, 1)
-			${(p) => (p.$visible ? '60ms' : '0ms')},
+		opacity 240ms cubic-bezier(0.22, 1, 0.36, 1) ${(p) => (p.$visible ? '60ms' : '0ms')},
 		transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
 	will-change: opacity, transform;
 
