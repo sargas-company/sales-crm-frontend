@@ -87,21 +87,20 @@ const ClientRequestList = () => {
 		{
 			key: 'name',
 			label: 'Contact',
-			minWidth: 240,
+			minWidth: 200,
 			sortable: true,
 			sortValue: (r) => r.name,
-			render: (r) => (
-				<ContactCell>
-					<ContactName>{r.name}</ContactName>
-					<ContactMeta>{r.company}</ContactMeta>
-				</ContactCell>
-			),
-			skeleton: () => (
-				<>
-					<TableSkeleton $w='150px' $h='14px' />
-					<TableSkeleton $w='110px' $h='11px' style={{ marginTop: 6 }} />
-				</>
-			),
+			render: (r) => <ContactName>{r.name || '—'}</ContactName>,
+			skeleton: () => <TableSkeleton $w='150px' $h='14px' />,
+		},
+		{
+			key: 'company',
+			label: 'Company',
+			minWidth: 180,
+			sortable: true,
+			sortValue: (r) => r.company ?? '',
+			render: (r) => (r.company ? <Muted>{r.company}</Muted> : <Muted>—</Muted>),
+			skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
 		},
 		{
 			key: 'email',
@@ -240,23 +239,11 @@ const ClientRequestList = () => {
 
 export default ClientRequestList
 
-const ContactCell = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 3px;
-	min-width: 0;
-`
-
 const ContactName = styled.span`
 	font-size: 14.5px;
 	font-weight: 600;
 	color: ${T.textStrong};
 	line-height: 1.3;
-`
-
-const ContactMeta = styled.span`
-	font-size: 12px;
-	color: ${T.textSecondary};
 `
 
 const PhoneCell = styled.div`
