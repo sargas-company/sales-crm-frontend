@@ -1,5 +1,6 @@
 import { ChangeEvent, FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import styled from 'styled-components'
 import { TextField, Button, Select, SelectItem } from '../../../ui'
 import { useCreatePromptMutation } from '../../../store/prompts/promptsApi'
 import type { PromptType } from '../../../store/prompts/types/definition'
@@ -191,14 +192,15 @@ const PromptForm = () => {
 							Prompt will be created as a draft
 						</FootLeft>
 						<FootActions>
-							<Button
-								varient='outlined'
-								color='info'
-								type='button'
-								onClick={() => navigate('/prompts/list')}
-							>
-								Cancel
-							</Button>
+							<CancelSlot>
+								<Button
+									varient='outlined'
+									type='button'
+									onClick={() => navigate('/prompts/list')}
+								>
+									Cancel
+								</Button>
+							</CancelSlot>
 							<PermissionGate permission='prompts:create'>
 								<PrimarySolidButton type='submit' disabled={isLoading}>
 									{isLoading ? 'Creating…' : 'Create prompt'}
@@ -213,3 +215,13 @@ const PromptForm = () => {
 }
 
 export default PromptForm
+
+/* Keeps the outlined Cancel button fully transparent on hover —
+   the shared UI Button fills a light-primary tint by default. */
+const CancelSlot = styled.div`
+	display: inline-block;
+
+	& > button:hover:not(:disabled) {
+		background: transparent !important;
+	}
+`
