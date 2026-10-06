@@ -6,15 +6,20 @@ import {
 	BackupOutlined,
 	ContentCopyRounded,
 	ExpandMoreRounded,
+	FileDownloadOutlined,
 	ScheduleRounded,
 	WarningAmberOutlined,
 } from '@mui/icons-material'
 import { T } from '../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../components/_shared/ListPageShell'
+import PermissionGate from '../../components/auth/PermissionGate'
 import {
+	useGetBackupDownloadUrlMutation,
 	useGetBackupRunQuery,
 	type BackupRun,
 } from '../../store/backups/backupsApi'
+import { useToast } from '../../context/toast/ToastContext'
+import parseServerError from '../../utils/parseServerError'
 
 const formatBytes = (n: number): string => {
 	if (!Number.isFinite(n) || n <= 0) return '0 B'
@@ -29,10 +34,37 @@ const formatBytes = (n: number): string => {
 const BackupDetailPage = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
-	const { data: run, isLoading, isError } = useGetBackupRunQuery(id ?? '', {
+	const {
+		data: run,
+		isLoading,
+		isError,
+	} = useGetBackupRunQuery(id ?? '', {
 		skip: !id,
 	})
 	const [showRaw, setShowRaw] = useState(true)
+	const { showToast } = useToast()
+	const [getDownloadUrl, { isLoading: isDownloading }] = useGetBackupDownloadUrlMutation()
+
+	const handleDownload = async () => {
+		if (!id) return
+		try {
+			const { url, fileName } = await getDownloadUrl(id).unwrap()
+			/* Hidden anchor + rel=noreferrer so the signed URL does not
+			 * leak via Referer to B2. The URL itself is short-lived
+			 * (~120s) and object-scoped. */
+			const a = document.createElement('a')
+			a.href = url
+			a.download = fileName
+			a.rel = 'noopener noreferrer'
+			a.style.display = 'none'
+			document.body.appendChild(a)
+			a.click()
+			a.remove()
+			showToast(`Backup ${fileName} downloaded`, 'success')
+		} catch (err) {
+			showToast(parseServerError(err), 'error')
+		}
+	}
 
 	if (!id) {
 		return (
@@ -61,10 +93,7 @@ const BackupDetailPage = () => {
 	if (isError || !run) {
 		return (
 			<Shell>
-				<ErrorBox
-					onBack={() => navigate('/backups/list')}
-					message='Backup run not found'
-				/>
+				<ErrorBox onBack={() => navigate('/backups/list')} message='Backup run not found' />
 			</Shell>
 		)
 	}
@@ -80,9 +109,7 @@ const BackupDetailPage = () => {
 		minute: '2-digit',
 		second: '2-digit',
 	})
-	const completedStr = run.completedAt
-		? new Date(run.completedAt).toLocaleString()
-		: '—'
+	const completedStr = run.completedAt ? new Date(run.completedAt).toLocaleString() : '—'
 
 	const termPath = `backup@sargas:~/backups/${run.type.toLowerCase()}/${run.id.slice(0, 8)}`
 
@@ -106,11 +133,7 @@ const BackupDetailPage = () => {
 					</TermDots>
 					<TermPath>{termPath}</TermPath>
 					<TermHeaderActions>
-						<CopyIdBtn
-							type='button'
-							onClick={copyId}
-							title='Copy backup ID'
-						>
+						<CopyIdBtn type='button' onClick={copyId} title='Copy backup ID'>
 							<ContentCopyRounded style={{ fontSize: 12 }} />
 							{run.id.slice(0, 8)}
 						</CopyIdBtn>
@@ -128,8 +151,7 @@ const BackupDetailPage = () => {
 						</HeroIcon>
 						<HeroText>
 							<Hero>
-								{run.type.toLowerCase()}{' '}
-								<Thin>backup on</Thin>{' '}
+								{run.type.toLowerCase()} <Thin>backup on</Thin>{' '}
 								<Accent>{run.databaseName || 'postgres'}</Accent>
 							</Hero>
 							<HeroMeta>
@@ -141,19 +163,33 @@ const BackupDetailPage = () => {
 								<span>{run.environment}</span>
 							</HeroMeta>
 						</HeroText>
-						{/* Download / restore of a backup is intentionally
-						 * absent from the MVP — restore is handled through
-						 * the manual runbook. If a browser-side download is
-						 * re-added later, re-introduce a signed-URL endpoint
-						 * on the backend first; never resurrect the removed
-						 * `?token=` fallback. */}
+						{run.artifactKey && (
+							<PermissionGate permission='backups:download'>
+								<DownloadBtn
+									type='button'
+									disabled={isDownloading}
+									onClick={handleDownload}
+									$busy={isDownloading}
+									aria-live='polite'
+								>
+									<BtnStack>
+										<BtnFace data-active={!isDownloading}>
+											<FileDownloadOutlined style={{ fontSize: 16 }} />
+											<span>Download .dump</span>
+										</BtnFace>
+										<BtnFace data-active={isDownloading}>
+											<Spinner aria-hidden='true' />
+											<span>Preparing…</span>
+										</BtnFace>
+									</BtnStack>
+								</DownloadBtn>
+							</PermissionGate>
+						)}
 					</HeroRow>
 
 					<KeyLines>
 						<KV label='status'>
-							<StatusPill $status={run.status}>
-								{run.status.toLowerCase()}
-							</StatusPill>
+							<StatusPill $status={run.status}>{run.status.toLowerCase()}</StatusPill>
 						</KV>
 						<KV label='type'>
 							<TypePill>{run.type.toLowerCase()}</TypePill>
@@ -172,15 +208,11 @@ const BackupDetailPage = () => {
 						</KV>
 						<KV label='duration'>
 							<KvMono>
-								{run.durationMs
-									? `${(run.durationMs / 1000).toFixed(2)} s`
-									: '—'}
+								{run.durationMs ? `${(run.durationMs / 1000).toFixed(2)} s` : '—'}
 							</KvMono>
 						</KV>
 						<KV label='size'>
-							<KvMono>
-								{run.size ? formatBytes(Number(run.size)) : '—'}
-							</KvMono>
+							<KvMono>{run.size ? formatBytes(Number(run.size)) : '—'}</KvMono>
 						</KV>
 						<KV label='pg_version'>
 							<KvMono>{run.pgVersion ?? '—'}</KvMono>
@@ -216,9 +248,7 @@ const BackupDetailPage = () => {
 						)}
 						{run.lastVerifiedAt && (
 							<KV label='last_verified_at'>
-								<KvMono>
-									{new Date(run.lastVerifiedAt).toLocaleString()}
-								</KvMono>
+								<KvMono>{new Date(run.lastVerifiedAt).toLocaleString()}</KvMono>
 							</KV>
 						)}
 					</KeyLines>
@@ -238,11 +268,7 @@ const BackupDetailPage = () => {
 
 					<Divider />
 
-					<RawToggle
-						type='button'
-						$open={showRaw}
-						onClick={() => setShowRaw((v) => !v)}
-					>
+					<RawToggle type='button' $open={showRaw} onClick={() => setShowRaw((v) => !v)}>
 						<TermPrompt>$</TermPrompt>
 						<span>{showRaw ? 'hide' : 'show'} raw.json</span>
 						<ExpandMoreRounded className='chev' />
@@ -259,7 +285,6 @@ const BackupDetailPage = () => {
 					<TermCursor />
 				</TermFooter>
 			</Terminal>
-
 		</Shell>
 	)
 }
@@ -268,13 +293,7 @@ export default BackupDetailPage
 
 /* ─── Row ─────────────────────────────────────────────────────── */
 
-const KV = ({
-	label,
-	children,
-}: {
-	label: string
-	children: React.ReactNode
-}) => (
+const KV = ({ label, children }: { label: string; children: React.ReactNode }) => (
 	<KvRow>
 		<KvArrow>→</KvArrow>
 		<KvLabel>{label}</KvLabel>
@@ -308,13 +327,7 @@ const Shell = ({ children }: { children: React.ReactNode }) => {
 	)
 }
 
-const ErrorBox = ({
-	onBack,
-	message,
-}: {
-	onBack: () => void
-	message: string
-}) => (
+const ErrorBox = ({ onBack, message }: { onBack: () => void; message: string }) => (
 	<Terminal>
 		<TermHeader>
 			<TermDots>
@@ -431,7 +444,9 @@ const CopyIdBtn = styled.button`
 	font-weight: 600;
 	color: ${T.textSecondary};
 	cursor: pointer;
-	transition: border-color 160ms ease, color 160ms ease;
+	transition:
+		border-color 160ms ease,
+		color 160ms ease;
 
 	&:hover {
 		border-color: ${T.primary};
@@ -486,11 +501,7 @@ const HeroIcon = styled.div<{ $status: BackupRun['status'] }>`
 				? 'rgba(217, 119, 6, 0.12)'
 				: 'rgba(5, 150, 105, 0.1)'};
 	color: ${(p) =>
-		p.$status === 'FAILED'
-			? '#c2410c'
-			: p.$status === 'RUNNING'
-				? '#b45309'
-				: '#047857'};
+		p.$status === 'FAILED' ? '#c2410c' : p.$status === 'RUNNING' ? '#b45309' : '#047857'};
 
 	svg {
 		font-size: 22px;
@@ -561,21 +572,51 @@ const KvRow = styled.div`
 	transition: background 160ms;
 	animation: ${rowIn} 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
 
-	&:nth-child(1)  { animation-delay: 60ms; }
-	&:nth-child(2)  { animation-delay: 110ms; }
-	&:nth-child(3)  { animation-delay: 160ms; }
-	&:nth-child(4)  { animation-delay: 210ms; }
-	&:nth-child(5)  { animation-delay: 260ms; }
-	&:nth-child(6)  { animation-delay: 310ms; }
-	&:nth-child(7)  { animation-delay: 360ms; }
-	&:nth-child(8)  { animation-delay: 410ms; }
-	&:nth-child(9)  { animation-delay: 460ms; }
-	&:nth-child(10) { animation-delay: 510ms; }
-	&:nth-child(11) { animation-delay: 560ms; }
-	&:nth-child(12) { animation-delay: 610ms; }
-	&:nth-child(13) { animation-delay: 660ms; }
-	&:nth-child(14) { animation-delay: 710ms; }
-	&:nth-child(15) { animation-delay: 760ms; }
+	&:nth-child(1) {
+		animation-delay: 60ms;
+	}
+	&:nth-child(2) {
+		animation-delay: 110ms;
+	}
+	&:nth-child(3) {
+		animation-delay: 160ms;
+	}
+	&:nth-child(4) {
+		animation-delay: 210ms;
+	}
+	&:nth-child(5) {
+		animation-delay: 260ms;
+	}
+	&:nth-child(6) {
+		animation-delay: 310ms;
+	}
+	&:nth-child(7) {
+		animation-delay: 360ms;
+	}
+	&:nth-child(8) {
+		animation-delay: 410ms;
+	}
+	&:nth-child(9) {
+		animation-delay: 460ms;
+	}
+	&:nth-child(10) {
+		animation-delay: 510ms;
+	}
+	&:nth-child(11) {
+		animation-delay: 560ms;
+	}
+	&:nth-child(12) {
+		animation-delay: 610ms;
+	}
+	&:nth-child(13) {
+		animation-delay: 660ms;
+	}
+	&:nth-child(14) {
+		animation-delay: 710ms;
+	}
+	&:nth-child(15) {
+		animation-delay: 760ms;
+	}
 
 	&:last-child {
 		border-bottom: none;
@@ -759,7 +800,6 @@ const Loading = styled.div`
 	align-items: center;
 `
 
-
 const BackBtn = styled.button`
 	display: inline-flex;
 	align-items: center;
@@ -773,10 +813,86 @@ const BackBtn = styled.button`
 	font-size: 12.5px;
 	font-weight: 600;
 	cursor: pointer;
-	transition: border-color 180ms ease, color 180ms ease;
+	transition:
+		border-color 180ms ease,
+		color 180ms ease;
 
 	&:hover {
 		border-color: ${T.primary};
 		color: ${T.primary};
 	}
+`
+
+const DownloadBtn = styled.button<{ $busy: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 180px;
+	padding: 9px 16px;
+	border: 0;
+	border-radius: 12px;
+	background: ${T.primary};
+	color: #ffffff;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+
+	&:hover:not(:disabled) {
+		transform: translateY(-1px);
+	}
+	&:disabled {
+		cursor: wait;
+	}
+`
+
+/* Button content stack — both «idle» and «busy» faces live in one
+   grid cell; the active one fades + slides in, the other fades
+   out. Keeps the button width stable (no reflow jump) and gives
+   the state swap a smooth spring. */
+const BtnStack = styled.span`
+	display: grid;
+	grid-template-areas: 'cell';
+	align-items: center;
+	justify-items: center;
+	width: 100%;
+`
+
+const BtnFace = styled.span`
+	grid-area: cell;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	opacity: 0;
+	transform: translateY(6px) scale(0.98);
+	pointer-events: none;
+	transition:
+		opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
+		transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+
+	&[data-active='true'] {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		transition: none;
+	}
+`
+
+const spin = keyframes`
+	to { transform: rotate(360deg); }
+`
+
+const Spinner = styled.span`
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.35);
+	border-top-color: #ffffff;
+	animation: ${spin} 720ms linear infinite;
 `

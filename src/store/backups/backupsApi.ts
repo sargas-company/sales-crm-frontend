@@ -1,11 +1,7 @@
 import { baseApi } from '../../api/baseApi'
 
 export type BackupType = 'DAILY' | 'PRE_MIGRATION' | 'PRE_SEED' | 'MANUAL'
-export type BackupStatus =
-	| 'RUNNING'
-	| 'SUCCEEDED'
-	| 'FAILED'
-	| 'VERIFIED'
+export type BackupStatus = 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'VERIFIED'
 
 export interface BackupRun {
 	id: string
@@ -45,10 +41,7 @@ export interface BackupSummary {
 
 export const backupsApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
-		listBackups: builder.query<
-			Paginated<BackupRun>,
-			{ page?: number; limit?: number }
-		>({
+		listBackups: builder.query<Paginated<BackupRun>, { page?: number; limit?: number }>({
 			query: (params) => ({ url: '/backups', params }),
 			providesTags: ['BackupRun'],
 		}),
@@ -60,6 +53,15 @@ export const backupsApi = baseApi.injectEndpoints({
 			query: (id) => ({ url: `/backups/${id}` }),
 			providesTags: (_r, _e, id) => [{ type: 'BackupRun', id }],
 		}),
+		/* Short-lived signed URL for the backup artifact. The signed URL
+		 * in the response body is intentionally not cached — the caller
+		 * triggers the download immediately and discards the URL. */
+		getBackupDownloadUrl: builder.mutation<
+			{ url: string; expiresAt: string; fileName: string },
+			string
+		>({
+			query: (id) => ({ url: `/backups/${id}/download`, method: 'GET' }),
+		}),
 	}),
 })
 
@@ -67,4 +69,5 @@ export const {
 	useListBackupsQuery,
 	useGetBackupSummaryQuery,
 	useGetBackupRunQuery,
+	useGetBackupDownloadUrlMutation,
 } = backupsApi
