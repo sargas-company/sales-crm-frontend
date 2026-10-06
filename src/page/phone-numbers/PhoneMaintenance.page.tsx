@@ -110,9 +110,9 @@ const PhoneMaintenancePage = () => {
 		{
 			key: 'number',
 			label: 'Number',
-			minWidth: 170,
+			minWidth: 210,
 			render: (r) => <Mono>{formatPhoneMask(r.phoneNumber.number)}</Mono>,
-			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
+			skeleton: () => <TableSkeleton $w='170px' $h='14px' />,
 		},
 		{
 			key: 'operator',
@@ -461,6 +461,7 @@ const Mono = styled.span`
 	font-family: 'JetBrains Mono', monospace;
 	font-weight: 600;
 	color: ${T.textStrong};
+	white-space: nowrap;
 `
 /* ─── V3b · Hero header + task bar ─── */
 const V3bCard = styled.article<{ $overdue: boolean }>`
