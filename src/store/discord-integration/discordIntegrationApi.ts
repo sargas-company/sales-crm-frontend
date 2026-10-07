@@ -102,7 +102,7 @@ export const discordIntegrationApi = baseApi.injectEndpoints({
 			query: ({ name, body }) => ({
 				url: `/discord-integration/profiles/${name}`,
 				method: 'PATCH',
-				data: body,
+				body,
 			}),
 			invalidatesTags: (_r, _e, { name }) => [
 				{ type: 'DiscordProfile', id: name },
