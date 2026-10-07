@@ -15,7 +15,11 @@ export interface ProjectAnalyticsKPI {
 	archived: number
 	reportsCount: number
 	trackedHours: number
-	reportAuthors: number
+	// Distinct employees captured in ProjectReport contributor snapshots
+	// across the selected range. Report-day rows without any Employee
+	// relation (legacy DISCORD rows that pre-date the snapshot
+	// backfill) do NOT increment this metric.
+	involvedContributors: number
 	assignedToActive: number
 }
 
@@ -50,7 +54,10 @@ export interface ProjectAnalyticsWorkloadRow {
 	status: ProjectStatus
 	hours: number
 	reports: number
-	reportAuthors: number
+	// Distinct employees in the contributor snapshots of this
+	// project's reports in the range. Hours are project-day totals
+	// and are NEVER multiplied by this count.
+	involvedContributors: number
 	lastReport: string | null
 	share: number
 }

@@ -111,7 +111,7 @@ const ProjectAnalytics = () => {
 	const [projectFilter, setProjectFilter] = useState('')
 	const [statusFilter, setStatusFilter] = useState<ProjectStatus | ''>('')
 	const [workloadSort, setWorkloadSort] = useState<{
-		key: 'hours' | 'reports' | 'reportAuthors' | 'lastReport'
+		key: 'hours' | 'reports' | 'involvedContributors' | 'lastReport'
 		dir: 'asc' | 'desc'
 	}>({ key: 'hours', dir: 'desc' })
 	const [hiddenProjects, setHiddenProjects] = useState<Set<string>>(new Set())
@@ -564,16 +564,18 @@ const ProjectAnalytics = () => {
 												<CountInt value={data?.kpi.reportsCount ?? 0} />
 											</span>
 										</ActivityCard>
-										<ActivityCard>
+										<ActivityCard
+											title='Distinct employees captured in ProjectReport contributor snapshots within the selected range. Legacy Discord reports without contributors are not counted; hours are never multiplied by this number.'
+										>
 											<span className='ico'>
 												<PeopleAltOutlined />
 											</span>
 											<div className='body'>
-												<div className='lbl'>Filed</div>
-												<div className='name'>Report authors</div>
+												<div className='lbl'>Involved</div>
+												<div className='name'>Contributors</div>
 											</div>
 											<span className='val'>
-												<CountInt value={data?.kpi.reportAuthors ?? 0} />
+												<CountInt value={data?.kpi.involvedContributors ?? 0} />
 											</span>
 										</ActivityCard>
 									</ActivityStrip>
@@ -1333,8 +1335,8 @@ const ProjectAnalytics = () => {
 														<span className='kv'>
 															Reports <b>{r.reports}</b>
 														</span>
-														<span className='kv' title='Distinct Employee authors of MANUAL reports in range. Discord-sourced reports count toward hours but have no Employee author.'>
-															Authors <b>{r.reportAuthors}</b>
+														<span className='kv' title='Distinct employees captured in ProjectReport contributor snapshots for this project in the selected range. Hours are project-day totals and are not multiplied by this count.'>
+															Contributors <b>{r.involvedContributors}</b>
 														</span>
 														<span className='kv'>
 															Last <b>{lastRel}</b>
