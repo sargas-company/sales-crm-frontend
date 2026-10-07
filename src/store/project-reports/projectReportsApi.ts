@@ -3,17 +3,33 @@ import type { ProjectStatus } from '../projects/projectsApi'
 
 export type ProjectReportSource = 'MANUAL' | 'DISCORD'
 
+/**
+ * Snapshot of one project team member at the moment the report
+ * was filed. Immutable after create — team changes afterwards do
+ * NOT update this list. The relation to `Employee` is nullable so
+ * a hard-deleted employee still shows up with their snapshot name.
+ */
+export interface ProjectReportContributor {
+	id: string
+	employeeId: string | null
+	firstNameSnapshot: string
+	lastNameSnapshot: string
+	employee: {
+		id: string
+		firstName: string
+		lastName: string
+	} | null
+}
+
 export interface ProjectReportItem {
 	id: string
 	projectId: string
-	// MANUAL rows always carry an Employee author; DISCORD rows never do.
-	employeeId: string | null
 	reportDate: string
 	hours: number
 	content: string
+	// Technical submitter metadata — not surfaced as "author" anywhere
+	// in the UI. The business team record is `contributors`.
 	source: ProjectReportSource
-	discordUserId: string | null
-	discordUsername: string | null
 	createdAt: string
 	updatedAt: string
 	project: {
@@ -21,14 +37,7 @@ export interface ProjectReportItem {
 		name: string
 		status: ProjectStatus
 	}
-	// Null when `source === 'DISCORD'`.
-	employee: {
-		id: string
-		firstName: string
-		lastName: string
-		positions: string[]
-		userId: string | null
-	} | null
+	contributors: ProjectReportContributor[]
 }
 
 export interface ProjectReportPage {
@@ -47,21 +56,18 @@ export interface ProjectReportListParams {
 	sortDirection?: ProjectReportSortDirection
 	search?: string
 	projectId?: string
-	employeeId?: string
 	from?: string
 	to?: string
 }
 
 export interface CreateProjectReportBody {
 	projectId: string
-	employeeId: string
 	reportDate: string
 	hours: number
 	content: string
 }
 
 export interface UpdateProjectReportBody {
-	reportDate?: string
 	hours?: number
 	content?: string
 }
@@ -69,7 +75,7 @@ export interface UpdateProjectReportBody {
 export const projectReportsApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getProjectReports: builder.query<ProjectReportPage, ProjectReportListParams>({
-			query: ({ page, limit, sortBy, sortDirection, search, projectId, employeeId, from, to }) => ({
+			query: ({ page, limit, sortBy, sortDirection, search, projectId, from, to }) => ({
 				url: '/project-reports',
 				params: {
 					page,
@@ -78,7 +84,6 @@ export const projectReportsApi = baseApi.injectEndpoints({
 					sortDirection,
 					search: search || undefined,
 					projectId: projectId || undefined,
-					employeeId: employeeId || undefined,
 					from: from || undefined,
 					to: to || undefined,
 				},

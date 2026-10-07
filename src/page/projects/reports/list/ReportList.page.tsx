@@ -40,7 +40,6 @@ const ReportList = () => {
 	const { showToast } = useToast()
 	const [searchParams] = useSearchParams()
 	const projectFilter = searchParams.get('projectId') ?? undefined
-	const employeeFilter = searchParams.get('employeeId') ?? undefined
 	const fromFilter = searchParams.get('from') ?? undefined
 	const toFilter = searchParams.get('to') ?? undefined
 
@@ -57,7 +56,6 @@ const ReportList = () => {
 		sortBy: (sort?.key as ProjectReportSortBy | undefined) ?? undefined,
 		sortDirection: sort?.direction,
 		projectId: projectFilter,
-		employeeId: employeeFilter,
 		from: fromFilter,
 		to: toFilter,
 	})
@@ -72,7 +70,7 @@ const ReportList = () => {
 	}
 	useEffect(() => {
 		setPage(1)
-	}, [search, projectFilter, employeeFilter, fromFilter, toFilter])
+	}, [search, projectFilter, fromFilter, toFilter])
 
 	const columns: DataTableColumn<ProjectReportItem>[] = [
 		{
@@ -104,34 +102,20 @@ const ReportList = () => {
 			skeleton: () => <TableSkeleton $w='150px' $h='13px' />,
 		},
 		{
-			// Author links to the Employee for MANUAL rows; for DISCORD
-			// rows, show a static "Posted via Discord" badge with the
-			// Discord display name — there is no Employee to deep-link
-			// to for this row.
-			key: 'employee',
-			label: 'Author',
+			// Source badge replaces the old Author column — the report
+			// is a project-day record, not an authored one. The badge
+			// surfaces where the row was filed (CRM UI vs. /report).
+			key: 'source',
+			label: 'Source',
 			render: (r) =>
-				r.source === 'DISCORD' || !r.employee ? (
+				r.source === 'DISCORD' ? (
 					<DiscordAuthor title='Posted via Discord'>
 						<DiscordBadge>Discord</DiscordBadge>
-						<span>{r.discordUsername ?? 'Discord user'}</span>
 					</DiscordAuthor>
 				) : (
-					<AuthorLink
-						onClick={(e) => {
-							e.stopPropagation()
-							if (r.employeeId) navigate(`/employees/${r.employeeId}`)
-						}}
-					>
-						<span>
-							{r.employee.firstName} {r.employee.lastName}
-						</span>
-						<LinkIcon aria-hidden='true'>
-							<ArrowOutwardOutlined />
-						</LinkIcon>
-					</AuthorLink>
+					<CRMSource>CRM</CRMSource>
 				),
-			skeleton: () => <TableSkeleton $w='120px' $h='13px' />,
+			skeleton: () => <TableSkeleton $w='70px' $h='18px' />,
 		},
 		{
 			key: 'hours',
@@ -219,7 +203,7 @@ const ReportList = () => {
 				]}
 				icon={<AssessmentOutlined />}
 				title='Project reports'
-				subtitle='Daily work logs — one report per employee per project per day.'
+				subtitle='Daily work logs — one report per project per day. Contributors are snapshotted at submission.'
 				action={
 					<PermissionGate permission='project_reports:create'>
 						<PrimarySolidButton type='button' onClick={() => navigate('/projects/reports/add')}>
@@ -303,27 +287,6 @@ const ProjectLink = styled.button`
 	}
 `
 
-const AuthorLink = styled.button`
-	background: transparent;
-	border: none;
-	padding: 0;
-	font-family: inherit;
-	font-size: 13px;
-	font-weight: 500;
-	color: ${T.textSecondary};
-	cursor: pointer;
-	text-align: left;
-	white-space: nowrap;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-
-	&:hover {
-		color: ${T.primary};
-		text-decoration: underline;
-	}
-`
-
 const DiscordAuthor = styled.span`
 	display: inline-flex;
 	align-items: center;
@@ -348,6 +311,20 @@ const DiscordBadge = styled.span`
 	border: 1px solid rgba(88, 101, 242, 0.25);
 `
 
+const CRMSource = styled.span`
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 6px;
+	border-radius: 999px;
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	color: ${T.textSecondary};
+	background: ${T.subtleBg};
+	border: 1px solid ${T.border};
+`
+
 const LinkIcon = styled.span`
 	display: inline-flex;
 	align-items: center;
@@ -360,8 +337,7 @@ const LinkIcon = styled.span`
 		font-size: 14px;
 	}
 
-	${ProjectLink}:hover &,
-	${AuthorLink}:hover & {
+	${ProjectLink}:hover & {
 		opacity: 1;
 		color: ${T.primary};
 	}

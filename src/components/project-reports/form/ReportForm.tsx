@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react'
+import { ChangeEvent, FormEvent, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AssessmentOutlined } from '@mui/icons-material'
 import { TextField, Select, SelectItem } from '../../../ui'
@@ -32,7 +32,6 @@ interface Props {
 
 interface FormFields {
 	projectId: string
-	employeeId: string
 	reportDate: string
 	hours: string
 	content: string
@@ -42,7 +41,6 @@ const today = () => new Date().toISOString().slice(0, 10)
 
 const empty: FormFields = {
 	projectId: '',
-	employeeId: '',
 	reportDate: today(),
 	hours: '',
 	content: '',
@@ -50,7 +48,6 @@ const empty: FormFields = {
 
 interface FormErrors {
 	projectId?: string
-	employeeId?: string
 	reportDate?: string
 	hours?: string
 	content?: string
@@ -70,11 +67,6 @@ const ReportFormInner = ({ id, initial }: { id?: string; initial: FormFields }) 
 
 	const { data: projectsPage } = useGetProjectsQuery({ page: 1, limit: 200 })
 	const projects = projectsPage?.data ?? []
-	const selectedProject = useMemo(
-		() => projects.find((p) => p.id === fields.projectId),
-		[projects, fields.projectId],
-	)
-	const projectMembers = selectedProject?.members ?? []
 
 	const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) => {
 		setFields((prev) => ({ ...prev, [key]: value }))
@@ -82,20 +74,10 @@ const ReportFormInner = ({ id, initial }: { id?: string; initial: FormFields }) 
 			setErrors((prev) => ({ ...prev, [key]: undefined }))
 	}
 
-	// When the picked project's members do not contain the currently
-	// selected employee, clear it so the user re-picks a valid one.
-	useEffect(() => {
-		if (!fields.employeeId) return
-		if (!projectMembers.some((m) => m.employeeId === fields.employeeId)) {
-			setFields((prev) => ({ ...prev, employeeId: '' }))
-		}
-	}, [fields.projectId, projectMembers, fields.employeeId])
-
 	const validate = (): boolean => {
 		const next: FormErrors = {}
 		if (!isEdit && !fields.projectId) next.projectId = 'Project is required'
-		if (!isEdit && !fields.employeeId) next.employeeId = 'Employee is required'
-		if (!fields.reportDate) next.reportDate = 'Report date is required'
+		if (!isEdit && !fields.reportDate) next.reportDate = 'Report date is required'
 		const hoursNum = Number(fields.hours)
 		if (!fields.hours || Number.isNaN(hoursNum) || hoursNum <= 0 || hoursNum > 24)
 			next.hours = 'Enter hours between 0.1 and 24'
@@ -113,7 +95,6 @@ const ReportFormInner = ({ id, initial }: { id?: string; initial: FormFields }) 
 				await updateReport({
 					id: id!,
 					body: {
-						reportDate: fields.reportDate,
 						hours: hoursNum,
 						content: fields.content.trim(),
 					},
@@ -122,7 +103,6 @@ const ReportFormInner = ({ id, initial }: { id?: string; initial: FormFields }) 
 			} else {
 				await createReport({
 					projectId: fields.projectId,
-					employeeId: fields.employeeId,
 					reportDate: fields.reportDate,
 					hours: hoursNum,
 					content: fields.content.trim(),
@@ -146,7 +126,7 @@ const ReportFormInner = ({ id, initial }: { id?: string; initial: FormFields }) 
 					subtitle={
 						isEdit
 							? 'Update the daily work log'
-							: 'Log the work done on a project for a specific day'
+							: 'Log the work done on a project for a specific day. The project team at the moment of submission is captured as the contributor snapshot.'
 					}
 					badgeLabel={isEdit ? 'Edit' : 'Draft'}
 					badgeTone={isEdit ? 'edit' : 'draft'}
@@ -154,7 +134,7 @@ const ReportFormInner = ({ id, initial }: { id?: string; initial: FormFields }) 
 
 				<form onSubmit={handleSubmit} noValidate>
 					<Section $delay={80}>
-						<SectionHead num='01' title='Context' hint='Project, author and date' />
+						<SectionHead num='01' title='Context' hint='Project, date and hours' />
 						<FieldGrid>
 							<Field label='Project' required error={errors.projectId}>
 								{isEdit ? (
@@ -180,59 +160,34 @@ const ReportFormInner = ({ id, initial }: { id?: string; initial: FormFields }) 
 									</Select>
 								)}
 							</Field>
-							<Field label='Author' required error={errors.employeeId}>
+							<Field label='Report date' required error={errors.reportDate}>
 								{isEdit ? (
 									<TextField
-										name='author'
-										value={fields.employeeId}
+										name='reportDate'
+										value={fields.reportDate}
 										disable
 										sizes='small'
 										width='100%'
 									/>
 								) : (
-									<Select
-										label='Author'
-										defaultValue={fields.employeeId}
-										onChange={(value) => setField('employeeId', value as string)}
+									<TextField
+										name='reportDate'
+										type='date'
+										placeholder='YYYY-MM-DD'
+										value={fields.reportDate}
+										onChange={(e: ChangeEvent<HTMLInputElement>) =>
+											setField('reportDate', e.target.value)
+										}
 										width='100%'
-										sizes='normal'
-									>
-										<SelectItem
-											label={
-												selectedProject
-													? '— Pick a team member —'
-													: '— Pick a project first —'
-											}
-											value=''
-										/>
-										{projectMembers.map((m) => (
-											<SelectItem
-												key={m.employeeId}
-												label={`${m.employee.firstName} ${m.employee.lastName}`}
-												value={m.employeeId}
-											/>
-										))}
-									</Select>
+										error={!!errors.reportDate}
+									/>
 								)}
-							</Field>
-							<Field label='Report date' required error={errors.reportDate}>
-								<TextField
-									name='reportDate'
-									type='date'
-									placeholder='YYYY-MM-DD'
-									value={fields.reportDate}
-									onChange={(e: ChangeEvent<HTMLInputElement>) =>
-										setField('reportDate', e.target.value)
-									}
-									width='100%'
-									error={!!errors.reportDate}
-								/>
 							</Field>
 							<Field
 								label='Hours worked'
 								required
 								error={errors.hours}
-								hint='Between 0.1 and 24'
+								hint='Project total between 0.1 and 24'
 							>
 								<TextField
 									name='hours'
@@ -258,7 +213,7 @@ const ReportFormInner = ({ id, initial }: { id?: string; initial: FormFields }) 
 						<Field label='Summary' required error={errors.content}>
 							<TextField
 								name='content'
-								placeholder='What did you work on today? Decisions made, blockers, links to PRs…'
+								placeholder='What did the team work on? Decisions made, blockers, links to PRs…'
 								value={fields.content}
 								onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
 									setField('content', e.target.value)
@@ -274,7 +229,7 @@ const ReportFormInner = ({ id, initial }: { id?: string; initial: FormFields }) 
 					<FootBar $dark={isDark}>
 						<FootLeft $dark={isDark}>
 							<DotMini />
-							One report per employee per project per day
+							One report per project per day; contributors are snapshotted at submission.
 						</FootLeft>
 						<FootActions>
 							<PrimaryGhostButton
@@ -308,7 +263,6 @@ const ReportForm = ({ id }: Props) => {
 	const initial: FormFields = data
 		? {
 				projectId: data.projectId,
-				employeeId: data.employeeId,
 				reportDate: data.reportDate.slice(0, 10),
 				hours: String(data.hours),
 				content: data.content,
