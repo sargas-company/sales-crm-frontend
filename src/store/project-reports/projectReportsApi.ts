@@ -45,7 +45,12 @@ export interface ProjectReportPage {
 	total: number
 }
 
-export type ProjectReportSortBy = 'reportDate' | 'createdAt' | 'updatedAt' | 'hours'
+export type ProjectReportSortBy =
+	| 'reportDate'
+	| 'createdAt'
+	| 'updatedAt'
+	| 'hours'
+	| 'source'
 
 export type ProjectReportSortDirection = 'asc' | 'desc'
 

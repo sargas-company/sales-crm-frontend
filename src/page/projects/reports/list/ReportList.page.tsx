@@ -107,6 +107,8 @@ const ReportList = () => {
 			// surfaces where the row was filed (CRM UI vs. /report).
 			key: 'source',
 			label: 'Source',
+			sortable: true,
+			sortValue: (r) => r.source,
 			render: (r) =>
 				r.source === 'DISCORD' ? (
 					<DiscordAuthor title='Posted via Discord'>
