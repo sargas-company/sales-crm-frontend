@@ -206,7 +206,10 @@ const ReportList = () => {
 				subtitle='Daily work logs — one report per project per day. Contributors are snapshotted at submission.'
 				action={
 					<PermissionGate permission='project_reports:create'>
-						<PrimarySolidButton type='button' onClick={() => navigate('/projects/reports/add')}>
+						<PrimarySolidButton
+							type='button'
+							onClick={() => navigate('/projects/reports/add')}
+						>
 							<AddRounded />
 							New report
 						</PrimarySolidButton>
@@ -242,7 +245,9 @@ const ReportList = () => {
 					title='Delete report?'
 					description={
 						<>
-							Are you sure you want to delete the report for <strong>&quot;{deleteTarget.title}&quot;</strong>? This action cannot be undone.
+							Are you sure you want to delete the report for{' '}
+							<strong>&quot;{deleteTarget.title}&quot;</strong>? This action cannot be
+							undone.
 						</>
 					}
 					confirmLabel='Delete'
@@ -300,29 +305,29 @@ const DiscordAuthor = styled.span`
 const DiscordBadge = styled.span`
 	display: inline-flex;
 	align-items: center;
-	padding: 2px 6px;
+	padding: 4px 10px;
 	border-radius: 999px;
-	font-size: 10px;
-	font-weight: 600;
-	letter-spacing: 0.03em;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
 	text-transform: uppercase;
+	white-space: nowrap;
 	color: #5865f2;
-	background: rgba(88, 101, 242, 0.12);
-	border: 1px solid rgba(88, 101, 242, 0.25);
+	background: rgba(88, 101, 242, 0.14);
 `
 
 const CRMSource = styled.span`
 	display: inline-flex;
 	align-items: center;
-	padding: 2px 6px;
+	padding: 4px 10px;
 	border-radius: 999px;
-	font-size: 10px;
-	font-weight: 600;
-	letter-spacing: 0.03em;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
 	text-transform: uppercase;
-	color: ${T.textSecondary};
-	background: ${T.subtleBg};
-	border: 1px solid ${T.border};
+	white-space: nowrap;
+	color: #475569;
+	background: rgba(100, 116, 139, 0.14);
 `
 
 const LinkIcon = styled.span`
@@ -331,7 +336,9 @@ const LinkIcon = styled.span`
 	justify-content: center;
 	color: ${T.textMuted};
 	opacity: 0.55;
-	transition: opacity 160ms ease, color 160ms ease;
+	transition:
+		opacity 160ms ease,
+		color 160ms ease;
 
 	svg {
 		font-size: 14px;
