@@ -1,6 +1,11 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
-import { AssessmentOutlined, EditOutlined, ArrowBackRounded } from '@mui/icons-material'
+import {
+	ArrowBackRounded,
+	ArrowOutwardOutlined,
+	AssessmentOutlined,
+	EditOutlined,
+} from '@mui/icons-material'
 import { TextField, Button } from '../../ui'
 import Loading from '../../ui/state/Loading'
 import ErrorState from '../../ui/state/ErrorState'
@@ -21,6 +26,24 @@ import {
 import { useGetProjectReportByIdQuery } from '../../store/project-reports/projectReportsApi'
 import { formatDate } from '../../utils/format'
 import { T } from '../sales-analytics/_shared/tokens'
+
+/** Two-letter initials for the avatar tile — mirrors ProjectViewPage. */
+const initials = (first: string, last: string): string => {
+	const a = (first?.[0] ?? '').toUpperCase()
+	const b = (last?.[0] ?? '').toUpperCase()
+	return (a + b || '?').slice(0, 2)
+}
+
+/** Shared brand-blue tint the project-team card uses. Kept in sync so
+    both pages feel like one visual family. */
+const BLUE = {
+	fg: 'rgb(3, 105, 161)',
+	border: 'rgba(3, 105, 161, 0.35)',
+	bgSoft: 'rgba(3, 105, 161, 0.10)',
+	bgMid: 'rgba(3, 105, 161, 0.18)',
+	ring: 'rgba(3, 105, 161, 0.24)',
+	focus: 'rgba(3, 105, 161, 0.18)',
+} as const
 
 const ReportViewPage = () => {
 	const { id = '' } = useParams<{ id: string }>()
@@ -50,7 +73,9 @@ const ReportViewPage = () => {
 						<ErrorState
 							title='Report not available'
 							description='Could not load report.'
-							action={<Button onClick={() => navigate('/projects/reports')}>Back to list</Button>}
+							action={
+								<Button onClick={() => navigate('/projects/reports')}>Back to list</Button>
+							}
 						/>
 					</Center>
 				</Surface>
@@ -69,9 +94,7 @@ const ReportViewPage = () => {
 					backLabel='Back to reports'
 					icon={<AssessmentOutlined />}
 					title={`${report.project.name} · ${formatDate(report.reportDate, 'short')}`}
-					subtitle={
-						isDiscord ? 'Posted via Discord' : 'Project daily report'
-					}
+					subtitle={isDiscord ? 'Posted via Discord' : 'Project daily report'}
 					badgeLabel={`${report.hours}h`}
 					badgeTone='new'
 				/>
@@ -80,7 +103,13 @@ const ReportViewPage = () => {
 					<SectionHead num='01' title='Context' hint='Project, date and hours' />
 					<Grid>
 						<Field label='Project'>
-							<TextField name='p' value={report.project.name} disable sizes='small' width='100%' />
+							<TextField
+								name='p'
+								value={report.project.name}
+								disable
+								sizes='small'
+								width='100%'
+							/>
 						</Field>
 						<Field label='Report date'>
 							<TextField
@@ -116,35 +145,65 @@ const ReportViewPage = () => {
 					<SectionHead
 						num='02'
 						title='Contributors at submission'
-						hint='Immutable snapshot of the project team at the moment this report was filed.'
+						hint={
+							contributors.length === 0
+								? 'Immutable snapshot of the project team at the moment this report was filed.'
+								: `${contributors.length} contributor${contributors.length === 1 ? '' : 's'} snapshotted when the report was filed`
+						}
 					/>
 					{contributors.length === 0 ? (
 						<EmptySnapshot>No contributors recorded.</EmptySnapshot>
 					) : (
-						<ContributorList>
+						<ContributorsGrid>
 							{contributors.map((c) => {
 								const name =
 									`${c.firstNameSnapshot} ${c.lastNameSnapshot}`.trim() ||
 									'Unknown contributor'
-								if (c.employee) {
+								const isDeleted = c.employee === null
+								if (!isDeleted) {
 									return (
-										<ContributorLink
+										<ContributorCard
 											key={c.id}
 											type='button'
 											onClick={() => navigate(`/employees/${c.employee!.id}`)}
+											aria-label={`Open ${name}`}
+											$deleted={false}
 										>
-											{name}
-										</ContributorLink>
+											<ContributorAvatarWrap>
+												<ContributorAvatar>
+													{initials(c.firstNameSnapshot, c.lastNameSnapshot)}
+												</ContributorAvatar>
+											</ContributorAvatarWrap>
+											<ContributorBody>
+												<ContributorName>{name}</ContributorName>
+												<ContributorMeta>Open employee</ContributorMeta>
+											</ContributorBody>
+											<ContributorChevron aria-hidden='true'>
+												<ArrowOutwardOutlined />
+											</ContributorChevron>
+										</ContributorCard>
 									)
 								}
 								return (
-									<ContributorChip key={c.id} title='Employee no longer exists'>
-										{name}
-										<Muted> · Deleted employee</Muted>
-									</ContributorChip>
+									<ContributorCard
+										key={c.id}
+										as='span'
+										$deleted={true}
+										title='Employee no longer exists'
+									>
+										<ContributorAvatarWrap>
+											<ContributorAvatar $muted>
+												{initials(c.firstNameSnapshot, c.lastNameSnapshot)}
+											</ContributorAvatar>
+										</ContributorAvatarWrap>
+										<ContributorBody>
+											<ContributorName>{name}</ContributorName>
+											<ContributorMetaMuted>Deleted employee</ContributorMetaMuted>
+										</ContributorBody>
+									</ContributorCard>
 								)
 							})}
-						</ContributorList>
+						</ContributorsGrid>
 					)}
 				</Section>
 
@@ -208,49 +267,173 @@ const ContentBlock = styled.div`
 	border: 1px solid ${T.border};
 `
 
-const ContributorList = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-	padding: 4px 0 2px;
-`
-
-const ContributorLink = styled.button`
-	appearance: none;
-	border: 1px solid ${T.border};
-	background: ${T.subtleBg};
-	color: ${T.primary};
-	border-radius: 999px;
-	padding: 6px 12px;
-	font-size: 13px;
-	font-weight: 500;
-	cursor: pointer;
-	transition: background 160ms ease;
-	&:hover {
-		border-color: ${T.primary};
-	}
-`
-
-const ContributorChip = styled.span`
-	display: inline-flex;
-	align-items: center;
-	border: 1px solid ${T.border};
-	background: ${T.subtleBg};
-	color: ${T.textMuted};
-	border-radius: 999px;
-	padding: 6px 12px;
-	font-size: 13px;
-	font-weight: 500;
-`
-
-const Muted = styled.span`
-	color: ${T.textMuted};
-	font-weight: 400;
-	margin-left: 6px;
-`
-
 const EmptySnapshot = styled.div`
 	color: ${T.textMuted};
 	font-size: 13px;
 	padding: 10px 0 2px;
+`
+
+/* ─── Contributor card grid — mirrors ProjectViewPage team cards.
+       The snapshot is historical; we reuse the exact look so the two
+       pages feel like one visual family. ─── */
+
+const ContributorsGrid = styled.div`
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 10px;
+`
+
+const ContributorCard = styled.button<{ $deleted: boolean }>`
+	position: relative;
+	display: grid;
+	grid-template-columns: 3px auto 1fr auto;
+	align-items: center;
+	gap: 0;
+	padding: 0;
+	border-radius: 14px;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	background: #ffffff;
+	text-align: left;
+	font-family: inherit;
+	cursor: ${({ $deleted }) => ($deleted ? 'default' : 'pointer')};
+	overflow: hidden;
+	isolation: isolate;
+	transition:
+		border-color 260ms ${T.ease},
+		background-color 260ms ${T.ease};
+	opacity: ${({ $deleted }) => ($deleted ? 0.7 : 1)};
+
+	&::before {
+		content: '';
+		grid-column: 1;
+		align-self: stretch;
+		background: ${BLUE.fg};
+		opacity: 0.35;
+		transition: opacity 260ms ${T.ease};
+	}
+
+	${({ $deleted }) =>
+		$deleted
+			? ''
+			: `
+	&:hover {
+		border-color: ${BLUE.border};
+	}
+
+	&:hover::before {
+		opacity: 1;
+	}
+
+	&:focus-visible {
+		outline: none;
+		border-color: ${BLUE.fg};
+		box-shadow: 0 0 0 3px ${BLUE.focus};
+	}
+
+	&:active {
+		background: rgba(15, 23, 42, 0.02);
+	}
+	`}
+
+	@media (prefers-reduced-motion: reduce) {
+		transition: none;
+		&::before {
+			transition: none;
+		}
+	}
+`
+
+const ContributorAvatarWrap = styled.span`
+	padding: 12px 0 12px 14px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+`
+
+const ContributorAvatar = styled.span<{ $muted?: boolean }>`
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 12px;
+	background: ${({ $muted }) => ($muted ? 'rgba(100, 116, 139, 0.12)' : BLUE.bgSoft)};
+	color: ${({ $muted }) => ($muted ? '#64748b' : BLUE.fg)};
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	box-shadow: inset 0 0 0 1px ${({ $muted }) => ($muted ? 'rgba(100, 116, 139, 0.24)' : BLUE.ring)};
+	transition: box-shadow 260ms ${T.ease};
+
+	${ContributorCard}:hover & {
+		box-shadow:
+			inset 0 0 0 1px ${BLUE.ring},
+			0 0 0 4px ${BLUE.bgMid};
+	}
+`
+
+const ContributorBody = styled.span`
+	padding: 12px 12px 12px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	min-width: 0;
+`
+
+const ContributorName = styled.span`
+	font-size: 14.5px;
+	font-weight: 600;
+	color: ${T.textStrong};
+	letter-spacing: -0.15px;
+	line-height: 1.25;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+`
+
+const ContributorMeta = styled.span`
+	font-size: 12px;
+	color: ${T.textSecondary};
+	line-height: 1.4;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: block;
+	min-width: 0;
+`
+
+const ContributorMetaMuted = styled(ContributorMeta)`
+	font-style: italic;
+	color: ${T.textMuted};
+`
+
+const ContributorChevron = styled.span`
+	padding: 12px 14px 12px 8px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: ${T.textMuted};
+	opacity: 0;
+	transform: translateX(-6px);
+	transition:
+		opacity 260ms ${T.ease},
+		transform 260ms ${T.ease},
+		color 260ms ${T.ease};
+
+	svg {
+		font-size: 16px;
+	}
+
+	${ContributorCard}:hover & {
+		opacity: 1;
+		transform: translateX(0);
+		color: ${BLUE.fg};
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		transform: none;
+	}
 `
