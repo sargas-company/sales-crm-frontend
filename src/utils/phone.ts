@@ -5,6 +5,37 @@ import {
 } from 'libphonenumber-js'
 
 /**
+ * Convert an ISO-3166-1 alpha-2 country code to a Unicode flag
+ * emoji via the regional-indicator codepoints. Mirrors the inline
+ * helper used in Client Request list/table/preview — promoted here
+ * so Leads can reuse the exact same output without duplicating math.
+ */
+export const countryToFlag = (iso: string | null | undefined): string => {
+	if (!iso || iso.length !== 2) return ''
+	const upper = iso.toUpperCase()
+	if (!/^[A-Z]{2}$/.test(upper)) return ''
+	return String.fromCodePoint(
+		...upper.split('').map((c) => c.charCodeAt(0) + 127397),
+	)
+}
+
+/**
+ * Country ISO-2 inferred from a raw phone number. Returns null when
+ * the number is unparseable or does not carry a `+country` prefix.
+ */
+export const phoneCountryIso = (
+	raw: string | null | undefined,
+): string | null => {
+	if (!raw) return null
+	try {
+		const parsed = parsePhoneNumberFromString(raw)
+		return parsed?.country ?? null
+	} catch {
+		return null
+	}
+}
+
+/**
  * Convert raw phone input into E.164 for backend persistence. Any
  * ISO-2 country hint narrows parsing (`38 097 123 45 67` with hint
  * `UA` becomes `+380971234567`); without a hint only inputs that

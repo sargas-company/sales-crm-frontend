@@ -5,11 +5,16 @@ import { useCreateLeadMutation } from '../../../store/leads/leadsApi'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
 import useTheme from '../../../theme/useTheme'
+import styled from 'styled-components'
 import {
+	countryToFlag,
+	formatPhoneDisplay,
 	isLikelyValidEmail,
 	isLikelyValidPhone,
 	normalisePhoneToE164,
+	phoneCountryIso,
 } from '../../../utils/phone'
+import { T } from '../../sales-analytics/_shared/tokens'
 import type { ApiClientType, CreateLeadBody } from '../../../store/leads/types/definition'
 import { Field, FormHeader, SectionHead } from '../../_shared/FormShell'
 import {
@@ -190,6 +195,7 @@ const LeadCreateForm = () => {
 									onChange={(e) => setField('phone', e.target.value)}
 									width='100%'
 								/>
+								<PhonePreview phone={fields.phone} />
 							</Field>
 							<Field label='Location' span='full'>
 								<TextField
@@ -283,3 +289,61 @@ const LeadCreateForm = () => {
 }
 
 export default LeadCreateForm
+
+/* Live country-flag + formatted preview under the Phone input —
+   mirrors the Client Request list cell. Shows the ISO-2 country
+   that libphonenumber inferred from the typed `+country` prefix,
+   and renders the number in its canonical international grouping.
+   Hidden while the field is empty or unparseable. */
+const PhonePreview = ({ phone }: { phone: string }) => {
+	const trimmed = phone.trim()
+	if (!trimmed) return null
+	const iso = phoneCountryIso(trimmed)
+	const flag = countryToFlag(iso)
+	const pretty = formatPhoneDisplay(trimmed)
+	if (!iso && pretty === trimmed) return null
+	return (
+		<PhonePreviewRow>
+			{flag && <PreviewFlag title={iso ?? undefined}>{flag}</PreviewFlag>}
+			<PreviewText>{pretty}</PreviewText>
+			{iso && <PreviewCountry>{iso}</PreviewCountry>}
+		</PhonePreviewRow>
+	)
+}
+
+const PhonePreviewRow = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 6px;
+	padding: 4px 8px;
+	border-radius: 8px;
+	background: rgba(15, 23, 42, 0.03);
+	font-size: 12.5px;
+`
+
+const PreviewFlag = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 4px;
+	background: rgba(15, 23, 42, 0.04);
+	font-size: 14px;
+	line-height: 1;
+`
+
+const PreviewText = styled.span`
+	color: ${T.textStrong};
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+`
+
+const PreviewCountry = styled.span`
+	color: ${T.textSecondary};
+	font-weight: 600;
+	letter-spacing: 0.3px;
+	font-size: 11px;
+	text-transform: uppercase;
+`

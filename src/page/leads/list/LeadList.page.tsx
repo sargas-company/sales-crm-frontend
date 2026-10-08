@@ -23,7 +23,11 @@ import PermissionGate from '../../../components/auth/PermissionGate'
 import type { LeadItem, LeadSortBy } from '../../../store/leads/types/definition'
 import { useGetLeadListQuery } from '../../../store/leads/leadsApi'
 import { formatDate } from '../../../utils/format'
-import { formatPhoneDisplay } from '../../../utils/phone'
+import {
+	countryToFlag,
+	formatPhoneDisplay,
+	phoneCountryIso,
+} from '../../../utils/phone'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
 
 const PAGE_SIZE = 20
@@ -122,22 +126,29 @@ const LeadList = () => {
 		{
 			key: 'phone',
 			label: 'Phone',
-			minWidth: 160,
+			minWidth: 180,
 			sortable: true,
 			sortValue: (l) => l.phone ?? '',
-			render: (l) =>
-				l.phone ? (
-					<ContactLink
-						href={`tel:${l.phone}`}
-						onClick={(e) => e.stopPropagation()}
-						title={l.phone}
-					>
-						{formatPhoneDisplay(l.phone)}
-					</ContactLink>
-				) : (
-					<Muted>—</Muted>
-				),
-			skeleton: () => <TableSkeleton $w='110px' $h='13px' />,
+			render: (l) => {
+				if (!l.phone) return <Muted>—</Muted>
+				const iso = phoneCountryIso(l.phone)
+				const flag = countryToFlag(iso)
+				return (
+					<PhoneCell>
+						{flag && (
+							<CountryFlag title={iso ?? undefined}>{flag}</CountryFlag>
+						)}
+						<ContactLink
+							href={`tel:${l.phone}`}
+							onClick={(e) => e.stopPropagation()}
+							title={l.phone}
+						>
+							{formatPhoneDisplay(l.phone)}
+						</ContactLink>
+					</PhoneCell>
+				)
+			},
+			skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
 		},
 		{
 			key: 'clientType',
@@ -315,6 +326,28 @@ const LeadName = styled.div`
 const LeadMeta = styled.div`
 	font-size: 12px;
 	color: ${T.textSecondary};
+`
+
+/* Flag + formatted phone — mirrors the Client Request list cell so
+   the two surfaces look identical. */
+const PhoneCell = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+`
+
+const CountryFlag = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 4px;
+	background: rgba(15, 23, 42, 0.04);
+	font-size: 14px;
+	line-height: 1;
+	flex-shrink: 0;
 `
 
 const ContactLink = styled.a`
