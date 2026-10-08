@@ -41,8 +41,28 @@ const reportAuthorLabel = (r: ProjectRecentReport): string => {
 	return '—'
 }
 
-const clientName = (p: { client: { firstName: string; lastName: string } | null }) =>
-	p.client ? `${p.client.firstName} ${p.client.lastName}`.trim() || '—' : '—'
+/* Prefer the new CRM Client when present; fall back to the legacy
+ * Counterparty link. Legacy projects without either stay as "—". */
+const clientName = (p: {
+	client?: { firstName: string; lastName: string } | null
+	crmClient?: {
+		firstName: string
+		lastName: string | null
+		company: string | null
+	} | null
+}) => {
+	if (p.crmClient) {
+		const name = [p.crmClient.firstName, p.crmClient.lastName]
+			.filter(Boolean)
+			.join(' ')
+			.trim()
+		return name || p.crmClient.company || '—'
+	}
+	if (p.client) {
+		return `${p.client.firstName} ${p.client.lastName}`.trim() || '—'
+	}
+	return '—'
+}
 
 const statusLabel = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 

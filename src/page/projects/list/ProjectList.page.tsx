@@ -32,8 +32,28 @@ import useDebouncedValue from '../../../hooks/useDebouncedValue'
 
 const PAGE_SIZE = 20
 
-const clientName = (p: ProjectItem) =>
-	p.client ? `${p.client.firstName} ${p.client.lastName}`.trim() || '—' : '—'
+/* Which client is "the" client of a project. New Project create /
+ * edit flow writes `crmClientId → Client`; legacy rows that pre-date
+ * the Clients module may still carry only the old `clientId →
+ * Counterparty`. Prefer the new link; fall back to the legacy one. */
+const resolveClient = (p: ProjectItem) => {
+	if (p.crmClient) {
+		const name = [p.crmClient.firstName, p.crmClient.lastName]
+			.filter(Boolean)
+			.join(' ')
+			.trim()
+		return {
+			kind: 'crm' as const,
+			id: p.crmClient.id,
+			label: name || p.crmClient.company || '—',
+		}
+	}
+	if (p.client) {
+		const name = `${p.client.firstName} ${p.client.lastName}`.trim()
+		return { kind: 'counterparty' as const, id: p.client.id, label: name || '—' }
+	}
+	return null
+}
 
 const ProjectList = () => {
 	const navigate = useNavigate()
@@ -82,27 +102,31 @@ const ProjectList = () => {
 			skeleton: () => <TableSkeleton $w='200px' $h='14px' />,
 		},
 		{
-			// Client column shrinks to content and links to the counterparty
-			// view page when a client is set. Falls back to a muted em-dash
-			// when the project has no client.
+			// Shows the CRM Client when the project is wired through the
+			// new `crmClientId → Client` relation, with a legacy fallback
+			// to the old `clientId → Counterparty` link. Clicking opens
+			// the appropriate detail page.
 			key: 'client',
 			label: 'Client',
-			render: (p) =>
-				p.client ? (
+			render: (p) => {
+				const c = resolveClient(p)
+				if (!c) return <Muted>—</Muted>
+				const href =
+					c.kind === 'crm' ? `/clients/${c.id}` : `/counterparties/${c.id}`
+				return (
 					<ClientLink
 						onClick={(e) => {
 							e.stopPropagation()
-							navigate(`/counterparties/${p.client!.id}`)
+							navigate(href)
 						}}
 					>
-						<span>{clientName(p)}</span>
+						<span>{c.label}</span>
 						<LinkIcon aria-hidden='true'>
 							<ArrowOutwardOutlined />
 						</LinkIcon>
 					</ClientLink>
-				) : (
-					<Muted>—</Muted>
-				),
+				)
+			},
 			skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
 		},
 		{
