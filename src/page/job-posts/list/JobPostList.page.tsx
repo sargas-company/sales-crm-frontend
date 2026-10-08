@@ -474,13 +474,15 @@ const JobPostList = () => {
 						</PageHead>
 
 						<PermissionGate permission='job_posts:delete'>
-							<BulkBarRow>
-								<BulkActionBar
-									count={selected.size}
-									onClear={() => setSelected(new Set())}
-									onConfirm={() => setBulkOpen(true)}
-									isLoading={bulkDeleting}
-								/>
+							<BulkBarRow $open={selected.size > 0}>
+								<BulkBarInner>
+									<BulkActionBar
+										count={selected.size}
+										onClear={() => setSelected(new Set())}
+										onConfirm={() => setBulkOpen(true)}
+										isLoading={bulkDeleting}
+									/>
+								</BulkBarInner>
 							</BulkBarRow>
 						</PermissionGate>
 
@@ -726,7 +728,28 @@ const JobPostList = () => {
 
 export default JobPostList
 
-const BulkBarRow = styled.div`
+/**
+ * Height-collapsing row for the bulk-action bar. When no rows are
+ * selected we want the surrounding filters to NOT jump into the
+ * vacated space abruptly — the row animates its own grid-row-size
+ * between 0fr and 1fr in sync with the bar's own fade/scale, so
+ * everything downstream slides into place smoothly. Modern browsers
+ * (Chrome 117+, Firefox 123+, Safari 17.4+) animate the fr-unit
+ * change natively; older ones fall back to an instant collapse,
+ * which is the pre-fix behaviour.
+ */
+const BulkBarRow = styled.div<{ $open: boolean }>`
+	display: grid;
+	grid-template-rows: ${({ $open }) => ($open ? '1fr' : '0fr')};
+	transition: grid-template-rows 260ms cubic-bezier(0.22, 1, 0.36, 1);
+	@media (prefers-reduced-motion: reduce) {
+		transition: none;
+	}
+`
+
+const BulkBarInner = styled.div`
+	min-height: 0;
+	overflow: hidden;
 	display: flex;
 	justify-content: flex-end;
 	padding: 0 4px 4px;
