@@ -23,6 +23,7 @@ import PermissionGate from '../../../components/auth/PermissionGate'
 import type { LeadItem, LeadSortBy } from '../../../store/leads/types/definition'
 import { useGetLeadListQuery } from '../../../store/leads/leadsApi'
 import { formatDate } from '../../../utils/format'
+import { formatPhoneDisplay } from '../../../utils/phone'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
 
 const PAGE_SIZE = 20
@@ -97,6 +98,46 @@ const LeadList = () => {
 					<TableSkeleton $w='140px' $h='14px' />
 				</LeadCell>
 			),
+		},
+		{
+			key: 'email',
+			label: 'Email',
+			minWidth: 180,
+			sortable: true,
+			sortValue: (l) => l.email ?? '',
+			render: (l) =>
+				l.email ? (
+					<ContactLink
+						href={`mailto:${l.email}`}
+						onClick={(e) => e.stopPropagation()}
+						title={l.email}
+					>
+						{l.email}
+					</ContactLink>
+				) : (
+					<Muted>—</Muted>
+				),
+			skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
+		},
+		{
+			key: 'phone',
+			label: 'Phone',
+			minWidth: 160,
+			sortable: true,
+			sortValue: (l) => l.phone ?? '',
+			render: (l) =>
+				l.phone ? (
+					<ContactLink
+						href={`tel:${l.phone}`}
+						onClick={(e) => e.stopPropagation()}
+						title={l.phone}
+					>
+						{formatPhoneDisplay(l.phone)}
+					</ContactLink>
+				) : (
+					<Muted>—</Muted>
+				),
+			skeleton: () => <TableSkeleton $w='110px' $h='13px' />,
 		},
 		{
 			key: 'clientType',
@@ -274,6 +315,23 @@ const LeadName = styled.div`
 const LeadMeta = styled.div`
 	font-size: 12px;
 	color: ${T.textSecondary};
+`
+
+const ContactLink = styled.a`
+	display: inline-block;
+	max-width: 220px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 13px;
+	color: ${T.primary};
+	text-decoration: none;
+	transition: color 160ms ease, text-decoration-color 160ms ease;
+	text-decoration: underline;
+	text-decoration-color: transparent;
+	&:hover {
+		text-decoration-color: ${T.primary};
+	}
 `
 
 const Muted = styled.span`

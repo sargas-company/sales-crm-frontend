@@ -13,6 +13,7 @@ type InputType =
 	| 'date'
 	| 'datetime-local'
 	| 'time'
+	| 'tel'
 export type InputVarient = 'filled' | 'standard' | 'regular'
 type TextFieldChange = React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>
 

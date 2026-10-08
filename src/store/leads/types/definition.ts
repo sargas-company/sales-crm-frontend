@@ -34,6 +34,8 @@ export interface LeadItem {
 	firstName: string | null
 	lastName: string | null
 	companyName: string | null
+	email: string | null
+	phone: string | null
 	status: ApiLeadStatus
 	clientType: ApiClientType | null
 	rate: number | null
@@ -49,6 +51,8 @@ export type CreateLeadBody = {
 	firstName?: string
 	lastName?: string
 	companyName?: string
+	email?: string
+	phone?: string
 	clientType?: ApiClientType
 	rate?: number
 	location?: string
@@ -66,6 +70,8 @@ export type LeadSortBy =
 	| 'status'
 	| 'rate'
 	| 'location'
+	| 'email'
+	| 'phone'
 	| 'repliedAt'
 	| 'createdAt'
 

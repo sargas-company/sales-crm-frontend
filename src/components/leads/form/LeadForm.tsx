@@ -5,6 +5,12 @@ import { useGetLeadByIdQuery, useUpdateLeadMutation } from '../../../store/leads
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
 import useTheme from '../../../theme/useTheme'
+import {
+	formatPhoneDisplay,
+	isLikelyValidEmail,
+	isLikelyValidPhone,
+	normalisePhoneToE164,
+} from '../../../utils/phone'
 import type { ApiLeadStatus, ApiClientType, LeadItem } from '../../../store/leads/types/definition'
 import { Field, FormHeader, FormLoading, FormNotFound, SectionHead } from '../../_shared/FormShell'
 import {
@@ -27,16 +33,27 @@ interface FormFields {
 	firstName: string
 	lastName: string
 	companyName: string
+	email: string
+	phone: string
 	status: ApiLeadStatus
 	clientType: ApiClientType | ''
 	rate: string
 	location: string
 }
 
+interface FieldErrors {
+	email?: string
+	phone?: string
+}
+
 const toFormValues = (data: LeadItem): FormFields => ({
 	firstName: data.firstName ?? '',
 	lastName: data.lastName ?? '',
 	companyName: data.companyName ?? '',
+	email: data.email ?? '',
+	// Prefer the readable international format while editing so the
+	// manager sees spaces/grouping; it gets re-normalised on submit.
+	phone: data.phone ? formatPhoneDisplay(data.phone) : '',
 	status: data.status,
 	clientType: data.clientType ?? '',
 	rate: data.rate != null ? String(data.rate) : '',
@@ -63,18 +80,40 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 	const { theme } = useTheme()
 	const isDark = theme.mode.name === 'dark'
 	const [fields, setFields] = useState<FormFields>(toFormValues(initialData))
+	const [errors, setErrors] = useState<FieldErrors>({})
 	const [updateLead, { isLoading }] = useUpdateLeadMutation()
 
-	const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) =>
+	const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) => {
 		setFields((prev) => ({ ...prev, [key]: value }))
+		if (key === 'email') setErrors((prev) => ({ ...prev, email: undefined }))
+		if (key === 'phone') setErrors((prev) => ({ ...prev, phone: undefined }))
+	}
+
+	const validate = (): FieldErrors => {
+		const next: FieldErrors = {}
+		if (fields.email && !isLikelyValidEmail(fields.email))
+			next.email = 'Enter a valid email address'
+		if (fields.phone && !isLikelyValidPhone(fields.phone))
+			next.phone = 'Use international format, e.g. +14155550123'
+		return next
+	}
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
+		const validationErrors = validate()
+		if (Object.keys(validationErrors).length > 0) {
+			setErrors(validationErrors)
+			return
+		}
 		try {
+			const trimmedEmail = fields.email.trim()
+			const normalisedPhone = normalisePhoneToE164(fields.phone)
 			const body: Partial<LeadItem> = {
 				firstName: fields.firstName || null,
 				lastName: fields.lastName || null,
 				companyName: fields.clientType === 'company' ? fields.companyName || null : null,
+				email: trimmedEmail ? trimmedEmail.toLowerCase() : null,
+				phone: normalisedPhone,
 				status: fields.status,
 				clientType: fields.clientType || null,
 				rate: fields.rate !== '' ? Number(fields.rate) : null,
@@ -106,7 +145,7 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 						<SectionHead
 							num='01'
 							title='Contact'
-							hint='Who this lead is and where they are based'
+							hint='Who this lead is and how to reach them'
 						/>
 						<FieldGrid>
 							<Field label='First name'>
@@ -124,6 +163,30 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 									placeholder='e.g. Doe'
 									value={fields.lastName}
 									onChange={(e) => setField('lastName', e.target.value)}
+									width='100%'
+								/>
+							</Field>
+							<Field label='Email' error={errors.email}>
+								<TextField
+									name='email'
+									type='email'
+									placeholder='e.g. john@acme.com'
+									value={fields.email}
+									onChange={(e) => setField('email', e.target.value)}
+									width='100%'
+								/>
+							</Field>
+							<Field
+								label='Phone'
+								error={errors.phone}
+								hint='International format, e.g. +14155550123'
+							>
+								<TextField
+									name='phone'
+									type='tel'
+									placeholder='+1 415 555 0123'
+									value={fields.phone}
+									onChange={(e) => setField('phone', e.target.value)}
 									width='100%'
 								/>
 							</Field>
