@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import {
@@ -7,7 +7,24 @@ import {
 	EditOutlined,
 	PersonSearchOutlined,
 	AddRounded,
+	FilterListOutlined,
+	SearchOutlined,
+	ClearRounded,
 } from '@mui/icons-material'
+import {
+	TapeIndicator,
+	TapePill,
+	TapePills,
+} from '../../analytics/filters/filters.styled'
+import {
+	BottomSlot,
+	ClearBtn as FreshClearBtn,
+	FreshFiltersWrap,
+	InlineField,
+	InlineSelect,
+	RowBreak,
+	SearchPill,
+} from '../../../components/_shared/filters/freshPaperFilters'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../../components/_shared/ListPageShell'
 import {
@@ -144,6 +161,37 @@ const LeadList = () => {
 		setSort(null)
 		setSp(new URLSearchParams(), { replace: true })
 	}
+
+	const activeFilterCount =
+		(search ? 1 : 0) +
+		(preset !== 'all' ? 1 : 0) +
+		(statusParam ? 1 : 0) +
+		(temperatureParam ? 1 : 0) +
+		(sourceParam ? 1 : 0) +
+		(fromParam ? 1 : 0) +
+		(toParam ? 1 : 0)
+
+	// Tape indicator — same pattern as Audit Log + Clients list.
+	const pillsRef = useRef<HTMLDivElement>(null)
+	const [ind, setInd] = useState({ left: 0, width: 0, opacity: 0 })
+	useLayoutEffect(() => {
+		const root = pillsRef.current
+		if (!root) return
+		const el = root.querySelector<HTMLButtonElement>(
+			'[role="tab"][data-active="true"]',
+		)
+		if (!el) {
+			setInd((p) => ({ ...p, opacity: 0 }))
+			return
+		}
+		const rootRect = root.getBoundingClientRect()
+		const r = el.getBoundingClientRect()
+		setInd({
+			left: r.left - rootRect.left - 2,
+			width: r.width + 4,
+			opacity: 1,
+		})
+	}, [preset])
 
 	const { data, isLoading, isError, refetch } = useGetLeadListQuery({
 		page,
@@ -383,26 +431,58 @@ const LeadList = () => {
 						</PrimarySolidButton>
 					</PermissionGate>
 				}
-				searchPlaceholder='Search by name, company, email or phone'
-				search={searchInput}
-				onSearchChange={setSearchInput}
 				filters={
-					<FilterRow>
-						<Presets>
+					<FreshFiltersWrap role='region' aria-label='Leads filters'>
+						<div className='filter-lead'>
+							<span className='lead-icon'>
+								<FilterListOutlined />
+							</span>
+							<div className='lead-text'>
+								<span className='top'>Preset</span>
+								<span className='bot'>{presetLabel[preset]}</span>
+							</div>
+						</div>
+
+						<TapePills ref={pillsRef} role='tablist' aria-label='Lead preset'>
+							<TapeIndicator
+								style={{
+									transform: `translateX(${ind.left}px) rotate(-1.2deg)`,
+									width: `${ind.width}px`,
+									opacity: ind.opacity,
+								}}
+							/>
 							{(Object.keys(presetToStatus) as LeadPreset[]).map((p) => (
-								<PresetBtn
+								<TapePill
 									key={p}
+									type='button'
+									role='tab'
+									data-active={preset === p || undefined}
+									aria-selected={preset === p}
 									$active={preset === p}
 									onClick={() => setPreset(p)}
 								>
 									{presetLabel[p]}
-								</PresetBtn>
+								</TapePill>
 							))}
-						</Presets>
-						<FilterGroup>
-							<label>
-								<span>Status</span>
-								<select
+						</TapePills>
+
+						<SearchPill>
+							<SearchOutlined className='ico' />
+							<input
+								type='text'
+								value={searchInput}
+								onChange={(e) => setSearchInput(e.target.value)}
+								placeholder='Search by name, company, email or phone'
+								aria-label='Search leads'
+							/>
+						</SearchPill>
+
+						<RowBreak />
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Status</span>
+								<InlineSelect
 									value={statusParam}
 									onChange={(e) => updateParam('status', e.target.value)}
 								>
@@ -413,11 +493,14 @@ const LeadList = () => {
 									<option value='ON_HOLD'>On Hold</option>
 									<option value='WON'>Won</option>
 									<option value='LOST'>Lost</option>
-								</select>
-							</label>
-							<label>
-								<span>Temperature</span>
-								<select
+								</InlineSelect>
+							</InlineField>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Temperature</span>
+								<InlineSelect
 									value={temperatureParam}
 									onChange={(e) => updateParam('temperature', e.target.value)}
 								>
@@ -425,36 +508,64 @@ const LeadList = () => {
 									<option value='COLD'>Cold</option>
 									<option value='WARM'>Warm</option>
 									<option value='HOT'>Hot</option>
-								</select>
-							</label>
-							<label>
-								<span>Source</span>
-								<input
+								</InlineSelect>
+							</InlineField>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Source</span>
+								<InlineSelect
+									as='input'
 									type='text'
 									value={sourceParam}
-									onChange={(e) => updateParam('source', e.target.value)}
 									placeholder='Any'
+									onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+										updateParam('source', e.target.value)
+									}
 								/>
-							</label>
-							<label>
-								<span>Created from</span>
-								<input
+							</InlineField>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Created from</span>
+								<InlineSelect
+									as='input'
 									type='date'
 									value={fromParam}
-									onChange={(e) => updateParam('from', e.target.value)}
+									onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+										updateParam('from', e.target.value)
+									}
 								/>
-							</label>
-							<label>
-								<span>Created to</span>
-								<input
+							</InlineField>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Created to</span>
+								<InlineSelect
+									as='input'
 									type='date'
 									value={toParam}
-									onChange={(e) => updateParam('to', e.target.value)}
+									onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+										updateParam('to', e.target.value)
+									}
 								/>
-							</label>
-							<ClearBtn onClick={clearFilters}>Clear</ClearBtn>
-						</FilterGroup>
-					</FilterRow>
+							</InlineField>
+						</BottomSlot>
+
+						<div className='filter-spacer' />
+
+						<FreshClearBtn
+							type='button'
+							onClick={clearFilters}
+							disabled={activeFilterCount === 0}
+						>
+							<ClearRounded style={{ fontSize: 15 }} />
+							Clear
+						</FreshClearBtn>
+					</FreshFiltersWrap>
 				}
 			>
 				<DataTable
@@ -628,61 +739,3 @@ const TempBadge = styled.span<{ $t: ApiLeadTemperature }>`
 				: '#1e40af'};
 `
 
-const FilterRow = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	gap: 12px;
-	align-items: center;
-`
-const Presets = styled.div`
-	display: inline-flex;
-	gap: 6px;
-	flex-wrap: wrap;
-`
-const PresetBtn = styled.button<{ $active: boolean }>`
-	border: 1px solid rgba(15, 23, 42, 0.12);
-	background: ${({ $active }) => ($active ? T.primary : 'rgba(255,255,255,0.9)')};
-	color: ${({ $active }) => ($active ? '#fff' : T.textStrong)};
-	padding: 6px 12px;
-	border-radius: 999px;
-	font-size: 12px;
-	font-weight: 600;
-	cursor: pointer;
-	&:hover {
-		background: ${({ $active }) => ($active ? T.primary : 'rgba(15, 23, 42, 0.04)')};
-	}
-`
-const FilterGroup = styled.div`
-	display: inline-flex;
-	gap: 10px;
-	flex-wrap: wrap;
-	align-items: flex-end;
-	label {
-		display: inline-flex;
-		flex-direction: column;
-		font-size: 11px;
-		font-weight: 600;
-		color: ${T.textSecondary};
-		letter-spacing: 0.2px;
-	}
-	input {
-		margin-top: 4px;
-		padding: 6px 8px;
-		border: 1px solid rgba(15, 23, 42, 0.14);
-		border-radius: 8px;
-		font-size: 13px;
-	}
-`
-const ClearBtn = styled.button`
-	border: 1px solid rgba(15, 23, 42, 0.12);
-	background: transparent;
-	padding: 7px 12px;
-	border-radius: 10px;
-	font-size: 12px;
-	font-weight: 600;
-	color: ${T.textStrong};
-	cursor: pointer;
-	&:hover {
-		background: rgba(15, 23, 42, 0.04);
-	}
-`
