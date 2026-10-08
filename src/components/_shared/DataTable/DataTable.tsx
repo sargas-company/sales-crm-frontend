@@ -9,6 +9,7 @@ import {
 	PagerBtn,
 	PagerButtons,
 	PagerInfo,
+	SelectCheckbox,
 	Skeleton,
 	SkeletonActions,
 	SortHeader,
@@ -47,6 +48,27 @@ export interface DataTablePagination {
 	onPageChange: (page: number) => void
 }
 
+/**
+ * Opt-in row selection. When supplied, the DataTable renders a
+ * leading checkbox column — header checkbox toggles every row on
+ * the current page, cell checkboxes toggle individual rows. The
+ * caller owns the selection state (so bulk-action bars can live
+ * outside the table). Checkbox clicks never bubble into other row
+ * click handlers.
+ */
+export interface DataTableSelection<T> {
+	/** Set of selected row IDs. */
+	selected: Set<string>
+	/** Toggle a single row by its `rowKey`. Boolean = new state. */
+	onToggleRow: (id: string, next: boolean) => void
+	/** Toggle every row currently rendered on this page. */
+	onToggleAllOnPage: (rows: T[], next: boolean) => void
+	/** Optional label for assistive tech on the header checkbox. */
+	headerLabel?: string
+	/** Optional label template for the per-row checkbox. */
+	rowLabel?: (row: T) => string
+}
+
 export interface DataTableProps<T> {
 	columns: DataTableColumn<T>[]
 	rows: T[]
@@ -70,6 +92,8 @@ export interface DataTableProps<T> {
 	/** Column key that should get an "actions" alignment (right-align + tight
 	 *  right padding). Defaults to `"actions"`. */
 	actionsColumnKey?: string
+	/** Opt-in row selection — adds a leading checkbox column. */
+	selection?: DataTableSelection<T>
 }
 
 function DataTable<T>({
@@ -89,6 +113,7 @@ function DataTable<T>({
 	sort,
 	onSortChange,
 	defaultSort = null,
+	selection,
 }: DataTableProps<T>) {
 	const { page, pageSize, total, onPageChange } = pagination
 	const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -168,6 +193,15 @@ function DataTable<T>({
 	// between the last data column and the sticky-right Actions cell.
 	const totalCols = columns.length + 1
 
+	// Selection-column derived state. Lives alongside the data columns
+	// so colgroup / thead / tbody can all consume the same booleans.
+	const selectedCount = selection ? selection.selected.size : 0
+	const pageIds = selection ? sortedRows.map((r) => rowKey(r)) : []
+	const allOnPageSelected =
+		selection && pageIds.length > 0 && pageIds.every((id) => selection.selected.has(id))
+	const someOnPageSelected =
+		selection && !allOnPageSelected && pageIds.some((id) => selection.selected.has(id))
+
 	const isActions = (key: string) => key === actionsColumnKey
 	const colClass = (col: DataTableColumn<T>) =>
 		[`col-${col.key}`, isActions(col.key) ? 'col-actions' : '', col.className]
@@ -209,6 +243,7 @@ function DataTable<T>({
 				<TableScroll ref={scrollRef} onScroll={recalc}>
 					<Table>
 						<colgroup>
+							{selection && <col className='col-select' style={{ width: '42px' }} />}
 							{dataColumns.map((c) => (
 								<col
 									key={c.key}
@@ -221,6 +256,21 @@ function DataTable<T>({
 
 						<thead>
 							<tr>
+								{selection && (
+									<th className='col-select' aria-label='Select'>
+										<SelectCheckbox
+											type='checkbox'
+											aria-label={selection.headerLabel ?? 'Select all on page'}
+											checked={!!allOnPageSelected}
+											ref={(el) => {
+												if (el) el.indeterminate = !!someOnPageSelected
+											}}
+											onChange={(e) =>
+												selection.onToggleAllOnPage(sortedRows, e.target.checked)
+											}
+										/>
+									</th>
+								)}
 								{dataColumns.map((c) => {
 									const active = activeSort?.key === c.key
 									const dir = active ? activeSort!.direction : null
@@ -264,6 +314,11 @@ function DataTable<T>({
 							{isLoading &&
 								Array.from({ length: skeletonRowCount }).map((_, i) => (
 									<tr key={`skel-${i}`}>
+										{selection && (
+											<td className='col-select'>
+												<Skeleton $w='18px' $h='18px' />
+											</td>
+										)}
 										{dataColumns.map((c) => (
 											<td key={c.key} className={colClass(c)}>
 												{c.skeleton ? c.skeleton(i) : <Skeleton $w='60%' $h='14px' />}
@@ -288,21 +343,45 @@ function DataTable<T>({
 
 							{!isLoading &&
 								!isError &&
-								sortedRows.map((row, idx) => (
-									<DataRow key={rowKey(row)} $delay={idx * 40}>
-										{dataColumns.map((c) => (
-											<td key={c.key} className={colClass(c)}>
-												{c.render(row, idx)}
-											</td>
-										))}
-										<td className='col-spacer' />
-										{actionsColumn && (
-											<td className={colClass(actionsColumn)}>
-												{actionsColumn.render(row, idx)}
-											</td>
-										)}
-									</DataRow>
-								))}
+								sortedRows.map((row, idx) => {
+									const id = rowKey(row)
+									const isSelected = selection
+										? selection.selected.has(id)
+										: false
+									return (
+										<DataRow key={id} $delay={idx * 40}>
+											{selection && (
+												<td className='col-select'>
+													<SelectCheckbox
+														type='checkbox'
+														aria-label={
+															selection.rowLabel ? selection.rowLabel(row) : 'Select row'
+														}
+														checked={isSelected}
+														onChange={(e) =>
+															selection.onToggleRow(id, e.target.checked)
+														}
+														// Clicking a checkbox is a selection act, not a
+														// row-open act — contain the event so parent
+														// handlers do not navigate on toggle.
+														onClick={(e) => e.stopPropagation()}
+													/>
+												</td>
+											)}
+											{dataColumns.map((c) => (
+												<td key={c.key} className={colClass(c)}>
+													{c.render(row, idx)}
+												</td>
+											))}
+											<td className='col-spacer' />
+											{actionsColumn && (
+												<td className={colClass(actionsColumn)}>
+													{actionsColumn.render(row, idx)}
+												</td>
+											)}
+										</DataRow>
+									)
+								})}
 						</tbody>
 					</Table>
 				</TableScroll>

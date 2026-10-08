@@ -118,6 +118,14 @@ export const projectReportsApi = baseApi.injectEndpoints({
 			query: (id) => ({ url: `/project-reports/${id}`, method: 'DELETE' }),
 			invalidatesTags: ['ProjectReport', 'Project'],
 		}),
+		bulkDeleteProjectReports: builder.mutation<{ deleted: number }, string[]>({
+			query: (ids) => ({
+				url: '/project-reports/bulk-delete',
+				method: 'POST',
+				body: { ids },
+			}),
+			invalidatesTags: ['ProjectReport', 'Project'],
+		}),
 	}),
 })
 
@@ -127,4 +135,5 @@ export const {
 	useCreateProjectReportMutation,
 	useUpdateProjectReportMutation,
 	useDeleteProjectReportMutation,
+	useBulkDeleteProjectReportsMutation,
 } = projectReportsApi

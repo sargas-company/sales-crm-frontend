@@ -3,6 +3,7 @@ export type {
 	DataTableColumn,
 	DataTablePagination,
 	DataTableProps,
+	DataTableSelection,
 	SortDirection,
 	SortState,
 } from './DataTable'

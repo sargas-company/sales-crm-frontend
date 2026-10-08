@@ -143,6 +143,70 @@ export const Table = styled.table`
 	thead th.col-spacer {
 		background: ${T.subtleBg};
 	}
+
+	/* Opt-in selection column — stays flush left with a tight padding so
+	   it feels like a gutter, not a data column. */
+	th.col-select,
+	td.col-select {
+		width: 42px;
+		padding: 0 0 0 18px;
+		text-align: left;
+	}
+`
+
+export const SelectCheckbox = styled.input`
+	appearance: none;
+	-webkit-appearance: none;
+	width: 18px;
+	height: 18px;
+	border: 1.5px solid ${T.border};
+	border-radius: 5px;
+	background: #ffffff;
+	cursor: pointer;
+	display: inline-grid;
+	place-content: center;
+	transition:
+		background 160ms ${T.ease},
+		border-color 160ms ${T.ease},
+		box-shadow 160ms ${T.ease};
+
+	&::before {
+		content: '';
+		width: 10px;
+		height: 10px;
+		clip-path: polygon(14% 44%, 0 60%, 40% 100%, 100% 20%, 86% 7%, 40% 70%);
+		transform: scale(0);
+		transform-origin: center;
+		background: #ffffff;
+		transition: transform 160ms ${T.ease};
+	}
+
+	&:checked {
+		background: ${T.primary};
+		border-color: ${T.primary};
+	}
+	&:checked::before {
+		transform: scale(1);
+	}
+	&:indeterminate {
+		background: ${T.primary};
+		border-color: ${T.primary};
+	}
+	&:indeterminate::before {
+		content: '';
+		width: 10px;
+		height: 2px;
+		clip-path: none;
+		background: #ffffff;
+		transform: scale(1);
+	}
+	&:hover:not(:disabled) {
+		border-color: ${T.primary};
+	}
+	&:focus-visible {
+		outline: none;
+		box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.22);
+	}
 `
 
 export const DataRow = styled.tr<{ $delay?: number }>`
