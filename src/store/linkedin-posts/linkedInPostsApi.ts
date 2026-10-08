@@ -164,6 +164,14 @@ export const linkedInPostsApi = baseApi.injectEndpoints({
 			query: (id) => ({ url: `/linkedin/posts/${id}`, method: 'DELETE' }),
 			invalidatesTags: [{ type: 'LinkedInPost', id: 'LIST' }],
 		}),
+		bulkDeleteLinkedInPosts: builder.mutation<{ deleted: number }, string[]>({
+			query: (ids) => ({
+				url: '/linkedin/posts/bulk-delete',
+				method: 'POST',
+				body: { ids },
+			}),
+			invalidatesTags: [{ type: 'LinkedInPost', id: 'LIST' }],
+		}),
 	}),
 })
 
@@ -173,4 +181,5 @@ export const {
 	useCreateLinkedInPostMutation,
 	useUpdateLinkedInPostMutation,
 	useDeleteLinkedInPostMutation,
+	useBulkDeleteLinkedInPostsMutation,
 } = linkedInPostsApi

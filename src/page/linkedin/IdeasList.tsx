@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { AnimatedSegmented } from '../../components/_shared/AnimatedSegmented'
@@ -18,15 +18,21 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../components/_shared/DataTable'
-import type { DataTableColumn, SortState } from '../../components/_shared/DataTable'
+import type {
+	DataTableColumn,
+	DataTableSelection,
+	SortState,
+} from '../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../components/_shared/formShell.styled'
 import PermissionGate from '../../components/auth/PermissionGate'
 import ConfirmModal from '../../components/_shared/ConfirmModal'
+import BulkActionBar from '../../components/_shared/BulkActionBar'
 import { useToast } from '../../context/toast/ToastContext'
 import parseServerError from '../../utils/parseServerError'
 import {
 	useGetLinkedInIdeasQuery,
 	useDeleteLinkedInIdeaMutation,
+	useBulkDeleteLinkedInIdeasMutation,
 	type LinkedInIdea,
 	type LinkedInIdeaStatus,
 	type LinkedInIdeaPriority,
@@ -89,6 +95,8 @@ const LinkedInIdeasList = () => {
 		direction: 'desc',
 	})
 	const [toDelete, setToDelete] = useState<LinkedInIdea | null>(null)
+	const [selected, setSelected] = useState<Set<string>>(() => new Set())
+	const [bulkOpen, setBulkOpen] = useState(false)
 
 	const { data, isLoading, isError, refetch } = useGetLinkedInIdeasQuery({
 		page,
@@ -106,6 +114,65 @@ const LinkedInIdeasList = () => {
 		sortDir: sort?.direction ?? 'desc',
 	})
 	const [deleteIdea, { isLoading: deleting }] = useDeleteLinkedInIdeaMutation()
+	const [bulkDeleteIdeas, { isLoading: bulkDeleting }] =
+		useBulkDeleteLinkedInIdeasMutation()
+
+	const items = data?.data ?? []
+
+	useEffect(() => {
+		if (selected.size === 0) return
+		const live = new Set(items.map((r) => r.id))
+		let changed = false
+		const next = new Set<string>()
+		for (const id of selected) {
+			if (live.has(id)) next.add(id)
+			else changed = true
+		}
+		if (changed) setSelected(next)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [items])
+
+	const selection = useMemo<DataTableSelection<LinkedInIdea>>(
+		() => ({
+			selected,
+			onToggleRow: (id, next) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					if (next) n.add(id)
+					else n.delete(id)
+					return n
+				}),
+			onToggleAllOnPage: (rows, next) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					for (const r of rows) {
+						if (next) n.add(r.id)
+						else n.delete(r.id)
+					}
+					return n
+				}),
+			headerLabel: 'Select every LinkedIn idea on this page',
+			rowLabel: (r) => `Select LinkedIn idea ${r.title ?? r.id}`,
+		}),
+		[selected],
+	)
+
+	const handleBulkDelete = async () => {
+		const ids = [...selected]
+		if (ids.length === 0) return
+		try {
+			const res = await bulkDeleteIdeas(ids).unwrap()
+			showToast(
+				`Deleted ${res.deleted} LinkedIn idea${res.deleted === 1 ? '' : 's'}`,
+				'success',
+			)
+			setSelected(new Set())
+			setBulkOpen(false)
+			refetch()
+		} catch (err) {
+			showToast(parseServerError(err), 'error')
+		}
+	}
 
 	const columns: DataTableColumn<LinkedInIdea>[] = [
 		{
@@ -267,7 +334,20 @@ const LinkedInIdeasList = () => {
 							setPage(1)
 						}}
 					/>
-					<div style={{ marginLeft: 'auto' }}>
+					<RightCluster>
+						<PermissionGate permission='linkedin_ideas:delete'>
+							<InlineBulkSlot $open={selected.size > 0}>
+								<InlineBulkInner>
+									<BulkActionBar
+										count={selected.size}
+										onClear={() => setSelected(new Set())}
+										onConfirm={() => setBulkOpen(true)}
+										isLoading={bulkDeleting}
+									/>
+								</InlineBulkInner>
+							</InlineBulkSlot>
+						</PermissionGate>
+						<RightSide>
 						<AnimatedSegmented
 							items={[
 								{ value: '', label: 'Any' },
@@ -283,12 +363,13 @@ const LinkedInIdeasList = () => {
 								setPage(1)
 							}}
 						/>
-					</div>
+						</RightSide>
+					</RightCluster>
 				</FiltersRow>
 
 				<DataTable
 					columns={columns}
-					rows={data?.data ?? []}
+					rows={items}
 					rowKey={(r) => r.id}
 					isLoading={isLoading}
 					isError={isError}
@@ -296,6 +377,7 @@ const LinkedInIdeasList = () => {
 					searchActive={!!search || !!status || !!priority}
 					sort={sort}
 					onSortChange={setSort}
+					selection={selection}
 					pagination={{
 						page,
 						pageSize: PAGE_SIZE,
@@ -332,11 +414,69 @@ const LinkedInIdeasList = () => {
 					isLoading={deleting}
 				/>
 			)}
+			{bulkOpen && (
+				<ConfirmModal
+					icon={<DeleteOutline />}
+					iconTone='danger'
+					title={`Delete ${selected.size} LinkedIn idea${selected.size === 1 ? '' : 's'}?`}
+					description={
+						<>
+							You are about to delete <strong>{selected.size}</strong> LinkedIn
+							idea{selected.size === 1 ? '' : 's'}. Any linked posts stay — the
+							relation is unlinked.
+						</>
+					}
+					confirmLabel={`Delete ${selected.size}`}
+					confirmLoadingLabel='Deleting…'
+					confirmColor='error'
+					onClose={() => setBulkOpen(false)}
+					onConfirm={handleBulkDelete}
+					isLoading={bulkDeleting}
+				/>
+			)}
 		</>
 	)
 }
 
 export default LinkedInIdeasList
+
+const RightSide = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+`
+/* The cluster has fixed layout; the bulk slot is absolutely
+ * positioned to its LEFT so it never shifts the right-side filter
+ * pills — on toggle, only opacity + a tiny translateX animate. */
+const RightCluster = styled.div`
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+	margin-left: auto;
+`
+const InlineBulkSlot = styled.div<{ $open: boolean }>`
+	position: absolute;
+	right: 100%;
+	top: 50%;
+	transform: translateY(-50%)
+		translateX(${({ $open }) => ($open ? '0' : '8px')});
+	margin-right: 12px;
+	opacity: ${({ $open }) => ($open ? 1 : 0)};
+	pointer-events: ${({ $open }) => ($open ? 'auto' : 'none')};
+	transition:
+		opacity 200ms ease,
+		transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+	@media (prefers-reduced-motion: reduce) {
+		transition: none;
+	}
+`
+const InlineBulkInner = styled.div`
+	display: flex;
+	align-items: center;
+	white-space: nowrap;
+`
 
 const TitleCell = styled.div`
 	display: flex;

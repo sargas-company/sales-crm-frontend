@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import {
@@ -23,16 +23,22 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../components/_shared/DataTable'
-import type { DataTableColumn, SortState } from '../../components/_shared/DataTable'
+import type {
+	DataTableColumn,
+	DataTableSelection,
+	SortState,
+} from '../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../components/_shared/formShell.styled'
 import PermissionGate from '../../components/auth/PermissionGate'
 import ConfirmModal from '../../components/_shared/ConfirmModal'
+import BulkActionBar from '../../components/_shared/BulkActionBar'
 import { useToast } from '../../context/toast/ToastContext'
 import parseServerError from '../../utils/parseServerError'
 import PostsCalendar from './PostsCalendar'
 import {
 	useGetLinkedInPostsQuery,
 	useDeleteLinkedInPostMutation,
+	useBulkDeleteLinkedInPostsMutation,
 	type LinkedInPost,
 	type LinkedInPostStatus,
 } from '../../store/linkedin-posts/linkedInPostsApi'
@@ -98,6 +104,8 @@ const LinkedInPostsList = () => {
 		direction: 'desc',
 	})
 	const [toDelete, setToDelete] = useState<LinkedInPost | null>(null)
+	const [selected, setSelected] = useState<Set<string>>(() => new Set())
+	const [bulkOpen, setBulkOpen] = useState(false)
 
 	const { data: accountsData } = useGetLinkedInAccountsQuery({
 		page: 1,
@@ -129,6 +137,66 @@ const LinkedInPostsList = () => {
 		{ skip: view !== 'list' },
 	)
 	const [deletePost, { isLoading: deleting }] = useDeleteLinkedInPostMutation()
+	const [bulkDeletePosts, { isLoading: bulkDeleting }] =
+		useBulkDeleteLinkedInPostsMutation()
+
+	const items = data?.data ?? []
+
+	// Prune stale selections after each refetch.
+	useEffect(() => {
+		if (selected.size === 0) return
+		const live = new Set(items.map((r) => r.id))
+		let changed = false
+		const next = new Set<string>()
+		for (const id of selected) {
+			if (live.has(id)) next.add(id)
+			else changed = true
+		}
+		if (changed) setSelected(next)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [items])
+
+	const selection = useMemo<DataTableSelection<LinkedInPost>>(
+		() => ({
+			selected,
+			onToggleRow: (id, next) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					if (next) n.add(id)
+					else n.delete(id)
+					return n
+				}),
+			onToggleAllOnPage: (rows, next) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					for (const r of rows) {
+						if (next) n.add(r.id)
+						else n.delete(r.id)
+					}
+					return n
+				}),
+			headerLabel: 'Select every LinkedIn post on this page',
+			rowLabel: (r) => `Select LinkedIn post ${r.internalTitle ?? r.id}`,
+		}),
+		[selected],
+	)
+
+	const handleBulkDelete = async () => {
+		const ids = [...selected]
+		if (ids.length === 0) return
+		try {
+			const res = await bulkDeletePosts(ids).unwrap()
+			showToast(
+				`Deleted ${res.deleted} LinkedIn post${res.deleted === 1 ? '' : 's'}`,
+				'success',
+			)
+			setSelected(new Set())
+			setBulkOpen(false)
+			refetch()
+		} catch (err) {
+			showToast(parseServerError(err), 'error')
+		}
+	}
 
 	const columns: DataTableColumn<LinkedInPost>[] = [
 		{
@@ -295,7 +363,20 @@ const LinkedInPostsList = () => {
 						}}
 					/>
 
-					<FilterSelects>
+					<RightCluster>
+						<PermissionGate permission='linkedin_posts:delete'>
+							<InlineBulkSlot $open={selected.size > 0}>
+								<InlineBulkInner>
+									<BulkActionBar
+										count={selected.size}
+										onClear={() => setSelected(new Set())}
+										onConfirm={() => setBulkOpen(true)}
+										isLoading={bulkDeleting}
+									/>
+								</InlineBulkInner>
+							</InlineBulkSlot>
+						</PermissionGate>
+						<FilterSelects>
 						<VarA_Pill>
 							<VarA_Icon>
 								<AccountCircleOutlined style={{ fontSize: 16 }} />
@@ -338,7 +419,8 @@ const LinkedInPostsList = () => {
 								))}
 							</VarA_HiddenSelect>
 						</VarA_Pill>
-					</FilterSelects>
+						</FilterSelects>
+					</RightCluster>
 				</FiltersRow>
 
 				<ViewToggleRow>
@@ -361,23 +443,26 @@ const LinkedInPostsList = () => {
 				</ViewToggleRow>
 
 				{view === 'list' ? (
-					<DataTable
-						columns={columns}
-						rows={data?.data ?? []}
-						rowKey={(r) => r.id}
-						isLoading={isLoading}
-						isError={isError}
-						onRetry={refetch}
-						searchActive={!!search || !!status || !!format || !!accountId}
-						sort={sort}
-						onSortChange={setSort}
-						pagination={{
-							page,
-							pageSize: PAGE_SIZE,
-							total: data?.total ?? 0,
-							onPageChange: setPage,
-						}}
-					/>
+					<>
+						<DataTable
+							columns={columns}
+							rows={items}
+							rowKey={(r) => r.id}
+							isLoading={isLoading}
+							isError={isError}
+							onRetry={refetch}
+							searchActive={!!search || !!status || !!format || !!accountId}
+							sort={sort}
+							onSortChange={setSort}
+							selection={selection}
+							pagination={{
+								page,
+								pageSize: PAGE_SIZE,
+								total: data?.total ?? 0,
+								onPageChange: setPage,
+							}}
+						/>
+					</>
 				) : (
 					<PostsCalendar
 						accountId={accountId || undefined}
@@ -414,11 +499,63 @@ const LinkedInPostsList = () => {
 					isLoading={deleting}
 				/>
 			)}
+			{bulkOpen && (
+				<ConfirmModal
+					icon={<DeleteOutline />}
+					iconTone='danger'
+					title={`Delete ${selected.size} LinkedIn post${selected.size === 1 ? '' : 's'}?`}
+					description={
+						<>
+							You are about to delete <strong>{selected.size}</strong> LinkedIn
+							post{selected.size === 1 ? '' : 's'}. This cannot be undone.
+						</>
+					}
+					confirmLabel={`Delete ${selected.size}`}
+					confirmLoadingLabel='Deleting…'
+					confirmColor='error'
+					onClose={() => setBulkOpen(false)}
+					onConfirm={handleBulkDelete}
+					isLoading={bulkDeleting}
+				/>
+			)}
 		</>
 	)
 }
 
 export default LinkedInPostsList
+
+/* The right-end cluster that groups the bulk slot and the right
+ * filter pills. The cluster itself has fixed layout; the bulk slot
+ * is absolutely positioned to its LEFT so it never shifts the
+ * surrounding filter pills — on toggle, only opacity animates. */
+const RightCluster = styled.div`
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+	margin-left: auto;
+`
+const InlineBulkSlot = styled.div<{ $open: boolean }>`
+	position: absolute;
+	right: 100%;
+	top: 50%;
+	transform: translateY(-50%)
+		translateX(${({ $open }) => ($open ? '0' : '8px')});
+	margin-right: 12px;
+	opacity: ${({ $open }) => ($open ? 1 : 0)};
+	pointer-events: ${({ $open }) => ($open ? 'auto' : 'none')};
+	transition:
+		opacity 200ms ease,
+		transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+	@media (prefers-reduced-motion: reduce) {
+		transition: none;
+	}
+`
+const InlineBulkInner = styled.div`
+	display: flex;
+	align-items: center;
+	white-space: nowrap;
+`
 
 const TitleCell = styled.div`
 	cursor: pointer;
@@ -516,7 +653,6 @@ const FilterSelects = styled.div`
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
-	margin-left: auto;
 `
 
 /* ─── Icon-prefix rich pill select ─────────────────────────── */

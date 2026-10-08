@@ -137,6 +137,14 @@ export const linkedInIdeasApi = baseApi.injectEndpoints({
 			query: (id) => ({ url: `/linkedin/ideas/${id}`, method: 'DELETE' }),
 			invalidatesTags: [{ type: 'LinkedInIdea', id: 'LIST' }],
 		}),
+		bulkDeleteLinkedInIdeas: builder.mutation<{ deleted: number }, string[]>({
+			query: (ids) => ({
+				url: '/linkedin/ideas/bulk-delete',
+				method: 'POST',
+				body: { ids },
+			}),
+			invalidatesTags: [{ type: 'LinkedInIdea', id: 'LIST' }],
+		}),
 	}),
 })
 
@@ -146,4 +154,5 @@ export const {
 	useCreateLinkedInIdeaMutation,
 	useUpdateLinkedInIdeaMutation,
 	useDeleteLinkedInIdeaMutation,
+	useBulkDeleteLinkedInIdeasMutation,
 } = linkedInIdeasApi
