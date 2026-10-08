@@ -68,26 +68,34 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 	const { theme } = useTheme()
 	const isDark = theme.mode.name === 'dark'
 	const [fields, setFields] = useState<FormFields>(initial)
-	const [errors, setErrors] = useState<{ name?: string; endDate?: string }>({})
+	const [errors, setErrors] = useState<{
+		name?: string
+		clientId?: string
+		endDate?: string
+	}>({})
 	const [createProject, { isLoading: creating }] = useCreateProjectMutation()
 	const [updateProject, { isLoading: updating }] = useUpdateProjectMutation()
 	const isLoading = creating || updating
 	const isEdit = Boolean(id)
 
-	const { data: counterpartiesPage } = useGetCounterpartiesQuery({
-		page: 1,
-		limit: 200,
-	})
+	const { data: counterpartiesPage, isLoading: clientsLoading } =
+		useGetCounterpartiesQuery({
+			page: 1,
+			limit: 200,
+			type: 'client',
+			sortBy: 'firstName',
+			sortDirection: 'asc',
+		})
 	const { data: employeesPage } = useGetEmployeesQuery({
 		page: 1,
 		limit: 500,
 		status: 'active',
 	})
 	const clientOptions = useMemo(
-		() =>
-			(counterpartiesPage?.data ?? []).filter((c) => c.type === 'client'),
+		() => counterpartiesPage?.data ?? [],
 		[counterpartiesPage],
 	)
+	const hasNoClients = !clientsLoading && clientOptions.length === 0
 	const employees = employeesPage?.data ?? []
 
 	// Employees currently animating out of one column before moving to
@@ -209,8 +217,9 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 	}
 
 	const validate = (): boolean => {
-		const next: { name?: string; endDate?: string } = {}
+		const next: { name?: string; clientId?: string; endDate?: string } = {}
 		if (!fields.name.trim()) next.name = 'Name is required'
+		if (!fields.clientId) next.clientId = 'Client is required'
 		if (
 			fields.startDate &&
 			fields.endDate &&
@@ -227,7 +236,7 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 		if (!validate()) return
 		const payload = {
 			name: fields.name.trim(),
-			clientId: fields.clientId || undefined,
+			clientId: fields.clientId,
 			status: fields.status,
 			description: fields.description || undefined,
 			startDate: fields.startDate || undefined,
@@ -283,7 +292,16 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 									error={!!errors.name}
 								/>
 							</Field>
-							<Field label='Client'>
+							<Field
+								label='Client'
+								required
+								error={errors.clientId}
+								hint={
+									hasNoClients
+										? 'No client-type counterparties yet — add one in Counterparties first.'
+										: undefined
+								}
+							>
 								<Select
 									label='Client'
 									defaultValue={fields.clientId}
@@ -291,14 +309,23 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 									width='100%'
 									sizes='normal'
 								>
-									<SelectItem label='— No client —' value='' />
-									{clientOptions.map((c) => (
+									{clientOptions.length === 0 ? (
 										<SelectItem
-											key={c.id}
-											label={`${c.firstName} ${c.lastName}`.trim() || c.id}
-											value={c.id}
+											label={clientsLoading ? 'Loading clients…' : 'No clients available'}
+											value=''
 										/>
-									))}
+									) : (
+										clientOptions.map((c) => {
+											const name = `${c.firstName} ${c.lastName}`.trim()
+											return (
+												<SelectItem
+													key={c.id}
+													label={c.company ? `${name || c.id} — ${c.company}` : name || c.id}
+													value={c.id}
+												/>
+											)
+										})
+									)}
 								</Select>
 							</Field>
 							<Field label='Status'>
