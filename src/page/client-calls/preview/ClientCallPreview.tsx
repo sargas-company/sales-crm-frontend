@@ -123,12 +123,24 @@ const ClientCallPreview = () => {
 		)
 	}
 
-	const clientName = call.lead
-		? [call.lead.firstName, call.lead.lastName].filter(Boolean).join(' ') ||
-			call.lead.companyName ||
-			'—'
-		: call.clientRequest?.name || call.clientRequest?.company || '—'
-	const sourceLabel = call.clientType === 'lead' ? 'Lead' : 'Client request'
+	const clientName =
+		call.clientType === 'lead' && call.lead
+			? [call.lead.firstName, call.lead.lastName].filter(Boolean).join(' ') ||
+				call.lead.companyName ||
+				'—'
+			: call.clientType === 'client' && call.crmClient
+				? [call.crmClient.firstName, call.crmClient.lastName]
+						.filter(Boolean)
+						.join(' ') ||
+					call.crmClient.company ||
+					'—'
+				: call.clientRequest?.name || call.clientRequest?.company || '—'
+	const sourceLabel =
+		call.clientType === 'lead'
+			? 'Lead'
+			: call.clientType === 'client'
+				? 'Client'
+				: 'Client request'
 	const badge = statusPalette[call.status]
 	const canReschedule = call.status === 'scheduled'
 

@@ -11,13 +11,14 @@ export type ClientType = 'Company' | 'Individual'
 
 // API types
 export type ApiLeadStatus =
-	| 'conversation_ongoing'
-	| 'trial'
-	| 'hold'
-	| 'contract_offer'
-	| 'accept_contract'
-	| 'start_contract'
-	| 'suspended'
+	| 'NEW'
+	| 'CONTACTED'
+	| 'IN_CONVERSATION'
+	| 'ON_HOLD'
+	| 'WON'
+	| 'LOST'
+
+export type ApiLeadTemperature = 'COLD' | 'WARM' | 'HOT'
 
 export type ApiClientType = 'individual' | 'company'
 
@@ -36,6 +37,10 @@ export interface LeadItem {
 	companyName: string | null
 	email: string | null
 	phone: string | null
+	source: string | null
+	profileUrl: string | null
+	temperature: ApiLeadTemperature | null
+	notes: string | null
 	status: ApiLeadStatus
 	clientType: ApiClientType | null
 	rate: number | null
@@ -51,8 +56,13 @@ export type CreateLeadBody = {
 	firstName?: string
 	lastName?: string
 	companyName?: string
-	email?: string
-	phone?: string
+	email?: string | null
+	phone?: string | null
+	source?: string | null
+	profileUrl?: string | null
+	temperature?: ApiLeadTemperature | null
+	notes?: string | null
+	status?: ApiLeadStatus
 	clientType?: ApiClientType
 	rate?: number
 	location?: string
@@ -66,13 +76,16 @@ export interface LeadPage {
 export type LeadSortBy =
 	| 'number'
 	| 'firstName'
+	| 'company'
 	| 'clientType'
 	| 'status'
+	| 'temperature'
 	| 'rate'
 	| 'location'
 	| 'email'
 	| 'phone'
 	| 'repliedAt'
+	| 'updatedAt'
 	| 'createdAt'
 
 export type LeadSortDirection = 'asc' | 'desc'
@@ -83,6 +96,11 @@ export interface LeadListParams {
 	sortBy?: LeadSortBy
 	sortDirection?: LeadSortDirection
 	search?: string
+	status?: ApiLeadStatus[]
+	temperature?: ApiLeadTemperature[]
+	source?: string
+	createdFrom?: string
+	createdTo?: string
 }
 
 export type AvatarColor = 'error' | 'info' | 'warning' | 'success'

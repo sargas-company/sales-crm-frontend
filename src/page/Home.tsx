@@ -16,6 +16,7 @@ const Leads = lazy(() => import('./leads'))
 const Platforms = lazy(() => import('./platforms'))
 const Accounts = lazy(() => import('./accounts'))
 const Counterparties = lazy(() => import('./counterparties'))
+const Clients = lazy(() => import('./clients'))
 const ClientRequests = lazy(() => import('./client-requests'))
 const Invoices = lazy(() => import('./invoices'))
 const JobPosts = lazy(() => import('./job-posts'))
@@ -176,6 +177,14 @@ const Home = () => {
 								element={
 									<ProtectedRoute permission='counterparties:view'>
 										<Counterparties />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/clients/*'
+								element={
+									<ProtectedRoute permission='clients:view'>
+										<Clients />
 									</ProtectedRoute>
 								}
 							/>

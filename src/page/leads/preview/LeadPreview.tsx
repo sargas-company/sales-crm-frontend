@@ -18,7 +18,13 @@ import {
 import Loading from '../../../ui/state/Loading'
 import ErrorState from '../../../ui/state/ErrorState'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
-import { useGetLeadByIdQuery } from '../../../store/leads/leadsApi'
+import {
+	useGetLeadActivityQuery,
+	useGetLeadByIdQuery,
+} from '../../../store/leads/leadsApi'
+import ActivityTimeline, {
+	ActivityHeading,
+} from '../../../components/_shared/ActivityTimeline'
 import { formatDate } from '../../../utils/formatDate'
 import type { ApiLeadStatus, ApiClientType } from '../../../store/leads/types/definition'
 
@@ -36,50 +42,44 @@ const PRIMARY_TINT_STRONG = '#e0f2fe'
 /* ── Static maps ────────────────────────────────────────────────── */
 
 const statusLabel: Record<ApiLeadStatus, string> = {
-	conversation_ongoing: 'Conversation ongoing',
-	trial: 'Trial',
-	hold: 'On hold',
-	contract_offer: 'Contract offer',
-	accept_contract: 'Accepted',
-	start_contract: 'Started',
-	suspended: 'Suspended',
+	NEW: 'New',
+	CONTACTED: 'Contacted',
+	IN_CONVERSATION: 'In conversation',
+	ON_HOLD: 'On hold',
+	WON: 'Won',
+	LOST: 'Lost',
 }
 
 const statusPalette: Record<ApiLeadStatus, { bg: string; fg: string; border: string }> = {
-	conversation_ongoing: {
+	NEW: {
 		bg: PRIMARY_TINT_STRONG,
 		fg: PRIMARY,
 		border: 'rgba(3, 105, 161, 0.32)',
 	},
-	trial: {
-		bg: 'rgba(245, 158, 11, 0.14)',
-		fg: '#a26608',
-		border: 'rgba(245, 158, 11, 0.32)',
-	},
-	hold: {
-		bg: 'rgba(148, 163, 184, 0.18)',
-		fg: '#475569',
-		border: 'rgba(148, 163, 184, 0.35)',
-	},
-	contract_offer: {
+	CONTACTED: {
 		bg: 'rgba(139, 92, 246, 0.14)',
 		fg: '#6d28d9',
 		border: 'rgba(139, 92, 246, 0.32)',
 	},
-	accept_contract: {
+	IN_CONVERSATION: {
+		bg: 'rgba(245, 158, 11, 0.14)',
+		fg: '#a26608',
+		border: 'rgba(245, 158, 11, 0.32)',
+	},
+	ON_HOLD: {
+		bg: 'rgba(148, 163, 184, 0.18)',
+		fg: '#475569',
+		border: 'rgba(148, 163, 184, 0.35)',
+	},
+	WON: {
 		bg: 'rgba(34, 197, 94, 0.14)',
 		fg: '#15803d',
 		border: 'rgba(34, 197, 94, 0.32)',
 	},
-	start_contract: {
-		bg: 'rgba(20, 184, 166, 0.14)',
-		fg: '#0f766e',
-		border: 'rgba(20, 184, 166, 0.32)',
-	},
-	suspended: {
-		bg: 'rgba(100, 116, 139, 0.16)',
-		fg: '#334155',
-		border: 'rgba(100, 116, 139, 0.32)',
+	LOST: {
+		bg: 'rgba(239, 68, 68, 0.14)',
+		fg: '#b91c1c',
+		border: 'rgba(239, 68, 68, 0.32)',
 	},
 }
 
@@ -94,6 +94,11 @@ const LeadPreview = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
 	const { data: lead, isLoading, isError } = useGetLeadByIdQuery(id!, { skip: !id })
+	const {
+		data: activity,
+		isLoading: activityLoading,
+		isError: activityError,
+	} = useGetLeadActivityQuery(id!, { skip: !id })
 
 	if (isLoading) {
 		return (
@@ -251,6 +256,21 @@ const LeadPreview = () => {
 							</TLText>
 						</TimelineRow>
 					</TimelineGrid>
+				</Section>
+
+				<Section>
+					<SectionHead>
+						<SectionTitle>
+							<ActivityHeading title='Activity' />
+						</SectionTitle>
+						<SectionRule />
+					</SectionHead>
+					<ActivityTimeline
+						events={activity}
+						isLoading={activityLoading}
+						isError={activityError}
+						emptyLabel='No activity recorded for this lead yet.'
+					/>
 				</Section>
 
 				{proposalUrl && (

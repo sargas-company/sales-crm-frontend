@@ -184,11 +184,18 @@ const ClientCallEdit = () => {
 		}
 	}
 
-	const clientName = call?.lead
-		? [call.lead.firstName, call.lead.lastName].filter(Boolean).join(' ') ||
-			call.lead.companyName ||
-			'—'
-		: call?.clientRequest?.name || call?.clientRequest?.company || '—'
+	const clientName =
+		call?.clientType === 'lead' && call?.lead
+			? [call.lead.firstName, call.lead.lastName].filter(Boolean).join(' ') ||
+				call.lead.companyName ||
+				'—'
+			: call?.clientType === 'client' && call?.crmClient
+				? [call.crmClient.firstName, call.crmClient.lastName]
+						.filter(Boolean)
+						.join(' ') ||
+					call.crmClient.company ||
+					'—'
+				: call?.clientRequest?.name || call?.clientRequest?.company || '—'
 
 	if (isLoadingCall || !call) {
 		return (
@@ -213,7 +220,13 @@ const ClientCallEdit = () => {
 	}
 
 	const isLead = call.clientType === 'lead'
-	const sourceLabel = isLead ? 'Lead' : 'Client request'
+	const isClient = call.clientType === 'client'
+	const sourceLabel =
+		call.clientType === 'lead'
+			? 'Lead'
+			: call.clientType === 'client'
+				? 'Client'
+				: 'Client request'
 
 	return (
 		<ThemeProvider theme={muiSargasTheme}>
@@ -421,6 +434,7 @@ const ClientCallEdit = () => {
 									<LockedClientCard
 										name={clientName}
 										isLead={isLead}
+										isClient={isClient}
 										sourceLabel={sourceLabel}
 									/>
 
@@ -906,10 +920,12 @@ const HelperText = ({ children, error }: { children: React.ReactNode; error?: bo
 const LockedClientCard = ({
 	name,
 	isLead,
+	isClient,
 	sourceLabel,
 }: {
 	name: string
 	isLead: boolean
+	isClient: boolean
 	sourceLabel: string
 }) => (
 	<Box
@@ -938,7 +954,7 @@ const LockedClientCard = ({
 				flexShrink: 0,
 			}}
 		>
-			{isLead ? (
+			{isLead || isClient ? (
 				<ContactPhoneOutlined sx={{ fontSize: 20 }} />
 			) : (
 				<WorkOutlineOutlined sx={{ fontSize: 20 }} />

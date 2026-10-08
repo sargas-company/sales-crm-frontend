@@ -15,7 +15,12 @@ import {
 	phoneCountryIso,
 } from '../../../utils/phone'
 import { T } from '../../sales-analytics/_shared/tokens'
-import type { ApiLeadStatus, ApiClientType, LeadItem } from '../../../store/leads/types/definition'
+import type {
+	ApiClientType,
+	ApiLeadStatus,
+	ApiLeadTemperature,
+	LeadItem,
+} from '../../../store/leads/types/definition'
 import { Field, FormHeader, FormLoading, FormNotFound, SectionHead } from '../../_shared/FormShell'
 import {
 	DotMini,
@@ -40,6 +45,10 @@ interface FormFields {
 	email: string
 	phone: string
 	status: ApiLeadStatus
+	temperature: ApiLeadTemperature | ''
+	source: string
+	profileUrl: string
+	notes: string
 	clientType: ApiClientType | ''
 	rate: string
 	location: string
@@ -55,10 +64,12 @@ const toFormValues = (data: LeadItem): FormFields => ({
 	lastName: data.lastName ?? '',
 	companyName: data.companyName ?? '',
 	email: data.email ?? '',
-	// Prefer the readable international format while editing so the
-	// manager sees spaces/grouping; it gets re-normalised on submit.
 	phone: data.phone ? formatPhoneDisplay(data.phone) : '',
 	status: data.status,
+	temperature: data.temperature ?? '',
+	source: data.source ?? '',
+	profileUrl: data.profileUrl ?? '',
+	notes: data.notes ?? '',
 	clientType: data.clientType ?? '',
 	rate: data.rate != null ? String(data.rate) : '',
 	location: data.location ?? '',
@@ -119,6 +130,10 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 				email: trimmedEmail ? trimmedEmail.toLowerCase() : null,
 				phone: normalisedPhone,
 				status: fields.status,
+				temperature: fields.temperature || null,
+				source: fields.source.trim() || null,
+				profileUrl: fields.profileUrl.trim() || null,
+				notes: fields.notes.trim() || null,
 				clientType: fields.clientType || null,
 				rate: fields.rate !== '' ? Number(fields.rate) : null,
 				location: fields.location || null,
@@ -222,14 +237,60 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 									width='100%'
 									sizes='normal'
 								>
-									<SelectItem label='Conversation Ongoing' value='conversation_ongoing' />
-									<SelectItem label='Trial' value='trial' />
-									<SelectItem label='Hold' value='hold' />
-									<SelectItem label='Contract Offer' value='contract_offer' />
-									<SelectItem label='Accept Contract' value='accept_contract' />
-									<SelectItem label='Start Contract' value='start_contract' />
-									<SelectItem label='Suspended' value='suspended' />
+									<SelectItem label='New' value='NEW' />
+									<SelectItem label='Contacted' value='CONTACTED' />
+									<SelectItem label='In Conversation' value='IN_CONVERSATION' />
+									<SelectItem label='On Hold' value='ON_HOLD' />
+									<SelectItem label='Won' value='WON' />
+									<SelectItem label='Lost' value='LOST' />
 								</Select>
+							</Field>
+							<Field label='Temperature'>
+								<Select
+									label='Temperature'
+									defaultValue={fields.temperature}
+									onChange={(v) =>
+										setField('temperature', v as ApiLeadTemperature | '')
+									}
+									width='100%'
+									sizes='normal'
+								>
+									<SelectItem label='— unset —' value='' />
+									<SelectItem label='Cold' value='COLD' />
+									<SelectItem label='Warm' value='WARM' />
+									<SelectItem label='Hot' value='HOT' />
+								</Select>
+							</Field>
+							<Field label='Source'>
+								<TextField
+									name='source'
+									placeholder='e.g. Upwork'
+									value={fields.source}
+									onChange={(e) => setField('source', e.target.value)}
+									width='100%'
+								/>
+							</Field>
+							<Field label='Profile URL' span='full'>
+								<TextField
+									name='profileUrl'
+									placeholder='https://…'
+									value={fields.profileUrl}
+									onChange={(e) => setField('profileUrl', e.target.value)}
+									width='100%'
+								/>
+							</Field>
+							<Field label='Notes' span='full'>
+								<TextField
+									name='notes'
+									placeholder='Anything internal worth remembering…'
+									value={fields.notes}
+									onChange={(e) =>
+										setField('notes', (e.target as HTMLTextAreaElement).value)
+									}
+									width='100%'
+									multiline
+									multiRow
+								/>
 							</Field>
 							<Field label='Client type'>
 								<Select

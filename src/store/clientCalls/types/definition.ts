@@ -1,5 +1,5 @@
 export type ClientCallStatus = 'scheduled' | 'cancelled' | 'completed'
-export type ClientCallClientType = 'lead' | 'client_request'
+export type ClientCallClientType = 'lead' | 'client' | 'client_request'
 
 export interface ClientCallLead {
 	id: string
@@ -20,10 +20,18 @@ export interface ClientCallCreatedBy {
 	lastName: string
 }
 
+export interface ClientCallCrmClient {
+	id: string
+	firstName: string
+	lastName: string | null
+	company: string | null
+}
+
 export interface ClientCallItem {
 	id: string
 	clientType: ClientCallClientType
 	leadId: string | null
+	crmClientId: string | null
 	clientRequestId: string | null
 	createdById: string
 	callTitle: string
@@ -41,6 +49,7 @@ export interface ClientCallItem {
 	clientDateTime: string
 	kyivDateTime: string
 	lead: ClientCallLead | null
+	crmClient: ClientCallCrmClient | null
 	clientRequest: ClientCallClientRequest | null
 	createdBy: ClientCallCreatedBy
 }
@@ -72,6 +81,7 @@ export interface ClientCallListParams {
 export type CreateClientCallBody = {
 	clientType: ClientCallClientType
 	leadId?: string
+	crmClientId?: string
 	clientRequestId?: string
 	callTitle: string
 	meetingUrl?: string

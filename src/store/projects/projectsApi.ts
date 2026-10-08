@@ -47,6 +47,14 @@ export interface ProjectItem {
 		lastName: string
 		type: 'client' | 'contractor'
 	} | null
+	crmClientId: string | null
+	crmClient: {
+		id: string
+		firstName: string
+		lastName: string | null
+		company: string | null
+		status: 'ACTIVE' | 'ON_HOLD' | 'FORMER'
+	} | null
 	status: ProjectStatus
 	description: string | null
 	startDate: string | null
@@ -79,7 +87,10 @@ export interface ProjectListParams {
 
 export interface CreateProjectBody {
 	name: string
+	// Legacy — Counterparty FK. Nullable / optional; the new flow
+	// drives `crmClientId` → Client instead.
 	clientId?: string
+	crmClientId: string
 	status?: ProjectStatus
 	description?: string
 	startDate?: string

@@ -27,7 +27,7 @@ import {
 	useUpdateProjectMutation,
 	type ProjectStatus,
 } from '../../../store/projects/projectsApi'
-import { useGetCounterpartiesQuery } from '../../../store/counterparties/counterpartiesApi'
+import { useGetClientsQuery } from '../../../store/clients/clientsApi'
 import { useGetEmployeesQuery } from '../../../store/employees/employeesApi'
 
 interface Props {
@@ -36,7 +36,7 @@ interface Props {
 
 interface FormFields {
 	name: string
-	clientId: string
+	crmClientId: string
 	status: ProjectStatus
 	description: string
 	startDate: string
@@ -53,7 +53,7 @@ const initials = (first: string, last: string): string => {
 
 const empty: FormFields = {
 	name: '',
-	clientId: '',
+	crmClientId: '',
 	status: 'planned',
 	description: '',
 	startDate: '',
@@ -70,7 +70,7 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 	const [fields, setFields] = useState<FormFields>(initial)
 	const [errors, setErrors] = useState<{
 		name?: string
-		clientId?: string
+		crmClientId?: string
 		endDate?: string
 	}>({})
 	const [createProject, { isLoading: creating }] = useCreateProjectMutation()
@@ -78,24 +78,27 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 	const isLoading = creating || updating
 	const isEdit = Boolean(id)
 
-	const { data: counterpartiesPage, isLoading: clientsLoading } =
-		useGetCounterpartiesQuery({
-			page: 1,
-			limit: 200,
-			type: 'client',
-			sortBy: 'firstName',
-			sortDirection: 'asc',
-		})
+	const {
+		data: clientsPage,
+		isLoading: clientsLoading,
+		isError: clientsError,
+	} = useGetClientsQuery({
+		page: 1,
+		limit: 200,
+		sortBy: 'firstName',
+		sortDirection: 'asc',
+	})
 	const { data: employeesPage } = useGetEmployeesQuery({
 		page: 1,
 		limit: 500,
 		status: 'active',
 	})
 	const clientOptions = useMemo(
-		() => counterpartiesPage?.data ?? [],
-		[counterpartiesPage],
+		() => clientsPage?.data ?? [],
+		[clientsPage],
 	)
-	const hasNoClients = !clientsLoading && clientOptions.length === 0
+	const hasNoClients =
+		!clientsLoading && !clientsError && clientOptions.length === 0
 	const employees = employeesPage?.data ?? []
 
 	// Employees currently animating out of one column before moving to
@@ -217,9 +220,9 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 	}
 
 	const validate = (): boolean => {
-		const next: { name?: string; clientId?: string; endDate?: string } = {}
+		const next: { name?: string; crmClientId?: string; endDate?: string } = {}
 		if (!fields.name.trim()) next.name = 'Name is required'
-		if (!fields.clientId) next.clientId = 'Client is required'
+		if (!fields.crmClientId) next.crmClientId = 'Client is required'
 		if (
 			fields.startDate &&
 			fields.endDate &&
@@ -236,7 +239,7 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 		if (!validate()) return
 		const payload = {
 			name: fields.name.trim(),
-			clientId: fields.clientId,
+			crmClientId: fields.crmClientId,
 			status: fields.status,
 			description: fields.description || undefined,
 			startDate: fields.startDate || undefined,
@@ -295,28 +298,44 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 							<Field
 								label='Client'
 								required
-								error={errors.clientId}
+								error={
+									errors.crmClientId ||
+									(clientsError
+										? 'Could not load clients — check your permissions or try again.'
+										: undefined)
+								}
 								hint={
 									hasNoClients
-										? 'No client-type counterparties yet — add one in Counterparties first.'
+										? 'No clients yet — open Clients and create one, then come back.'
 										: undefined
 								}
 							>
 								<Select
 									label='Client'
-									defaultValue={fields.clientId}
-									onChange={(value) => setField('clientId', value as string)}
+									defaultValue={fields.crmClientId}
+									onChange={(value) =>
+										setField('crmClientId', value as string)
+									}
 									width='100%'
 									sizes='normal'
 								>
 									{clientOptions.length === 0 ? (
 										<SelectItem
-											label={clientsLoading ? 'Loading clients…' : 'No clients available'}
+											label={
+												clientsLoading
+													? 'Loading clients…'
+													: clientsError
+														? 'Error loading clients'
+														: 'No clients available'
+											}
 											value=''
 										/>
 									) : (
 										clientOptions.map((c) => {
-											const name = `${c.firstName} ${c.lastName}`.trim()
+											const name = [c.firstName, c.lastName]
+												.filter(Boolean)
+												.join(' ')
+												.trim()
 											return (
 												<SelectItem
 													key={c.id}
@@ -504,7 +523,8 @@ const ProjectForm = ({ id }: Props) => {
 	const initial: FormFields = data
 		? {
 				name: data.name,
-				clientId: data.clientId ?? '',
+				crmClientId:
+					(data as { crmClientId?: string | null }).crmClientId ?? '',
 				status: data.status,
 				description: data.description ?? '',
 				startDate: data.startDate ? data.startDate.slice(0, 10) : '',

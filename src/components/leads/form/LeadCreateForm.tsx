@@ -15,7 +15,12 @@ import {
 	phoneCountryIso,
 } from '../../../utils/phone'
 import { T } from '../../sales-analytics/_shared/tokens'
-import type { ApiClientType, CreateLeadBody } from '../../../store/leads/types/definition'
+import type {
+	ApiClientType,
+	ApiLeadStatus,
+	ApiLeadTemperature,
+	CreateLeadBody,
+} from '../../../store/leads/types/definition'
 import { Field, FormHeader, SectionHead } from '../../_shared/FormShell'
 import {
 	DotMini,
@@ -35,6 +40,11 @@ interface FormFields {
 	companyName: string
 	email: string
 	phone: string
+	status: ApiLeadStatus
+	temperature: ApiLeadTemperature | ''
+	source: string
+	profileUrl: string
+	notes: string
 	clientType: ApiClientType | ''
 	rate: string
 	location: string
@@ -52,6 +62,11 @@ const empty: FormFields = {
 	companyName: '',
 	email: '',
 	phone: '',
+	status: 'NEW',
+	temperature: '',
+	source: '',
+	profileUrl: '',
+	notes: '',
 	clientType: '',
 	rate: '',
 	location: '',
@@ -121,6 +136,11 @@ const LeadCreateForm = () => {
 					fields.clientType === 'company' ? fields.companyName.trim() || undefined : undefined,
 				email: trimmedEmail ? trimmedEmail.toLowerCase() : undefined,
 				phone: normalisedPhone ?? undefined,
+				status: fields.status,
+				temperature: fields.temperature || null,
+				source: fields.source.trim() || null,
+				profileUrl: fields.profileUrl.trim() || null,
+				notes: fields.notes.trim() || null,
 				clientType: (fields.clientType || undefined) as ApiClientType | undefined,
 				rate: fields.rate !== '' ? Number(fields.rate) : undefined,
 				location: fields.location.trim() || undefined,
@@ -242,9 +262,88 @@ const LeadCreateForm = () => {
 						</FieldGrid>
 					</Section>
 
-					<Section $delay={240}>
+					<Section $delay={200}>
 						<SectionHead
 							num='03'
+							title='Classification'
+							hint='Status, temperature and where this lead came from'
+						/>
+						<FieldGrid>
+							<Field label='Status'>
+								<Select
+									label='Status'
+									defaultValue={fields.status}
+									onChange={(v) => setField('status', v as ApiLeadStatus)}
+									width='100%'
+									sizes='normal'
+								>
+									<SelectItem label='New' value='NEW' />
+									<SelectItem label='Contacted' value='CONTACTED' />
+									<SelectItem label='In Conversation' value='IN_CONVERSATION' />
+									<SelectItem label='On Hold' value='ON_HOLD' />
+									<SelectItem label='Won' value='WON' />
+									<SelectItem label='Lost' value='LOST' />
+								</Select>
+							</Field>
+							<Field label='Temperature'>
+								<Select
+									label='Temperature'
+									defaultValue={fields.temperature}
+									onChange={(v) =>
+										setField('temperature', v as ApiLeadTemperature | '')
+									}
+									width='100%'
+									sizes='normal'
+								>
+									<SelectItem label='— unset —' value='' />
+									<SelectItem label='Cold' value='COLD' />
+									<SelectItem label='Warm' value='WARM' />
+									<SelectItem label='Hot' value='HOT' />
+								</Select>
+							</Field>
+							<Field label='Source'>
+								<TextField
+									name='source'
+									placeholder='e.g. Upwork'
+									value={fields.source}
+									onChange={(e) => setField('source', e.target.value)}
+									width='100%'
+								/>
+							</Field>
+							<Field label='Profile URL' span='full'>
+								<TextField
+									name='profileUrl'
+									placeholder='https://…'
+									value={fields.profileUrl}
+									onChange={(e) => setField('profileUrl', e.target.value)}
+									width='100%'
+								/>
+							</Field>
+						</FieldGrid>
+					</Section>
+
+					<Section $delay={280}>
+						<SectionHead num='04' title='Notes' hint='Free-form internal notes' />
+						<FieldGrid>
+							<Field label='Notes' span='full'>
+								<TextField
+									name='notes'
+									placeholder='Anything internal worth remembering…'
+									value={fields.notes}
+									onChange={(e) =>
+										setField('notes', (e.target as HTMLTextAreaElement).value)
+									}
+									width='100%'
+									multiline
+									multiRow
+								/>
+							</Field>
+						</FieldGrid>
+					</Section>
+
+					<Section $delay={360}>
+						<SectionHead
+							num='05'
 							title='Financial'
 							hint='Hourly rate agreed with the client, in USD'
 						/>

@@ -2,23 +2,21 @@ import { ApiLeadStatus } from '../../../store/leads/types/definition'
 import { Chip } from '../../../ui'
 
 const statusColor: Record<ApiLeadStatus, string> = {
-	conversation_ongoing: 'info',
-	trial: 'warning',
-	hold: '#607D8B',
-	contract_offer: '#9155FD',
-	accept_contract: 'success',
-	start_contract: '#00897B',
-	suspended: '#9E9E9E',
+	NEW: 'info',
+	CONTACTED: '#9155FD',
+	IN_CONVERSATION: 'warning',
+	ON_HOLD: '#607D8B',
+	WON: 'success',
+	LOST: '#9E9E9E',
 }
 
 const statusLabel: Record<ApiLeadStatus, string> = {
-	conversation_ongoing: 'Conversation Ongoing',
-	trial: 'Trial',
-	hold: 'Hold',
-	contract_offer: 'Contract Offer',
-	accept_contract: 'Accept Contract',
-	start_contract: 'Start Contract',
-	suspended: 'Suspended',
+	NEW: 'New',
+	CONTACTED: 'Contacted',
+	IN_CONVERSATION: 'In Conversation',
+	ON_HOLD: 'On Hold',
+	WON: 'Won',
+	LOST: 'Lost',
 }
 
 const LeadListItemStatus = ({ itemStatus }: { itemStatus: ApiLeadStatus }) => (

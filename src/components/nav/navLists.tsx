@@ -98,6 +98,7 @@ const navList: NavOptions[] = [
 		parent: formatGroupButton('Leads', <PeopleOutlined />, '/leads'),
 		childrens: [
 			format('List', '/leads/list/', <PeopleOutlined />, 'leads:view'),
+			format('Clients', '/clients/list/', <ContactsOutlined />, 'clients:view'),
 			format('Client Calls', '/client-calls/list/', <PhoneOutlined />, 'client_calls:view'),
 			format(
 				'Client Requests',

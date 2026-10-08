@@ -3,11 +3,13 @@ import { Chip } from '../../../ui'
 
 const sourceColor: Record<ClientCallClientType, string> = {
 	lead: 'warning',
+	client: 'info',
 	client_request: 'success',
 }
 
 const sourceLabel: Record<ClientCallClientType, string> = {
 	lead: 'Lead',
+	client: 'Client',
 	client_request: 'Client Request',
 }
 

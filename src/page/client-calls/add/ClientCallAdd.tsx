@@ -32,6 +32,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { muiSargasTheme } from '../../../components/_shared/muiSargasTheme'
 import { useGetLeadListQuery } from '../../../store/leads/leadsApi'
 import { useGetClientRequestListQuery } from '../../../store/clientRequests/clientRequestsApi'
+import { useGetClientsQuery } from '../../../store/clients/clientsApi'
 import { useCreateClientCallMutation } from '../../../store/clientCalls/clientCallsApi'
 import { useToast } from '../../../context/toast/ToastContext'
 import { timezones } from '../../../utils/timezones'
@@ -39,7 +40,7 @@ import { timezones } from '../../../utils/timezones'
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
-type ClientType = 'lead' | 'client_request'
+type ClientType = 'lead' | 'client' | 'client_request'
 
 const INK = '#0f172a'
 const INK_60 = 'rgba(15, 23, 42, 0.6)'
@@ -107,10 +108,17 @@ const CreateCallPage = () => {
 		page: 1,
 		limit: 100,
 	})
+	const { data: clientsData, isLoading: clientsLoading } = useGetClientsQuery({
+		page: 1,
+		limit: 100,
+		sortBy: 'firstName',
+		sortDirection: 'asc',
+	})
 	const [createClientCall, { isLoading: isSubmitting }] = useCreateClientCallMutation()
 
 	const leads = leadsData?.data ?? []
 	const clientRequests = clientRequestsData?.data ?? []
+	const crmClients = clientsData?.data ?? []
 
 	const clientOptions =
 		clientType === 'lead'
@@ -120,7 +128,18 @@ const CreateCallPage = () => {
 						? `${l.firstName} ${l.lastName ?? ''}`.trim()
 						: (l.proposal?.title ?? l.id),
 				}))
-			: clientRequests.map((cr) => ({ id: cr.id, name: cr.name || cr.company || cr.id }))
+			: clientType === 'client'
+				? crmClients.map((c) => ({
+						id: c.id,
+						name:
+							[c.firstName, c.lastName].filter(Boolean).join(' ').trim() ||
+							c.company ||
+							c.id,
+					}))
+				: clientRequests.map((cr) => ({
+						id: cr.id,
+						name: cr.name || cr.company || cr.id,
+					}))
 
 	const selectedTimezone = timezones.find((tz) => tz.value === clientTimezone)
 	const selectedClient = clientOptions.find((c) => c.id === selectedClientId)
@@ -174,7 +193,9 @@ const CreateCallPage = () => {
 			duration: Number(duration),
 			...(clientType === 'lead'
 				? { leadId: selectedClientId }
-				: { clientRequestId: selectedClientId }),
+				: clientType === 'client'
+					? { crmClientId: selectedClientId }
+					: { clientRequestId: selectedClientId }),
 		}
 
 		try {
@@ -198,7 +219,12 @@ const CreateCallPage = () => {
 		setSubmitAttempted(false)
 	}
 
-	const isLoadingClients = clientType === 'lead' ? leadsLoading : crLoading
+	const isLoadingClients =
+		clientType === 'lead'
+			? leadsLoading
+			: clientType === 'client'
+				? clientsLoading
+				: crLoading
 
 	return (
 		<ThemeProvider theme={muiSargasTheme}>
@@ -407,12 +433,17 @@ const CreateCallPage = () => {
 										value={clientType}
 										onChange={handleClientTypeChange}
 										leadCount={leads.length}
+										clientCount={crmClients.length}
 										requestCount={clientRequests.length}
 									/>
 
 									<Box sx={{ mt: 2.5 }}>
 										<FieldLabel error={submitAttempted && errors.selectedClientId}>
-											{clientType === 'lead' ? 'Choose lead' : 'Choose client request'}
+											{clientType === 'lead'
+												? 'Choose lead'
+												: clientType === 'client'
+													? 'Choose client'
+													: 'Choose client request'}
 										</FieldLabel>
 										<Select
 											fullWidth
@@ -427,7 +458,7 @@ const CreateCallPage = () => {
 														<Box sx={{ color: INK_45, fontWeight: 500 }}>
 															{isLoadingClients
 																? 'Loading…'
-																: `Pick a ${clientType === 'lead' ? 'lead' : 'client request'}`}
+																: `Pick a ${clientType === 'lead' ? 'lead' : clientType === 'client' ? 'client' : 'client request'}`}
 														</Box>
 													)
 												}
@@ -741,7 +772,11 @@ const CreateCallPage = () => {
 													lineHeight: 1,
 												}}
 											>
-												{clientType === 'lead' ? 'Lead' : 'Client request'}
+												{clientType === 'lead'
+													? 'Lead'
+													: clientType === 'client'
+														? 'Client'
+														: 'Client request'}
 											</Typography>
 											<Typography
 												sx={{
@@ -969,56 +1004,69 @@ const SegmentedPill = ({
 	value,
 	onChange,
 	leadCount,
+	clientCount,
 	requestCount,
 }: {
 	value: ClientType
 	onChange: (v: ClientType) => void
 	leadCount: number
+	clientCount: number
 	requestCount: number
-}) => (
-	<Box
-		sx={{
-			position: 'relative',
-			display: 'grid',
-			gridTemplateColumns: '1fr 1fr',
-			background: INK_04,
-			borderRadius: '12px',
-			p: '4px',
-			border: `1px solid ${INK_10}`,
-			overflow: 'hidden',
-		}}
-	>
+}) => {
+	const activeIndex = value === 'lead' ? 0 : value === 'client' ? 1 : 2
+	return (
 		<Box
 			sx={{
-				position: 'absolute',
-				top: 4,
-				bottom: 4,
-				left: value === 'lead' ? 4 : 'calc(50% + 0px)',
-				width: 'calc(50% - 4px)',
-				background: '#fff',
-				borderRadius: '9px',
-				boxShadow: '0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 12px -4px rgba(15, 23, 42, 0.08)',
+				position: 'relative',
+				display: 'grid',
+				gridTemplateColumns: '1fr 1fr 1fr',
+				background: INK_04,
+				borderRadius: '12px',
+				p: '4px',
 				border: `1px solid ${INK_10}`,
-				transition: 'left 240ms cubic-bezier(0.22, 1, 0.36, 1)',
-				zIndex: 0,
+				overflow: 'hidden',
 			}}
-		/>
-		<PillTab
-			icon={<ContactPhoneOutlined sx={{ fontSize: 18 }} />}
-			label='Leads'
-			count={leadCount}
-			active={value === 'lead'}
-			onClick={() => onChange('lead')}
-		/>
-		<PillTab
-			icon={<WorkOutlineOutlined sx={{ fontSize: 18 }} />}
-			label='Client requests'
-			count={requestCount}
-			active={value === 'client_request'}
-			onClick={() => onChange('client_request')}
-		/>
-	</Box>
-)
+		>
+			<Box
+				sx={{
+					position: 'absolute',
+					top: 4,
+					bottom: 4,
+					left: `calc(${(activeIndex * 100) / 3}% + 4px)`,
+					width: 'calc(100% / 3 - 8px)',
+					background: '#fff',
+					borderRadius: '9px',
+					boxShadow:
+						'0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 12px -4px rgba(15, 23, 42, 0.08)',
+					border: `1px solid ${INK_10}`,
+					transition: 'left 240ms cubic-bezier(0.22, 1, 0.36, 1)',
+					zIndex: 0,
+				}}
+			/>
+			<PillTab
+				icon={<ContactPhoneOutlined sx={{ fontSize: 18 }} />}
+				label='Leads'
+				count={leadCount}
+				active={value === 'lead'}
+				onClick={() => onChange('lead')}
+			/>
+			<PillTab
+				icon={<ContactPhoneOutlined sx={{ fontSize: 18 }} />}
+				label='Clients'
+				count={clientCount}
+				active={value === 'client'}
+				onClick={() => onChange('client')}
+			/>
+			<PillTab
+				icon={<WorkOutlineOutlined sx={{ fontSize: 18 }} />}
+				label='Client requests'
+				count={requestCount}
+				active={value === 'client_request'}
+				onClick={() => onChange('client_request')}
+			/>
+		</Box>
+	)
+}
 
 const PillTab = ({
 	icon,
