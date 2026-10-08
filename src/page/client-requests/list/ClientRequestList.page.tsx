@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { DeleteOutline, VisibilityOutlined, EditOutlined, MailOutline } from '@mui/icons-material'
@@ -36,14 +36,24 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../../components/_shared/DataTable'
-import type { DataTableColumn, SortState } from '../../../components/_shared/DataTable'
+import type {
+	DataTableColumn,
+	DataTableSelection,
+	SortState,
+} from '../../../components/_shared/DataTable'
+import BulkActionBar from '../../../components/_shared/BulkActionBar'
 import ClientRequestDeleteModal from '../../../components/client-requests/list/ClientRequestDeleteModal'
+import ConfirmModal from '../../../components/_shared/ConfirmModal'
 import PermissionGate from '../../../components/auth/PermissionGate'
+import { useToast } from '../../../context/toast/ToastContext'
 import type {
 	ClientRequestItem,
 	ClientRequestSortBy,
 } from '../../../store/clientRequests/types/definition'
-import { useGetClientRequestListQuery } from '../../../store/clientRequests/clientRequestsApi'
+import {
+	useBulkDeleteClientRequestsMutation,
+	useGetClientRequestListQuery,
+} from '../../../store/clientRequests/clientRequestsApi'
 import { formatDate } from '../../../utils/format'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
 
@@ -58,11 +68,14 @@ const prettyStatus = (s: string) => s.replace(/_/g, ' ')
 
 const ClientRequestList = () => {
 	const navigate = useNavigate()
+	const { showToast } = useToast()
 	const [searchInput, setSearchInput] = useState('')
 	const search = useDebouncedValue(searchInput.trim(), 300)
 	const [page, setPage] = useState(1)
 	const [sort, setSort] = useState<SortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+	const [selected, setSelected] = useState<Set<string>>(() => new Set())
+	const [bulkOpen, setBulkOpen] = useState(false)
 
 	const { data, isLoading, isError, refetch } = useGetClientRequestListQuery({
 		page,
@@ -71,6 +84,8 @@ const ClientRequestList = () => {
 		sortBy: (sort?.key as ClientRequestSortBy | undefined) ?? undefined,
 		sortDirection: sort?.direction,
 	})
+	const [bulkDeleteRequests, { isLoading: bulkDeleting }] =
+		useBulkDeleteClientRequestsMutation()
 	const items = data?.data ?? []
 	const total = data?.total ?? 0
 
@@ -82,6 +97,63 @@ const ClientRequestList = () => {
 	useEffect(() => {
 		setPage(1)
 	}, [search])
+
+	// Drop stale ids on page refetch so the bulk batch always matches
+	// what the user actually sees on the current page.
+	useEffect(() => {
+		if (selected.size === 0) return
+		const live = new Set(items.map((r) => r.id))
+		let changed = false
+		const next = new Set<string>()
+		for (const id of selected) {
+			if (live.has(id)) next.add(id)
+			else changed = true
+		}
+		if (changed) setSelected(next)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [items])
+
+	const selection = useMemo<DataTableSelection<ClientRequestItem>>(
+		() => ({
+			selected,
+			onToggleRow: (id, next) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					if (next) n.add(id)
+					else n.delete(id)
+					return n
+				}),
+			onToggleAllOnPage: (rows, next) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					for (const r of rows) {
+						if (next) n.add(r.id)
+						else n.delete(r.id)
+					}
+					return n
+				}),
+			headerLabel: 'Select every request on this page',
+			rowLabel: (r) => `Select client request from ${r.name}`,
+		}),
+		[selected],
+	)
+
+	const handleBulkDelete = async () => {
+		const ids = [...selected]
+		if (ids.length === 0) return
+		try {
+			const res = await bulkDeleteRequests(ids).unwrap()
+			showToast(
+				`Deleted ${res.deleted} client request${res.deleted === 1 ? '' : 's'}`,
+				'success',
+			)
+			setSelected(new Set())
+			setBulkOpen(false)
+			refetch()
+		} catch {
+			showToast('Bulk delete failed', 'error')
+		}
+	}
 
 	const columns: DataTableColumn<ClientRequestItem>[] = [
 		{
@@ -202,6 +274,16 @@ const ClientRequestList = () => {
 				icon={<MailOutline />}
 				title='Client requests'
 				subtitle='Inbound requests from prospective clients — with attachments and service tags.'
+				action={
+					<PermissionGate permission='client_requests:delete'>
+						<BulkActionBar
+							count={selected.size}
+							onClear={() => setSelected(new Set())}
+							onConfirm={() => setBulkOpen(true)}
+							isLoading={bulkDeleting}
+						/>
+					</PermissionGate>
+				}
 				searchPlaceholder='Search by contact name'
 				search={searchInput}
 				onSearchChange={setSearchInput}
@@ -222,6 +304,7 @@ const ClientRequestList = () => {
 						total,
 						onPageChange: setPage,
 					}}
+					selection={selection}
 				/>
 			</ListPageShell>
 
@@ -231,6 +314,28 @@ const ClientRequestList = () => {
 					title={deleteTarget.title}
 					onClose={() => setDeleteTarget(null)}
 					onSuccess={() => refetch()}
+				/>
+			)}
+
+			{bulkOpen && (
+				<ConfirmModal
+					icon={<DeleteOutline />}
+					iconTone='danger'
+					title={`Delete ${selected.size} client request${selected.size === 1 ? '' : 's'}?`}
+					description={
+						<>
+							You are about to delete <strong>{selected.size}</strong> client
+							request{selected.size === 1 ? '' : 's'}. Any{' '}
+							<strong>related Client Calls will also be deleted</strong> via
+							cascade. This cannot be undone.
+						</>
+					}
+					confirmLabel={`Delete ${selected.size}`}
+					confirmLoadingLabel='Deleting…'
+					confirmColor='error'
+					onClose={() => setBulkOpen(false)}
+					onConfirm={handleBulkDelete}
+					isLoading={bulkDeleting}
 				/>
 			)}
 		</>

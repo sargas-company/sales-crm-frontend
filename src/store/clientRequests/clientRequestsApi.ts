@@ -35,6 +35,17 @@ export const clientRequestsApi = baseApi.injectEndpoints({
 			invalidatesTags: ['ClientRequest'],
 		}),
 
+		bulkDeleteClientRequests: builder.mutation<{ deleted: number }, string[]>({
+			query: (ids) => ({
+				url: '/client-requests/bulk-delete',
+				method: 'POST',
+				body: { ids },
+			}),
+			// Cascade removes dependent ClientCalls; invalidate both tag sets
+			// so any live Client Calls table also refetches.
+			invalidatesTags: ['ClientRequest', 'ClientCall'],
+		}),
+
 		getClientRequestFiles: builder.query<ClientRequestSignedFile[], string>({
 			query: (id) => ({ url: `/client-requests/${id}/files` }),
 		}),
@@ -46,5 +57,6 @@ export const {
 	useGetClientRequestByIdQuery,
 	useUpdateClientRequestMutation,
 	useDeleteClientRequestMutation,
+	useBulkDeleteClientRequestsMutation,
 	useGetClientRequestFilesQuery,
 } = clientRequestsApi

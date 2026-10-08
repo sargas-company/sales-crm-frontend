@@ -17,7 +17,14 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../../components/_shared/DataTable'
-import type { DataTableColumn, SortState } from '../../../components/_shared/DataTable'
+import type {
+	DataTableColumn,
+	DataTableSelection,
+	SortState,
+} from '../../../components/_shared/DataTable'
+import BulkActionBar from '../../../components/_shared/BulkActionBar'
+import ConfirmModal from '../../../components/_shared/ConfirmModal'
+import { useToast } from '../../../context/toast/ToastContext'
 import JobPostDeleteModal from '../../../components/job-posts/list/JobPostDeleteModal'
 import PermissionGate from '../../../components/auth/PermissionGate'
 import type {
@@ -28,6 +35,7 @@ import type {
 	JobPostStatus,
 } from '../../../store/job-posts/types/definition'
 import {
+	useBulkDeleteJobPostsMutation,
 	useGetJobPostListQuery,
 	useMarkJobPostViewedMutation,
 } from '../../../store/job-posts/jobPostsApi'
@@ -84,11 +92,14 @@ const clampScore = (raw: string): number | null => {
 
 const JobPostList = () => {
 	const navigate = useNavigate()
+	const { showToast } = useToast()
 	const [searchInput, setSearchInput] = useState('')
 	const [search, setSearch] = useState('')
 	const [page, setPage] = useState(1)
 	const [sort, setSort] = useState<SortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+	const [selected, setSelected] = useState<Set<string>>(() => new Set())
+	const [bulkOpen, setBulkOpen] = useState(false)
 	const [filterDecision, setFilterDecision] = useState<JobPostDecision | ''>('')
 	const [filterPriority, setFilterPriority] = useState<JobPostPriority | ''>('')
 	const [filterStatus, setFilterStatus] = useState<JobPostStatus>(DEFAULT_STATUS)
@@ -192,12 +203,70 @@ const JobPostList = () => {
 	})
 
 	const [markViewed] = useMarkJobPostViewedMutation()
+	const [bulkDeleteJobPosts, { isLoading: bulkDeleting }] =
+		useBulkDeleteJobPostsMutation()
 	const openJobPost = (id: string) => {
 		markViewed(id)
 		navigate(`/job-posts/preview/${id}`)
 	}
 	const items = data?.data ?? []
 	const total = data?.meta.total ?? 0
+
+	// Prune stale ids after each refetch.
+	useEffect(() => {
+		if (selected.size === 0) return
+		const live = new Set(items.map((r) => r.id))
+		let changed = false
+		const next = new Set<string>()
+		for (const id of selected) {
+			if (live.has(id)) next.add(id)
+			else changed = true
+		}
+		if (changed) setSelected(next)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [items])
+
+	const selection = useMemo<DataTableSelection<JobPostItem>>(
+		() => ({
+			selected,
+			onToggleRow: (id, next) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					if (next) n.add(id)
+					else n.delete(id)
+					return n
+				}),
+			onToggleAllOnPage: (rows, next) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					for (const r of rows) {
+						if (next) n.add(r.id)
+						else n.delete(r.id)
+					}
+					return n
+				}),
+			headerLabel: 'Select every job post on this page',
+			rowLabel: (r) => `Select job post ${r.title ?? r.id}`,
+		}),
+		[selected],
+	)
+
+	const handleBulkDelete = async () => {
+		const ids = [...selected]
+		if (ids.length === 0) return
+		try {
+			const res = await bulkDeleteJobPosts(ids).unwrap()
+			showToast(
+				`Deleted ${res.deleted} job post${res.deleted === 1 ? '' : 's'}`,
+				'success',
+			)
+			setSelected(new Set())
+			setBulkOpen(false)
+			refetch()
+		} catch {
+			showToast('Bulk delete failed', 'error')
+		}
+	}
 
 	const handleSortChange = (next: SortState | null) => {
 		setSort(next)
@@ -404,6 +473,17 @@ const JobPostList = () => {
 							</div>
 						</PageHead>
 
+						<PermissionGate permission='job_posts:delete'>
+							<BulkBarRow>
+								<BulkActionBar
+									count={selected.size}
+									onClear={() => setSelected(new Set())}
+									onConfirm={() => setBulkOpen(true)}
+									isLoading={bulkDeleting}
+								/>
+							</BulkBarRow>
+						</PermissionGate>
+
 						<FreshFiltersWrap role='region' aria-label='Job post filters'>
 							<div className='filter-lead'>
 								<span className='lead-icon'>
@@ -604,6 +684,7 @@ const JobPostList = () => {
 								total,
 								onPageChange: setPage,
 							}}
+							selection={selection}
 						/>
 					</ShellInner>
 				</ShellCard>
@@ -620,11 +701,36 @@ const JobPostList = () => {
 					}}
 				/>
 			)}
+
+			{bulkOpen && (
+				<ConfirmModal
+					icon={<DeleteOutline />}
+					iconTone='danger'
+					title={`Delete ${selected.size} job post${selected.size === 1 ? '' : 's'}?`}
+					description={
+						<>
+							You are about to delete <strong>{selected.size}</strong> job post{selected.size === 1 ? '' : 's'}. This cannot be undone.
+						</>
+					}
+					confirmLabel={`Delete ${selected.size}`}
+					confirmLoadingLabel='Deleting…'
+					confirmColor='error'
+					onClose={() => setBulkOpen(false)}
+					onConfirm={handleBulkDelete}
+					isLoading={bulkDeleting}
+				/>
+			)}
 		</>
 	)
 }
 
 export default JobPostList
+
+const BulkBarRow = styled.div`
+	display: flex;
+	justify-content: flex-end;
+	padding: 0 4px 4px;
+`
 
 const fadeUp = keyframes`
 	from { opacity: 0; transform: translateY(6px); }

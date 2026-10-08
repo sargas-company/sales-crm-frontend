@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import {
@@ -16,15 +16,25 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../../components/_shared/DataTable'
-import type { DataTableColumn, SortState } from '../../../components/_shared/DataTable'
+import type {
+	DataTableColumn,
+	DataTableSelection,
+	SortState,
+} from '../../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
+import BulkActionBar from '../../../components/_shared/BulkActionBar'
 import ClientCallDeleteModal from '../../../components/client-call/list/ProposalDeleteModal'
+import ConfirmModal from '../../../components/_shared/ConfirmModal'
 import PermissionGate from '../../../components/auth/PermissionGate'
+import { useToast } from '../../../context/toast/ToastContext'
 import type {
 	ClientCallItem,
 	ClientCallSortBy,
 } from '../../../store/clientCalls/types/definition'
-import { useGetClientCallListQuery } from '../../../store/clientCalls/clientCallsApi'
+import {
+	useBulkDeleteClientCallsMutation,
+	useGetClientCallListQuery,
+} from '../../../store/clientCalls/clientCallsApi'
 import { formatDate } from '../../../utils/format'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
 
@@ -46,11 +56,14 @@ const clientName = (c: ClientCallItem): string => {
 
 const ClientCallList = () => {
 	const navigate = useNavigate()
+	const { showToast } = useToast()
 	const [searchInput, setSearchInput] = useState('')
 	const search = useDebouncedValue(searchInput.trim(), 300)
 	const [page, setPage] = useState(1)
 	const [sort, setSort] = useState<SortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+	const [selected, setSelected] = useState<Set<string>>(() => new Set())
+	const [bulkOpen, setBulkOpen] = useState(false)
 
 	const { data, isLoading, isError, refetch } = useGetClientCallListQuery({
 		page,
@@ -59,6 +72,8 @@ const ClientCallList = () => {
 		sortBy: (sort?.key as ClientCallSortBy | undefined) ?? undefined,
 		sortDirection: sort?.direction,
 	})
+	const [bulkDeleteCalls, { isLoading: bulkDeleting }] =
+		useBulkDeleteClientCallsMutation()
 	const items = data?.data ?? []
 	const total = data?.total ?? 0
 
@@ -70,6 +85,61 @@ const ClientCallList = () => {
 	useEffect(() => {
 		setPage(1)
 	}, [search])
+
+	useEffect(() => {
+		if (selected.size === 0) return
+		const live = new Set(items.map((c) => c.id))
+		let changed = false
+		const next = new Set<string>()
+		for (const id of selected) {
+			if (live.has(id)) next.add(id)
+			else changed = true
+		}
+		if (changed) setSelected(next)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [items])
+
+	const selection = useMemo<DataTableSelection<ClientCallItem>>(
+		() => ({
+			selected,
+			onToggleRow: (id, next) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					if (next) n.add(id)
+					else n.delete(id)
+					return n
+				}),
+			onToggleAllOnPage: (rows, next) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					for (const r of rows) {
+						if (next) n.add(r.id)
+						else n.delete(r.id)
+					}
+					return n
+				}),
+			headerLabel: 'Select every call on this page',
+			rowLabel: (c) => `Select call ${clientName(c)}`,
+		}),
+		[selected],
+	)
+
+	const handleBulkDelete = async () => {
+		const ids = [...selected]
+		if (ids.length === 0) return
+		try {
+			const res = await bulkDeleteCalls(ids).unwrap()
+			showToast(
+				`Deleted ${res.deleted} call${res.deleted === 1 ? '' : 's'}`,
+				'success',
+			)
+			setSelected(new Set())
+			setBulkOpen(false)
+			refetch()
+		} catch {
+			showToast('Bulk delete failed', 'error')
+		}
+	}
 
 	const columns: DataTableColumn<ClientCallItem>[] = [
 		{
@@ -195,12 +265,22 @@ const ClientCallList = () => {
 				title='Client calls'
 				subtitle='Scheduled meetings and past conversations with leads and clients.'
 				action={
-					<PermissionGate permission='client_calls:create'>
-						<PrimarySolidButton type='button' onClick={() => navigate('/client-calls/add/')}>
-							<AddRounded />
-							New call
-						</PrimarySolidButton>
-					</PermissionGate>
+					<HeaderActions>
+						<PermissionGate permission='client_calls:delete'>
+							<BulkActionBar
+								count={selected.size}
+								onClear={() => setSelected(new Set())}
+								onConfirm={() => setBulkOpen(true)}
+								isLoading={bulkDeleting}
+							/>
+						</PermissionGate>
+						<PermissionGate permission='client_calls:create'>
+							<PrimarySolidButton type='button' onClick={() => navigate('/client-calls/add/')}>
+								<AddRounded />
+								New call
+							</PrimarySolidButton>
+						</PermissionGate>
+					</HeaderActions>
 				}
 				searchPlaceholder='Search by title'
 				search={searchInput}
@@ -222,6 +302,7 @@ const ClientCallList = () => {
 						total,
 						onPageChange: setPage,
 					}}
+					selection={selection}
 				/>
 			</ListPageShell>
 
@@ -233,11 +314,38 @@ const ClientCallList = () => {
 					onSuccess={() => refetch()}
 				/>
 			)}
+
+			{bulkOpen && (
+				<ConfirmModal
+					icon={<DeleteOutline />}
+					iconTone='danger'
+					title={`Delete ${selected.size} client call${selected.size === 1 ? '' : 's'}?`}
+					description={
+						<>
+							You are about to delete <strong>{selected.size}</strong> client
+							call{selected.size === 1 ? '' : 's'}. This cannot be undone.
+						</>
+					}
+					confirmLabel={`Delete ${selected.size}`}
+					confirmLoadingLabel='Deleting…'
+					confirmColor='error'
+					onClose={() => setBulkOpen(false)}
+					onConfirm={handleBulkDelete}
+					isLoading={bulkDeleting}
+				/>
+			)}
 		</>
 	)
 }
 
 export default ClientCallList
+
+const HeaderActions = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+`
 
 const CallCell = styled.div`
 	display: flex;

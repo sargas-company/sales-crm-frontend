@@ -57,6 +57,15 @@ export const jobPostsApi = baseApi.injectEndpoints({
 			invalidatesTags: ['JobPost'],
 		}),
 
+		bulkDeleteJobPosts: builder.mutation<{ deleted: number }, string[]>({
+			query: (ids) => ({
+				url: '/job-posts/bulk-delete',
+				method: 'POST',
+				body: { ids },
+			}),
+			invalidatesTags: ['JobPost'],
+		}),
+
 		/* Per-user "I opened this post" marker. Optimistic patch — we
 		 * update every active list cache and the single-item cache for
 		 * this id so the viewed dot shows up immediately on click. We do
@@ -120,5 +129,6 @@ export const {
 	useGetJobPostByIdQuery,
 	useConvertJobPostToProposalMutation,
 	useDeleteJobPostMutation,
+	useBulkDeleteJobPostsMutation,
 	useMarkJobPostViewedMutation,
 } = jobPostsApi

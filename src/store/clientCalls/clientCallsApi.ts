@@ -36,6 +36,15 @@ export const clientCallsApi = baseApi.injectEndpoints({
 			query: (id) => ({ url: `/client-calls/${id}`, method: 'DELETE' }),
 			invalidatesTags: ['ClientCall'],
 		}),
+
+		bulkDeleteClientCalls: builder.mutation<{ deleted: number }, string[]>({
+			query: (ids) => ({
+				url: '/client-calls/bulk-delete',
+				method: 'POST',
+				body: { ids },
+			}),
+			invalidatesTags: ['ClientCall'],
+		}),
 	}),
 })
 
@@ -45,4 +54,5 @@ export const {
 	useCreateClientCallMutation,
 	useUpdateClientCallMutation,
 	useDeleteClientCallMutation,
+	useBulkDeleteClientCallsMutation,
 } = clientCallsApi
