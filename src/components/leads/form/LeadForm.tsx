@@ -343,11 +343,11 @@ const PreviewFlag = styled.span`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 20px;
-	height: 20px;
-	border-radius: 4px;
+	width: 24px;
+	height: 24px;
+	border-radius: 5px;
 	background: rgba(15, 23, 42, 0.04);
-	font-size: 14px;
+	font-size: 18px;
 	line-height: 1;
 `
 
