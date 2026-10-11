@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.production)",
+      "Read(**/.env.staging)",
+      "Read(**/.env.*.local)",
+      "Read(**/.session.txt)"
+    ],
+    "ask": [
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(ssh*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '⚠ Session rooted in sales-crm-frontend (a nested repo). Canonical brain, rules, hooks and project memory live one level up: ../CLAUDE.md, ../work/, ../docs/, ../.claude/. Prefer starting Claude sessions from the workspace root.'"
+          }
+        ]
+      }
+    ]
+  }
+}

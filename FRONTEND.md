@@ -1,5 +1,13 @@
 # Инструкция по подключению к API
 
+> ⚠️ **Deprecated (2026-10-12).** Документ описывает раннюю
+> инкарнацию API (включая удалённые WebSocket/чаты) и ни на что не
+> ссылается из актуальных инструкций. Актуальная поверхность API —
+> Swagger (`/swagger`) и `docs/` в backend-репозитории. Учётные
+> данные в примерах заменены на плейсхолдеры (demo-seed значения живут
+> в `sales-crm-backend/prisma/seed.ts` и используются только локально).
+> Судьба файла (удаление/перенос) — отдельное решение.
+
 ## Адреса
 
 | Назначение | URL |
@@ -21,8 +29,8 @@ POST /auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@test.com",
-  "password": "admin123"
+  "email": "user@example.com",
+  "password": "<password>"
 }
 ```
 
@@ -967,7 +975,7 @@ import { io } from 'socket.io-client';
 const { accessToken } = await fetch('http://localhost:3000/auth/login', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ email: 'admin@test.com', password: 'admin123' }),
+  body: JSON.stringify({ email: 'user@example.com', password: '<password>' }),
 }).then(r => r.json());
 
 // 2. Подключиться к WebSocket
