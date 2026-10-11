@@ -745,25 +745,16 @@ const ClientCallEdit = () => {
 										</Typography>
 									</Box>
 
-									{/* Time conversion box */}
+									{/* Time conversion box — plain surface (no gradient). */}
 									<Box
 										sx={{
 											position: 'relative',
 											mt: 0.5,
 											p: '16px 18px',
 											borderRadius: '14px',
-											background: `linear-gradient(135deg, ${PRIMARY_TINT} 0%, #ffffff 60%, ${PRIMARY_TINT} 130%)`,
-											backgroundSize: '200% 200%',
+											background: '#ffffff',
 											border: `1px solid ${PRIMARY_TINT_STRONG}`,
 											overflow: 'hidden',
-											animation: 'callTimeShift 6s ease-in-out infinite',
-											'@keyframes callTimeShift': {
-												'0%, 100%': { backgroundPosition: '0% 50%' },
-												'50%': { backgroundPosition: '100% 50%' },
-											},
-											'@media (prefers-reduced-motion: reduce)': {
-												animation: 'none',
-											},
 										}}
 									>
 										<Typography

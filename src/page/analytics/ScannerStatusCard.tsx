@@ -1,17 +1,28 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import SectionCard from '../../components/sales-analytics/_shared/SectionCard'
 import { WebhookCard, ScannerVisualState } from './webhookCard.styled'
 import type { ScannerHealth, ScannerStatus } from '../../store/sales-analytics/types/scanner'
+import { baseApi } from '../../api/baseApi'
+import { useDispatch } from 'react-redux'
 
 interface Props {
 	data: ScannerHealth
+	/**
+	 * Optional slot rendered between the blue "Last event received"
+	 * hero and the orange hero tiles row. Job Posts' AI pipeline
+	 * block sits here on the Overview tab.
+	 */
+	middleSlot?: ReactNode
 }
 
 const statusToVisual = (s: ScannerStatus): ScannerVisualState => s
 
-const formatAgoShort = (iso: string | null): { value: string; suffix: string } => {
+const formatAgoShort = (
+	iso: string | null,
+	now: number = Date.now(),
+): { value: string; suffix: string } => {
 	if (!iso) return { value: '—', suffix: '' }
-	const diff = Math.max(0, Date.now() - new Date(iso).getTime())
+	const diff = Math.max(0, now - new Date(iso).getTime())
 	if (diff < 60_000) return { value: 'just now', suffix: '' }
 	if (diff < 60 * 60_000) return { value: `${Math.floor(diff / 60_000)}`, suffix: 'min ago' }
 	if (diff < 24 * 60 * 60_000)
@@ -19,9 +30,89 @@ const formatAgoShort = (iso: string | null): { value: string; suffix: string } =
 	return { value: `${Math.floor(diff / (24 * 60 * 60_000))}`, suffix: 'd ago' }
 }
 
-const hourOfDay = () => {
-	const d = new Date()
-	return d.getHours() + d.getMinutes() / 60
+const hourOfDay = (now: Date = new Date(), timezone?: string): number => {
+	if (!timezone) return now.getHours() + now.getMinutes() / 60
+	try {
+		const fmt = new Intl.DateTimeFormat('en-GB', {
+			timeZone: timezone,
+			hour: '2-digit',
+			minute: '2-digit',
+			hourCycle: 'h23',
+		})
+		const parts = fmt.formatToParts(now)
+		const h = Number(parts.find((p) => p.type === 'hour')?.value ?? '0')
+		const m = Number(parts.find((p) => p.type === 'minute')?.value ?? '0')
+		return h + m / 60
+	} catch {
+		return now.getHours() + now.getMinutes() / 60
+	}
+}
+
+/**
+ * YYYY-MM-DD in the given IANA timezone. Used as the day key for
+ * boundary detection — browser-local `toDateString()` would roll
+ * over at a different wall-clock moment than the backend's today
+ * window.
+ */
+function dayKeyIn(timezone: string, at: Date = new Date()): string {
+	try {
+		return new Intl.DateTimeFormat('en-CA', {
+			timeZone: timezone,
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+		}).format(at)
+	} catch {
+		return at.toISOString().slice(0, 10)
+	}
+}
+
+/**
+ * Returns a `now` timestamp that ticks every minute. Also:
+ *   • **invalidates ScannerHealth every minute** — this is what
+ *     slides the 60-minute `receivedLastHour` window so a card
+ *     that hasn't received an SSE tick for a while still reflects
+ *     the correct "events in the past hour" number after the
+ *     oldest event ages out;
+ *   • **detects a day boundary in the backend's timezone** (not
+ *     the browser's) and triggers an extra invalidation so Today /
+ *     Analyzed / Discord alerts reset at the same wall-clock moment
+ *     the backend starts counting the new day.
+ */
+function useMinuteTicker(timezone: string): number {
+	const [now, setNow] = useState(() => Date.now())
+	const dispatch = useDispatch()
+	useEffect(() => {
+		// Align the first fire with the next whole minute so all
+		// cards tick together and we don't skew the sparkline.
+		const first = 60_000 - (Date.now() % 60_000)
+		let interval: ReturnType<typeof setInterval> | null = null
+		let lastDay = dayKeyIn(timezone)
+		const tick = () => {
+			const nextMs = Date.now()
+			setNow(nextMs)
+			// Sliding 60-minute window: trigger a refetch every
+			// minute so events falling out of the window are
+			// reflected without waiting for a new SSE tick.
+			dispatch(baseApi.util.invalidateTags(['ScannerHealth']))
+			const nextDay = dayKeyIn(timezone)
+			if (nextDay !== lastDay) {
+				lastDay = nextDay
+				// Day boundary already covered by the per-minute
+				// invalidation above; explicit log/branch kept for
+				// clarity if we later add a day-change hook.
+			}
+		}
+		const start = setTimeout(() => {
+			tick()
+			interval = setInterval(tick, 60_000)
+		}, first)
+		return () => {
+			clearTimeout(start)
+			if (interval) clearInterval(interval)
+		}
+	}, [dispatch, timezone])
+	return now
 }
 
 // mulberry32 for deterministic sparkline shape (based on value)
@@ -38,8 +129,10 @@ const seededBars = (seed: number, n: number, max = 100): number[] => {
 	return out
 }
 
-const ScannerStatusCard = ({ data }: Props) => {
-	const last = useMemo(() => formatAgoShort(data.lastEventAt), [data.lastEventAt])
+const ScannerStatusCard = ({ data, middleSlot }: Props) => {
+	const now = useMinuteTicker(data.timezone)
+	const last = useMemo(() => formatAgoShort(data.lastEventAt, now), [data.lastEventAt, now])
+	const timezone = data.timezone
 
 	return (
 		<SectionCard padding='0'>
@@ -76,16 +169,21 @@ const ScannerStatusCard = ({ data }: Props) => {
 					</div>
 				</div>
 
+				{middleSlot ? <div className='wh-middle-slot'>{middleSlot}</div> : null}
+
 				{/* Pinterest-style hero widgets */}
 				<div className='wh-hero-tiles'>
 					<LastHourTile
 						value={data.receivedLastHour}
 						dayTotal={data.receivedToday}
+						now={now}
+						timezone={timezone}
 					/>
-					<TodayTile value={data.receivedToday} />
+					<TodayTile value={data.receivedToday} now={now} timezone={timezone} />
 					<AnalyzedTile
-						analyzed={data.analyzedInPeriod}
-						received={data.receivedToday}
+						analyzedToday={data.analyzedToday}
+						analyzedOfTodaysReceived={data.analyzedOfTodaysReceived}
+						receivedToday={data.receivedToday}
 					/>
 					<DiscordAlertsTile
 						sent={data.discordAlertsInPeriod}
@@ -137,13 +235,26 @@ const HeroBody = ({
 	</div>
 )
 
-const LastHourTile = ({ value, dayTotal }: { value: number; dayTotal: number }) => {
+const LastHourTile = ({
+	value,
+	dayTotal,
+	now,
+	timezone,
+}: {
+	value: number
+	dayTotal: number
+	now: number
+	timezone: string
+}) => {
 	const bars = seededBars(value * 31 + 7, 14, 80)
 	bars[bars.length - 1] = Math.max(bars[bars.length - 1], 90)
 	const maxBar = Math.max(...bars)
 
-	// vs daily-average: last hour vs (dayTotal / hoursElapsedToday)
-	const hoursElapsed = Math.max(1, hourOfDay())
+	// vs daily-average: last hour vs (dayTotal / hoursElapsedToday).
+	// `now` ticks every minute via useMinuteTicker and hoursElapsed
+	// is computed in the backend's timezone so the comparison stays
+	// consistent with how `dayTotal` was bucketed.
+	const hoursElapsed = Math.max(1, hourOfDay(new Date(now), timezone))
 	const avgPerHour = dayTotal / hoursElapsed
 	const trend =
 		avgPerHour > 0 ? Math.round(((value - avgPerHour) / avgPerHour) * 100) : null
@@ -171,8 +282,16 @@ const LastHourTile = ({ value, dayTotal }: { value: number; dayTotal: number }) 
 	)
 }
 
-const TodayTile = ({ value }: { value: number }) => {
-	const hr = useMemo(() => hourOfDay(), [value])
+const TodayTile = ({
+	value,
+	now,
+	timezone,
+}: {
+	value: number
+	now: number
+	timezone: string
+}) => {
+	const hr = hourOfDay(new Date(now), timezone)
 	const dayPct = Math.min(100, Math.round((hr / 24) * 100))
 	const hLabel = Math.floor(hr)
 	const mLabel = Math.floor((hr % 1) * 60)
@@ -207,41 +326,85 @@ const toneForPct = (pct: number): 'good' | 'ok' | 'warn' | 'bad' => {
 	return 'bad'
 }
 
-const AnalyzedTile = ({ analyzed, received }: { analyzed: number; received: number }) => {
-	const total = Math.max(received, analyzed)
-	const coverage = total > 0 ? Math.round((analyzed / total) * 100) : 100
+const AnalyzedTile = ({
+	analyzedToday,
+	analyzedOfTodaysReceived,
+	receivedToday,
+}: {
+	analyzedToday: number
+	analyzedOfTodaysReceived: number
+	receivedToday: number
+}) => {
+	// Big number is the ACTUAL AI throughput for today, so
+	// processing yesterday's backlog shows up correctly. The %
+	// below it uses a bounded numerator/denominator pair
+	// (`analyzedOfTodaysReceived / receivedToday`) so it never
+	// exceeds 100 % and never misrepresents yesterday's work as
+	// over-100 % of today's intake.
+	const hasSample = receivedToday > 0
+	const pct = hasSample
+		? Math.round((analyzedOfTodaysReceived / receivedToday) * 100)
+		: null
+	const yesterdayCarryover = Math.max(0, analyzedToday - analyzedOfTodaysReceived)
+	const caption = !hasSample
+		? yesterdayCarryover > 0
+			? `${yesterdayCarryover} from yesterday`
+			: 'no posts received yet today'
+		: yesterdayCarryover > 0
+			? `${analyzedOfTodaysReceived}/${receivedToday} today · +${yesterdayCarryover} backlog`
+			: `${analyzedOfTodaysReceived}/${receivedToday} received today`
 
 	return (
-		<div className={`hw-tile hw-tile-teal hw-tone-${toneForPct(coverage)}`}>
-			<HeroBody label='Analyzed' value={analyzed} unit='posts today' />
-			<PercentBar pct={coverage} caption={`of received · last 24h`} />
+		<div
+			className={`hw-tile hw-tile-teal hw-tone-${
+				pct == null ? 'ok' : toneForPct(pct)
+			}`}
+		>
+			<HeroBody label='Analyzed' value={analyzedToday} unit='posts today' />
+			<PercentBar pct={pct} caption={caption} />
 		</div>
 	)
 }
 
 const DiscordAlertsTile = ({ sent, failed }: { sent: number; failed: number }) => {
 	const attempted = sent + failed
-	const deliveryRate =
-		attempted > 0 ? Math.round((sent / attempted) * 100) : 100
-	const caption =
-		failed > 0 ? `${failed} failed · last 24h` : 'all delivered · last 24h'
+	const hasSample = attempted > 0
+	const deliveryRate = hasSample ? Math.round((sent / attempted) * 100) : null
+	const caption = hasSample
+		? failed > 0
+			? `${failed} failed · today`
+			: 'all delivered · today'
+		: 'no alerts attempted today'
 	return (
-		<div className={`hw-tile hw-tile-rose hw-tone-${toneForPct(deliveryRate)}`}>
+		<div
+			className={`hw-tile hw-tile-rose hw-tone-${
+				deliveryRate == null ? 'ok' : toneForPct(deliveryRate)
+			}`}
+		>
 			<HeroBody label='Discord alerts' value={sent} unit='sent today' />
 			<PercentBar pct={deliveryRate} caption={caption} />
 		</div>
 	)
 }
 
-const PercentBar = ({ pct, caption }: { pct: number; caption: string }) => (
+const PercentBar = ({
+	pct,
+	caption,
+}: {
+	pct: number | null
+	caption: string
+}) => (
 	<div className='hw-pct' aria-hidden='true'>
 		<div className='hw-pct-num'>
-			{pct}
-			<span className='hw-pct-sign'>%</span>
+			{pct == null ? '—' : pct}
+			{pct != null && <span className='hw-pct-sign'>%</span>}
 			<span className='hw-pct-caption'>{caption}</span>
 		</div>
 		<div className='hw-pct-track'>
-			<span className='hw-pct-fill' style={{ width: `${Math.max(4, pct)}%` }}>
+			<span
+				className='hw-pct-fill'
+				style={{ width: `${pct == null ? 4 : Math.max(4, pct)}%`, opacity: pct == null ? 0.3 : 1 }}
+			>
 				<span className='hw-pct-shine' />
 			</span>
 		</div>

@@ -17,6 +17,7 @@ export type ApiLeadStatus =
 	| 'ON_HOLD'
 	| 'WON'
 	| 'LOST'
+	| 'CLIENT'
 
 export type ApiLeadTemperature = 'COLD' | 'WARM' | 'HOT'
 
@@ -25,6 +26,13 @@ export type ApiClientType = 'individual' | 'company'
 export interface LeadProposal {
 	id: string
 	title: string
+}
+
+export interface LeadPlatformSummary {
+	id: string
+	title: string
+	slug: string | null
+	imageUrl: string | null
 }
 
 export interface LeadItem {
@@ -45,6 +53,8 @@ export interface LeadItem {
 	clientType: ApiClientType | null
 	rate: number | null
 	location: string | null
+	platformId: string | null
+	platform: LeadPlatformSummary | null
 	repliedAt: string
 	acceptedAt: string | null
 	holdAt: string | null
@@ -66,6 +76,7 @@ export type CreateLeadBody = {
 	clientType?: ApiClientType
 	rate?: number
 	location?: string
+	platformId?: string | null
 }
 
 export interface LeadPage {
@@ -99,6 +110,7 @@ export interface LeadListParams {
 	status?: ApiLeadStatus[]
 	temperature?: ApiLeadTemperature[]
 	source?: string
+	location?: string
 	createdFrom?: string
 	createdTo?: string
 }

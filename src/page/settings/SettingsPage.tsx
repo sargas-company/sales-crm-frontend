@@ -23,7 +23,7 @@ import {
 	SimCardOutlined,
 	FolderSpecialOutlined,
 } from '@mui/icons-material'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import MyAccountPanel from './MyAccountPanel'
 import BackupsSettingsPanel, {
 	BACKUPS_LS_KEY,
@@ -677,6 +677,7 @@ const Control = ({
 	disabled: boolean
 	onChange: (v: unknown) => void
 }) => {
+	const navigate = useNavigate()
 	switch (entry.type) {
 		case 'boolean':
 			return (
@@ -686,7 +687,24 @@ const Control = ({
 					aria-checked={!!value}
 					$on={!!value}
 					$disabled={disabled}
-					onClick={() => !disabled && onChange(!value)}
+					onClick={() => {
+						if (disabled) return
+						// scanner.analysisEnabled off → on MUST go
+						// through the Resume AI dialog so the operator
+						// picks a backlog strategy. The backend returns
+						// 400 to a direct PATCH as a defence-in-depth
+						// contract guard; the UI redirects to the
+						// shared Analytics modal here to avoid that
+						// error ever reaching an operator.
+						if (
+							entry.key === 'scanner.analysisEnabled' &&
+							!value
+						) {
+							navigate('/dashboards/sales?resumeAi=1')
+							return
+						}
+						onChange(!value)
+					}}
 				>
 					<Dot $on={!!value} />
 				</ToggleSwitch>

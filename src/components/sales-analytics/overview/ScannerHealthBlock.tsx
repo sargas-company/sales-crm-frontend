@@ -1,9 +1,16 @@
+import type { ReactNode } from 'react'
 import ScannerStatusCard from '../../../page/analytics/ScannerStatusCard'
 import SkeletonBlock from '../_shared/SkeletonBlock'
 import ErrorState from '../_shared/ErrorState'
 import { useGetScannerHealthQuery } from '../../../store/sales-analytics/salesAnalyticsApi'
 
-const ScannerHealthBlock = () => {
+interface Props {
+	/** Slot rendered inside the webhook card between the blue
+	 *  hero and the orange hero-tiles row. */
+	middleSlot?: ReactNode
+}
+
+const ScannerHealthBlock = ({ middleSlot }: Props) => {
 	// Scanner health is operational status, NOT analytics — always shows
 	// "today" and last-hour figures regardless of the dashboard date filter.
 	const { data, isLoading, isError, refetch } = useGetScannerHealthQuery({ period: 'today' })
@@ -22,7 +29,7 @@ const ScannerHealthBlock = () => {
 		)
 	}
 
-	return <ScannerStatusCard data={data} />
+	return <ScannerStatusCard data={data} middleSlot={middleSlot} />
 }
 
 export default ScannerHealthBlock

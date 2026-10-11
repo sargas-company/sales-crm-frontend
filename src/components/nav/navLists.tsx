@@ -5,8 +5,6 @@ import {
 	TrendingUpOutlined,
 	PaidOutlined,
 	PeopleOutlined,
-	RequestQuoteOutlined,
-	LayersOutlined,
 	AccountCircleOutlined,
 	ContactsOutlined,
 	ReceiptLongOutlined,
@@ -45,6 +43,7 @@ import {
 	FolderSpecialOutlined,
 	BackupOutlined,
 	NotificationsNoneOutlined,
+	StoreOutlined,
 } from '@mui/icons-material'
 import { ReactNode } from 'react'
 
@@ -86,26 +85,29 @@ const navList: NavOptions[] = [
 			),
 		],
 	},
+	// Proposals, Accounts, Platforms are hidden from the menu while
+	// Sales is parked (we're only running Job Posts today). Code,
+	// routes, data and FKs stay intact — the entries will be restored
+	// or re-grouped if those surfaces come back.
 	{
-		parent: formatGroupButton('Proposals', <RequestQuoteOutlined />, '/proposal'),
-		childrens: [
-			format('Platforms', '/platforms/list/', <LayersOutlined />, 'platforms:view'),
-			format('Job Posts', '/job-posts/list/', <WorkOutlineOutlined />, 'job_posts:view'),
-			format('Accounts', '/accounts/list/', <AccountCircleOutlined />, 'accounts:view'),
-		],
+		label: 'Job Posts',
+		path: '/job-posts/list/?status=any',
+		icon: <WorkOutlineOutlined />,
+		permission: 'job_posts:view',
 	},
 	{
-		parent: formatGroupButton('Leads', <PeopleOutlined />, '/leads'),
+		parent: formatGroupButton('Sales', <PeopleOutlined />, '/leads'),
 		childrens: [
-			format('List', '/leads/list/', <PeopleOutlined />, 'leads:view'),
+			format('Leads', '/leads/list/', <PeopleOutlined />, 'leads:view'),
 			format('Clients', '/clients/list/', <ContactsOutlined />, 'clients:view'),
-			format('Client Calls', '/client-calls/list/', <PhoneOutlined />, 'client_calls:view'),
 			format(
-				'Client Requests',
+				'Website Requests',
 				'/client-requests/list/',
 				<AssignmentOutlined />,
 				'client_requests:view'
 			),
+			format('Calls', '/client-calls/list/', <PhoneOutlined />, 'client_calls:view'),
+			format('Platforms', '/platforms/list/', <StoreOutlined />, 'platforms:view'),
 		],
 	},
 	{

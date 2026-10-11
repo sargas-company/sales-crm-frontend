@@ -34,10 +34,16 @@ export const leadsApi = baseApi.injectEndpoints({
 							? params.temperature.join(',')
 							: undefined,
 					source: params.source || undefined,
+					location: params.location || undefined,
 					createdFrom: params.createdFrom || undefined,
 					createdTo: params.createdTo || undefined,
 				},
 			}),
+			providesTags: ['Lead'],
+		}),
+
+		getLeadSources: builder.query<string[], void>({
+			query: () => ({ url: '/leads/sources' }),
 			providesTags: ['Lead'],
 		}),
 
@@ -74,6 +80,7 @@ export const leadsApi = baseApi.injectEndpoints({
 
 export const {
 	useGetLeadListQuery,
+	useGetLeadSourcesQuery,
 	useGetLeadByIdQuery,
 	useGetLeadActivityQuery,
 	useUpdateLeadMutation,

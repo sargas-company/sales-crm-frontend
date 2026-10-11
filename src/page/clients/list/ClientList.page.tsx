@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import {
 	DeleteOutline,
@@ -10,7 +10,11 @@ import {
 	FilterListOutlined,
 	SearchOutlined,
 	ClearRounded,
+	LocationOnOutlined,
 } from '@mui/icons-material'
+import { locationFlag } from '../../../utils/location'
+import CountryAutocomplete from '../../../components/_shared/CountryAutocomplete'
+import { formatDate } from '../../../utils/format'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../../components/_shared/ListPageShell'
 import {
@@ -29,6 +33,7 @@ import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
 import {
 	useDeleteClientMutation,
+	useGetClientSourcesQuery,
 	useGetClientsQuery,
 	type ApiClientStatus,
 	type ClientItem,
@@ -89,8 +94,8 @@ const ClientList = () => {
 
 	const searchParam = sp.get('q') ?? ''
 	const sourceParam = sp.get('source') ?? ''
-	const sinceFromParam = sp.get('from') ?? ''
-	const sinceToParam = sp.get('to') ?? ''
+	const locationParam = sp.get('location') ?? ''
+	const statusParam = (sp.get('status') ?? '') as ApiClientStatus | ''
 	const presetParam = (sp.get('preset') ?? 'all') as Preset
 	const sortByParam = sp.get('sortBy') as ClientSortBy | null
 	const sortDirParam = sp.get('sortDir') as 'asc' | 'desc' | null
@@ -106,7 +111,7 @@ const ClientList = () => {
 
 	useEffect(() => {
 		setPage(1)
-	}, [search, presetParam, sourceParam, sinceFromParam, sinceToParam])
+	}, [search, presetParam, statusParam, sourceParam, locationParam])
 
 	// Keep URL params in sync for shareable list state.
 	useEffect(() => {
@@ -124,14 +129,16 @@ const ClientList = () => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [search, sort])
 
+	const { data: clientSources } = useGetClientSourcesQuery()
 	const { data, isLoading, isError, refetch } = useGetClientsQuery({
 		page,
 		limit: PAGE_SIZE,
 		search: search || undefined,
-		status: presetToStatus[presetParam],
+		// Explicit status filter OVERRIDES the preset so the user can
+		// refine within a preset (same contract as LeadList).
+		status: (statusParam || presetToStatus[presetParam]) as ApiClientStatus | undefined,
 		source: sourceParam || undefined,
-		clientSinceFrom: sinceFromParam || undefined,
-		clientSinceTo: sinceToParam || undefined,
+		location: locationParam || undefined,
 		sortBy: (sort?.key as ClientSortBy | undefined) ?? undefined,
 		sortDirection: sort?.direction,
 	})
@@ -171,9 +178,9 @@ const ClientList = () => {
 	const activeFilterCount =
 		(search ? 1 : 0) +
 		(presetParam !== 'all' ? 1 : 0) +
+		(statusParam ? 1 : 0) +
 		(sourceParam ? 1 : 0) +
-		(sinceFromParam ? 1 : 0) +
-		(sinceToParam ? 1 : 0)
+		(locationParam ? 1 : 0)
 
 	// Tape indicator (ported from Audit Log): slide the paper strip
 	// behind the active preset. Measured in a layout effect so the
@@ -202,6 +209,17 @@ const ClientList = () => {
 	const columns: DataTableColumn<ClientItem>[] = useMemo(
 		() => [
 			{
+				key: 'number',
+				label: '#',
+				minWidth: 70,
+				sortable: true,
+				sortValue: (c) => c.number,
+				render: (c) => (
+					<NumLink to={`/clients/${c.id}`}>#{c.number}</NumLink>
+				),
+				skeleton: () => <TableSkeleton $w='32px' $h='13px' />,
+			},
+			{
 				key: 'firstName',
 				label: 'Name',
 				sortable: true,
@@ -219,21 +237,22 @@ const ClientList = () => {
 				skeleton: () => <TableSkeleton $w='120px' $h='13px' />,
 			},
 			{
+				key: 'status',
+				label: 'Status',
+				sortable: true,
+				sortValue: (c) => c.status,
+				render: (c) => (
+					<StatusPill $status={c.status}>{statusLabel[c.status]}</StatusPill>
+				),
+				skeleton: () => <TableSkeleton $w='70px' $h='18px' />,
+			},
+			{
 				key: 'email',
 				label: 'Email',
 				sortable: true,
 				sortValue: (c) => c.email ?? '',
 				render: (c) =>
-					c.email ? (
-						<a
-							href={`mailto:${c.email}`}
-							onClick={(e) => e.stopPropagation()}
-						>
-							{c.email}
-						</a>
-					) : (
-						<Muted>—</Muted>
-					),
+					c.email ? <EmailText title={c.email}>{c.email}</EmailText> : <Muted>—</Muted>,
 				skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
 			},
 			{
@@ -248,12 +267,7 @@ const ClientList = () => {
 					return (
 						<PhoneCell>
 							{flag && <Flag title={iso ?? undefined}>{flag}</Flag>}
-							<a
-								href={`tel:${c.phone}`}
-								onClick={(e) => e.stopPropagation()}
-							>
-								{formatPhoneDisplay(c.phone)}
-							</a>
+							<PhoneText>{formatPhoneDisplay(c.phone)}</PhoneText>
 						</PhoneCell>
 					)
 				},
@@ -263,39 +277,49 @@ const ClientList = () => {
 				key: 'source',
 				label: 'Source',
 				sortable: false,
-				render: (c) => c.source ?? <Muted>—</Muted>,
+				render: (c) =>
+					c.source ? <SourcePill>{c.source}</SourcePill> : <Muted>—</Muted>,
 				skeleton: () => <TableSkeleton $w='70px' $h='13px' />,
 			},
 			{
-				key: 'status',
-				label: 'Status',
-				sortable: true,
-				sortValue: (c) => c.status,
-				render: (c) => (
-					<StatusPill $status={c.status}>{statusLabel[c.status]}</StatusPill>
-				),
-				skeleton: () => <TableSkeleton $w='70px' $h='18px' />,
-			},
-			{
-				key: 'clientSince',
-				label: 'Client since',
-				sortable: true,
-				sortValue: (c) => c.clientSince ?? '',
-				render: (c) =>
-					c.clientSince ? (
-						c.clientSince.slice(0, 10)
-					) : (
-						<Muted>—</Muted>
-					),
+				key: 'location',
+				label: 'Location',
+				sortable: false,
+				render: (c) => {
+					if (!c.location) return <Muted>—</Muted>
+					const flag = locationFlag(c.location)
+					return (
+						<LocationCell>
+							<LocationIcon>
+								{flag ? (
+									<span className='flag'>{flag}</span>
+								) : (
+									<LocationOnOutlined />
+								)}
+							</LocationIcon>
+							<span>{c.location}</span>
+						</LocationCell>
+					)
+				},
 				skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
 			},
 			{
 				key: 'updatedAt',
 				label: 'Updated',
+				minWidth: 140,
 				sortable: true,
-				sortValue: (c) => c.updatedAt,
-				render: (c) => c.updatedAt.slice(0, 10),
-				skeleton: () => <TableSkeleton $w='70px' $h='13px' />,
+				sortValue: (c) => new Date(c.updatedAt),
+				render: (c) => <Muted>{formatDate(c.updatedAt, 'short')}</Muted>,
+				skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
+			},
+			{
+				key: 'createdAt',
+				label: 'Created',
+				minWidth: 140,
+				sortable: true,
+				sortValue: (c) => new Date(c.createdAt),
+				render: (c) => <Muted>{formatDate(c.createdAt, 'short')}</Muted>,
+				skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
 			},
 			{
 				key: 'actions',
@@ -425,43 +449,45 @@ const ClientList = () => {
 
 					<BottomSlot>
 						<InlineField>
+							<span className='l'>Status</span>
+							<InlineSelect
+								value={statusParam}
+								onChange={(e) => updateParam('status', e.target.value)}
+							>
+								<option value=''>Any</option>
+								<option value='ACTIVE'>Active</option>
+								<option value='ON_HOLD'>On hold</option>
+								<option value='FORMER'>Former</option>
+							</InlineSelect>
+						</InlineField>
+					</BottomSlot>
+
+					<BottomSlot>
+						<InlineField>
 							<span className='l'>Source</span>
 							<InlineSelect
-								as='input'
-								type='text'
 								value={sourceParam}
+								onChange={(e) => updateParam('source', e.target.value)}
+							>
+								<option value=''>Any</option>
+								{(clientSources ?? []).map((s) => (
+									<option key={s} value={s}>
+										{s}
+									</option>
+								))}
+							</InlineSelect>
+						</InlineField>
+					</BottomSlot>
+
+					<BottomSlot>
+						<InlineField>
+							<span className='l'>Country</span>
+							<CountryAutocomplete
+								variant='paper'
+								value={locationParam}
+								onChange={(v) => updateParam('location', v)}
 								placeholder='Any'
-								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-									updateParam('source', e.target.value)
-								}
-							/>
-						</InlineField>
-					</BottomSlot>
-
-					<BottomSlot>
-						<InlineField>
-							<span className='l'>Since from</span>
-							<InlineSelect
-								as='input'
-								type='date'
-								value={sinceFromParam}
-								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-									updateParam('from', e.target.value)
-								}
-							/>
-						</InlineField>
-					</BottomSlot>
-
-					<BottomSlot>
-						<InlineField>
-							<span className='l'>Since to</span>
-							<InlineSelect
-								as='input'
-								type='date'
-								value={sinceToParam}
-								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-									updateParam('to', e.target.value)
-								}
+								ariaLabel='Filter by country'
 							/>
 						</InlineField>
 					</BottomSlot>
@@ -529,6 +555,61 @@ const ClientList = () => {
 
 const Muted = styled.span`
 	color: ${T.textSecondary};
+`
+const NumLink = styled(Link)`
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+	color: ${T.textStrong};
+	text-decoration: none;
+	&:hover {
+		text-decoration: underline;
+	}
+`
+const PhoneText = styled.span`
+	color: ${T.textStrong};
+	font-variant-numeric: tabular-nums;
+`
+const EmailText = styled.span`
+	color: ${T.textStrong};
+`
+const SourcePill = styled.span`
+	display: inline-flex;
+	align-items: center;
+	width: fit-content;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	background: rgba(148, 163, 184, 0.18);
+	color: #475569;
+`
+const LocationCell = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	color: ${T.textStrong};
+`
+const LocationIcon = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 5px;
+	background: rgba(15, 23, 42, 0.04);
+	color: rgba(15, 23, 42, 0.55);
+	flex-shrink: 0;
+	svg {
+		font-size: 16px;
+	}
+	.flag {
+		font-size: 18px;
+		line-height: 1;
+		color: initial;
+	}
 `
 const PhoneCell = styled.span`
 	display: inline-flex;

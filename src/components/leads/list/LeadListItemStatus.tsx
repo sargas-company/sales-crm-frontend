@@ -8,6 +8,7 @@ const statusColor: Record<ApiLeadStatus, string> = {
 	ON_HOLD: '#607D8B',
 	WON: 'success',
 	LOST: '#9E9E9E',
+	CLIENT: '#1976D2',
 }
 
 const statusLabel: Record<ApiLeadStatus, string> = {
@@ -17,6 +18,7 @@ const statusLabel: Record<ApiLeadStatus, string> = {
 	ON_HOLD: 'On Hold',
 	WON: 'Won',
 	LOST: 'Lost',
+	CLIENT: 'Client',
 }
 
 const LeadListItemStatus = ({ itemStatus }: { itemStatus: ApiLeadStatus }) => (

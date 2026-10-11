@@ -87,7 +87,11 @@ const clientInitials = (name: string) => {
 
 const CreateCallPage = () => {
 	const [searchParams] = useSearchParams()
-	const initialClientType = (searchParams.get('clientType') as ClientType | null) ?? 'lead'
+	// Website Request is no longer a supported owner for new calls —
+	// clamp a stale deep link back to Lead.
+	const rawInitialClientType = (searchParams.get('clientType') as ClientType | null) ?? 'lead'
+	const initialClientType: ClientType =
+		rawInitialClientType === 'client_request' ? 'lead' : rawInitialClientType
 	const initialClientId = searchParams.get('clientId') ?? ''
 
 	const defaultDateTime = useMemo(() => dayjs().add(1, 'hour'), [])
@@ -434,7 +438,6 @@ const CreateCallPage = () => {
 										onChange={handleClientTypeChange}
 										leadCount={leads.length}
 										clientCount={crmClients.length}
-										requestCount={clientRequests.length}
 									/>
 
 									<Box sx={{ mt: 2.5 }}>
@@ -828,25 +831,16 @@ const CreateCallPage = () => {
 										</Typography>
 									</Box>
 
-									{/* Time conversion box */}
+									{/* Time conversion box — plain surface (no gradient). */}
 									<Box
 										sx={{
 											position: 'relative',
 											mt: 0.5,
 											p: '16px 18px',
 											borderRadius: '14px',
-											background: `linear-gradient(135deg, ${PRIMARY_TINT} 0%, #ffffff 60%, ${PRIMARY_TINT} 130%)`,
-											backgroundSize: '200% 200%',
+											background: '#ffffff',
 											border: `1px solid ${PRIMARY_TINT_STRONG}`,
 											overflow: 'hidden',
-											animation: 'callTimeShift 6s ease-in-out infinite',
-											'@keyframes callTimeShift': {
-												'0%, 100%': { backgroundPosition: '0% 50%' },
-												'50%': { backgroundPosition: '100% 50%' },
-											},
-											'@media (prefers-reduced-motion: reduce)': {
-												animation: 'none',
-											},
 										}}
 									>
 										<Typography
@@ -1005,21 +999,22 @@ const SegmentedPill = ({
 	onChange,
 	leadCount,
 	clientCount,
-	requestCount,
 }: {
 	value: ClientType
 	onChange: (v: ClientType) => void
 	leadCount: number
 	clientCount: number
-	requestCount: number
 }) => {
-	const activeIndex = value === 'lead' ? 0 : value === 'client' ? 1 : 2
+	// Only Lead / Client owners are offered by the UI now (Website
+	// Request is no longer a valid owner for new calls). Clamp any
+	// pre-existing `client_request` value to Lead for the indicator.
+	const activeIndex = value === 'client' ? 1 : 0
 	return (
 		<Box
 			sx={{
 				position: 'relative',
 				display: 'grid',
-				gridTemplateColumns: '1fr 1fr 1fr',
+				gridTemplateColumns: '1fr 1fr',
 				background: INK_04,
 				borderRadius: '12px',
 				p: '4px',
@@ -1032,8 +1027,8 @@ const SegmentedPill = ({
 					position: 'absolute',
 					top: 4,
 					bottom: 4,
-					left: `calc(${(activeIndex * 100) / 3}% + 4px)`,
-					width: 'calc(100% / 3 - 8px)',
+					left: `calc(${(activeIndex * 100) / 2}% + 4px)`,
+					width: 'calc(100% / 2 - 8px)',
 					background: '#fff',
 					borderRadius: '9px',
 					boxShadow:
@@ -1056,13 +1051,6 @@ const SegmentedPill = ({
 				count={clientCount}
 				active={value === 'client'}
 				onClick={() => onChange('client')}
-			/>
-			<PillTab
-				icon={<WorkOutlineOutlined sx={{ fontSize: 18 }} />}
-				label='Client requests'
-				count={requestCount}
-				active={value === 'client_request'}
-				onClick={() => onChange('client_request')}
 			/>
 		</Box>
 	)

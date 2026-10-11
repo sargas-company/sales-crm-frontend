@@ -514,8 +514,8 @@ const DangerGhostButton = styled.button`
 	font-weight: 600;
 	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 	transition:
-		transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
-		background 160ms ease;
+		background 160ms ease,
+		border-color 160ms ease;
 
 	svg {
 		transform-origin: 50% 55%;
@@ -523,8 +523,7 @@ const DangerGhostButton = styled.button`
 	}
 
 	&:hover:not(:disabled) {
-		transform: translateY(-1px);
-		background: ${DANGER_BG};
+		border-color: ${DANGER};
 	}
 	&:hover:not(:disabled) svg {
 		scale: 1.15;
@@ -781,26 +780,15 @@ const TimeBox = styled.div`
 	position: relative;
 	padding: 20px 22px;
 	border-radius: 14px;
-	background: linear-gradient(135deg, ${PRIMARY_TINT} 0%, #ffffff 60%, ${PRIMARY_TINT} 130%);
-	background-size: 200% 200%;
+	background: #ffffff;
 	border: 1px solid ${PRIMARY_TINT_STRONG};
 	overflow: hidden;
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	gap: 20px 32px;
-	animation: timeBoxShift 6s ease-in-out infinite;
-
-	@keyframes timeBoxShift {
-		0%, 100% { background-position: 0% 50%; }
-		50%      { background-position: 100% 50%; }
-	}
 
 	@media (max-width: 640px) {
 		grid-template-columns: 1fr;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		animation: none;
 	}
 `
 

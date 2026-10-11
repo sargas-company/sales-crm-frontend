@@ -66,6 +66,7 @@ const filtersToQueryParams = (
 export const salesAnalyticsApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getScannerHealth: builder.query<ScannerHealth, ScannerHealthFilters>({
+			providesTags: ['ScannerHealth'],
 			query: ({ period }) => ({
 				url: '/analytics/scanner-health',
 				params: { period },

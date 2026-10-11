@@ -32,6 +32,22 @@ export const formatDateTime = (iso: string | null | undefined): string => {
 }
 
 /**
+ * Like `formatDateTime` but includes seconds.
+ * Example: "2026-04-15T12:35:40.981Z" → "15 Apr 2026, 12:35:40"
+ */
+export const formatDateTimeSec = (iso: string | null | undefined): string => {
+	if (!iso) return '—'
+	return new Date(iso).toLocaleString('en-GB', {
+		day: '2-digit',
+		month: 'short',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+	})
+}
+
+/**
  * Formats a backend datetime string (YYYY-MM-DD HH:mm) for client timezone display.
  * Uses 12-hour clock with AM/PM.
  * Example: "2026-05-01 08:00" → "May 1, 2026 · 08:00 AM"

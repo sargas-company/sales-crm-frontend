@@ -10,7 +10,9 @@ import {
 	FilterListOutlined,
 	SearchOutlined,
 	ClearRounded,
+	LocationOnOutlined,
 } from '@mui/icons-material'
+import { locationFlag } from '../../../utils/location'
 import {
 	TapeIndicator,
 	TapePill,
@@ -43,7 +45,10 @@ import type {
 	LeadItem,
 	LeadSortBy,
 } from '../../../store/leads/types/definition'
-import { useGetLeadListQuery } from '../../../store/leads/leadsApi'
+import {
+	useGetLeadListQuery,
+	useGetLeadSourcesQuery,
+} from '../../../store/leads/leadsApi'
 import { formatDate } from '../../../utils/format'
 import {
 	countryToFlag,
@@ -51,6 +56,7 @@ import {
 	phoneCountryIso,
 } from '../../../utils/phone'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
+import CountryAutocomplete from '../../../components/_shared/CountryAutocomplete'
 
 const PAGE_SIZE = 20
 
@@ -110,8 +116,7 @@ const LeadList = () => {
 
 	const preset = (sp.get('preset') ?? 'all') as LeadPreset
 	const sourceParam = sp.get('source') ?? ''
-	const fromParam = sp.get('from') ?? ''
-	const toParam = sp.get('to') ?? ''
+	const locationParam = sp.get('location') ?? ''
 	const statusParam = (sp.get('status') ?? '') as ApiLeadStatus | ''
 	const temperatureParam = (sp.get('temperature') ?? '') as
 		| ApiLeadTemperature
@@ -168,8 +173,7 @@ const LeadList = () => {
 		(statusParam ? 1 : 0) +
 		(temperatureParam ? 1 : 0) +
 		(sourceParam ? 1 : 0) +
-		(fromParam ? 1 : 0) +
-		(toParam ? 1 : 0)
+		(locationParam ? 1 : 0)
 
 	// Tape indicator — same pattern as Audit Log + Clients list.
 	const pillsRef = useRef<HTMLDivElement>(null)
@@ -193,6 +197,7 @@ const LeadList = () => {
 		})
 	}, [preset])
 
+	const { data: leadSources } = useGetLeadSourcesQuery()
 	const { data, isLoading, isError, refetch } = useGetLeadListQuery({
 		page,
 		limit: PAGE_SIZE,
@@ -200,8 +205,7 @@ const LeadList = () => {
 		status: statusList,
 		temperature: temperatureList,
 		source: sourceParam || undefined,
-		createdFrom: fromParam || undefined,
-		createdTo: toParam || undefined,
+		location: locationParam || undefined,
 		sortBy: (sort?.key as LeadSortBy | undefined) ?? undefined,
 		sortDirection: sort?.direction,
 	})
@@ -219,8 +223,7 @@ const LeadList = () => {
 		search,
 		preset,
 		sourceParam,
-		fromParam,
-		toParam,
+		locationParam,
 		statusParam,
 		temperatureParam,
 	])
@@ -238,24 +241,16 @@ const LeadList = () => {
 		{
 			key: 'name',
 			label: 'Lead',
-			minWidth: 260,
+			minWidth: 160,
 			sortable: true,
 			sortValue: (l) => leadName(l),
 			render: (l) => (
-				<LeadCell>
-					<Avatar>{leadName(l).slice(0, 2).toUpperCase()}</Avatar>
-					<div>
-						<LeadName>{leadName(l)}</LeadName>
-						{l.companyName && <LeadMeta>{l.companyName}</LeadMeta>}
-					</div>
-				</LeadCell>
+				<LeadCellCompact>
+					<LeadName>{leadName(l)}</LeadName>
+					{l.companyName && <LeadMeta>{l.companyName}</LeadMeta>}
+				</LeadCellCompact>
 			),
-			skeleton: () => (
-				<LeadCell>
-					<TableSkeleton $w='36px' $h='36px' style={{ borderRadius: 10, flexShrink: 0 }} />
-					<TableSkeleton $w='140px' $h='14px' />
-				</LeadCell>
-			),
+			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
 		},
 		{
 			key: 'email',
@@ -265,13 +260,7 @@ const LeadList = () => {
 			sortValue: (l) => l.email ?? '',
 			render: (l) =>
 				l.email ? (
-					<ContactLink
-						href={`mailto:${l.email}`}
-						onClick={(e) => e.stopPropagation()}
-						title={l.email}
-					>
-						{l.email}
-					</ContactLink>
+					<EmailText title={l.email}>{l.email}</EmailText>
 				) : (
 					<Muted>—</Muted>
 				),
@@ -292,13 +281,9 @@ const LeadList = () => {
 						{flag && (
 							<CountryFlag title={iso ?? undefined}>{flag}</CountryFlag>
 						)}
-						<ContactLink
-							href={`tel:${l.phone}`}
-							onClick={(e) => e.stopPropagation()}
-							title={l.phone}
-						>
+						<PhoneText title={l.phone}>
 							{formatPhoneDisplay(l.phone)}
-						</ContactLink>
+						</PhoneText>
 					</PhoneCell>
 				)
 			},
@@ -310,7 +295,14 @@ const LeadList = () => {
 			minWidth: 120,
 			sortable: true,
 			sortValue: (l) => l.clientType ?? '',
-			render: (l) => <Muted>{l.clientType ?? '—'}</Muted>,
+			render: (l) =>
+				l.clientType ? (
+					<ClientTypePill $kind={l.clientType}>
+						{l.clientType === 'company' ? 'Company' : 'Individual'}
+					</ClientTypePill>
+				) : (
+					<Muted>—</Muted>
+				),
 			skeleton: () => <TableSkeleton $w='70px' $h='13px' />,
 		},
 		{
@@ -339,36 +331,48 @@ const LeadList = () => {
 		{
 			key: 'source',
 			label: 'Source',
-			minWidth: 110,
+			minWidth: 60,
 			sortable: false,
-			render: (l) => l.source ?? <Muted>—</Muted>,
-			skeleton: () => <TableSkeleton $w='70px' $h='13px' />,
+			render: (l) =>
+				l.source ? <SourcePill>{l.source}</SourcePill> : <Muted>—</Muted>,
+			skeleton: () => <TableSkeleton $w='60px' $h='13px' />,
 		},
 		{
-			key: 'rate',
-			label: 'Rate',
-			minWidth: 100,
-			sortable: true,
-			sortValue: (l) => l.rate,
-			render: (l) => <Num>{l.rate != null ? `$${l.rate}/hr` : '—'}</Num>,
-			skeleton: () => <TableSkeleton $w='50px' $h='13px' />,
+			key: 'platform',
+			label: 'Platform',
+			minWidth: 80,
+			sortable: false,
+			render: (l) =>
+				l.platform?.title ? <Muted>{l.platform.title}</Muted> : <Muted>—</Muted>,
+			skeleton: () => <TableSkeleton $w='80px' $h='13px' />,
 		},
 		{
 			key: 'location',
 			label: 'Location',
-			minWidth: 140,
+			minWidth: 80,
 			sortable: true,
 			sortValue: (l) => l.location ?? '',
-			render: (l) => <Muted>{l.location ?? '—'}</Muted>,
+			render: (l) => {
+				if (!l.location) return <Muted>—</Muted>
+				const flag = locationFlag(l.location)
+				return (
+					<LocationCell>
+						<LocationIcon>
+							{flag ? <span className='flag'>{flag}</span> : <LocationOnOutlined />}
+						</LocationIcon>
+						<span className='value'>{l.location}</span>
+					</LocationCell>
+				)
+			},
 			skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
 		},
 		{
-			key: 'replied',
-			label: 'Replied',
+			key: 'updatedAt',
+			label: 'Updated',
 			minWidth: 140,
 			sortable: true,
-			sortValue: (l) => new Date(l.repliedAt),
-			render: (l) => <Muted>{formatDate(l.repliedAt, 'short')}</Muted>,
+			sortValue: (l) => new Date(l.updatedAt),
+			render: (l) => <Muted>{formatDate(l.updatedAt, 'short')}</Muted>,
 			skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
 		},
 		{
@@ -493,6 +497,7 @@ const LeadList = () => {
 									<option value='ON_HOLD'>On Hold</option>
 									<option value='WON'>Won</option>
 									<option value='LOST'>Lost</option>
+									<option value='CLIENT'>Client</option>
 								</InlineSelect>
 							</InlineField>
 						</BottomSlot>
@@ -516,41 +521,28 @@ const LeadList = () => {
 							<InlineField>
 								<span className='l'>Source</span>
 								<InlineSelect
-									as='input'
-									type='text'
 									value={sourceParam}
+									onChange={(e) => updateParam('source', e.target.value)}
+								>
+									<option value=''>Any</option>
+									{(leadSources ?? []).map((s) => (
+										<option key={s} value={s}>
+											{s}
+										</option>
+									))}
+								</InlineSelect>
+							</InlineField>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Country</span>
+								<CountryAutocomplete
+									variant='paper'
+									value={locationParam}
+									onChange={(v) => updateParam('location', v)}
 									placeholder='Any'
-									onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-										updateParam('source', e.target.value)
-									}
-								/>
-							</InlineField>
-						</BottomSlot>
-
-						<BottomSlot>
-							<InlineField>
-								<span className='l'>Created from</span>
-								<InlineSelect
-									as='input'
-									type='date'
-									value={fromParam}
-									onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-										updateParam('from', e.target.value)
-									}
-								/>
-							</InlineField>
-						</BottomSlot>
-
-						<BottomSlot>
-							<InlineField>
-								<span className='l'>Created to</span>
-								<InlineSelect
-									as='input'
-									type='date'
-									value={toParam}
-									onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-										updateParam('to', e.target.value)
-									}
+									ariaLabel='Filter by country'
 								/>
 							</InlineField>
 						</BottomSlot>
@@ -601,28 +593,12 @@ const LeadList = () => {
 
 export default LeadList
 
-const LeadCell = styled.div`
+const LeadCellCompact = styled.div`
 	display: inline-flex;
-	align-items: center;
-	gap: 14px;
+	flex-direction: column;
+	gap: 2px;
 	min-width: 0;
-`
-
-const Avatar = styled.span`
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 36px;
-	height: 36px;
-	border-radius: 10px;
-	background: ${T.subtleBg};
-	border: 1px solid ${T.border};
-	color: ${T.textSecondary};
-	font-size: 12px;
-	font-weight: 700;
-	letter-spacing: 0.4px;
-	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-	flex-shrink: 0;
+	width: fit-content;
 `
 
 const LeadName = styled.div`
@@ -658,6 +634,101 @@ const CountryFlag = styled.span`
 	line-height: 1;
 	flex-shrink: 0;
 `
+
+const PhoneText = styled.span`
+	display: inline-block;
+	max-width: 220px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: ${T.textStrong};
+	font-variant-numeric: tabular-nums;
+`
+
+const EmailText = styled.span`
+	display: inline-block;
+	max-width: 220px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: ${T.textStrong};
+`
+
+const FitCell = styled.span`
+	display: inline-block;
+	width: fit-content;
+	white-space: nowrap;
+	font-size: 13px;
+	color: ${T.textStrong};
+`
+
+const SourcePill = styled.span`
+	display: inline-flex;
+	align-items: center;
+	width: fit-content;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	background: rgba(148, 163, 184, 0.18);
+	color: #475569;
+`
+
+const ClientTypePill = styled.span<{ $kind: 'company' | 'individual' }>`
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
+	text-transform: uppercase;
+	background: ${(p) =>
+		p.$kind === 'company'
+			? 'rgba(99, 102, 241, 0.14)'
+			: 'rgba(148, 163, 184, 0.18)'};
+	color: ${(p) => (p.$kind === 'company' ? '#4338ca' : '#475569')};
+`
+
+const LocationCell = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	width: fit-content;
+	font-size: 13px;
+	color: ${T.textStrong};
+
+	.value {
+		white-space: nowrap;
+	}
+`
+
+const LocationIcon = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 5px;
+	background: rgba(15, 23, 42, 0.04);
+	color: rgba(15, 23, 42, 0.55);
+	flex-shrink: 0;
+
+	svg {
+		font-size: 16px;
+	}
+	.flag {
+		font-size: 18px;
+		line-height: 1;
+		/* Reset color so emoji renders at its native, full-colour
+		   palette — same look as the phone-cell flag badge. */
+		color: initial;
+	}
+`
+
 
 const ContactLink = styled.a`
 	display: inline-block;

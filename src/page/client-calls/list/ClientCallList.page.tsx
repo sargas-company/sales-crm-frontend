@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import {
 	DeleteOutline,
@@ -7,6 +7,7 @@ import {
 	EditOutlined,
 	VideocamOutlined,
 	AddRounded,
+	NorthEastRounded,
 } from '@mui/icons-material'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../../components/_shared/ListPageShell'
@@ -50,8 +51,55 @@ const clientName = (c: ClientCallItem): string => {
 		const n = [c.lead.firstName, c.lead.lastName].filter(Boolean).join(' ').trim()
 		return n || c.lead.companyName || 'Lead'
 	}
+	if (c.crmClient) {
+		const n = [c.crmClient.firstName, c.crmClient.lastName]
+			.filter(Boolean)
+			.join(' ')
+			.trim()
+		return n || c.crmClient.company || 'Client'
+	}
 	if (c.clientRequest) return c.clientRequest.name || c.clientRequest.company || 'Request'
 	return '—'
+}
+
+// Owner column model: name/company + typed badge (Lead | Client |
+// legacy Website Request) + target route for the carded link. The
+// third variant is only shown for historical rows and never links
+// to a request-owner form because new calls can no longer be
+// created against a request.
+type OwnerKind = 'lead' | 'client' | 'request' | 'unknown'
+const ownerInfo = (
+	c: ClientCallItem,
+): { name: string; kind: OwnerKind; href: string | null } => {
+	if (c.clientType === 'lead' && c.lead) {
+		const n = [c.lead.firstName, c.lead.lastName].filter(Boolean).join(' ').trim()
+		return {
+			name: n || c.lead.companyName || 'Lead',
+			kind: 'lead',
+			href: c.leadId ? `/leads/preview/${c.leadId}` : null,
+		}
+	}
+	if (c.clientType === 'client' && c.crmClient) {
+		const n = [c.crmClient.firstName, c.crmClient.lastName]
+			.filter(Boolean)
+			.join(' ')
+			.trim()
+		return {
+			name: n || c.crmClient.company || 'Client',
+			kind: 'client',
+			href: c.crmClientId ? `/clients/${c.crmClientId}` : null,
+		}
+	}
+	if (c.clientType === 'client_request' && c.clientRequest) {
+		return {
+			name: c.clientRequest.name || c.clientRequest.company || 'Request',
+			kind: 'request',
+			href: c.clientRequestId
+				? `/client-requests/preview/${c.clientRequestId}`
+				: null,
+		}
+	}
+	return { name: '—', kind: 'unknown', href: null }
 }
 
 const ClientCallList = () => {
@@ -144,23 +192,67 @@ const ClientCallList = () => {
 	const columns: DataTableColumn<ClientCallItem>[] = [
 		{
 			key: 'callTitle',
-			label: 'Call',
-			minWidth: 300,
-			sortable: true,
-			sortValue: (c) => c.callTitle,
+			label: 'Title',
+			minWidth: 240,
+			sortable: false,
 			render: (c) => (
 				<CallCell>
 					<CallTitle>{c.callTitle}</CallTitle>
-					<CallMeta>
-						{c.clientType === 'lead' ? 'Lead' : 'Client request'} · {clientName(c)}
-					</CallMeta>
 				</CallCell>
 			),
+			skeleton: () => <TableSkeleton $w='220px' $h='14px' />,
+		},
+		{
+			key: 'contact',
+			label: 'Contact',
+			minWidth: 180,
+			sortable: false,
+			render: (c) => {
+				const o = ownerInfo(c)
+				return o.href ? (
+					<OwnerLink to={o.href}>
+						<span>{o.name}</span>
+						<NorthEastRounded sx={{ fontSize: 14 }} />
+					</OwnerLink>
+				) : (
+					<OwnerName>{o.name}</OwnerName>
+				)
+			},
+			skeleton: () => <TableSkeleton $w='160px' $h='14px' />,
+		},
+		{
+			key: 'createdBy',
+			label: 'Created by',
+			minWidth: 80,
+			sortable: true,
+			sortValue: (c) => `${c.createdBy.firstName} ${c.createdBy.lastName}`,
+			render: (c) => (
+				<FitMuted>
+					{c.createdBy.firstName} {c.createdBy.lastName}
+				</FitMuted>
+			),
+			skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
+		},
+		{
+			key: 'contactType',
+			label: 'Type',
+			minWidth: 130,
+			sortable: true,
+			sortValue: (c) => ownerInfo(c).kind,
+			render: (c) => {
+				const o = ownerInfo(c)
+				const badgeLabel =
+					o.kind === 'lead'
+						? 'Lead'
+						: o.kind === 'client'
+							? 'Client'
+							: o.kind === 'request'
+								? 'Website Request'
+								: '—'
+				return <OwnerBadge $kind={o.kind}>{badgeLabel}</OwnerBadge>
+			},
 			skeleton: () => (
-				<>
-					<TableSkeleton $w='220px' $h='14px' />
-					<TableSkeleton $w='150px' $h='11px' style={{ marginTop: 6 }} />
-				</>
+				<TableSkeleton $w='70px' $h='18px' style={{ borderRadius: 999 }} />
 			),
 		},
 		{
@@ -198,19 +290,6 @@ const ClientCallList = () => {
 			sortValue: (c) => c.status,
 			render: (c) => <StatusPill $status={c.status}>{c.status}</StatusPill>,
 			skeleton: () => <TableSkeleton $w='80px' $h='22px' style={{ borderRadius: 999 }} />,
-		},
-		{
-			key: 'createdBy',
-			label: 'Created by',
-			minWidth: 160,
-			sortable: true,
-			sortValue: (c) => `${c.createdBy.firstName} ${c.createdBy.lastName}`,
-			render: (c) => (
-				<Muted>
-					{c.createdBy.firstName} {c.createdBy.lastName}
-				</Muted>
-			),
-			skeleton: () => <TableSkeleton $w='110px' $h='13px' />,
 		},
 		{
 			key: 'created',
@@ -260,19 +339,21 @@ const ClientCallList = () => {
 	return (
 		<>
 			<ListPageShell
-				crumbs={[{ label: 'Pipeline' }, { label: 'Client calls', current: true }]}
+				crumbs={[{ label: 'Pipeline' }, { label: 'Calls', current: true }]}
 				icon={<VideocamOutlined />}
-				title='Client calls'
+				title='Calls'
 				subtitle='Scheduled meetings and past conversations with leads and clients.'
 				action={
 					<HeaderActions>
 						<PermissionGate permission='client_calls:delete'>
-							<BulkActionBar
-								count={selected.size}
-								onClear={() => setSelected(new Set())}
-								onConfirm={() => setBulkOpen(true)}
-								isLoading={bulkDeleting}
-							/>
+							<BulkSlot>
+								<BulkActionBar
+									count={selected.size}
+									onClear={() => setSelected(new Set())}
+									onConfirm={() => setBulkOpen(true)}
+									isLoading={bulkDeleting}
+								/>
+							</BulkSlot>
 						</PermissionGate>
 						<PermissionGate permission='client_calls:create'>
 							<PrimarySolidButton type='button' onClick={() => navigate('/client-calls/add/')}>
@@ -341,10 +422,23 @@ const ClientCallList = () => {
 export default ClientCallList
 
 const HeaderActions = styled.div`
+	position: relative;
 	display: inline-flex;
 	align-items: center;
 	gap: 10px;
 	flex-wrap: wrap;
+`
+
+/* Bulk bar lives OUTSIDE the normal flex row so the "New call"
+ * button never shifts when the bar mounts / unmounts. Anchored to
+ * the left-outer edge of the HeaderActions container. */
+const BulkSlot = styled.div`
+	position: absolute;
+	top: 50%;
+	right: calc(100% + 10px);
+	transform: translateY(-50%);
+	display: inline-flex;
+	align-items: center;
 `
 
 const CallCell = styled.div`
@@ -364,6 +458,69 @@ const CallTitle = styled.span`
 const CallMeta = styled.span`
 	font-size: 12px;
 	color: ${T.textSecondary};
+`
+
+const OwnerName = styled.span`
+	font-size: 14px;
+	color: ${T.textStrong};
+	line-height: 1.3;
+`
+
+const FitMuted = styled.span`
+	display: inline-block;
+	width: fit-content;
+	white-space: nowrap;
+	font-size: 13.5px;
+	color: ${T.textSecondary};
+`
+
+const OwnerLink = styled(Link)`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: transparent;
+	color: ${T.primary};
+	font-size: 12.5px;
+	font-weight: 600;
+	padding: 6px 0;
+	text-decoration: none;
+	white-space: nowrap;
+	width: fit-content;
+
+	svg {
+		transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	&:hover svg {
+		transform: translate(2px, -2px);
+	}
+`
+
+const OwnerBadge = styled.span<{ $kind: 'lead' | 'client' | 'request' | 'unknown' }>`
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
+	text-transform: uppercase;
+	background: ${(p) =>
+		p.$kind === 'lead'
+			? 'rgba(3, 105, 161, 0.12)'
+			: p.$kind === 'client'
+				? 'rgba(34, 197, 94, 0.14)'
+				: p.$kind === 'request'
+					? 'rgba(245, 158, 11, 0.14)'
+					: 'rgba(100, 116, 139, 0.14)'};
+	color: ${(p) =>
+		p.$kind === 'lead'
+			? T.primary
+			: p.$kind === 'client'
+				? '#15803d'
+				: p.$kind === 'request'
+					? '#a26608'
+					: '#475569'};
 `
 
 const Muted = styled.span`

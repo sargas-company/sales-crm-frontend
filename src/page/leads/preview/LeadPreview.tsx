@@ -1,23 +1,21 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import {
 	ArrowBackRounded,
 	EditOutlined,
 	PhoneInTalkOutlined,
-	PersonOutlineRounded,
-	BusinessOutlined,
-	LocationOnOutlined,
-	PaidOutlined,
-	CalendarMonthOutlined,
-	ReplyRounded,
-	CheckCircleOutlined,
-	PauseCircleOutlined,
-	LinkRounded,
-	OpenInNewRounded,
+	PersonSearchOutlined,
+	ScheduleRounded,
+	WarningAmberRounded,
 } from '@mui/icons-material'
+
+import { T } from '../../../components/sales-analytics/_shared/tokens'
+import ListPageShell from '../../../components/_shared/ListPageShell/ListPageShell'
 import Loading from '../../../ui/state/Loading'
-import ErrorState from '../../../ui/state/ErrorState'
-import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
+import {
+	PrimaryGhostButton,
+	PrimarySolidButton,
+} from '../../../components/_shared/formShell.styled'
 import {
 	useGetLeadActivityQuery,
 	useGetLeadByIdQuery,
@@ -25,304 +23,325 @@ import {
 import ActivityTimeline, {
 	ActivityHeading,
 } from '../../../components/_shared/ActivityTimeline'
-import { formatDate } from '../../../utils/formatDate'
-import type { ApiLeadStatus, ApiClientType } from '../../../store/leads/types/definition'
+import AttachmentsSection from '../../../components/_shared/AttachmentsSection'
+import { locationFlag } from '../../../utils/location'
+import { formatDate } from '../../../utils/format'
+import type { ApiLeadStatus } from '../../../store/leads/types/definition'
 
-/* ── Tokens ─────────────────────────────────────────────────────── */
-
-const INK = '#0f172a'
-const INK_60 = 'rgba(15, 23, 42, 0.6)'
-const INK_45 = 'rgba(15, 23, 42, 0.45)'
-const INK_10 = 'rgba(15, 23, 42, 0.08)'
-const INK_04 = 'rgba(15, 23, 42, 0.04)'
-const PRIMARY = 'rgb(3, 105, 161)'
-const PRIMARY_TINT = '#f0f9ff'
-const PRIMARY_TINT_STRONG = '#e0f2fe'
-
-/* ── Static maps ────────────────────────────────────────────────── */
-
-const statusLabel: Record<ApiLeadStatus, string> = {
-	NEW: 'New',
-	CONTACTED: 'Contacted',
-	IN_CONVERSATION: 'In conversation',
-	ON_HOLD: 'On hold',
-	WON: 'Won',
-	LOST: 'Lost',
+const STATUS_LABEL: Record<ApiLeadStatus, string> = {
+	NEW: 'new',
+	CONTACTED: 'contacted',
+	IN_CONVERSATION: 'in conversation',
+	ON_HOLD: 'on hold',
+	WON: 'won',
+	LOST: 'lost',
+	CLIENT: 'client',
 }
 
-const statusPalette: Record<ApiLeadStatus, { bg: string; fg: string; border: string }> = {
-	NEW: {
-		bg: PRIMARY_TINT_STRONG,
-		fg: PRIMARY,
-		border: 'rgba(3, 105, 161, 0.32)',
-	},
-	CONTACTED: {
-		bg: 'rgba(139, 92, 246, 0.14)',
-		fg: '#6d28d9',
-		border: 'rgba(139, 92, 246, 0.32)',
-	},
-	IN_CONVERSATION: {
-		bg: 'rgba(245, 158, 11, 0.14)',
-		fg: '#a26608',
-		border: 'rgba(245, 158, 11, 0.32)',
-	},
-	ON_HOLD: {
-		bg: 'rgba(148, 163, 184, 0.18)',
-		fg: '#475569',
-		border: 'rgba(148, 163, 184, 0.35)',
-	},
-	WON: {
-		bg: 'rgba(34, 197, 94, 0.14)',
-		fg: '#15803d',
-		border: 'rgba(34, 197, 94, 0.32)',
-	},
-	LOST: {
-		bg: 'rgba(239, 68, 68, 0.14)',
-		fg: '#b91c1c',
-		border: 'rgba(239, 68, 68, 0.32)',
-	},
-}
-
-const clientTypeLabel: Record<ApiClientType, string> = {
-	company: 'Company',
-	individual: 'Individual',
-}
-
-/* ── Component ──────────────────────────────────────────────────── */
+const slugify = (s: string) =>
+	s
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 40) || 'lead'
 
 const LeadPreview = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
-	const { data: lead, isLoading, isError } = useGetLeadByIdQuery(id!, { skip: !id })
+
+	const {
+		data: lead,
+		isLoading,
+		isError,
+	} = useGetLeadByIdQuery(id ?? '', { skip: !id })
 	const {
 		data: activity,
 		isLoading: activityLoading,
 		isError: activityError,
-	} = useGetLeadActivityQuery(id!, { skip: !id })
+	} = useGetLeadActivityQuery(id ?? '', { skip: !id })
 
-	if (isLoading) {
+	if (!id) {
 		return (
-			<Page>
-				<Shell>
-					<Center>
-						<Loading label='Loading lead…' />
-					</Center>
-				</Shell>
-			</Page>
+			<Shell>
+				<ErrorBox onBack={() => navigate(-1)} message='Missing lead id' />
+			</Shell>
 		)
 	}
-
+	if (isLoading && !lead) {
+		return (
+			<Shell>
+				<Terminal>
+					<TermHeader>
+						<TermDots>
+							<span className='r' />
+							<span className='y' />
+							<span className='g' />
+						</TermDots>
+						<TermPath>loading…</TermPath>
+					</TermHeader>
+					<LoadingBlock>
+						<Loading label='fetching lead…' />
+					</LoadingBlock>
+				</Terminal>
+			</Shell>
+		)
+	}
 	if (isError || !lead) {
 		return (
-			<Page>
-				<Shell>
-					<Center>
-						<ErrorState title='Lead not found' description='Could not load lead.' />
-					</Center>
-				</Shell>
-			</Page>
+			<Shell>
+				<ErrorBox
+					onBack={() => navigate('/leads/list/')}
+					message='Lead not found'
+				/>
+			</Shell>
 		)
 	}
 
 	const fullName = [lead.firstName, lead.lastName].filter(Boolean).join(' ')
 	const displayName = fullName || lead.companyName || `Lead #${lead.number}`
-	const badge = statusPalette[lead.status]
-	const proposalUrl = lead.proposalId
-		? `${import.meta.env.VITE_APP_URL}/proposal/preview/${lead.proposalId}`
-		: null
+	const createdStr = formatDate(lead.createdAt, 'short')
+	const updatedStr = formatDate(lead.updatedAt, 'short')
+	const sameTs = lead.createdAt === lead.updatedAt
+	const termPath = `crm@sargas:~/leads/${STATUS_LABEL[lead.status].replace(
+		/\s+/g,
+		'-',
+	)}/${slugify(fullName || lead.companyName || `lead-${lead.number}`)}`
 
 	return (
-		<Page>
-			<Shell>
-				<TopRow>
-					<BackChip type='button' onClick={() => navigate('/leads/list')}>
-						<span className='arrow'>
-							<ArrowBackRounded sx={{ fontSize: 16 }} />
-						</span>
-						<span>Back to leads</span>
-					</BackChip>
-
-					<TopActions>
-						<GhostButton
+		<Shell>
+			<Terminal>
+				<TermHeader>
+					<TermDots>
+						<span
+							className='r'
+							role='button'
+							aria-label='Close'
+							onClick={() => navigate(-1)}
+						/>
+						<span className='y' />
+						<span className='g' />
+					</TermDots>
+					<TermPath>{termPath}</TermPath>
+					<TermHeaderActions>
+						<CallGhost
 							type='button'
 							onClick={() =>
 								navigate(`/client-calls/add/?clientType=lead&clientId=${lead.id}`)
 							}
 						>
-							<PhoneInTalkOutlined sx={{ fontSize: 18 }} />
+							<PhoneInTalkOutlined />
 							<span>Book a call</span>
-						</GhostButton>
-						<EditButton
+						</CallGhost>
+						<EditSolid
 							type='button'
 							onClick={() => navigate(`/leads/edit/${lead.id}`)}
 						>
 							<EditOutlined />
-							Edit lead
-						</EditButton>
-					</TopActions>
-				</TopRow>
+							<span>Edit</span>
+						</EditSolid>
+					</TermHeaderActions>
+				</TermHeader>
 
-				<Header>
-					<HeaderLeft>
-						<HeaderIcon>
-							{lead.clientType === 'company' ? <BusinessOutlined /> : <PersonOutlineRounded />}
-						</HeaderIcon>
-						<HeaderText>
-							<HeaderName>{displayName}</HeaderName>
-							{fullName && lead.companyName ? (
-								<HeaderSub>@ {lead.companyName}</HeaderSub>
-							) : null}
-						</HeaderText>
-					</HeaderLeft>
+				<TermBody>
+					<TermPromptLine>
+						<TermPrompt>$</TermPrompt> cat lead --id {lead.id.slice(0, 8)}
+					</TermPromptLine>
 
-					<StatusBadge $bg={badge.bg} $fg={badge.fg} $border={badge.border}>
-						<Dot $color={badge.fg} />
-						{statusLabel[lead.status]}
-					</StatusBadge>
-				</Header>
+					<HeroRow>
+						<HeroIcon>
+							<PersonSearchOutlined />
+						</HeroIcon>
+						<HeroText>
+							<Hero>{displayName}</Hero>
+							<HeroMeta>
+								<KvMono>#{lead.number}</KvMono>
+								<Sep>·</Sep>
+								<ScheduleRounded style={{ fontSize: 13 }} />
+								<span>received {createdStr}</span>
+								{lead.companyName && (
+									<>
+										<Sep>·</Sep>
+										<span>{lead.companyName}</span>
+									</>
+								)}
+							</HeroMeta>
+						</HeroText>
+					</HeroRow>
 
-				<Meta>
-					<MetaCard $delay={0}>
-						<MetaIcon>
-							<PersonOutlineRounded />
-						</MetaIcon>
-						<MetaText>
-							<MetaLabel>Client type</MetaLabel>
-							<MetaValue>
-								{lead.clientType ? clientTypeLabel[lead.clientType] : '—'}
-							</MetaValue>
-						</MetaText>
-					</MetaCard>
-					<MetaCard $delay={90}>
-						<MetaIcon>
-							<PaidOutlined />
-						</MetaIcon>
-						<MetaText>
-							<MetaLabel>Rate</MetaLabel>
-							<MetaValue>{lead.rate != null ? `$${lead.rate} / hr` : '—'}</MetaValue>
-						</MetaText>
-					</MetaCard>
-					<MetaCard $delay={180}>
-						<MetaIcon>
-							<LocationOnOutlined />
-						</MetaIcon>
-						<MetaText>
-							<MetaLabel>Location</MetaLabel>
-							<MetaValue>{lead.location || '—'}</MetaValue>
-						</MetaText>
-					</MetaCard>
-				</Meta>
+					<KeyLines>
+						<KV label='name'>
+							<KvMono>{fullName || '—'}</KvMono>
+						</KV>
+						<KV label='company'>
+							<KvMono>{lead.companyName || '—'}</KvMono>
+						</KV>
+						<KV label='email'>
+							{lead.email ? (
+								<KvLink href={`mailto:${lead.email}`}>{lead.email}</KvLink>
+							) : (
+								<KvMono>—</KvMono>
+							)}
+						</KV>
+						<KV label='phone'>
+							{lead.phone ? (
+								<KvLink href={`tel:${lead.phone}`}>{lead.phone}</KvLink>
+							) : (
+								<KvMono>—</KvMono>
+							)}
+						</KV>
+						<KV label='source'>
+							{lead.source ? <Chip>{lead.source}</Chip> : <KvMono>—</KvMono>}
+						</KV>
+						<KV label='platform'>
+							<KvMono>{lead.platform?.title || '—'}</KvMono>
+						</KV>
+						<KV label='location'>
+							{lead.location ? (
+								<LocationLine>
+									{locationFlag(lead.location) ? (
+										<span className='flag'>{locationFlag(lead.location)}</span>
+									) : null}
+									<span>{lead.location}</span>
+								</LocationLine>
+							) : (
+								<KvMono>—</KvMono>
+							)}
+						</KV>
+						<KV label='status'>
+							<StatusTag $status={lead.status}>{STATUS_LABEL[lead.status]}</StatusTag>
+						</KV>
+						<KV label='client type'>
+							<KvMono>{lead.clientType ?? '—'}</KvMono>
+						</KV>
+						<KV label='temperature'>
+							<KvMono>
+								{lead.temperature ? lead.temperature.toLowerCase() : '—'}
+							</KvMono>
+						</KV>
+						<KV label='rate'>
+							<KvMono>
+								{lead.rate != null ? `$${lead.rate} / hr` : '—'}
+							</KvMono>
+						</KV>
+						<KV label='created'>
+							<KvMono>{createdStr}</KvMono>
+						</KV>
+						{!sameTs && (
+							<KV label='updated'>
+								<KvMono>{updatedStr}</KvMono>
+							</KV>
+						)}
+						<KV label='id'>
+							<KvMono>{lead.id}</KvMono>
+						</KV>
+					</KeyLines>
 
-				<Section>
-					<SectionHead>
-						<SectionTitle>Timeline</SectionTitle>
-						<SectionRule />
-					</SectionHead>
-					<TimelineGrid>
-						<TimelineRow $delay={0}>
-							<TLIcon $tone='info'>
-								<ReplyRounded sx={{ fontSize: 18 }} />
-							</TLIcon>
-							<TLText>
-								<TLLabel>Replied at</TLLabel>
-								<TLValue>{formatDate(lead.repliedAt)}</TLValue>
-							</TLText>
-						</TimelineRow>
-						<TimelineRow $delay={60}>
-							<TLIcon $tone='success'>
-								<CheckCircleOutlined sx={{ fontSize: 18 }} />
-							</TLIcon>
-							<TLText>
-								<TLLabel>Accepted at</TLLabel>
-								<TLValue>{lead.acceptedAt ? formatDate(lead.acceptedAt) : '—'}</TLValue>
-							</TLText>
-						</TimelineRow>
-						<TimelineRow $delay={120}>
-							<TLIcon $tone='warning'>
-								<PauseCircleOutlined sx={{ fontSize: 18 }} />
-							</TLIcon>
-							<TLText>
-								<TLLabel>Hold at</TLLabel>
-								<TLValue>{lead.holdAt ? formatDate(lead.holdAt) : '—'}</TLValue>
-							</TLText>
-						</TimelineRow>
-						<TimelineRow $delay={180}>
-							<TLIcon $tone='muted'>
-								<CalendarMonthOutlined sx={{ fontSize: 18 }} />
-							</TLIcon>
-							<TLText>
-								<TLLabel>Created at</TLLabel>
-								<TLValue>{formatDate(lead.createdAt)}</TLValue>
-							</TLText>
-						</TimelineRow>
-					</TimelineGrid>
-				</Section>
+					<Divider />
+					<TermPromptLine>
+						<TermPrompt>$</TermPrompt> cat notes.txt
+					</TermPromptLine>
+					<RawBlock>
+						<pre>{lead.notes?.trim() || '(empty — no notes recorded)'}</pre>
+					</RawBlock>
 
-				<Section>
-					<SectionHead>
-						<SectionTitle>
-							<ActivityHeading title='Activity' />
-						</SectionTitle>
-						<SectionRule />
-					</SectionHead>
-					<ActivityTimeline
-						events={activity}
-						isLoading={activityLoading}
-						isError={activityError}
-						emptyLabel='No activity recorded for this lead yet.'
-					/>
-				</Section>
+					<Divider />
+					<TermPromptLine>
+						<TermPrompt>$</TermPrompt> ls attachments/
+					</TermPromptLine>
+					<SectionShell>
+						<AttachmentsSection ownerType='lead' ownerId={lead.id} />
+					</SectionShell>
 
-				{proposalUrl && (
-					<Section>
-						<SectionHead>
-							<SectionTitle>Linked proposal</SectionTitle>
-							<SectionRule />
-						</SectionHead>
-						<ProposalCard>
-							<ProposalIcon>
-								<LinkRounded />
-							</ProposalIcon>
-							<ProposalBody>
-								<ProposalLabel>
-									{lead.proposal?.title || 'Proposal'}
-								</ProposalLabel>
-								<ProposalUrl
-									href={proposalUrl}
-									target='_blank'
-									rel='noopener noreferrer'
-								>
-									{proposalUrl}
-								</ProposalUrl>
-							</ProposalBody>
-							<ProposalOpen
-								href={proposalUrl}
-								target='_blank'
-								rel='noopener noreferrer'
-								aria-label='Open proposal'
-							>
-								<OpenInNewRounded sx={{ fontSize: 16 }} />
-							</ProposalOpen>
-						</ProposalCard>
-					</Section>
-				)}
-			</Shell>
-		</Page>
+					<Divider />
+					<TermPromptLine>
+						<TermPrompt>$</TermPrompt> tail activity.log
+					</TermPromptLine>
+					<SectionShell>
+						<ActivityHeading />
+						<ActivityTimeline
+							events={activity}
+							isLoading={activityLoading}
+							isError={activityError}
+							emptyLabel='No activity recorded for this lead yet.'
+						/>
+					</SectionShell>
+				</TermBody>
+
+				<TermFooter>
+					lead · {createdStr} · {lead.id}
+					<TermCursor />
+				</TermFooter>
+			</Terminal>
+		</Shell>
 	)
 }
 
 export default LeadPreview
 
-/* ── Styled ─────────────────────────────────────────────────────── */
+/* ─── KV row ───────────────────────────────────────────────────── */
 
-const fadeUp = keyframes`
-	from { opacity: 0; transform: translateY(6px); }
+const KV = ({ label, children }: { label: string; children: React.ReactNode }) => (
+	<KvRow>
+		<KvArrow>→</KvArrow>
+		<KvLabel>{label}</KvLabel>
+		<KvValue>{children}</KvValue>
+	</KvRow>
+)
+
+/* ─── Outer shell (keeps the standard ListPageShell navigation) ── */
+
+const Shell = ({ children }: { children: React.ReactNode }) => {
+	const navigate = useNavigate()
+	return (
+		<ListPageShell
+			crumbs={[
+				{ label: 'Sales' },
+				{ label: 'Leads', href: '/leads/list/' },
+				{ label: 'Preview', current: true },
+			]}
+			icon={<PersonSearchOutlined />}
+			title='Lead'
+			subtitle='Lead card — contact, source, pipeline position, attachments, activity.'
+			action={
+				<BackBtn type='button' onClick={() => navigate(-1)}>
+					<ArrowBackRounded style={{ fontSize: 16 }} />
+					Back
+				</BackBtn>
+			}
+		>
+			{children}
+		</ListPageShell>
+	)
+}
+
+const ErrorBox = ({ onBack, message }: { onBack: () => void; message: string }) => (
+	<Terminal>
+		<TermHeader>
+			<TermDots>
+				<span className='r' />
+				<span className='y' />
+				<span className='g' />
+			</TermDots>
+			<TermPath>crm@sargas:~/leads/error</TermPath>
+		</TermHeader>
+		<LoadingBlock>
+			<WarningAmberRounded style={{ fontSize: 16, marginRight: 6 }} />
+			{message}
+		</LoadingBlock>
+		<TermFooter>
+			<BackBtn type='button' onClick={onBack}>
+				<ArrowBackRounded style={{ fontSize: 16 }} />
+				Back
+			</BackBtn>
+		</TermFooter>
+	</Terminal>
+)
+
+/* ─── Styles (mirror of ClientRequestPreview) ─────────────────── */
+
+const terminalIn = keyframes`
+	from { opacity: 0; transform: translateY(10px); }
 	to   { opacity: 1; transform: translateY(0); }
-`
-
-const metaIn = keyframes`
-	from { opacity: 0; transform: translateY(12px) scale(0.98); }
-	to   { opacity: 1; transform: translateY(0) scale(1); }
 `
 
 const rowIn = keyframes`
@@ -330,22 +349,9 @@ const rowIn = keyframes`
 	to   { opacity: 1; transform: translateX(0); }
 `
 
-const iconFloat = keyframes`
-	0%, 100% { transform: translateY(0) rotate(0deg); }
-	50%      { transform: translateY(-3px) rotate(-2deg); }
-`
-
-const iconIdle = keyframes`
-	0%, 100% { transform: translateY(0) rotate(0deg); }
-	20%      { transform: translateY(-2px) rotate(-4deg); }
-	40%      { transform: translateY(1px) rotate(3deg); }
-	60%      { transform: translateY(-1px) rotate(-2deg); }
-	80%      { transform: translateY(0) rotate(1deg); }
-`
-
-const dotPulse = keyframes`
-	0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 currentColor; }
-	50%      { transform: scale(1.25); box-shadow: 0 0 0 6px transparent; }
+const cursorBlink = keyframes`
+	0%, 50% { opacity: 1; }
+	51%, 100% { opacity: 0; }
 `
 
 const phoneRing = keyframes`
@@ -366,129 +372,76 @@ const editWiggle = keyframes`
 	100% { rotate: 0deg; translate: 0 0; }
 `
 
-const Page = styled.div`
-	width: 100%;
-	padding: 0;
-`
-
-const Shell = styled.div`
-	background: #fff;
-	border-radius: 18px;
+const Terminal = styled.div`
+	background: #ffffff;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	border-radius: 14px;
+	padding: 16px 22px 14px;
 	box-shadow:
-		0 1px 2px rgba(15, 23, 42, 0.04),
-		0 12px 40px rgba(39, 36, 45, 0.06);
-	padding: 34px 40px 36px;
-	display: flex;
-	flex-direction: column;
-	gap: 28px;
-	animation: ${fadeUp} 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
-
-	@media (max-width: 767px) {
-		padding: 22px 18px 24px;
-		gap: 22px;
-		border-radius: 12px;
-	}
+		0 1px 2px rgba(15, 23, 42, 0.03),
+		0 8px 24px rgba(15, 23, 42, 0.04);
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	animation: ${terminalIn} 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
 `
 
-const Center = styled.div`
-	padding: 96px 32px;
+const TermHeader = styled.div`
 	display: flex;
 	align-items: center;
-	justify-content: center;
-`
-
-const TopRow = styled.div`
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 16px;
+	gap: 10px;
+	margin-bottom: 14px;
+	padding-bottom: 12px;
+	border-bottom: 1px dashed rgba(15, 23, 42, 0.08);
 	flex-wrap: wrap;
 `
 
-const BackChip = styled.button`
-	appearance: none;
-	background: transparent;
-	border: none;
-	padding: 8px 14px 8px 10px;
-	cursor: pointer;
+const TermDots = styled.div`
 	display: inline-flex;
-	align-items: center;
-	gap: 10px;
-	color: ${INK};
-	font-family: inherit;
-	font-size: 13.5px;
-	font-weight: 500;
-	border-radius: 999px;
+	gap: 6px;
+	flex-shrink: 0;
 
-	.arrow {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 26px;
-		height: 26px;
+	span {
+		width: 10px;
+		height: 10px;
 		border-radius: 50%;
-		background: ${PRIMARY};
-		color: #fff;
-		transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 	}
-
-	&:hover .arrow {
-		transform: translateX(-3px);
+	.r {
+		background: #f87171;
+		cursor: pointer;
+		transition: filter 140ms ease;
+	}
+	.r:hover {
+		filter: brightness(0.9);
+	}
+	.y {
+		background: #fbbf24;
+	}
+	.g {
+		background: #4ade80;
 	}
 `
 
-const TopActions = styled.div`
+const TermPath = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 12px;
+	color: ${T.textMuted};
+	letter-spacing: 0.2px;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+`
+
+const TermHeaderActions = styled.div`
+	margin-left: auto;
 	display: inline-flex;
 	align-items: center;
 	gap: 10px;
-	flex-wrap: wrap;
+	flex-shrink: 0;
 `
 
-const GhostButton = styled.button`
-	appearance: none;
-	background: #fff;
-	border: 1px solid ${INK_10};
-	border-radius: 12px;
-	padding: 10px 16px;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	color: ${INK};
-	font-family: inherit;
-	font-size: 13.5px;
-	font-weight: 500;
-	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-	transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
-
+const EditSolid = styled(PrimarySolidButton)`
 	svg {
-		transform-origin: 50% 65%;
-		transition: scale 260ms cubic-bezier(0.22, 1.35, 0.36, 1);
-	}
-
-	&:hover:not(:disabled) {
-		transform: translateY(-1px);
-	}
-	&:hover:not(:disabled) svg {
-		scale: 1.15;
-		animation: ${phoneRing} 720ms cubic-bezier(0.22, 1, 0.36, 1);
-	}
-	&:disabled {
-		opacity: 0.55;
-		cursor: not-allowed;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		&:hover:not(:disabled) svg {
-			animation: none;
-			scale: 1;
-		}
-	}
-`
-
-const EditButton = styled(PrimarySolidButton)`
-	svg {
-		transform-origin: 30% 70%;
+		transform-origin: 40% 60%;
 		transition: scale 260ms cubic-bezier(0.22, 1.35, 0.36, 1);
 	}
 
@@ -505,344 +458,168 @@ const EditButton = styled(PrimarySolidButton)`
 	}
 `
 
-const Header = styled.header`
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 24px;
-	padding-bottom: 26px;
-	border-bottom: 1px solid ${INK_10};
-
-	@media (max-width: 767px) {
-		flex-direction: column;
-		align-items: flex-start;
-	}
-`
-
-const HeaderLeft = styled.div`
-	display: inline-flex;
-	align-items: center;
-	gap: 18px;
-	min-width: 0;
-`
-
-const HeaderIcon = styled.span`
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 52px;
-	height: 52px;
-	border-radius: 14px;
-	background: ${PRIMARY_TINT};
-	color: ${PRIMARY};
-	flex-shrink: 0;
-	animation: ${iconFloat} 4s ease-in-out infinite;
-
+const CallGhost = styled(PrimaryGhostButton)`
 	svg {
-		font-size: 28px;
+		transform-origin: 50% 65%;
+		transition: scale 260ms cubic-bezier(0.22, 1.35, 0.36, 1);
+	}
+
+	&:hover:not(:disabled) svg {
+		scale: 1.15;
+		animation: ${phoneRing} 720ms cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		animation: none;
+		&:hover:not(:disabled) svg {
+			animation: none;
+			scale: 1;
+		}
 	}
 `
 
-const HeaderText = styled.div`
+const TermBody = styled.div`
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	min-width: 0;
+	gap: 14px;
 `
 
-const HeaderName = styled.p`
-	margin: 0;
-	font-size: 26px;
-	font-weight: 800;
-	letter-spacing: -0.015em;
-	color: ${INK};
-	line-height: 1.15;
-	text-transform: uppercase;
-	word-break: break-word;
-
-	@media (max-width: 767px) {
-		font-size: 22px;
-	}
-`
-
-const HeaderSub = styled.p`
-	margin: 4px 0 0;
-	font-size: 13.5px;
-	font-weight: 500;
-	color: ${INK_60};
-	letter-spacing: 0.01em;
-`
-
-const StatusBadge = styled.div<{ $bg: string; $fg: string; $border: string }>`
+const TermPromptLine = styled.div`
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
-	padding: 8px 14px;
-	border-radius: 999px;
-	background: ${(p) => p.$bg};
-	color: ${(p) => p.$fg};
-	border: 1px solid ${(p) => p.$border};
-	font-size: 12px;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 13.5px;
+	color: ${T.textSecondary};
+`
+
+const TermPrompt = styled.span`
+	color: ${T.primary};
 	font-weight: 700;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-	flex-shrink: 0;
 `
 
-const Dot = styled.span<{ $color: string }>`
-	width: 8px;
-	height: 8px;
-	border-radius: 50%;
-	background: ${(p) => p.$color};
-	color: ${(p) => p.$color};
-	animation: ${dotPulse} 1.8s ease-in-out infinite;
+/* ─── Hero ────────────────────────────────────────────────── */
 
-	@media (prefers-reduced-motion: reduce) {
-		animation: none;
-	}
-`
-
-const Meta = styled.div`
+const HeroRow = styled.div`
 	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 18px;
-
-	@media (max-width: 767px) {
-		grid-template-columns: 1fr;
-	}
-`
-
-const MetaCard = styled.div<{ $delay?: number }>`
-	position: relative;
-	display: flex;
-	flex-direction: column;
-	justify-content: space-between;
-	gap: 24px;
-	padding: 24px 26px 22px;
-	border-radius: 18px;
-	background: #fff;
-	border: 1px solid ${INK_10};
-	overflow: hidden;
-	min-height: 140px;
-	animation: ${metaIn} 560ms cubic-bezier(0.22, 1, 0.36, 1) ${({ $delay }) => $delay ?? 0}ms both;
-
-	@media (prefers-reduced-motion: reduce) {
-		animation: none;
-	}
-`
-
-const MetaIcon = styled.span`
-	position: relative;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 48px;
-	height: 48px;
-	border-radius: 14px;
-	background: ${PRIMARY};
-	color: #fff;
-	box-shadow: 0 8px 20px -10px rgba(3, 105, 161, 0.55);
-	flex-shrink: 0;
-	z-index: 1;
-	animation: ${iconIdle} 5.6s ease-in-out infinite;
-
-	${MetaCard}:nth-child(2) & {
-		animation-delay: 0.9s;
-	}
-	${MetaCard}:nth-child(3) & {
-		animation-delay: 1.8s;
-	}
-
-	svg {
-		font-size: 24px;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		animation: none;
-	}
-`
-
-const MetaText = styled.div`
-	position: relative;
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-	min-width: 0;
-	z-index: 1;
-`
-
-const MetaLabel = styled.span`
-	font-size: 10.5px;
-	font-weight: 800;
-	letter-spacing: 0.22em;
-	text-transform: uppercase;
-	color: ${INK_45};
-`
-
-const MetaValue = styled.span`
-	font-size: 18px;
-	font-weight: 800;
-	letter-spacing: -0.015em;
-	color: ${INK};
-	line-height: 1.15;
-	word-break: break-word;
-`
-
-const Section = styled.section`
-	display: flex;
-	flex-direction: column;
+	grid-template-columns: 44px 1fr;
 	gap: 14px;
+	align-items: flex-start;
 `
 
-const SectionHead = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 12px;
-`
-
-const SectionTitle = styled.h3`
-	margin: 0;
-	font-size: 11px;
-	font-weight: 800;
-	letter-spacing: 0.22em;
-	text-transform: uppercase;
-	color: ${INK_45};
-	flex-shrink: 0;
-`
-
-const SectionRule = styled.div`
-	flex: 1;
-	height: 1px;
-	background: ${INK_10};
-`
-
-const TimelineGrid = styled.div`
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: 10px 16px;
-
-	@media (max-width: 640px) {
-		grid-template-columns: 1fr;
-	}
-`
-
-const tonePalette: Record<'info' | 'success' | 'warning' | 'muted', { bg: string; fg: string }> = {
-	info: { bg: PRIMARY_TINT_STRONG, fg: PRIMARY },
-	success: { bg: 'rgba(34, 197, 94, 0.14)', fg: '#15803d' },
-	warning: { bg: 'rgba(245, 158, 11, 0.16)', fg: '#a26608' },
-	muted: { bg: INK_04, fg: INK_60 },
-}
-
-const TimelineRow = styled.div<{ $delay?: number }>`
-	display: inline-flex;
-	align-items: center;
-	gap: 12px;
-	padding: 12px 14px;
+const HeroIcon = styled.div`
+	width: 44px;
+	height: 44px;
 	border-radius: 12px;
-	background: #fff;
-	border: 1px solid ${INK_10};
-	animation: ${rowIn} 420ms cubic-bezier(0.22, 1, 0.36, 1) ${({ $delay }) => $delay ?? 0}ms both;
-
-	@media (prefers-reduced-motion: reduce) {
-		animation: none;
-	}
-`
-
-const TLIcon = styled.span<{ $tone: 'info' | 'success' | 'warning' | 'muted' }>`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 32px;
-	height: 32px;
-	border-radius: 9px;
-	background: ${({ $tone }) => tonePalette[$tone].bg};
-	color: ${({ $tone }) => tonePalette[$tone].fg};
-	flex-shrink: 0;
-`
-
-const TLText = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	min-width: 0;
-`
-
-const TLLabel = styled.span`
-	font-size: 10.5px;
-	font-weight: 700;
-	letter-spacing: 0.16em;
-	text-transform: uppercase;
-	color: ${INK_45};
-`
-
-const TLValue = styled.span`
-	font-size: 14px;
-	font-weight: 600;
-	color: ${INK};
-	letter-spacing: -0.005em;
-`
-
-const ProposalCard = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 14px;
-	padding: 16px 18px;
-	border-radius: 14px;
-	background: linear-gradient(135deg, ${PRIMARY_TINT} 0%, #ffffff 55%, ${PRIMARY_TINT} 130%);
-	background-size: 200% 200%;
-	border: 1px solid ${PRIMARY_TINT_STRONG};
-	animation: proposalShift 8s ease-in-out infinite;
-
-	@keyframes proposalShift {
-		0%, 100% { background-position: 0% 50%; }
-		50%      { background-position: 100% 50%; }
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		animation: none;
-	}
-`
-
-const ProposalIcon = styled.span`
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 40px;
-	height: 40px;
-	border-radius: 10px;
-	background: ${PRIMARY};
-	color: #fff;
-	flex-shrink: 0;
-	box-shadow: 0 8px 20px -10px rgba(3, 105, 161, 0.55);
+	background: rgba(3, 105, 161, 0.1);
+	color: ${T.primary};
 
 	svg {
 		font-size: 22px;
 	}
 `
 
-const ProposalBody = styled.div`
+const HeroText = styled.div`
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+`
+
+const Hero = styled.h2`
+	margin: 0;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 18.5px;
+	font-weight: 700;
+	color: ${T.textStrong};
+	line-height: 1.35;
+	letter-spacing: -0.1px;
+	word-break: break-word;
+`
+
+const HeroMeta = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 12px;
+	color: ${T.textMuted};
+	flex-wrap: wrap;
+
+	svg {
+		color: ${T.textMuted};
+	}
+`
+
+const Sep = styled.span`
+	opacity: 0.5;
+`
+
+/* ─── KV lines ────────────────────────────────────────────── */
+
+const KeyLines = styled.div`
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
-	min-width: 0;
-	flex: 1;
 `
 
-const ProposalLabel = styled.span`
-	font-size: 14px;
+const KvRow = styled.div`
+	display: grid;
+	grid-template-columns: 14px 110px 1fr;
+	gap: 10px;
+	padding: 6px 0;
+	align-items: center;
+	border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+	transition: background 160ms;
+	animation: ${rowIn} 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+	&:last-child {
+		border-bottom: none;
+	}
+	&:hover {
+		background: rgba(3, 105, 161, 0.03);
+		border-radius: 6px;
+		padding-left: 6px;
+		padding-right: 6px;
+		margin-left: -6px;
+		margin-right: -6px;
+	}
+`
+
+const KvArrow = styled.span`
+	color: ${T.primary};
 	font-weight: 700;
-	color: ${INK};
-	letter-spacing: -0.005em;
+	font-size: 14px;
 `
 
-const ProposalUrl = styled.a`
+const KvLabel = styled.span`
+	color: ${T.textMuted};
 	font-family: 'JetBrains Mono', ui-monospace, monospace;
 	font-size: 12px;
-	color: ${PRIMARY};
+	letter-spacing: 0.4px;
+`
+
+const KvValue = styled.span`
+	min-width: 0;
+	font-size: 13.5px;
+	color: ${T.textStrong};
+	word-break: break-word;
+`
+
+const KvMono = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 13px;
+	color: ${T.textStrong};
+	word-break: break-all;
+`
+
+const KvLink = styled.a`
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 13px;
+	font-weight: 600;
+	color: ${T.primary};
 	text-decoration: none;
 	word-break: break-all;
 
@@ -851,21 +628,154 @@ const ProposalUrl = styled.a`
 	}
 `
 
-const ProposalOpen = styled.a`
+const Chip = styled.span`
 	display: inline-flex;
 	align-items: center;
-	justify-content: center;
-	width: 34px;
-	height: 34px;
+	padding: 3px 10px;
+	border-radius: 999px;
+	background: rgba(3, 105, 161, 0.08);
+	color: ${T.primary};
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 11.5px;
+	font-weight: 600;
+	letter-spacing: 0.2px;
+`
+
+const LocationLine = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 13px;
+	color: ${T.textStrong};
+
+	.flag {
+		font-size: 16px;
+		line-height: 1;
+	}
+`
+
+const StatusTag = styled.span<{ $status: ApiLeadStatus }>`
+	display: inline-flex;
+	padding: 3px 11px;
+	border-radius: 999px;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
+	text-transform: uppercase;
+	color: ${(p) =>
+		p.$status === 'WON'
+			? '#15803d'
+			: p.$status === 'LOST'
+				? '#b91c1c'
+				: p.$status === 'ON_HOLD'
+					? '#475569'
+					: p.$status === 'CLIENT'
+						? '#1d4ed8'
+						: p.$status === 'IN_CONVERSATION'
+							? '#a26608'
+							: p.$status === 'CONTACTED'
+								? '#6d28d9'
+								: T.primary};
+	background: ${(p) =>
+		p.$status === 'WON'
+			? 'rgba(34, 197, 94, 0.14)'
+			: p.$status === 'LOST'
+				? 'rgba(239, 68, 68, 0.14)'
+				: p.$status === 'ON_HOLD'
+					? 'rgba(148, 163, 184, 0.18)'
+					: p.$status === 'CLIENT'
+						? 'rgba(59, 130, 246, 0.14)'
+						: p.$status === 'IN_CONVERSATION'
+							? 'rgba(245, 158, 11, 0.14)'
+							: p.$status === 'CONTACTED'
+								? 'rgba(139, 92, 246, 0.14)'
+								: 'rgba(3, 105, 161, 0.12)'};
+`
+
+/* ─── Divider / Raw block ────────────────────────────────── */
+
+const Divider = styled.div`
+	border-top: 1px dashed rgba(15, 23, 42, 0.08);
+	margin: 6px 0;
+`
+
+const RawBlock = styled.div`
+	padding: 14px 16px;
 	border-radius: 10px;
-	background: #fff;
-	border: 1px solid ${INK_10};
-	color: ${INK};
-	flex-shrink: 0;
-	text-decoration: none;
-	transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+	background: #0f172a;
+	color: #e2e8f0;
+	overflow-x: auto;
+
+	pre {
+		margin: 0;
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-size: 12.5px;
+		line-height: 1.65;
+		white-space: pre-wrap;
+		word-break: break-word;
+	}
+`
+
+const SectionShell = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+`
+
+/* ─── Footer ──────────────────────────────────────────────── */
+
+const TermFooter = styled.div`
+	margin-top: 14px;
+	padding-top: 10px;
+	border-top: 1px dashed rgba(15, 23, 42, 0.08);
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 12px;
+	color: ${T.textMuted};
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+`
+
+const TermCursor = styled.span`
+	display: inline-block;
+	width: 7px;
+	height: 11px;
+	background: ${T.primary};
+	margin-left: 6px;
+	vertical-align: middle;
+	animation: ${cursorBlink} 1s steps(2) infinite;
+`
+
+const LoadingBlock = styled.div`
+	padding: 18px 0;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 13.5px;
+	color: ${T.textSecondary};
+	display: inline-flex;
+	align-items: center;
+`
+
+const BackBtn = styled.button`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 7px 14px;
+	border-radius: 999px;
+	border: 1.5px solid rgba(15, 23, 42, 0.1);
+	background: #ffffff;
+	color: ${T.textStrong};
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 600;
+	cursor: pointer;
+	transition:
+		border-color 180ms ease,
+		color 180ms ease;
 
 	&:hover {
-		transform: translateY(-1px);
+		border-color: ${T.primary};
+		color: ${T.primary};
 	}
 `

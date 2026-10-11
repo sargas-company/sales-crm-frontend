@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TextField, Button, Select, SelectItem } from '../../../ui'
+import { TextField, Select, SelectItem } from '../../../ui'
 import { useCreateLeadMutation } from '../../../store/leads/leadsApi'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
@@ -22,12 +22,14 @@ import type {
 	CreateLeadBody,
 } from '../../../store/leads/types/definition'
 import { Field, FormHeader, SectionHead } from '../../_shared/FormShell'
+import CountryAutocomplete from '../../_shared/CountryAutocomplete'
 import {
 	DotMini,
 	FieldGrid,
 	FootActions,
 	FootBar,
 	FootLeft,
+	PrimaryGhostButton,
 	PrimarySolidButton,
 	Section,
 	Shell,
@@ -47,7 +49,10 @@ interface FormFields {
 	notes: string
 	clientType: ApiClientType | ''
 	rate: string
-	location: string
+	// Country-first entry; City optional. Serialised on submit as
+	// `city, country` (or just country when the city is empty).
+	country: string
+	city: string
 }
 
 interface FieldErrors {
@@ -67,9 +72,10 @@ const empty: FormFields = {
 	source: '',
 	profileUrl: '',
 	notes: '',
-	clientType: '',
+	clientType: 'individual',
 	rate: '',
-	location: '',
+	country: '',
+	city: '',
 }
 
 const LeadIcon = () => (
@@ -143,7 +149,13 @@ const LeadCreateForm = () => {
 				notes: fields.notes.trim() || null,
 				clientType: (fields.clientType || undefined) as ApiClientType | undefined,
 				rate: fields.rate !== '' ? Number(fields.rate) : undefined,
-				location: fields.location.trim() || undefined,
+				location: ((): string | undefined => {
+					const country = fields.country.trim()
+					const city = fields.city.trim()
+					if (!country && !city) return undefined
+					if (country && city) return `${city}, ${country}`
+					return country || city
+				})(),
 			}
 			const result = await createLead(body).unwrap()
 			showToast('Lead created successfully', 'success')
@@ -217,12 +229,20 @@ const LeadCreateForm = () => {
 								/>
 								<PhonePreview phone={fields.phone} />
 							</Field>
-							<Field label='Location' span='full'>
+							<Field label='Country'>
+								<CountryAutocomplete
+									value={fields.country}
+									onChange={(v) => setField('country', v)}
+									placeholder='Start typing a country…'
+									ariaLabel='Country'
+								/>
+							</Field>
+							<Field label='City (optional)'>
 								<TextField
-									name='location'
-									placeholder='e.g. United States'
-									value={fields.location}
-									onChange={(e) => setField('location', e.target.value)}
+									name='city'
+									placeholder='e.g. Berlin'
+									value={fields.city}
+									onChange={(e) => setField('city', e.target.value)}
 									width='100%'
 								/>
 							</Field>
@@ -283,6 +303,7 @@ const LeadCreateForm = () => {
 									<SelectItem label='On Hold' value='ON_HOLD' />
 									<SelectItem label='Won' value='WON' />
 									<SelectItem label='Lost' value='LOST' />
+									<SelectItem label='Client' value='CLIENT' />
 								</Select>
 							</Field>
 							<Field label='Temperature'>
@@ -368,14 +389,12 @@ const LeadCreateForm = () => {
 							Lead will be added to the list right away
 						</FootLeft>
 						<FootActions>
-							<Button
-								varient='outlined'
-								color='info'
+							<PrimaryGhostButton
 								type='button'
 								onClick={() => navigate('/leads/list/')}
 							>
 								Cancel
-							</Button>
+							</PrimaryGhostButton>
 							<PrimarySolidButton type='submit' disabled={isLoading}>
 								{isLoading ? 'Creating…' : 'Create lead'}
 							</PrimarySolidButton>

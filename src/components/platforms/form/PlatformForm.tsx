@@ -1,7 +1,7 @@
 import { FormEvent, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { TextField, Button } from '../../../ui'
+import { TextField } from '../../../ui'
 import {
 	useGetPlatformByIdQuery,
 	useCreatePlatformMutation,
@@ -18,6 +18,7 @@ import {
 	FootBar,
 	FootLeft,
 	InfoPanel,
+	PrimaryGhostButton,
 	PrimarySolidButton,
 	Section,
 	Shell,
@@ -233,14 +234,12 @@ const PlatformFormInner = ({ id, initial }: { id?: string; initial: FormFields }
 								: 'Platform will be added to the list right away'}
 						</FootLeft>
 						<FootActions>
-							<Button
-								varient='outlined'
-								color='info'
+							<PrimaryGhostButton
 								type='button'
 								onClick={() => navigate('/platforms/list/')}
 							>
 								Cancel
-							</Button>
+							</PrimaryGhostButton>
 							<PrimarySolidButton type='submit' disabled={isLoading}>
 								{isLoading
 									? isEdit

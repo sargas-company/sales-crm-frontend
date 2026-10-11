@@ -205,15 +205,6 @@ const ClientRequestList = () => {
 			skeleton: () => <TableSkeleton $w='130px' $h='13px' />,
 		},
 		{
-			key: 'files',
-			label: 'Files',
-			minWidth: 90,
-			sortable: true,
-			sortValue: (r) => r.files.length,
-			render: (r) => <Num>{r.files.length}</Num>,
-			skeleton: () => <TableSkeleton $w='30px' $h='13px' />,
-		},
-		{
 			key: 'status',
 			label: 'Status',
 			minWidth: 170,
@@ -270,9 +261,9 @@ const ClientRequestList = () => {
 	return (
 		<>
 			<ListPageShell
-				crumbs={[{ label: 'Pipeline' }, { label: 'Client requests', current: true }]}
+				crumbs={[{ label: 'Pipeline' }, { label: 'Website requests', current: true }]}
 				icon={<MailOutline />}
-				title='Client requests'
+				title='Website requests'
 				subtitle='Inbound requests from prospective clients — with attachments and service tags.'
 				action={
 					<PermissionGate permission='client_requests:delete'>

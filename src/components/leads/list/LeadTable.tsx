@@ -19,6 +19,7 @@ const columns: DataGridColoumn[] = [
 	{ fieldId: 'proposalId', label: 'Bid ID', width: '130px' },
 	{ fieldId: 'name', label: 'Name', width: '200px' },
 	{ fieldId: 'status', label: 'Status', width: '210px' },
+	{ fieldId: 'platform', label: 'Platform', width: '160px' },
 	{ fieldId: 'clientType', label: 'Client Type', width: '160px' },
 	{ fieldId: 'rate', label: 'Rate', width: '90px' },
 	{ fieldId: 'location', label: 'Location', width: '160px' },
@@ -75,6 +76,10 @@ const LeadTable = ({ items, isLoading, onDelete }: LeadTableProps) => {
 						<DataGridCell
 							width={field['status'].width}
 							children={<LeadListItemStatus itemStatus={row.status} />}
+						/>
+						<DataGridCell
+							width={field['platform'].width}
+							value={row.platform?.title ?? '—'}
 						/>
 						<DataGridCell
 							width={field['clientType'].width}

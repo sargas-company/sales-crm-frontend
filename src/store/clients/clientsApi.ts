@@ -2,8 +2,16 @@ import { baseApi } from '../../api/baseApi'
 
 export type ApiClientStatus = 'ACTIVE' | 'ON_HOLD' | 'FORMER'
 
+export interface ClientPlatformSummary {
+	id: string
+	title: string
+	slug: string | null
+	imageUrl: string | null
+}
+
 export interface ClientItem {
 	id: string
+	number: number
 	firstName: string
 	lastName: string | null
 	company: string | null
@@ -14,6 +22,9 @@ export interface ClientItem {
 	status: ApiClientStatus
 	clientSince: string | null
 	notes: string | null
+	platformId: string | null
+	platform: ClientPlatformSummary | null
+	location: string | null
 	createdAt: string
 	updatedAt: string
 }
@@ -24,6 +35,7 @@ export interface ClientPage {
 }
 
 export type ClientSortBy =
+	| 'number'
 	| 'firstName'
 	| 'company'
 	| 'email'
@@ -43,6 +55,7 @@ export interface ClientListParams {
 	search?: string
 	status?: ApiClientStatus
 	source?: string
+	location?: string
 	clientSinceFrom?: string
 	clientSinceTo?: string
 }
@@ -58,6 +71,8 @@ export interface CreateClientBody {
 	status?: ApiClientStatus
 	clientSince?: string | null
 	notes?: string | null
+	platformId?: string | null
+	location?: string | null
 }
 
 export type UpdateClientBody = Partial<CreateClientBody>
@@ -88,10 +103,16 @@ export const clientsApi = baseApi.injectEndpoints({
 					search: params.search || undefined,
 					status: params.status || undefined,
 					source: params.source || undefined,
+					location: params.location || undefined,
 					clientSinceFrom: params.clientSinceFrom || undefined,
 					clientSinceTo: params.clientSinceTo || undefined,
 				},
 			}),
+			providesTags: ['Client'],
+		}),
+
+		getClientSources: builder.query<string[], void>({
+			query: () => ({ url: '/clients/sources' }),
 			providesTags: ['Client'],
 		}),
 
@@ -149,6 +170,7 @@ export const clientsApi = baseApi.injectEndpoints({
 
 export const {
 	useGetClientsQuery,
+	useGetClientSourcesQuery,
 	useGetClientByIdQuery,
 	useGetClientActivityQuery,
 	useGetClientDuplicatesQuery,

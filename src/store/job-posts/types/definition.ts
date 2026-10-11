@@ -1,6 +1,12 @@
-export type JobPostStatus = 'NEW' | 'PROCESSING' | 'PROCESSED' | 'FAILED'
+export type JobPostStatus =
+	| 'NEW'
+	| 'PROCESSING'
+	| 'PROCESSED'
+	| 'FAILED'
+	| 'SKIPPED'
 export type JobPostDecision = 'approve' | 'maybe' | 'decline'
 export type JobPostPriority = 'high' | 'medium' | 'low'
+export type JobPostEnqueueState = 'BACKLOG' | 'PENDING' | 'ENQUEUED'
 
 export interface JobPostAiResponse {
 	decision: string
@@ -19,6 +25,7 @@ export interface JobPostItem {
 	chatId: string
 	messageId: number
 	status: JobPostStatus
+	enqueueState?: JobPostEnqueueState | null
 	decision: JobPostDecision | null
 	matchScore: number | null
 	priority: JobPostPriority | null
@@ -27,13 +34,36 @@ export interface JobPostItem {
 	title: string | null
 	jobUrl: string | null
 	scanner: string | null
-	gigRadarScore: number | null
 	location: string | null
 	budget: string | null
 	totalSpent: number | null
 	avgRatePaid: number | null
 	hireRate: number | null
 	hSkillsKeywords: string[]
+	/** Phase A — normalised fields; fall back to legacy flat columns. */
+	budgetType?: string | null
+	budgetMin?: number | null
+	budgetMax?: number | null
+	budgetCurrency?: string | null
+	postedAt?: string | null
+	country?: string | null
+	city?: string | null
+	clientPaymentVerified?: boolean | null
+	clientRating?: number | null
+	clientHires?: number | null
+	/** Phase A — fields present on findOne, surfaced in the preview sidebar. */
+	contractType?: string | null
+	duration?: string | null
+	hoursPerWeek?: string | null
+	experienceLevel?: string | null
+	connectsRequired?: number | null
+	categories?: string[]
+	questions?: unknown
+	clientJobsPosted?: number | null
+	clientReviewCount?: number | null
+	clientRankLabel?: string | null
+	clientRankScore?: number | null
+	clientLocationRestriction?: string | null
 	rawText?: string
 	rawPayload?: Record<string, unknown>
 	aiResponse?: JobPostAiResponse
@@ -80,6 +110,8 @@ export interface JobPostListParams {
 	sortBy?: JobPostSortBy
 	sortDirection?: JobPostSortDirection
 	search?: string
+	viewed?: 'viewed' | 'unviewed'
+	country?: string
 }
 
 export interface CreateJobPostBody {

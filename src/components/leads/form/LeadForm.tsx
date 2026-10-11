@@ -1,7 +1,9 @@
 import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TextField, Button, Select, SelectItem } from '../../../ui'
+import { TextField, Select, SelectItem } from '../../../ui'
 import { useGetLeadByIdQuery, useUpdateLeadMutation } from '../../../store/leads/leadsApi'
+import { useGetPlatformsQuery } from '../../../store/platforms/platformsApi'
+import CountryAutocomplete from '../../_shared/CountryAutocomplete'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
 import useTheme from '../../../theme/useTheme'
@@ -28,6 +30,7 @@ import {
 	FootActions,
 	FootBar,
 	FootLeft,
+	PrimaryGhostButton,
 	PrimarySolidButton,
 	Section,
 	Shell,
@@ -51,7 +54,13 @@ interface FormFields {
 	notes: string
 	clientType: ApiClientType | ''
 	rate: string
-	location: string
+	// Location is persisted as a single free-text string on Lead, but
+	// the form edits it as a country + optional city so the UI can
+	// offer the country autocomplete. Serialised back on submit:
+	// city ? `${city}, ${country}` : country.
+	country: string
+	city: string
+	platformId: string
 }
 
 interface FieldErrors {
@@ -59,21 +68,40 @@ interface FieldErrors {
 	phone?: string
 }
 
-const toFormValues = (data: LeadItem): FormFields => ({
-	firstName: data.firstName ?? '',
-	lastName: data.lastName ?? '',
-	companyName: data.companyName ?? '',
-	email: data.email ?? '',
-	phone: data.phone ? formatPhoneDisplay(data.phone) : '',
-	status: data.status,
-	temperature: data.temperature ?? '',
-	source: data.source ?? '',
-	profileUrl: data.profileUrl ?? '',
-	notes: data.notes ?? '',
-	clientType: data.clientType ?? '',
-	rate: data.rate != null ? String(data.rate) : '',
-	location: data.location ?? '',
-})
+// Parse "City, Country" (last comma = country boundary) back into
+// the two form fields. One-segment input is treated as country-only
+// so a user who typed just "Germany" sees it in the Country slot
+// after reload, not in City.
+const splitLocation = (raw: string | null): { country: string; city: string } => {
+	const trimmed = (raw ?? '').trim()
+	if (!trimmed) return { country: '', city: '' }
+	const idx = trimmed.lastIndexOf(',')
+	if (idx === -1) return { country: trimmed, city: '' }
+	const city = trimmed.slice(0, idx).trim()
+	const country = trimmed.slice(idx + 1).trim()
+	return { country: country || trimmed, city }
+}
+
+const toFormValues = (data: LeadItem): FormFields => {
+	const { country, city } = splitLocation(data.location)
+	return {
+		firstName: data.firstName ?? '',
+		lastName: data.lastName ?? '',
+		companyName: data.companyName ?? '',
+		email: data.email ?? '',
+		phone: data.phone ? formatPhoneDisplay(data.phone) : '',
+		status: data.status,
+		temperature: data.temperature ?? '',
+		source: data.source ?? '',
+		profileUrl: data.profileUrl ?? '',
+		notes: data.notes ?? '',
+		clientType: data.clientType ?? '',
+		rate: data.rate != null ? String(data.rate) : '',
+		country,
+		city,
+		platformId: data.platformId ?? '',
+	}
+}
 
 const LeadIcon = () => (
 	<svg width='22' height='22' viewBox='0 0 24 24' fill='none'>
@@ -97,6 +125,7 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 	const [fields, setFields] = useState<FormFields>(toFormValues(initialData))
 	const [errors, setErrors] = useState<FieldErrors>({})
 	const [updateLead, { isLoading }] = useUpdateLeadMutation()
+	const { data: platforms } = useGetPlatformsQuery()
 
 	const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) => {
 		setFields((prev) => ({ ...prev, [key]: value }))
@@ -136,7 +165,17 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 				notes: fields.notes.trim() || null,
 				clientType: fields.clientType || null,
 				rate: fields.rate !== '' ? Number(fields.rate) : null,
-				location: fields.location || null,
+				// Country-only is a valid submission; City without a
+				// Country is not sent (keeps the backend's single
+				// location string meaningful).
+				location: ((): string | null => {
+					const country = fields.country.trim()
+					const city = fields.city.trim()
+					if (!country && !city) return null
+					if (country && city) return `${city}, ${country}`
+					return country || city || null
+				})(),
+				platformId: fields.platformId || null,
 			}
 			await updateLead({ id, body }).unwrap()
 			showToast('Lead updated successfully', 'success')
@@ -210,12 +249,20 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 								/>
 								<PhonePreview phone={fields.phone} />
 							</Field>
-							<Field label='Location' span='full'>
+							<Field label='Country'>
+								<CountryAutocomplete
+									value={fields.country}
+									onChange={(v) => setField('country', v)}
+									placeholder='Start typing a country…'
+									ariaLabel='Country'
+								/>
+							</Field>
+							<Field label='City (optional)'>
 								<TextField
-									name='location'
-									placeholder='e.g. United States'
-									value={fields.location}
-									onChange={(e) => setField('location', e.target.value)}
+									name='city'
+									placeholder='e.g. Berlin'
+									value={fields.city}
+									onChange={(e) => setField('city', e.target.value)}
 									width='100%'
 								/>
 							</Field>
@@ -243,6 +290,21 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 									<SelectItem label='On Hold' value='ON_HOLD' />
 									<SelectItem label='Won' value='WON' />
 									<SelectItem label='Lost' value='LOST' />
+									<SelectItem label='Client' value='CLIENT' />
+								</Select>
+							</Field>
+							<Field label='Platform'>
+								<Select
+									label='Platform'
+									defaultValue={fields.platformId}
+									onChange={(v) => setField('platformId', v as string)}
+									width='100%'
+									sizes='normal'
+								>
+									<SelectItem label='— unset —' value='' />
+									{(platforms ?? []).map((p) => (
+										<SelectItem key={p.id} label={p.title} value={p.id} />
+									))}
 								</Select>
 							</Field>
 							<Field label='Temperature'>
@@ -345,14 +407,12 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 							Changes are saved when you press Save
 						</FootLeft>
 						<FootActions>
-							<Button
-								varient='outlined'
-								color='info'
+							<PrimaryGhostButton
 								type='button'
 								onClick={() => navigate(`/leads/preview/${id}`)}
 							>
 								Cancel
-							</Button>
+							</PrimaryGhostButton>
 							<PrimarySolidButton type='submit' disabled={isLoading}>
 								{isLoading ? 'Saving…' : 'Save changes'}
 							</PrimarySolidButton>

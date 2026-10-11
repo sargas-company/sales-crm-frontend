@@ -19,6 +19,10 @@ interface Props {
 	onConfirm: () => void
 	isLoading?: boolean
 	maxWidth?: number
+	/** Optional extra content rendered between the description and
+	 * the action buttons — e.g. a radio-group of strategies for the
+	 * Resume AI modal. Picks up the same softIn/softOut animation. */
+	children?: ReactNode
 }
 
 interface TonePalette {
@@ -100,6 +104,7 @@ const ConfirmModal = ({
 	onConfirm,
 	isLoading,
 	maxWidth = 460,
+	children,
 }: Props) => {
 	const { theme } = useTheme()
 	const isDark = theme.mode.name === 'dark'
@@ -138,6 +143,8 @@ const ConfirmModal = ({
 						<TitleText $dark={isDark}>{title}</TitleText>
 						<DescText $dark={isDark}>{description}</DescText>
 					</TextBlock>
+
+					{children ? <ExtrasSlot $closing={closing}>{children}</ExtrasSlot> : null}
 
 					<Actions $closing={closing}>
 						<CancelButton
@@ -341,6 +348,16 @@ const DescText = styled.p<{ $dark: boolean }>`
 		border-radius: 6px;
 		border: 1px solid rgba(15, 23, 42, 0.08);
 	}
+`
+
+const ExtrasSlot = styled.div<{ $closing: boolean }>`
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	animation: ${({ $closing }) => ($closing ? softOut : softIn)}
+		${({ $closing }) => ($closing ? '180ms' : '440ms')}
+		cubic-bezier(0.22, 1, 0.36, 1) ${({ $closing }) => ($closing ? '0ms' : '220ms')} both;
 `
 
 const Actions = styled.div<{ $closing: boolean }>`

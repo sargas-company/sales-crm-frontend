@@ -160,21 +160,6 @@ const ClientRequestPreview = () => {
 						<span className='g' />
 					</TermDots>
 					<TermPath>{termPath}</TermPath>
-					<TermHeaderActions>
-						<BookCallBtn
-							type='button'
-							onClick={() =>
-								navigate(
-									`/client-calls/add/?clientType=client_request&clientId=${request.id}`
-								)
-							}
-						>
-							<BookCallIcon aria-hidden='true'>
-								<PhoneInTalkOutlined />
-							</BookCallIcon>
-							Book a call
-						</BookCallBtn>
-					</TermHeaderActions>
 				</TermHeader>
 
 				<TermBody>

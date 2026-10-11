@@ -24,6 +24,8 @@ export const baseApi = createApi({
 		'ClientRequest',
 		'ClientCall',
 		'JobPost',
+		'QueueStats',
+		'ScannerHealth',
 		'Invoice',
 		'Prompt',
 		'Setting',
@@ -61,6 +63,7 @@ export const baseApi = createApi({
 		'PortfolioTag',
 		'BackupRun',
 		'DiscordProfile',
+		'Attachment',
 	],
 	endpoints: () => ({}),
 })

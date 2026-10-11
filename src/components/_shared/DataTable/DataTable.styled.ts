@@ -326,13 +326,12 @@ export const PagerBtn = styled.button`
 	color: ${T.textStrong};
 	cursor: pointer;
 	transition:
-		background 120ms ${T.ease},
-		border-color 120ms ${T.ease};
+		box-shadow 160ms ${T.ease},
+		transform 160ms ${T.ease};
 
 	&:hover:not(:disabled) {
-		border-color: ${T.primary};
-		color: ${T.primary};
-		background: ${T.primaryTint};
+		box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+		transform: scale(1.04);
 	}
 
 	&:disabled {

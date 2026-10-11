@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import {
 	TextField,
-	Button,
 	Select,
 	SelectItem,
 } from '../../../ui'
@@ -18,6 +17,8 @@ import {
 	type ClientItem,
 	type CreateClientBody,
 } from '../../../store/clients/clientsApi'
+import { useGetPlatformsQuery } from '../../../store/platforms/platformsApi'
+import CountryAutocomplete from '../../_shared/CountryAutocomplete'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
 import { Link } from 'react-router-dom'
 import {
@@ -40,6 +41,7 @@ import {
 	FootActions,
 	FootBar,
 	FootLeft,
+	PrimaryGhostButton,
 	PrimarySolidButton,
 	Section,
 	Shell,
@@ -63,6 +65,11 @@ interface FormFields {
 	status: ApiClientStatus
 	clientSince: string
 	notes: string
+	platformId: string
+	// Country + optional city — joined server-side into Client.location
+	// as `city, country` (or just country when city is empty).
+	country: string
+	city: string
 }
 
 interface FieldErrors {
@@ -83,20 +90,42 @@ const emptyFields: FormFields = {
 	status: 'ACTIVE',
 	clientSince: '',
 	notes: '',
+	platformId: '',
+	country: '',
+	city: '',
 }
 
-const fromInitial = (c: ClientItem): FormFields => ({
-	firstName: c.firstName ?? '',
-	lastName: c.lastName ?? '',
-	company: c.company ?? '',
-	email: c.email ?? '',
-	phone: c.phone ? formatPhoneDisplay(c.phone) : '',
-	source: c.source ?? '',
-	profileUrl: c.profileUrl ?? '',
-	status: c.status,
-	clientSince: c.clientSince ? c.clientSince.slice(0, 10) : '',
-	notes: c.notes ?? '',
-})
+// Parse a persisted `location` into { country, city } by the last
+// comma — same contract as LeadForm so the two surfaces agree on
+// the serialisation.
+const splitLocation = (raw: string | null): { country: string; city: string } => {
+	const trimmed = (raw ?? '').trim()
+	if (!trimmed) return { country: '', city: '' }
+	const idx = trimmed.lastIndexOf(',')
+	if (idx === -1) return { country: trimmed, city: '' }
+	const city = trimmed.slice(0, idx).trim()
+	const country = trimmed.slice(idx + 1).trim()
+	return { country: country || trimmed, city }
+}
+
+const fromInitial = (c: ClientItem): FormFields => {
+	const { country, city } = splitLocation(c.location)
+	return {
+		firstName: c.firstName ?? '',
+		lastName: c.lastName ?? '',
+		company: c.company ?? '',
+		email: c.email ?? '',
+		phone: c.phone ? formatPhoneDisplay(c.phone) : '',
+		source: c.source ?? '',
+		profileUrl: c.profileUrl ?? '',
+		status: c.status,
+		clientSince: c.clientSince ? c.clientSince.slice(0, 10) : '',
+		notes: c.notes ?? '',
+		platformId: c.platformId ?? '',
+		country,
+		city,
+	}
+}
 
 const ClientIcon = () => (
 	<svg width='22' height='22' viewBox='0 0 24 24' fill='none'>
@@ -116,6 +145,7 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 	const isDark = theme.mode.name === 'dark'
 	const [createClient, { isLoading: creating }] = useCreateClientMutation()
 	const [updateClient, { isLoading: updating }] = useUpdateClientMutation()
+	const { data: platforms } = useGetPlatformsQuery()
 	const isLoading = creating || updating
 	const isEdit = mode === 'edit'
 	const [fields, setFields] = useState<FormFields>(
@@ -179,6 +209,14 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 			status: fields.status,
 			clientSince: fields.clientSince || null,
 			notes: fields.notes.trim() || null,
+			platformId: fields.platformId || null,
+			location: ((): string | null => {
+				const country = fields.country.trim()
+				const city = fields.city.trim()
+				if (!country && !city) return null
+				if (country && city) return `${city}, ${country}`
+				return country || city || null
+			})(),
 		}
 	}
 
@@ -344,12 +382,43 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 									<SelectItem label='Former' value='FORMER' />
 								</Select>
 							</Field>
+							<Field label='Platform'>
+								<Select
+									label='Platform'
+									defaultValue={fields.platformId}
+									onChange={(v) => setField('platformId', v as string)}
+									width='100%'
+									sizes='normal'
+								>
+									<SelectItem label='— unset —' value='' />
+									{(platforms ?? []).map((p) => (
+										<SelectItem key={p.id} label={p.title} value={p.id} />
+									))}
+								</Select>
+							</Field>
 							<Field label='Source'>
 								<TextField
 									name='source'
 									placeholder='e.g. Referral'
 									value={fields.source}
 									onChange={(e) => setField('source', e.target.value)}
+									width='100%'
+								/>
+							</Field>
+							<Field label='Country'>
+								<CountryAutocomplete
+									value={fields.country}
+									onChange={(v) => setField('country', v)}
+									placeholder='Start typing a country…'
+									ariaLabel='Country'
+								/>
+							</Field>
+							<Field label='City (optional)'>
+								<TextField
+									name='city'
+									placeholder='e.g. Berlin'
+									value={fields.city}
+									onChange={(e) => setField('city', e.target.value)}
 									width='100%'
 								/>
 							</Field>
@@ -403,16 +472,14 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 							{isEdit ? 'Changes save on submit' : 'Client appears in the list immediately'}
 						</FootLeft>
 						<FootActions>
-							<Button
-								varient='outlined'
-								color='info'
+							<PrimaryGhostButton
 								type='button'
 								onClick={() =>
 									navigate(isEdit && id ? `/clients/${id}` : '/clients/list/')
 								}
 							>
 								Cancel
-							</Button>
+							</PrimaryGhostButton>
 							<PrimarySolidButton type='submit' disabled={isLoading}>
 								{isLoading
 									? isEdit
