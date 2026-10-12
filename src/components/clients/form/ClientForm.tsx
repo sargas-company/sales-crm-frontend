@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import {
@@ -7,7 +7,14 @@ import {
 	SelectItem,
 } from '../../../ui'
 import { useToast } from '../../../context/toast/ToastContext'
-import parseServerError from '../../../utils/parseServerError'
+import parseServerError, {
+	parseServerFieldErrors,
+} from '../../../utils/parseServerError'
+import ErrorSummary, {
+	ServerErrorBox,
+	focusByName,
+} from '../../_shared/ErrorSummary'
+import DuplicatesHint from '../../_shared/DuplicatesHint'
 import useTheme from '../../../theme/useTheme'
 import {
 	useCreateClientMutation,
@@ -20,7 +27,6 @@ import {
 import { useGetPlatformsQuery } from '../../../store/platforms/platformsApi'
 import CountryAutocomplete from '../../_shared/CountryAutocomplete'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
-import { Link } from 'react-router-dom'
 import {
 	countryToFlag,
 	formatPhoneDisplay,
@@ -77,6 +83,28 @@ interface FieldErrors {
 	email?: string
 	phone?: string
 	profileUrl?: string
+	notes?: string
+}
+
+const NOTES_MAX = 4000
+
+/** Submit-order of error anchors; first present key gets focus. */
+const ERROR_ORDER: { key: keyof FieldErrors; inputName: string }[] = [
+	{ key: 'firstName', inputName: 'firstName' },
+	{ key: 'email', inputName: 'email' },
+	{ key: 'phone', inputName: 'phone' },
+	{ key: 'profileUrl', inputName: 'profileUrl' },
+	{ key: 'notes', inputName: 'notes' },
+]
+
+/** Backend DTO property → local error slot (class-validator messages
+ *  start with the property name, see parseServerFieldErrors). */
+const SERVER_FIELDS: Record<string, keyof FieldErrors> = {
+	firstName: 'firstName',
+	email: 'email',
+	phone: 'phone',
+	profileUrl: 'profileUrl',
+	notes: 'notes',
 }
 
 const emptyFields: FormFields = {
@@ -152,6 +180,8 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 		initial ? fromInitial(initial) : emptyFields,
 	)
 	const [errors, setErrors] = useState<FieldErrors>({})
+	const [serverGeneral, setServerGeneral] = useState<string | null>(null)
+	const summaryRef = useRef<HTMLDivElement>(null)
 
 	// Non-blocking duplicate suggestion. Only queries once the
 	// contact fields look complete enough to be worth checking
@@ -175,12 +205,23 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 		},
 		{ skip: !shouldLookup },
 	)
-	const duplicateCount = duplicates?.length ?? 0
 
 	const setField = <K extends keyof FormFields>(k: K, v: FormFields[K]) => {
 		setFields((p) => ({ ...p, [k]: v }))
 		if ((errors as Record<string, unknown>)[k])
 			setErrors((p) => ({ ...p, [k]: undefined }))
+		if (serverGeneral) setServerGeneral(null)
+	}
+
+	const applyErrors = (next: FieldErrors) => {
+		setErrors(next)
+		const present = ERROR_ORDER.filter((e) => next[e.key])
+		if (present.length > 2) {
+			summaryRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+			summaryRef.current?.focus({ preventScroll: true })
+		} else if (present.length > 0) {
+			focusByName(present[0].inputName)
+		}
 	}
 
 	const validate = (): FieldErrors => {
@@ -192,6 +233,8 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 			next.phone = 'Use international format, e.g. +14155550123'
 		if (fields.profileUrl && !/^https?:\/\//i.test(fields.profileUrl.trim()))
 			next.profileUrl = 'Must start with http:// or https://'
+		if (fields.notes.length > NOTES_MAX)
+			next.notes = `Notes are limited to ${NOTES_MAX} characters (currently ${fields.notes.length})`
 		return next
 	}
 
@@ -222,9 +265,10 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
+		setServerGeneral(null)
 		const v = validate()
 		if (Object.keys(v).length > 0) {
-			setErrors(v)
+			applyErrors(v)
 			return
 		}
 		try {
@@ -239,9 +283,33 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 				navigate(`/clients/${row.id}`)
 			}
 		} catch (err) {
-			showToast(parseServerError(err), 'error')
+			// Same contract as LeadForm: backend field errors land in the
+			// matching inline slots, values stay, unmapped messages show
+			// as one general block.
+			const { fieldErrors, general } = parseServerFieldErrors(
+				err,
+				Object.keys(SERVER_FIELDS),
+			)
+			const mapped: FieldErrors = {}
+			for (const [prop, msg] of Object.entries(fieldErrors)) {
+				const slot = SERVER_FIELDS[prop]
+				if (slot && !mapped[slot]) mapped[slot] = msg
+			}
+			if (Object.keys(mapped).length > 0) applyErrors(mapped)
+			const generalText =
+				general.length > 0
+					? general.join('\n')
+					: Object.keys(mapped).length === 0
+						? parseServerError(err)
+						: null
+			if (generalText) setServerGeneral(generalText)
 		}
 	}
+
+	const summaryItems = ERROR_ORDER.filter((e) => errors[e.key]).map((e) => ({
+		name: e.inputName,
+		message: errors[e.key]!,
+	}))
 
 	return (
 		<Shell $dark={isDark}>
@@ -261,6 +329,13 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 				/>
 
 				<form onSubmit={handleSubmit} noValidate>
+					{summaryItems.length > 2 && (
+						<ErrorSummary
+							ref={summaryRef}
+							items={summaryItems}
+							onJump={focusByName}
+						/>
+					)}
 					<Section $delay={80}>
 						<SectionHead
 							num='01'
@@ -331,35 +406,23 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 								<PhonePreview phone={fields.phone} />
 							</Field>
 						</FieldGrid>
-						{duplicateCount > 0 && (
-							<DupHint role='status'>
-								<DupTitle>
-									Possible duplicate — {duplicateCount}{' '}
-									{duplicateCount === 1 ? 'client' : 'clients'} share this email or phone
-								</DupTitle>
-								<DupNote>
-									You can still save — the system will not merge or link
-									records automatically.
-								</DupNote>
-								<DupList>
-									{duplicates!.slice(0, 5).map((d) => {
-										const name =
-											[d.firstName, d.lastName].filter(Boolean).join(' ') ||
-											d.company ||
-											d.id
-										return (
-											<li key={d.id}>
-												<Link to={`/clients/${d.id}`} target='_blank'>
-													{name}
-												</Link>
-												{d.company && name !== d.company ? ` · ${d.company}` : ''}
-												{d.email ? ` · ${d.email}` : ''}
-											</li>
-										)
-									})}
-								</DupList>
-							</DupHint>
-						)}
+						<DuplicatesHint
+							entityLabel='client'
+							linkBase='/clients'
+							items={(duplicates ?? []).map((d) => {
+								const name =
+									[d.firstName, d.lastName].filter(Boolean).join(' ') ||
+									d.company ||
+									d.id
+								const extra = [
+									d.company && name !== d.company ? d.company : null,
+									d.email ?? null,
+								]
+									.filter(Boolean)
+									.join(' · ')
+								return { id: d.id, title: name, subtitle: extra || undefined }
+							})}
+						/>
 					</Section>
 
 					<Section $delay={240}>
@@ -450,7 +513,12 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 					<Section $delay={320}>
 						<SectionHead num='04' title='Notes' hint='Free-form internal notes' />
 						<FieldGrid>
-							<Field label='Notes' span='full'>
+							<Field
+								label='Notes'
+								span='full'
+								error={errors.notes}
+								hint={`Up to ${NOTES_MAX} characters`}
+							>
 								<TextField
 									name='notes'
 									placeholder='Anything internal worth remembering…'
@@ -465,6 +533,10 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 							</Field>
 						</FieldGrid>
 					</Section>
+
+					{serverGeneral && (
+						<ServerErrorBox role='alert'>{serverGeneral}</ServerErrorBox>
+					)}
 
 					<FootBar $dark={isDark}>
 						<FootLeft $dark={isDark}>
@@ -545,36 +617,6 @@ const Country = styled.span`
 	letter-spacing: 0.3px;
 	font-size: 11px;
 	text-transform: uppercase;
-`
-
-const DupHint = styled.div`
-	margin-top: 12px;
-	padding: 10px 14px;
-	border-radius: 12px;
-	background: rgba(245, 158, 11, 0.08);
-	border: 1px solid rgba(245, 158, 11, 0.28);
-	font-size: 12.5px;
-	color: #a26608;
-`
-const DupTitle = styled.div`
-	font-weight: 700;
-	margin-bottom: 2px;
-`
-const DupNote = styled.div`
-	color: ${T.textSecondary};
-	margin-bottom: 6px;
-`
-const DupList = styled.ul`
-	list-style: '— ';
-	padding-left: 14px;
-	margin: 0;
-	li {
-		margin: 2px 0;
-	}
-	a {
-		color: ${T.primary};
-		font-weight: 600;
-	}
 `
 
 export default ClientForm

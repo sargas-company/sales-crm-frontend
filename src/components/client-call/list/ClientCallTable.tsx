@@ -78,7 +78,7 @@ const ClientCallTable = ({ items, isLoading, onDelete }: Props) => {
 
 						<DataGridCell width={field['clientName'].width}>
 							{row.clientType === 'lead' && row.leadId ? (
-								<Link to={`/leads/preview/${row.leadId}`}>
+								<Link to={`/leads/view/${row.leadId}`}>
 									<Text skinColor varient={'body2'} >{row.clientName}</Text>
 								</Link>
 							) : row.clientType === 'client_request' && row.clientRequestId ? (

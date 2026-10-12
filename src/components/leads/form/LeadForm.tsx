@@ -1,13 +1,22 @@
 import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import styled, { keyframes } from 'styled-components'
 import { TextField, Select, SelectItem } from '../../../ui'
-import { useGetLeadByIdQuery, useUpdateLeadMutation } from '../../../store/leads/leadsApi'
-import { useGetPlatformsQuery } from '../../../store/platforms/platformsApi'
+import {
+	useCreateLeadMutation,
+	useGetLeadDuplicatesQuery,
+	useGetLeadSourcesQuery,
+	useUpdateLeadMutation,
+} from '../../../store/leads/leadsApi'
 import CountryAutocomplete from '../../_shared/CountryAutocomplete'
+import DuplicatesHint from '../../_shared/DuplicatesHint'
+import { ServerErrorBox, focusByName } from '../../_shared/ErrorSummary'
+import useDebouncedValue from '../../../hooks/useDebouncedValue'
 import { useToast } from '../../../context/toast/ToastContext'
-import parseServerError from '../../../utils/parseServerError'
+import parseServerError, {
+	parseServerFieldErrors,
+} from '../../../utils/parseServerError'
 import useTheme from '../../../theme/useTheme'
-import styled from 'styled-components'
 import {
 	countryToFlag,
 	formatPhoneDisplay,
@@ -21,9 +30,11 @@ import type {
 	ApiClientType,
 	ApiLeadStatus,
 	ApiLeadTemperature,
+	CreateLeadBody,
 	LeadItem,
+	UpdateLeadBody,
 } from '../../../store/leads/types/definition'
-import { Field, FormHeader, FormLoading, FormNotFound, SectionHead } from '../../_shared/FormShell'
+import { Field, FormHeader, SectionHead } from '../../_shared/FormShell'
 import {
 	DotMini,
 	FieldGrid,
@@ -35,10 +46,15 @@ import {
 	Section,
 	Shell,
 	Surface,
+	spin,
 } from '../../_shared/formShell.styled'
 
-interface LeadFormProps {
-	id: string
+const NOTES_MAX = 4000
+
+interface Props {
+	mode: 'create' | 'edit'
+	id?: string
+	initial?: LeadItem
 }
 
 interface FormFields {
@@ -48,30 +64,72 @@ interface FormFields {
 	email: string
 	phone: string
 	status: ApiLeadStatus
-	temperature: ApiLeadTemperature | ''
+	temperature: ApiLeadTemperature
 	source: string
 	profileUrl: string
 	notes: string
-	clientType: ApiClientType | ''
-	rate: string
-	// Location is persisted as a single free-text string on Lead, but
-	// the form edits it as a country + optional city so the UI can
-	// offer the country autocomplete. Serialised back on submit:
-	// city ? `${city}, ${country}` : country.
+	clientType: ApiClientType
+	// Location is persisted as one free-text string; the form edits it
+	// as Country (required) + optional City and serialises
+	// `city, country`.
 	country: string
 	city: string
-	platformId: string
 }
 
-interface FieldErrors {
-	email?: string
-	phone?: string
+type ErrorKey =
+	| 'firstName'
+	| 'lastName'
+	| 'companyName'
+	| 'country'
+	| 'email'
+	| 'phone'
+	| 'profileUrl'
+	| 'notes'
+type FieldErrors = Partial<Record<ErrorKey, string>>
+
+/** Submit-order of error anchors; the first present key gets focus. */
+const ERROR_ORDER: { key: ErrorKey; inputName: string }[] = [
+	{ key: 'firstName', inputName: 'firstName' },
+	{ key: 'lastName', inputName: 'lastName' },
+	{ key: 'companyName', inputName: 'companyName' },
+	{ key: 'country', inputName: 'country' },
+	{ key: 'email', inputName: 'email' },
+	{ key: 'phone', inputName: 'phone' },
+	{ key: 'profileUrl', inputName: 'profileUrl' },
+	{ key: 'notes', inputName: 'notes' },
+]
+
+/** Backend DTO property → local error slot (class-validator messages
+ *  start with the property name, see parseServerFieldErrors). */
+const SERVER_FIELDS: Record<string, ErrorKey> = {
+	firstName: 'firstName',
+	lastName: 'lastName',
+	companyName: 'companyName',
+	email: 'email',
+	phone: 'phone',
+	profileUrl: 'profileUrl',
+	notes: 'notes',
+	location: 'country',
 }
 
-// Parse "City, Country" (last comma = country boundary) back into
-// the two form fields. One-segment input is treated as country-only
-// so a user who typed just "Germany" sees it in the Country slot
-// after reload, not in City.
+const empty: FormFields = {
+	firstName: '',
+	lastName: '',
+	companyName: '',
+	email: '',
+	phone: '',
+	status: 'NEW',
+	temperature: 'COLD',
+	source: '',
+	profileUrl: '',
+	notes: '',
+	clientType: 'individual',
+	country: '',
+	city: '',
+}
+
+// Parse "City, Country" (last comma = boundary) back into the two
+// form fields; one segment is treated as country-only.
 const splitLocation = (raw: string | null): { country: string; city: string } => {
 	const trimmed = (raw ?? '').trim()
 	if (!trimmed) return { country: '', city: '' }
@@ -82,7 +140,7 @@ const splitLocation = (raw: string | null): { country: string; city: string } =>
 	return { country: country || trimmed, city }
 }
 
-const toFormValues = (data: LeadItem): FormFields => {
+const fromInitial = (data: LeadItem): FormFields => {
 	const { country, city } = splitLocation(data.location)
 	return {
 		firstName: data.firstName ?? '',
@@ -91,15 +149,15 @@ const toFormValues = (data: LeadItem): FormFields => {
 		email: data.email ?? '',
 		phone: data.phone ? formatPhoneDisplay(data.phone) : '',
 		status: data.status,
-		temperature: data.temperature ?? '',
+		// Temperature/clientType are required controls with defaults —
+		// a legacy null simply lands on the default.
+		temperature: data.temperature ?? 'COLD',
 		source: data.source ?? '',
 		profileUrl: data.profileUrl ?? '',
 		notes: data.notes ?? '',
-		clientType: data.clientType ?? '',
-		rate: data.rate != null ? String(data.rate) : '',
+		clientType: data.clientType ?? 'individual',
 		country,
 		city,
-		platformId: data.platformId ?? '',
 	}
 }
 
@@ -117,85 +175,181 @@ const LeadIcon = () => (
 	</svg>
 )
 
-const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem }) => {
+const LeadForm = ({ mode, id, initial }: Props) => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
 	const { theme } = useTheme()
 	const isDark = theme.mode.name === 'dark'
-	const [fields, setFields] = useState<FormFields>(toFormValues(initialData))
+	const isEdit = mode === 'edit'
+
+	const [createLead, { isLoading: creating }] = useCreateLeadMutation()
+	const [updateLead, { isLoading: updating }] = useUpdateLeadMutation()
+	const { data: sources } = useGetLeadSourcesQuery()
+	const isLoading = creating || updating
+
+	const [fields, setFields] = useState<FormFields>(
+		initial ? fromInitial(initial) : empty,
+	)
 	const [errors, setErrors] = useState<FieldErrors>({})
-	const [updateLead, { isLoading }] = useUpdateLeadMutation()
-	const { data: platforms } = useGetPlatformsQuery()
+	const [serverGeneral, setServerGeneral] = useState<string | null>(null)
+
+	// Non-blocking duplicate suggestion — queries only once email/phone
+	// look complete; never blocks save.
+	const debouncedEmail = useDebouncedValue(fields.email.trim(), 400)
+	const debouncedPhone = useDebouncedValue(fields.phone.trim(), 400)
+	const emailForLookup =
+		debouncedEmail && isLikelyValidEmail(debouncedEmail)
+			? debouncedEmail.toLowerCase()
+			: ''
+	const phoneForLookup = isLikelyValidPhone(debouncedPhone)
+		? normalisePhoneToE164(debouncedPhone) ?? ''
+		: ''
+	const shouldLookup = Boolean(emailForLookup || phoneForLookup)
+	const { data: duplicates } = useGetLeadDuplicatesQuery(
+		{
+			email: emailForLookup || undefined,
+			phone: phoneForLookup || undefined,
+			excludeId: id,
+		},
+		{ skip: !shouldLookup },
+	)
 
 	const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) => {
 		setFields((prev) => ({ ...prev, [key]: value }))
-		if (key === 'email') setErrors((prev) => ({ ...prev, email: undefined }))
-		if (key === 'phone') setErrors((prev) => ({ ...prev, phone: undefined }))
+		if ((errors as Record<string, unknown>)[key as string])
+			setErrors((prev) => ({ ...prev, [key as ErrorKey]: undefined }))
+		if (serverGeneral) setServerGeneral(null)
 	}
 
 	const validate = (): FieldErrors => {
 		const next: FieldErrors = {}
+		if (!fields.firstName.trim()) next.firstName = 'First name is required'
+		if (!fields.lastName.trim()) next.lastName = 'Last name is required'
+		if (fields.clientType === 'company' && !fields.companyName.trim())
+			next.companyName = 'Company name is required for a company lead'
+		if (!fields.country.trim()) next.country = 'Country is required'
 		if (fields.email && !isLikelyValidEmail(fields.email))
 			next.email = 'Enter a valid email address'
 		if (fields.phone && !isLikelyValidPhone(fields.phone))
 			next.phone = 'Use international format, e.g. +14155550123'
+		if (fields.profileUrl && !/^https?:\/\//i.test(fields.profileUrl.trim()))
+			next.profileUrl = 'Must start with http:// or https://'
+		if (fields.notes.length > NOTES_MAX)
+			next.notes = `Notes are limited to ${NOTES_MAX} characters (currently ${fields.notes.length})`
 		return next
+	}
+
+	const applyErrors = (next: FieldErrors) => {
+		setErrors(next)
+		const first = ERROR_ORDER.find((e) => next[e.key])
+		if (first) focusByName(first.inputName)
+	}
+
+	const locationValue = (): string => {
+		const country = fields.country.trim()
+		const city = fields.city.trim()
+		return city ? `${city}, ${country}` : country
 	}
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
-		const validationErrors = validate()
-		if (Object.keys(validationErrors).length > 0) {
-			setErrors(validationErrors)
+		setServerGeneral(null)
+		const v = validate()
+		if (Object.keys(v).length > 0) {
+			applyErrors(v)
 			return
 		}
+		const trimmedEmail = fields.email.trim()
+		const normalisedPhone = normalisePhoneToE164(fields.phone)
 		try {
-			const trimmedEmail = fields.email.trim()
-			const normalisedPhone = normalisePhoneToE164(fields.phone)
-			const body: Partial<LeadItem> = {
-				firstName: fields.firstName || null,
-				lastName: fields.lastName || null,
-				companyName: fields.clientType === 'company' ? fields.companyName || null : null,
-				email: trimmedEmail ? trimmedEmail.toLowerCase() : null,
-				phone: normalisedPhone,
-				status: fields.status,
-				temperature: fields.temperature || null,
-				source: fields.source.trim() || null,
-				profileUrl: fields.profileUrl.trim() || null,
-				notes: fields.notes.trim() || null,
-				clientType: fields.clientType || null,
-				rate: fields.rate !== '' ? Number(fields.rate) : null,
-				// Country-only is a valid submission; City without a
-				// Country is not sent (keeps the backend's single
-				// location string meaningful).
-				location: ((): string | null => {
-					const country = fields.country.trim()
-					const city = fields.city.trim()
-					if (!country && !city) return null
-					if (country && city) return `${city}, ${country}`
-					return country || city || null
-				})(),
-				platformId: fields.platformId || null,
+			if (isEdit && id) {
+				// Rate is intentionally absent: it left the Lead UI and the
+				// stored value must stay untouched.
+				const body: UpdateLeadBody = {
+					firstName: fields.firstName.trim(),
+					lastName: fields.lastName.trim(),
+					companyName:
+						fields.clientType === 'company'
+							? fields.companyName.trim()
+							: null,
+					email: trimmedEmail ? trimmedEmail.toLowerCase() : null,
+					phone: normalisedPhone,
+					status: fields.status,
+					temperature: fields.temperature,
+					source: fields.source.trim() || null,
+					profileUrl: fields.profileUrl.trim() || null,
+					notes: fields.notes.trim() || null,
+					clientType: fields.clientType,
+					location: locationValue(),
+				}
+				await updateLead({ id, body }).unwrap()
+				showToast('Lead updated successfully', 'success')
+				navigate(`/leads/view/${id}`)
+			} else {
+				const body: CreateLeadBody = {
+					firstName: fields.firstName.trim(),
+					lastName: fields.lastName.trim(),
+					companyName:
+						fields.clientType === 'company'
+							? fields.companyName.trim()
+							: undefined,
+					email: trimmedEmail ? trimmedEmail.toLowerCase() : undefined,
+					phone: normalisedPhone ?? undefined,
+					status: fields.status,
+					temperature: fields.temperature,
+					source: fields.source.trim() || null,
+					profileUrl: fields.profileUrl.trim() || null,
+					notes: fields.notes.trim() || null,
+					clientType: fields.clientType,
+					location: locationValue(),
+				}
+				const row = await createLead(body).unwrap()
+				showToast('Lead created successfully', 'success')
+				navigate(`/leads/view/${row.id}`)
 			}
-			await updateLead({ id, body }).unwrap()
-			showToast('Lead updated successfully', 'success')
-			navigate(`/leads/preview/${id}`)
 		} catch (err) {
-			showToast(parseServerError(err), 'error')
+			// Map backend field errors onto the same inline slots; keep
+			// the entered values; show unmapped messages as one general
+			// block instead of a toast.
+			const { fieldErrors, general } = parseServerFieldErrors(
+				err,
+				Object.keys(SERVER_FIELDS),
+			)
+			const mapped: FieldErrors = {}
+			for (const [prop, msg] of Object.entries(fieldErrors)) {
+				const slot = SERVER_FIELDS[prop]
+				if (slot && !mapped[slot]) mapped[slot] = msg
+			}
+			if (Object.keys(mapped).length > 0) applyErrors(mapped)
+			const generalText =
+				general.length > 0
+					? general.join('\n')
+					: Object.keys(mapped).length === 0
+						? parseServerError(err)
+						: null
+			if (generalText) setServerGeneral(generalText)
 		}
 	}
+
+	const backTarget = isEdit && id ? `/leads/view/${id}` : '/leads/list/'
 
 	return (
 		<Shell $dark={isDark}>
 			<Surface $dark={isDark}>
 				<FormHeader
-					backTo={`/leads/preview/${id}`}
-					backLabel='Back to lead'
+					backTo={backTarget}
+					backLabel={isEdit ? 'Back to lead' : 'Back to leads'}
 					icon={<LeadIcon />}
-					title={`Edit lead #${initialData.number}`}
-					subtitle='Update contact info, status and financial terms'
-					badgeLabel='Editing'
-					badgeTone='edit'
+					title={
+						isEdit && initial ? `Edit lead #${initial.number}` : 'New lead'
+					}
+					subtitle={
+						isEdit
+							? 'Update contact info, status and classification'
+							: 'Add a lead manually and start tracking the deal'
+					}
+					badgeLabel={isEdit ? 'Editing' : 'New'}
+					badgeTone={isEdit ? 'edit' : 'new'}
 				/>
 
 				<form onSubmit={handleSubmit} noValidate>
@@ -206,38 +360,42 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 							hint='Who this lead is and how to reach them'
 						/>
 						<FieldGrid>
-							<Field label='First name'>
+							<Field label='First name' required error={errors.firstName}>
 								<TextField
 									name='firstName'
 									placeholder='e.g. John'
 									value={fields.firstName}
 									onChange={(e) => setField('firstName', e.target.value)}
+									error={!!errors.firstName}
 									width='100%'
 								/>
 							</Field>
-							<Field label='Last name'>
+							<Field label='Last name' required error={errors.lastName}>
 								<TextField
 									name='lastName'
 									placeholder='e.g. Doe'
 									value={fields.lastName}
 									onChange={(e) => setField('lastName', e.target.value)}
+									error={!!errors.lastName}
 									width='100%'
 								/>
 							</Field>
-							<Field label='Email' error={errors.email}>
+							<Field label='Email' optional error={errors.email}>
 								<TextField
 									name='email'
 									type='email'
 									placeholder='e.g. john@acme.com'
 									value={fields.email}
 									onChange={(e) => setField('email', e.target.value)}
+									error={!!errors.email}
 									width='100%'
 								/>
 							</Field>
 							<Field
 								label='Phone'
+								optional
 								error={errors.phone}
-								hint='International format, e.g. +14155550123'
+								hint='e.g. +14155550123'
 							>
 								<TextField
 									name='phone'
@@ -245,19 +403,22 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 									placeholder='+1 415 555 0123'
 									value={fields.phone}
 									onChange={(e) => setField('phone', e.target.value)}
+									error={!!errors.phone}
 									width='100%'
 								/>
 								<PhonePreview phone={fields.phone} />
 							</Field>
-							<Field label='Country'>
+							<Field label='Country' required error={errors.country}>
 								<CountryAutocomplete
 									value={fields.country}
 									onChange={(v) => setField('country', v)}
 									placeholder='Start typing a country…'
 									ariaLabel='Country'
+									name='country'
+									error={!!errors.country}
 								/>
 							</Field>
-							<Field label='City (optional)'>
+							<Field label='City' optional>
 								<TextField
 									name='city'
 									placeholder='e.g. Berlin'
@@ -267,20 +428,74 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 								/>
 							</Field>
 						</FieldGrid>
+						<DuplicatesHint
+							entityLabel='lead'
+							linkBase='/leads/view'
+							items={(duplicates ?? []).map((d) => ({
+								id: d.id,
+								title:
+									[d.firstName, d.lastName].filter(Boolean).join(' ') ||
+									d.companyName ||
+									d.id,
+								subtitle: d.email ?? d.phone ?? undefined,
+							}))}
+						/>
 					</Section>
 
 					<Section $delay={160}>
 						<SectionHead
 							num='02'
-							title='Pipeline'
-							hint='Where the lead sits in the sales funnel'
+							title='Client'
+							hint='Individual or company — pick the type that fits'
 						/>
 						<FieldGrid>
-							<Field label='Status'>
+							<Field label='Client type' required>
 								<Select
-									label='Select status'
-									defaultValue={fields.status}
-									onChange={(value) => setField('status', value as ApiLeadStatus)}
+									label='Client type'
+									value={fields.clientType}
+									onChange={(value) =>
+										setField('clientType', value as ApiClientType)
+									}
+									width='100%'
+									sizes='normal'
+								>
+									<SelectItem label='Individual' value='individual' />
+									<SelectItem label='Company' value='company' />
+								</Select>
+							</Field>
+							{fields.clientType === 'company' && (
+								<Reveal>
+									<Field
+										label='Company name'
+										required
+										error={errors.companyName}
+									>
+										<TextField
+											name='companyName'
+											placeholder='e.g. Acme Corp'
+											value={fields.companyName}
+											onChange={(e) => setField('companyName', e.target.value)}
+											error={!!errors.companyName}
+											width='100%'
+										/>
+									</Field>
+								</Reveal>
+							)}
+						</FieldGrid>
+					</Section>
+
+					<Section $delay={200}>
+						<SectionHead
+							num='03'
+							title='Classification'
+							hint='Status, temperature and where this lead came from'
+						/>
+						<FieldGrid>
+							<Field label='Status' required>
+								<Select
+									label='Status'
+									value={fields.status}
+									onChange={(v) => setField('status', v as ApiLeadStatus)}
 									width='100%'
 									sizes='normal'
 								>
@@ -293,55 +508,63 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 									<SelectItem label='Client' value='CLIENT' />
 								</Select>
 							</Field>
-							<Field label='Platform'>
-								<Select
-									label='Platform'
-									defaultValue={fields.platformId}
-									onChange={(v) => setField('platformId', v as string)}
-									width='100%'
-									sizes='normal'
-								>
-									<SelectItem label='— unset —' value='' />
-									{(platforms ?? []).map((p) => (
-										<SelectItem key={p.id} label={p.title} value={p.id} />
-									))}
-								</Select>
-							</Field>
-							<Field label='Temperature'>
+							<Field label='Temperature' required>
 								<Select
 									label='Temperature'
-									defaultValue={fields.temperature}
+									value={fields.temperature}
 									onChange={(v) =>
-										setField('temperature', v as ApiLeadTemperature | '')
+										setField('temperature', v as ApiLeadTemperature)
 									}
 									width='100%'
 									sizes='normal'
 								>
-									<SelectItem label='— unset —' value='' />
 									<SelectItem label='Cold' value='COLD' />
 									<SelectItem label='Warm' value='WARM' />
 									<SelectItem label='Hot' value='HOT' />
 								</Select>
 							</Field>
-							<Field label='Source'>
-								<TextField
-									name='source'
-									placeholder='e.g. Upwork'
+							<Field label='Source' optional>
+								<Select
+									label='Source'
 									value={fields.source}
-									onChange={(e) => setField('source', e.target.value)}
+									onChange={(v) => setField('source', v as string)}
 									width='100%'
-								/>
+									sizes='normal'
+								>
+									<SelectItem label='Not specified' value='' />
+									{(sources ?? []).map((s) => (
+										<SelectItem key={s} label={s} value={s} />
+									))}
+								</Select>
 							</Field>
-							<Field label='Profile URL' span='full'>
+							<Field
+								label='Profile URL'
+								optional
+								error={errors.profileUrl}
+								span='full'
+							>
 								<TextField
 									name='profileUrl'
-									placeholder='https://…'
+									placeholder='https://www.upwork.com/freelancers/~0123abcd…'
 									value={fields.profileUrl}
 									onChange={(e) => setField('profileUrl', e.target.value)}
+									error={!!errors.profileUrl}
 									width='100%'
 								/>
 							</Field>
-							<Field label='Notes' span='full'>
+						</FieldGrid>
+					</Section>
+
+					<Section $delay={280}>
+						<SectionHead num='04' title='Notes' hint='Free-form internal notes' />
+						<FieldGrid>
+							<Field
+								label='Notes'
+								optional
+								span='full'
+								error={errors.notes}
+								hint={`Up to ${NOTES_MAX} characters`}
+							>
 								<TextField
 									name='notes'
 									placeholder='Anything internal worth remembering…'
@@ -352,69 +575,40 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 									width='100%'
 									multiline
 									multiRow
+									style={{ minHeight: 160, resize: 'vertical' }}
+									error={!!errors.notes}
 								/>
 							</Field>
-							<Field label='Client type'>
-								<Select
-									label='Select client type'
-									defaultValue={fields.clientType}
-									onChange={(value) => setField('clientType', value as ApiClientType | '')}
-									width='100%'
-									sizes='normal'
-								>
-									<SelectItem label='Individual' value='individual' />
-									<SelectItem label='Company' value='company' />
-								</Select>
-							</Field>
-							{fields.clientType === 'company' && (
-								<Field label='Company name' span='full'>
-									<TextField
-										name='companyName'
-										placeholder='e.g. Acme Corp'
-										value={fields.companyName}
-										onChange={(e) => setField('companyName', e.target.value)}
-										width='100%'
-									/>
-								</Field>
-							)}
 						</FieldGrid>
 					</Section>
 
-					<Section $delay={240}>
-						<SectionHead
-							num='03'
-							title='Financial'
-							hint='Hourly rate agreed with the client, in USD'
-						/>
-						<FieldGrid>
-							<Field label='Hourly rate ($)' span='third'>
-								<TextField
-									name='rate'
-									type='number'
-									placeholder='e.g. 50'
-									value={fields.rate}
-									onChange={(e) => setField('rate', e.target.value)}
-									width='100%'
-									minValue={0}
-								/>
-							</Field>
-						</FieldGrid>
-					</Section>
+					{serverGeneral && (
+						<ServerErrorBox role='alert'>{serverGeneral}</ServerErrorBox>
+					)}
 
 					<FootBar $dark={isDark}>
 						<FootLeft $dark={isDark}>
 							<DotMini />
-							Changes are saved when you press Save
+							{isEdit
+								? 'Changes are saved when you press Save'
+								: 'Lead will be added to the list right away'}
 						</FootLeft>
 						<FootActions>
 							<PrimaryGhostButton
 								type='button'
-								onClick={() => navigate(`/leads/preview/${id}`)}
+								onClick={() => navigate(backTarget)}
 							>
 								Cancel
 							</PrimaryGhostButton>
 							<PrimarySolidButton type='submit' disabled={isLoading}>
-								{isLoading ? 'Saving…' : 'Save changes'}
+								{isLoading && <ButtonSpinner aria-hidden />}
+								{isLoading
+									? isEdit
+										? 'Saving…'
+										: 'Creating…'
+									: isEdit
+										? 'Save changes'
+										: 'Create lead'}
 							</PrimarySolidButton>
 						</FootActions>
 					</FootBar>
@@ -424,15 +618,9 @@ const LeadFormInner = ({ id, initialData }: { id: string; initialData: LeadItem 
 	)
 }
 
-const LeadForm = ({ id }: LeadFormProps) => {
-	const { data, isLoading } = useGetLeadByIdQuery(id, { skip: !id })
-	if (isLoading) return <FormLoading label='Loading lead…' />
-	if (!data) return <FormNotFound label='Lead not found' />
-	return <LeadFormInner id={id} initialData={data} />
-}
-
 export default LeadForm
 
+/* Live country-flag + formatted preview under the Phone input. */
 const PhonePreview = ({ phone }: { phone: string }) => {
 	const trimmed = phone.trim()
 	if (!trimmed) return null
@@ -448,6 +636,29 @@ const PhonePreview = ({ phone }: { phone: string }) => {
 		</PhonePreviewRow>
 	)
 }
+
+const revealIn = keyframes`
+	from { opacity: 0; transform: translateY(-4px); }
+	to   { opacity: 1; transform: translateY(0); }
+`
+
+/* Wrapper for the conditional Company field so it eases in instead of
+   popping. display: contents keeps the Field a direct grid child. */
+const Reveal = styled.div`
+	display: contents;
+	& > * {
+		animation: ${revealIn} 180ms ease-out both;
+	}
+`
+
+const ButtonSpinner = styled.span`
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.35);
+	border-top-color: #ffffff;
+	animation: ${spin} 640ms linear infinite;
+`
 
 const PhonePreviewRow = styled.div`
 	display: inline-flex;

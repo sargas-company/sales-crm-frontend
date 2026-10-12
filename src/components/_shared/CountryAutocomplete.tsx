@@ -24,9 +24,15 @@ interface Props {
 	onChange: (v: string) => void
 	placeholder?: string
 	ariaLabel?: string
+	/** Forwarded to the input so forms can focus it by name. */
+	name?: string
+	/** Error state — mirrors the TextField red border. */
+	error?: boolean
 	/**
 	 * Visual variant.
-	 *   - `default` — soft rounded input, fits inside a form Field.
+	 *   - `default` — matches the form TextField (height, border,
+	 *                 radius, focus ring) so it sits in a FieldGrid
+	 *                 without a size or stroke mismatch.
 	 *   - `paper`   — matches the "paper" filter pill used in the
 	 *                 list toolbars (same min-height, border, radius
 	 *                 and typography as `InlineSelect` in
@@ -40,6 +46,8 @@ const CountryAutocomplete = ({
 	onChange,
 	placeholder,
 	ariaLabel,
+	name,
+	error,
 	variant = 'default',
 }: Props) => {
 	const [open, setOpen] = useState(false)
@@ -131,6 +139,9 @@ const CountryAutocomplete = ({
 			<InputEl
 				ref={inputRef}
 				type='text'
+				name={name}
+				$error={error}
+				aria-invalid={error ? true : undefined}
 				placeholder={placeholder ?? 'Any country'}
 				value={value}
 				maxLength={60}
@@ -190,21 +201,38 @@ const Wrap = styled.div`
 	width: 100%;
 `
 
-const Input = styled.input`
+/* Mirrors the form TextField (ui/input/text-field): same height,
+   border weight, radius, font and focus ring, so Country never reads
+   as a foreign control inside a FieldGrid. */
+const Input = styled.input<{ $error?: boolean }>`
 	width: 100%;
-	height: 32px;
-	padding: 0 10px;
-	font-size: 13px;
-	line-height: 1;
-	border: 1px solid rgba(15, 23, 42, 0.14);
+	box-sizing: border-box;
+	padding: 1rem 0.8rem;
+	font: inherit;
+	font-size: 1rem;
+	line-height: normal;
+	border: 1.5px solid
+		${({ $error }) => ($error ? '#d32f2f' : '#c9c9c9c4')};
 	border-radius: 8px;
-	background: #fff;
-	color: #0f172a;
+	background: transparent;
+	color: inherit;
 	outline: none;
-	transition: border-color 160ms ease, box-shadow 160ms ease;
-	&:focus {
-		border-color: rgba(59, 130, 246, 0.55);
-		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+	transition:
+		border-color 160ms ease,
+		box-shadow 160ms ease;
+
+	&:hover:not(:focus):not(:disabled) {
+		border-color: ${({ $error }) => ($error ? '#d32f2f' : '#9f9f9f')};
+	}
+	&:focus,
+	&:focus-visible {
+		border-color: ${({ $error }) => ($error ? '#d32f2f' : 'rgba(3, 105, 161, 1)')};
+		outline: ${({ $error }) => ($error ? '#d32f2f' : 'rgba(3, 105, 161, 1)')} solid 2px;
+		outline-offset: -1px;
+	}
+	&:disabled {
+		pointer-events: none;
+		color: #b3b3b3;
 	}
 	&::placeholder {
 		color: rgba(15, 23, 42, 0.4);
@@ -220,7 +248,7 @@ const PAPER_INK = '#1F1A14'
 const PAPER_MUTE = '#7D6E5D'
 const PAPER_RULE_STRONG = 'rgba(31, 26, 20, 0.22)'
 
-const PaperInput = styled.input`
+const PaperInput = styled.input<{ $error?: boolean }>`
 	appearance: none;
 	-webkit-appearance: none;
 	box-sizing: border-box;

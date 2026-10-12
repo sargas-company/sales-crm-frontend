@@ -76,7 +76,7 @@ const ownerInfo = (
 		return {
 			name: n || c.lead.companyName || 'Lead',
 			kind: 'lead',
-			href: c.leadId ? `/leads/preview/${c.leadId}` : null,
+			href: c.leadId ? `/leads/view/${c.leadId}` : null,
 		}
 	}
 	if (c.clientType === 'client' && c.crmClient) {

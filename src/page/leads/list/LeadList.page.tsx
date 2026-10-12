@@ -338,15 +338,6 @@ const LeadList = () => {
 			skeleton: () => <TableSkeleton $w='60px' $h='13px' />,
 		},
 		{
-			key: 'platform',
-			label: 'Platform',
-			minWidth: 80,
-			sortable: false,
-			render: (l) =>
-				l.platform?.title ? <Muted>{l.platform.title}</Muted> : <Muted>—</Muted>,
-			skeleton: () => <TableSkeleton $w='80px' $h='13px' />,
-		},
-		{
 			key: 'location',
 			label: 'Location',
 			minWidth: 80,
@@ -391,7 +382,7 @@ const LeadList = () => {
 				<Actions>
 					<IconAction
 						type='button'
-						onClick={() => navigate(`/leads/preview/${l.id}`)}
+						onClick={() => navigate(`/leads/view/${l.id}`)}
 						aria-label='View lead'
 					>
 						<VisibilityOutlined />

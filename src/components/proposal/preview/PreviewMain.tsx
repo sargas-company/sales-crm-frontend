@@ -227,13 +227,13 @@ const PreviewMain = ({ proposal }: Props) => {
 							<InfoRow icon={<LinkOutlined style={{ fontSize: 18 }} />} label='Lead URL'>
 								<Box display='flex' align='center' space={1}>
 									<a
-										href={`${import.meta.env.VITE_APP_URL}/leads/preview/${proposal.lead?.id}`}
+										href={`${import.meta.env.VITE_APP_URL}/leads/view/${proposal.lead?.id}`}
 										target='_blank'
 										rel='noopener noreferrer'
 										style={{ wordBreak: 'break-all' }}
 									>
 										<Text varient='body2' skinColor>
-											{`${import.meta.env.VITE_APP_URL}/leads/preview/${proposal.lead?.id}`}
+											{`${import.meta.env.VITE_APP_URL}/leads/view/${proposal.lead?.id}`}
 										</Text>
 									</a>
 									<Tooltip title='Copy URL'>
@@ -245,7 +245,7 @@ const PreviewMain = ({ proposal }: Props) => {
 												contentOpacity={5}
 												onClick={() =>
 													copy(
-														`${import.meta.env.VITE_APP_URL}/leads/preview/${proposal.lead?.id}`
+														`${import.meta.env.VITE_APP_URL}/leads/view/${proposal.lead?.id}`
 													)
 												}
 											>

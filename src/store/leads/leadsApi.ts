@@ -1,5 +1,12 @@
 import { baseApi } from '../../api/baseApi'
-import type { LeadItem, LeadPage, LeadListParams, CreateLeadBody } from './types/definition'
+import type {
+	LeadItem,
+	LeadPage,
+	LeadListParams,
+	LeadDuplicate,
+	CreateLeadBody,
+	UpdateLeadBody,
+} from './types/definition'
 
 export interface LeadActivityEvent {
 	id: string
@@ -57,7 +64,15 @@ export const leadsApi = baseApi.injectEndpoints({
 			providesTags: (_, __, id) => [{ type: 'LeadActivity', id }],
 		}),
 
-		updateLead: builder.mutation<LeadItem, { id: string; body: Partial<LeadItem> }>({
+		getLeadDuplicates: builder.query<
+			LeadDuplicate[],
+			{ email?: string; phone?: string; excludeId?: string }
+		>({
+			query: (params) => ({ url: '/leads/duplicates', params }),
+			providesTags: ['Lead'],
+		}),
+
+		updateLead: builder.mutation<LeadItem, { id: string; body: UpdateLeadBody }>({
 			query: ({ id, body }) => ({ url: `/leads/${id}`, method: 'PATCH', body }),
 			invalidatesTags: (_, __, { id }) => [
 				'Lead',
@@ -83,6 +98,7 @@ export const {
 	useGetLeadSourcesQuery,
 	useGetLeadByIdQuery,
 	useGetLeadActivityQuery,
+	useGetLeadDuplicatesQuery,
 	useUpdateLeadMutation,
 	useDeleteLeadMutation,
 	useCreateLeadMutation,

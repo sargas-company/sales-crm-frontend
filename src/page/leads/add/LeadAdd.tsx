@@ -1,5 +1,5 @@
-import LeadCreateForm from '../../../components/leads/form/LeadCreateForm'
+import LeadForm from '../../../components/leads/form/LeadForm'
 
-const LeadAdd = () => <LeadCreateForm />
+const LeadAdd = () => <LeadForm mode='create' />
 
 export default LeadAdd

@@ -70,6 +70,30 @@ const StyledSelectWrapper = styled(InputWrapper)<{ width?: string; containerWidt
     }
 
 }`
+/* Dropdown list rendered through a portal (outside the wrapper), so
+   its open animation must live on the element itself. */
+export const StyledPortalList = styled.ul`
+	border-radius: 8px;
+	padding: 4px 0;
+	margin: 0;
+	list-style: none;
+	overflow: hidden auto;
+	max-height: 300px;
+	transform-origin: top center;
+	animation: selectPopIn 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+	@keyframes selectPopIn {
+		from {
+			opacity: 0;
+			transform: translateY(-4px) scale(0.98);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
+`
+
 export const StyledSelectButton = styled(Input)<{ width?: string }>`
 	height: ${({ sizes }) => (sizes === 'small' ? '46px' : '56px')};
 	width: ${({ width }) => (width ? width : '100%')};

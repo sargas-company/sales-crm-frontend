@@ -17,6 +17,7 @@ import {
 	LoadingBlock,
 	ModeBadge,
 	ModeTone,
+	OptMark,
 	ReqStar,
 	SectionHeadWrap,
 	SectionHint,
@@ -116,6 +117,8 @@ export const SectionHead = ({ num, title, hint }: SectionHeadProps) => {
 interface FieldProps {
 	label: string
 	required?: boolean
+	/** Marks the label with a uniform "(optional)" suffix. */
+	optional?: boolean
 	hint?: string
 	error?: string
 	span?: FieldSpan
@@ -126,6 +129,7 @@ interface FieldProps {
 export const Field = ({
 	label,
 	required,
+	optional,
 	hint,
 	error,
 	span = 'auto',
@@ -137,6 +141,7 @@ export const Field = ({
 			<FieldLabel htmlFor={htmlFor}>
 				{label}
 				{required && <ReqStar>*</ReqStar>}
+				{optional && <OptMark>(optional)</OptMark>}
 			</FieldLabel>
 			{hint && <FieldHint>{hint}</FieldHint>}
 		</FieldLabelRow>

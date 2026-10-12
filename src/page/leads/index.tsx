@@ -1,10 +1,17 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import PageNotFound from '../404/PageNotFound'
 import ProtectedRoute from '../../routes/ProtectedRoute'
 import LeadAdd from './add/LeadAdd'
 import LeadEdit from './edit/LeadEdit.page'
 import LeadList from './list/LeadList.page'
-import LeadPreview from './preview/LeadPreview'
+import LeadView from './view/LeadView.page'
+
+/** Legacy URL keeper: /leads/preview/:id → /leads/view/:id. */
+const PreviewRedirect = () => {
+	const { id } = useParams<{ id: string }>()
+	return <Navigate to={`/leads/view/${id}`} replace />
+}
+
 const Leads = () => {
 	return (
 		<Routes>
@@ -25,7 +32,8 @@ const Leads = () => {
 					</ProtectedRoute>
 				}
 			/>
-			<Route path='/preview/:id' element={<LeadPreview />} />
+			<Route path='/view/:id' element={<LeadView />} />
+			<Route path='/preview/:id' element={<PreviewRedirect />} />
 			<Route path='*' element={<PageNotFound />} />
 		</Routes>
 	)

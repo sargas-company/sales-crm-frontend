@@ -143,6 +143,21 @@ export const Input = styled('input')<InputOptions>`
 	${({ varient }) => varient === 'standard' && `padding: 4px 0px; padding-top: 16px;`}
     border-radius: ${({ borderRadius }) => (borderRadius ? borderRadius : '8px')};
 	${({ disable }) => disable && `pointer-events: none;`}
+	transition:
+		border-color 160ms ease,
+		box-shadow 160ms ease,
+		background 160ms ease;
+
+	&:hover:not(:focus):not(:disabled) {
+		border-color: ${({ theme, varient, error }) =>
+			varient === 'filled' || varient === 'standard'
+				? 'transparent'
+				: error
+					? alertColors('error')
+					: theme.mode.name === 'dark'
+						? '#a3a3a3'
+						: '#9f9f9f'};
+	}
 
 	&:-webkit-autofill,
     &:-webkit-autofill:hover,

@@ -300,12 +300,26 @@ export const FieldInput = styled.div`
 	position: relative;
 `
 
+const errorIn = keyframes`
+	from { opacity: 0; transform: translateY(-3px); }
+	to   { opacity: 1; transform: translateY(0); }
+`
+
+export const OptMark = styled.span`
+	font-weight: 400;
+	text-transform: none;
+	letter-spacing: normal;
+	opacity: 0.75;
+	margin-left: 4px;
+`
+
 export const FieldError = styled.span`
 	font-size: 12px;
 	color: #ef4444;
 	display: flex;
 	align-items: center;
 	gap: 4px;
+	animation: ${errorIn} 180ms ease-out both;
 
 	&::before {
 		content: '!';

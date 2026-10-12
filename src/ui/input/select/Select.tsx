@@ -18,7 +18,7 @@ import { createPortal } from 'react-dom'
 import Box from '../../../components/box/Box'
 import useTheme from '../../../theme/useTheme'
 import { InputVarient } from '../type'
-import StyledSelectWrapper, { StyledSelectButton } from './styled'
+import StyledSelectWrapper, { StyledPortalList, StyledSelectButton } from './styled'
 
 interface DefaultProps {
 	handleOnChange: (value: string, name: string, icon?: string) => void
@@ -251,26 +251,21 @@ const Select: FC<SelectProp> = (props) => {
 							close: handleClose,
 						}}
 					>
-						<ul
+						<StyledPortalList
 							ref={listRef}
 							className={`select-list-container select-portal ${itemListShow}`}
 							style={{
 								...portalPos,
 								background: mode.name === 'dark' ? mode.foreground : '#ffffff',
 								minWidth: portalPos.width,
-								borderRadius: 8,
 								boxShadow:
 									mode.name === 'dark'
 										? '0 8px 24px rgba(0, 0, 0, 0.5)'
 										: '0 8px 24px rgba(15, 23, 42, 0.14)',
-								padding: '4px 0',
-								overflow: 'hidden',
-								maxHeight: 300,
-								overflowY: 'auto',
 							}}
 						>
 							{children}
-						</ul>
+						</StyledPortalList>
 					</SelectCtx.Provider>,
 					document.body
 				)}

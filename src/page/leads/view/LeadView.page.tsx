@@ -1,17 +1,23 @@
-import { useNavigate, useParams } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import {
 	ArrowBackRounded,
+	BadgeOutlined,
+	DeleteOutline,
 	EditOutlined,
+	MailOutline,
+	NotesOutlined,
 	PhoneInTalkOutlined,
 	PersonSearchOutlined,
-	ScheduleRounded,
 	WarningAmberRounded,
 } from '@mui/icons-material'
 
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import ListPageShell from '../../../components/_shared/ListPageShell/ListPageShell'
 import Loading from '../../../ui/state/Loading'
+import PermissionGate from '../../../components/auth/PermissionGate'
+import LeadDeleteModal from '../../../components/leads/list/LeadDeleteModal'
 import {
 	PrimaryGhostButton,
 	PrimarySolidButton,
@@ -26,7 +32,10 @@ import ActivityTimeline, {
 import AttachmentsSection from '../../../components/_shared/AttachmentsSection'
 import { locationFlag } from '../../../utils/location'
 import { formatDate } from '../../../utils/format'
-import type { ApiLeadStatus } from '../../../store/leads/types/definition'
+import type {
+	ApiLeadStatus,
+	ApiLeadTemperature,
+} from '../../../store/leads/types/definition'
 
 const STATUS_LABEL: Record<ApiLeadStatus, string> = {
 	NEW: 'new',
@@ -45,9 +54,22 @@ const slugify = (s: string) =>
 		.replace(/^-+|-+$/g, '')
 		.slice(0, 40) || 'lead'
 
-const LeadPreview = () => {
+// "City, Country" (last comma = boundary); one segment = country only.
+const splitLocation = (raw: string | null): { country: string; city: string } => {
+	const trimmed = (raw ?? '').trim()
+	if (!trimmed) return { country: '', city: '' }
+	const idx = trimmed.lastIndexOf(',')
+	if (idx === -1) return { country: trimmed, city: '' }
+	return {
+		country: trimmed.slice(idx + 1).trim() || trimmed,
+		city: trimmed.slice(0, idx).trim(),
+	}
+}
+
+const LeadView = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
+	const [confirmDelete, setConfirmDelete] = useState(false)
 
 	const {
 		data: lead,
@@ -102,6 +124,8 @@ const LeadPreview = () => {
 	const createdStr = formatDate(lead.createdAt, 'short')
 	const updatedStr = formatDate(lead.updatedAt, 'short')
 	const sameTs = lead.createdAt === lead.updatedAt
+	const { country, city } = splitLocation(lead.location)
+	const hasContact = Boolean(lead.email || lead.phone || lead.profileUrl)
 	const termPath = `crm@sargas:~/leads/${STATUS_LABEL[lead.status].replace(
 		/\s+/g,
 		'-',
@@ -132,13 +156,25 @@ const LeadPreview = () => {
 							<PhoneInTalkOutlined />
 							<span>Book a call</span>
 						</CallGhost>
-						<EditSolid
-							type='button'
-							onClick={() => navigate(`/leads/edit/${lead.id}`)}
-						>
-							<EditOutlined />
-							<span>Edit</span>
-						</EditSolid>
+						<PermissionGate permission='leads:update'>
+							<EditSolid
+								type='button'
+								onClick={() => navigate(`/leads/edit/${lead.id}`)}
+							>
+								<EditOutlined />
+								<span>Edit</span>
+							</EditSolid>
+						</PermissionGate>
+						<PermissionGate permission='leads:delete'>
+							<DangerGhost
+								type='button'
+								onClick={() => setConfirmDelete(true)}
+								aria-label='Delete lead'
+							>
+								<DeleteOutline />
+								<span>Delete</span>
+							</DangerGhost>
+						</PermissionGate>
 					</TermHeaderActions>
 				</TermHeader>
 
@@ -153,110 +189,143 @@ const LeadPreview = () => {
 						</HeroIcon>
 						<HeroText>
 							<Hero>{displayName}</Hero>
-							<HeroMeta>
+							<BadgeRow>
 								<KvMono>#{lead.number}</KvMono>
-								<Sep>·</Sep>
-								<ScheduleRounded style={{ fontSize: 13 }} />
-								<span>received {createdStr}</span>
-								{lead.companyName && (
+								<StatusTag $status={lead.status}>
+									{STATUS_LABEL[lead.status]}
+								</StatusTag>
+								{lead.temperature && (
+									<TempTag $temp={lead.temperature}>
+										{lead.temperature.toLowerCase()}
+									</TempTag>
+								)}
+							</BadgeRow>
+							<MetaLine>
+								received {createdStr}
+								{!sameTs && (
 									<>
-										<Sep>·</Sep>
-										<span>{lead.companyName}</span>
+										<Sep>·</Sep>updated {updatedStr}
 									</>
 								)}
-							</HeroMeta>
+							</MetaLine>
 						</HeroText>
 					</HeroRow>
 
-					<KeyLines>
-						<KV label='name'>
-							<KvMono>{fullName || '—'}</KvMono>
-						</KV>
-						<KV label='company'>
-							<KvMono>{lead.companyName || '—'}</KvMono>
-						</KV>
-						<KV label='email'>
-							{lead.email ? (
-								<KvLink href={`mailto:${lead.email}`}>{lead.email}</KvLink>
-							) : (
-								<KvMono>—</KvMono>
-							)}
-						</KV>
-						<KV label='phone'>
-							{lead.phone ? (
-								<KvLink href={`tel:${lead.phone}`}>{lead.phone}</KvLink>
-							) : (
-								<KvMono>—</KvMono>
-							)}
-						</KV>
-						<KV label='source'>
-							{lead.source ? <Chip>{lead.source}</Chip> : <KvMono>—</KvMono>}
-						</KV>
-						<KV label='platform'>
-							<KvMono>{lead.platform?.title || '—'}</KvMono>
-						</KV>
-						<KV label='location'>
-							{lead.location ? (
-								<LocationLine>
-									{locationFlag(lead.location) ? (
-										<span className='flag'>{locationFlag(lead.location)}</span>
-									) : null}
-									<span>{lead.location}</span>
-								</LocationLine>
-							) : (
-								<KvMono>—</KvMono>
-							)}
-						</KV>
-						<KV label='status'>
-							<StatusTag $status={lead.status}>{STATUS_LABEL[lead.status]}</StatusTag>
-						</KV>
-						<KV label='client type'>
-							<KvMono>{lead.clientType ?? '—'}</KvMono>
-						</KV>
-						<KV label='temperature'>
-							<KvMono>
-								{lead.temperature ? lead.temperature.toLowerCase() : '—'}
-							</KvMono>
-						</KV>
-						<KV label='rate'>
-							<KvMono>
-								{lead.rate != null ? `$${lead.rate} / hr` : '—'}
-							</KvMono>
-						</KV>
-						<KV label='created'>
-							<KvMono>{createdStr}</KvMono>
-						</KV>
-						{!sameTs && (
-							<KV label='updated'>
-								<KvMono>{updatedStr}</KvMono>
-							</KV>
+					<SectionCard $delay={40}>
+						<CardHead>
+							<MailOutline />
+							<span>Contact</span>
+						</CardHead>
+						{hasContact ? (
+							<KeyLines>
+								{lead.email && (
+									<KV label='email'>
+										<KvLink href={`mailto:${lead.email}`}>{lead.email}</KvLink>
+									</KV>
+								)}
+								{lead.phone && (
+									<KV label='phone'>
+										<KvLink href={`tel:${lead.phone}`}>{lead.phone}</KvLink>
+									</KV>
+								)}
+								{lead.profileUrl && (
+									<KV label='profile'>
+										<KvLink
+											href={lead.profileUrl}
+											target='_blank'
+											rel='noopener noreferrer'
+										>
+											{lead.profileUrl}
+										</KvLink>
+									</KV>
+								)}
+							</KeyLines>
+						) : (
+							<EmptyNote>No contact details yet — add them via Edit.</EmptyNote>
 						)}
-						<KV label='id'>
-							<KvMono>{lead.id}</KvMono>
-						</KV>
-					</KeyLines>
+					</SectionCard>
 
-					<Divider />
-					<TermPromptLine>
-						<TermPrompt>$</TermPrompt> cat notes.txt
-					</TermPromptLine>
-					<RawBlock>
-						<pre>{lead.notes?.trim() || '(empty — no notes recorded)'}</pre>
-					</RawBlock>
+					<SectionCard $delay={90}>
+						<CardHead>
+							<BadgeOutlined />
+							<span>Lead details</span>
+						</CardHead>
+						<KeyLines>
+							<KV label='client type'>
+								<KvMono>{lead.clientType ?? '—'}</KvMono>
+							</KV>
+							{lead.clientType === 'company' && lead.companyName && (
+								<KV label='company'>
+									<KvMono>{lead.companyName}</KvMono>
+								</KV>
+							)}
+							<KV label='source'>
+								{lead.source ? <Chip>{lead.source}</Chip> : <KvMono>—</KvMono>}
+							</KV>
+							<KV label='country'>
+								{country ? (
+									<LocationLine>
+										{locationFlag(country) ? (
+											<span className='flag'>{locationFlag(country)}</span>
+										) : null}
+										<span>{country}</span>
+									</LocationLine>
+								) : (
+									<KvMono>—</KvMono>
+								)}
+							</KV>
+							{city && (
+								<KV label='city'>
+									<KvMono>{city}</KvMono>
+								</KV>
+							)}
+							{/* repliedAt defaults to createdAt on the backend — only a
+							    later value is a real reply worth surfacing. */}
+							{lead.repliedAt && lead.repliedAt !== lead.createdAt && (
+								<KV label='replied'>
+									<KvMono>{formatDate(lead.repliedAt, 'short')}</KvMono>
+								</KV>
+							)}
+							{lead.acceptedAt && (
+								<KV label='accepted'>
+									<KvMono>{formatDate(lead.acceptedAt, 'short')}</KvMono>
+								</KV>
+							)}
+							{lead.holdAt && (
+								<KV label='on hold since'>
+									<KvMono>{formatDate(lead.holdAt, 'short')}</KvMono>
+								</KV>
+							)}
+							{lead.proposal && (
+								<KV label='proposal'>
+									<KvLink as={Link} to={`/proposal/preview/${lead.proposal.id}`}>
+										{lead.proposal.title}
+									</KvLink>
+								</KV>
+							)}
+						</KeyLines>
+					</SectionCard>
 
-					<Divider />
-					<TermPromptLine>
-						<TermPrompt>$</TermPrompt> ls attachments/
-					</TermPromptLine>
-					<SectionShell>
+					<SectionCard $delay={140}>
+						<CardHead>
+							<NotesOutlined />
+							<span>Notes</span>
+						</CardHead>
+						{lead.notes?.trim() ? (
+							<RawBlock>
+								<pre>{lead.notes.trim()}</pre>
+							</RawBlock>
+						) : (
+							<EmptyNote>No notes recorded for this lead.</EmptyNote>
+						)}
+					</SectionCard>
+
+					<SectionCard $delay={190}>
+						{/* AttachmentsSection ships its own heading + Add file. */}
 						<AttachmentsSection ownerType='lead' ownerId={lead.id} />
-					</SectionShell>
+					</SectionCard>
 
-					<Divider />
-					<TermPromptLine>
-						<TermPrompt>$</TermPrompt> tail activity.log
-					</TermPromptLine>
-					<SectionShell>
+					<SectionCard $delay={240}>
 						<ActivityHeading />
 						<ActivityTimeline
 							events={activity}
@@ -264,7 +333,7 @@ const LeadPreview = () => {
 							isError={activityError}
 							emptyLabel='No activity recorded for this lead yet.'
 						/>
-					</SectionShell>
+					</SectionCard>
 				</TermBody>
 
 				<TermFooter>
@@ -272,11 +341,20 @@ const LeadPreview = () => {
 					<TermCursor />
 				</TermFooter>
 			</Terminal>
+
+			{confirmDelete && (
+				<LeadDeleteModal
+					id={lead.id}
+					title={displayName}
+					onClose={() => setConfirmDelete(false)}
+					onSuccess={() => navigate('/leads/list/')}
+				/>
+			)}
 		</Shell>
 	)
 }
 
-export default LeadPreview
+export default LeadView
 
 /* ─── KV row ───────────────────────────────────────────────────── */
 
@@ -297,7 +375,7 @@ const Shell = ({ children }: { children: React.ReactNode }) => {
 			crumbs={[
 				{ label: 'Sales' },
 				{ label: 'Leads', href: '/leads/list/' },
-				{ label: 'Preview', current: true },
+				{ label: 'View', current: true },
 			]}
 			icon={<PersonSearchOutlined />}
 			title='Lead'
@@ -337,7 +415,7 @@ const ErrorBox = ({ onBack, message }: { onBack: () => void; message: string }) 
 	</Terminal>
 )
 
-/* ─── Styles (mirror of ClientRequestPreview) ─────────────────── */
+/* ─── Styles ───────────────────────────────────────────────────── */
 
 const terminalIn = keyframes`
 	from { opacity: 0; transform: translateY(10px); }
@@ -345,8 +423,8 @@ const terminalIn = keyframes`
 `
 
 const rowIn = keyframes`
-	from { opacity: 0; transform: translateX(-6px); }
-	to   { opacity: 1; transform: translateX(0); }
+	from { opacity: 0; transform: translateY(4px); }
+	to   { opacity: 1; transform: translateY(0); }
 `
 
 const cursorBlink = keyframes`
@@ -477,6 +555,21 @@ const CallGhost = styled(PrimaryGhostButton)`
 	}
 `
 
+/* Quietly dangerous: outlined red, fills faintly on hover. */
+const DangerGhost = styled(PrimaryGhostButton)`
+	color: #dc2626;
+	border-color: rgba(220, 38, 38, 0.35);
+	transition:
+		transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+		background 160ms ease,
+		border-color 160ms ease;
+
+	&:hover:not(:disabled) {
+		background: rgba(220, 38, 38, 0.05);
+		border-color: rgba(220, 38, 38, 0.55);
+	}
+`
+
 const TermBody = styled.div`
 	display: flex;
 	flex-direction: column;
@@ -504,6 +597,7 @@ const HeroRow = styled.div`
 	grid-template-columns: 44px 1fr;
 	gap: 14px;
 	align-items: flex-start;
+	padding-bottom: 4px;
 `
 
 const HeroIcon = styled.div`
@@ -525,36 +619,81 @@ const HeroText = styled.div`
 	min-width: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 5px;
+	gap: 6px;
 `
 
 const Hero = styled.h2`
 	margin: 0;
 	font-family: 'JetBrains Mono', ui-monospace, monospace;
-	font-size: 18.5px;
+	font-size: 19px;
 	font-weight: 700;
 	color: ${T.textStrong};
-	line-height: 1.35;
+	line-height: 1.3;
 	letter-spacing: -0.1px;
 	word-break: break-word;
 `
 
-const HeroMeta = styled.div`
+const BadgeRow = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+`
+
+const MetaLine = styled.div`
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
 	font-family: 'JetBrains Mono', ui-monospace, monospace;
-	font-size: 12px;
+	font-size: 11.5px;
 	color: ${T.textMuted};
-	flex-wrap: wrap;
-
-	svg {
-		color: ${T.textMuted};
-	}
 `
 
 const Sep = styled.span`
 	opacity: 0.5;
+`
+
+/* ─── Section cards ───────────────────────────────────────── */
+
+const SectionCard = styled.section<{ $delay?: number }>`
+	border: 1px solid rgba(15, 23, 42, 0.07);
+	border-radius: 12px;
+	background: #fcfdff;
+	padding: 14px 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	animation: ${rowIn} 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	animation-delay: ${({ $delay }) => $delay ?? 0}ms;
+	transition: border-color 180ms ease;
+
+	&:hover {
+		border-color: rgba(3, 105, 161, 0.16);
+	}
+`
+
+const CardHead = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 12.5px;
+	font-weight: 700;
+	letter-spacing: 0.6px;
+	text-transform: uppercase;
+	color: ${T.textSecondary};
+
+	svg {
+		font-size: 17px;
+		color: ${T.primary};
+	}
+`
+
+const EmptyNote = styled.div`
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 12.5px;
+	color: ${T.textMuted};
+	padding: 2px 0 4px;
 `
 
 /* ─── KV lines ────────────────────────────────────────────── */
@@ -573,7 +712,6 @@ const KvRow = styled.div`
 	align-items: center;
 	border-bottom: 1px solid rgba(15, 23, 42, 0.04);
 	transition: background 160ms;
-	animation: ${rowIn} 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
 
 	&:last-child {
 		border-bottom: none;
@@ -622,6 +760,7 @@ const KvLink = styled.a`
 	color: ${T.primary};
 	text-decoration: none;
 	word-break: break-all;
+	transition: color 150ms ease;
 
 	&:hover {
 		text-decoration: underline;
@@ -694,12 +833,26 @@ const StatusTag = styled.span<{ $status: ApiLeadStatus }>`
 								: 'rgba(3, 105, 161, 0.12)'};
 `
 
-/* ─── Divider / Raw block ────────────────────────────────── */
-
-const Divider = styled.div`
-	border-top: 1px dashed rgba(15, 23, 42, 0.08);
-	margin: 6px 0;
+const TempTag = styled.span<{ $temp: ApiLeadTemperature }>`
+	display: inline-flex;
+	padding: 3px 11px;
+	border-radius: 999px;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
+	text-transform: uppercase;
+	color: ${(p) =>
+		p.$temp === 'HOT' ? '#b91c1c' : p.$temp === 'WARM' ? '#a26608' : '#475569'};
+	background: ${(p) =>
+		p.$temp === 'HOT'
+			? 'rgba(239, 68, 68, 0.12)'
+			: p.$temp === 'WARM'
+				? 'rgba(245, 158, 11, 0.12)'
+				: 'rgba(148, 163, 184, 0.16)'};
 `
+
+/* ─── Notes block ─────────────────────────────────────────── */
 
 const RawBlock = styled.div`
 	padding: 14px 16px;
@@ -716,12 +869,6 @@ const RawBlock = styled.div`
 		white-space: pre-wrap;
 		word-break: break-word;
 	}
-`
-
-const SectionShell = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
 `
 
 /* ─── Footer ──────────────────────────────────────────────── */
