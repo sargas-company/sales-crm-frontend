@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 .env
+/.env.production
 *.local
 
 # Local-only backups of large original assets (e.g. uncompressed .glb)
