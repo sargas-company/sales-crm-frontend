@@ -9,6 +9,7 @@ import {
 	useUpdateLeadMutation,
 } from '../../../store/leads/leadsApi'
 import CountryAutocomplete from '../../_shared/CountryAutocomplete'
+import { mergeSources } from '../../../constants/sources'
 import DuplicatesHint from '../../_shared/DuplicatesHint'
 import { ServerErrorBox, focusByName } from '../../_shared/ErrorSummary'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
@@ -556,7 +557,7 @@ const LeadForm = ({ mode, id, initial }: Props) => {
 									sizes='normal'
 								>
 									<SelectItem label='Not specified' value='' />
-									{(sources ?? []).map((s) => (
+									{mergeSources(sources).map((s) => (
 										<SelectItem key={s} label={s} value={s} />
 									))}
 								</Select>

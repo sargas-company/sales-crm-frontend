@@ -8,6 +8,7 @@ import parseServerError, {
 } from '../../../utils/parseServerError'
 import { ServerErrorBox, focusByName } from '../../_shared/ErrorSummary'
 import DuplicatesHint from '../../_shared/DuplicatesHint'
+import { mergeSources } from '../../../constants/sources'
 import useTheme from '../../../theme/useTheme'
 import {
 	useCreateClientMutation,
@@ -471,7 +472,7 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 									sizes='normal'
 								>
 									<SelectItem label='Not specified' value='' />
-									{(sources ?? []).map((s) => (
+									{mergeSources(sources).map((s) => (
 										<SelectItem key={s} label={s} value={s} />
 									))}
 								</Select>
