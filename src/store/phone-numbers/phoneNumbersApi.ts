@@ -4,13 +4,6 @@ export type PhoneOperator = 'VODAFONE' | 'KYIVSTAR' | 'LIFECELL' | 'OTHER'
 export type PhoneStatus = 'ACTIVE' | 'HOLD' | 'DISABLED'
 export type MaintenanceStatus = 'DUE' | 'OVERDUE' | 'COMPLETED' | 'SKIPPED'
 
-export interface PhoneHolder {
-	id: string
-	firstName: string
-	lastName: string
-	email: string
-}
-
 export interface PhoneBindingService {
 	id: string
 	name: string
@@ -30,9 +23,6 @@ export interface PhoneNumber {
 	number: string
 	operator: PhoneOperator
 	status: PhoneStatus
-	holderEmployeeId: string | null
-	holder: PhoneHolder | null
-	holderName: string | null
 	maintenanceRequired: boolean
 	lastTopUpAt: string | null
 	lastNetworkRegistrationAt: string | null
@@ -80,7 +70,6 @@ export interface MaintenanceTask {
 		number: string
 		operator: PhoneOperator
 		status: PhoneStatus
-		holder?: { firstName: string; lastName: string } | null
 	}
 }
 

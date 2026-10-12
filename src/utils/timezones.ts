@@ -38,3 +38,39 @@ export const getTimezoneLabel = (stored: string | null | undefined): string => {
 	if (!stored) return '—'
 	return reverseMap.get(stored) ?? stored
 }
+
+/* Build the absolute Day.js moment for a wall-clock date+time entered
+   in the given `TimezoneOption`, and pin the resulting instance to
+   that same zone/offset so later `.format(...)` calls render in it.
+
+   Shared by the Call create and edit forms (and anything else that
+   lets a user pick a tz option) so the two can't drift the way they
+   did before: without `.utcOffset(offset)` on the offset-only branch,
+   a `GMT±N` time was rendered in the browser's local zone and the
+   previewed hour drifted by `(browser_tz − chosen_offset)`.
+
+   The input `dayjs` is injected (callers already have the timezone-
+   plugin-extended instance). Returns null when any of date / time /
+   tz is missing so the caller can treat the whole form as pending. */
+// `dayjs` is passed in (not imported here) because the callers already
+// hold the timezone-plugin-extended instance.
+type DayjsCtor = (date?: string) => import('dayjs').Dayjs
+type DayjsWithTz = DayjsCtor & {
+	tz: (date: string, format: string, zone: string) => import('dayjs').Dayjs
+}
+
+export const buildPinnedClientDateTime = (
+	dayjs: DayjsWithTz,
+	date: string,
+	time: string,
+	tz: TimezoneOption | undefined,
+): import('dayjs').Dayjs | null => {
+	if (!date || !time || !tz) return null
+	if (tz.timezone) {
+		return dayjs.tz(`${date} ${time}`, 'YYYY-MM-DD HH:mm', tz.timezone)
+	}
+	if (tz.offset) {
+		return dayjs(`${date}T${time}${tz.offset}`).utcOffset(tz.offset)
+	}
+	return null
+}

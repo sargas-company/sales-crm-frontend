@@ -20,13 +20,17 @@ export interface ClientItem {
 	source: string | null
 	profileUrl: string | null
 	status: ApiClientStatus
-	clientSince: string | null
 	notes: string | null
-	platformId: string | null
-	platform: ClientPlatformSummary | null
 	location: string | null
 	createdAt: string
 	updatedAt: string
+	/** Legacy columns the backend still returns for existing rows but
+	 *  the UI never edits or shows (rev-5 2026-10-12). Kept here as
+	 *  optional only so TypeScript stops caring about them; new code
+	 *  must not reference these. */
+	clientSince?: string | null
+	platformId?: string | null
+	platform?: ClientPlatformSummary | null
 }
 
 export interface ClientPage {
@@ -41,7 +45,6 @@ export type ClientSortBy =
 	| 'email'
 	| 'phone'
 	| 'status'
-	| 'clientSince'
 	| 'updatedAt'
 	| 'createdAt'
 
@@ -56,22 +59,18 @@ export interface ClientListParams {
 	status?: ApiClientStatus
 	source?: string
 	location?: string
-	clientSinceFrom?: string
-	clientSinceTo?: string
 }
 
 export interface CreateClientBody {
 	firstName: string
-	lastName?: string | null
-	company?: string | null
-	email?: string | null
+	lastName: string
+	company: string
+	email: string
 	phone?: string | null
 	source?: string | null
 	profileUrl?: string | null
 	status?: ApiClientStatus
-	clientSince?: string | null
 	notes?: string | null
-	platformId?: string | null
 	location?: string | null
 }
 
@@ -104,8 +103,6 @@ export const clientsApi = baseApi.injectEndpoints({
 					status: params.status || undefined,
 					source: params.source || undefined,
 					location: params.location || undefined,
-					clientSinceFrom: params.clientSinceFrom || undefined,
-					clientSinceTo: params.clientSinceTo || undefined,
 				},
 			}),
 			providesTags: ['Client'],

@@ -35,7 +35,7 @@ import { useGetClientRequestListQuery } from '../../../store/clientRequests/clie
 import { useGetClientsQuery } from '../../../store/clients/clientsApi'
 import { useCreateClientCallMutation } from '../../../store/clientCalls/clientCallsApi'
 import { useToast } from '../../../context/toast/ToastContext'
-import { timezones } from '../../../utils/timezones'
+import { timezones, buildPinnedClientDateTime } from '../../../utils/timezones'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -153,16 +153,10 @@ const CreateCallPage = () => {
 		setSelectedClientId('')
 	}
 
-	const clientDateTime = useMemo(() => {
-		if (!date || !time || !selectedTimezone) return null
-		if (selectedTimezone.timezone) {
-			return dayjs.tz(`${date} ${time}`, 'YYYY-MM-DD HH:mm', selectedTimezone.timezone)
-		}
-		if (selectedTimezone.offset) {
-			return dayjs(`${date}T${time}${selectedTimezone.offset}`)
-		}
-		return null
-	}, [date, time, selectedTimezone])
+	const clientDateTime = useMemo(
+		() => buildPinnedClientDateTime(dayjs, date, time, selectedTimezone),
+		[date, time, selectedTimezone],
+	)
 
 	const kyivDateTime = useMemo(() => {
 		if (!clientDateTime) return null

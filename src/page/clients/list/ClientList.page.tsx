@@ -29,16 +29,14 @@ import type {
 } from '../../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
 import PermissionGate from '../../../components/auth/PermissionGate'
-import { useToast } from '../../../context/toast/ToastContext'
-import parseServerError from '../../../utils/parseServerError'
 import {
-	useDeleteClientMutation,
 	useGetClientSourcesQuery,
 	useGetClientsQuery,
 	type ApiClientStatus,
 	type ClientItem,
 	type ClientSortBy,
 } from '../../../store/clients/clientsApi'
+import ClientDeleteModal from '../../../components/clients/list/ClientDeleteModal'
 import {
 	countryToFlag,
 	formatPhoneDisplay,
@@ -89,7 +87,6 @@ const statusLabel: Record<ApiClientStatus, string> = {
 
 const ClientList = () => {
 	const navigate = useNavigate()
-	const { showToast } = useToast()
 	const [sp, setSp] = useSearchParams()
 
 	const searchParam = sp.get('q') ?? ''
@@ -145,9 +142,7 @@ const ClientList = () => {
 	const items = data?.data ?? []
 	const total = data?.total ?? 0
 
-	const [deleteClient] = useDeleteClientMutation()
 	const [deleteTarget, setDeleteTarget] = useState<ClientItem | null>(null)
-	const [deleting, setDeleting] = useState(false)
 
 	const handleSortChange = (next: SortState | null) => {
 		setSort(next)
@@ -366,21 +361,6 @@ const ClientList = () => {
 		[navigate],
 	)
 
-	const handleDelete = async () => {
-		if (!deleteTarget) return
-		setDeleting(true)
-		try {
-			await deleteClient(deleteTarget.id).unwrap()
-			showToast('Client deleted', 'success')
-			setDeleteTarget(null)
-			refetch()
-		} catch (err) {
-			showToast(parseServerError(err), 'error')
-		} finally {
-			setDeleting(false)
-		}
-	}
-
 	return (
 		<ListPageShell
 			crumbs={[
@@ -533,21 +513,12 @@ const ClientList = () => {
 			)}
 
 			{deleteTarget && (
-				<Backdrop onClick={() => setDeleteTarget(null)}>
-					<Dialog onClick={(e) => e.stopPropagation()}>
-						<h3>Delete «{nameOf(deleteTarget)}»?</h3>
-						<p>
-							The server will refuse if any Projects still reference this
-							client.
-						</p>
-						<DialogActions>
-							<ClearBtn onClick={() => setDeleteTarget(null)}>Cancel</ClearBtn>
-							<DangerBtn disabled={deleting} onClick={handleDelete}>
-								{deleting ? 'Deleting…' : 'Delete'}
-							</DangerBtn>
-						</DialogActions>
-					</Dialog>
-				</Backdrop>
+				<ClientDeleteModal
+					id={deleteTarget.id}
+					title={nameOf(deleteTarget)}
+					onClose={() => setDeleteTarget(null)}
+					onSuccess={() => refetch()}
+				/>
 			)}
 		</ListPageShell>
 	)
@@ -691,36 +662,6 @@ const AdaptiveTable = styled.div`
 	}
 `
 
-const ClearBtn = styled.button`
-	border: 1px solid rgba(15, 23, 42, 0.12);
-	background: transparent;
-	padding: 7px 12px;
-	border-radius: 10px;
-	font-size: 12px;
-	font-weight: 600;
-	color: ${T.textStrong};
-	cursor: pointer;
-	&:hover {
-		background: rgba(15, 23, 42, 0.04);
-	}
-`
-const DangerBtn = styled.button`
-	border: 1px solid rgba(185, 28, 28, 0.3);
-	color: #b91c1c;
-	padding: 7px 14px;
-	border-radius: 10px;
-	font-size: 12px;
-	font-weight: 700;
-	cursor: pointer;
-	background: transparent;
-	&:hover {
-		background: rgba(185, 28, 28, 0.08);
-	}
-	&:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-`
 const ErrorBox = styled.div`
 	padding: 24px;
 	border-radius: 12px;
@@ -738,34 +679,4 @@ const ErrorRetry = styled.button`
 	text-decoration: underline;
 	font-weight: 600;
 `
-const Backdrop = styled.div`
-	position: fixed;
-	inset: 0;
-	background: rgba(15, 23, 42, 0.4);
-	display: grid;
-	place-items: center;
-	z-index: 50;
-`
-const Dialog = styled.div`
-	background: #fff;
-	border-radius: 16px;
-	padding: 20px;
-	min-width: 300px;
-	max-width: 420px;
-	h3 {
-		margin: 0 0 8px;
-		font-size: 16px;
-	}
-	p {
-		margin: 0 0 16px;
-		font-size: 13px;
-		color: ${T.textSecondary};
-	}
-`
-const DialogActions = styled.div`
-	display: flex;
-	justify-content: flex-end;
-	gap: 10px;
-`
-
 export default ClientList

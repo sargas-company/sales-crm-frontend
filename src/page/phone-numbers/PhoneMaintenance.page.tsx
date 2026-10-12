@@ -218,9 +218,6 @@ const PhoneMaintenancePage = () => {
 								const draft = draftFor(t)
 								const bothDone = draft.network && draft.topup
 								const due = dueLabel(t.dueAt)
-								const holderText = t.phoneNumber.holder
-									? `${t.phoneNumber.holder.firstName} ${t.phoneNumber.holder.lastName}`
-									: 'no holder'
 								const progress = (draft.network ? 1 : 0) + (draft.topup ? 1 : 0)
 								return (
 									<V3bCard key={t.id} $overdue={t.status === 'OVERDUE'}>
@@ -229,7 +226,7 @@ const PhoneMaintenancePage = () => {
 											<V3bHeroLeft>
 												<V3bPhone>{formatPhoneMask(t.phoneNumber.number)}</V3bPhone>
 												<V3bSub>
-													{OPERATOR_LABEL[t.phoneNumber.operator]} · {holderText} · due{' '}
+													{OPERATOR_LABEL[t.phoneNumber.operator]} · due{' '}
 													{new Date(t.dueAt).toLocaleDateString()}
 												</V3bSub>
 											</V3bHeroLeft>

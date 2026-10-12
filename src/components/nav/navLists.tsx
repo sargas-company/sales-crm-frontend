@@ -224,9 +224,10 @@ export const secondaryNavList: NavOptions[] = [
 		],
 	},
 	{
-		parent: formatGroupButton('Backup & Recovery', <BackupOutlined />, '/backups'),
+		label: 'Backup & Recovery',
+		path: '/backups/list',
+		icon: <BackupOutlined />,
 		permission: 'backups:view',
-		childrens: [format('List', '/backups/list', <ListAltOutlined />, 'backups:view')],
 	},
 	{
 		label: 'Notifications',

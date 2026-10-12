@@ -14,12 +14,6 @@ export interface ClientCallClientRequest {
 	company: string
 }
 
-export interface ClientCallCreatedBy {
-	id: string
-	firstName: string
-	lastName: string
-}
-
 export interface ClientCallCrmClient {
 	id: string
 	firstName: string
@@ -33,7 +27,6 @@ export interface ClientCallItem {
 	leadId: string | null
 	crmClientId: string | null
 	clientRequestId: string | null
-	createdById: string
 	callTitle: string
 	meetingUrl: string | null
 	scheduledAt: string
@@ -51,7 +44,6 @@ export interface ClientCallItem {
 	lead: ClientCallLead | null
 	crmClient: ClientCallCrmClient | null
 	clientRequest: ClientCallClientRequest | null
-	createdBy: ClientCallCreatedBy
 }
 
 export interface ClientCallPage {
@@ -65,7 +57,6 @@ export type ClientCallSortBy =
 	| 'duration'
 	| 'clientTimezone'
 	| 'status'
-	| 'createdBy'
 	| 'createdAt'
 
 export type ClientCallSortDirection = 'asc' | 'desc'

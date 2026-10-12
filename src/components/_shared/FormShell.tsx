@@ -138,7 +138,7 @@ export const Field = ({
 }: FieldProps) => (
 	<FieldRoot $span={span}>
 		<FieldLabelRow>
-			<FieldLabel htmlFor={htmlFor}>
+			<FieldLabel htmlFor={htmlFor} $error={!!error}>
 				{label}
 				{required && <ReqStar>*</ReqStar>}
 				{optional && <OptMark>(optional)</OptMark>}

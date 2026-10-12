@@ -25,7 +25,6 @@ import {
 import ActivityTimeline, {
 	ActivityHeading,
 } from '../../../components/_shared/ActivityTimeline'
-import AttachmentsSection from '../../../components/_shared/AttachmentsSection'
 import { locationFlag } from '../../../utils/location'
 import { formatDate } from '../../../utils/format'
 
@@ -196,9 +195,6 @@ const ClientView = () => {
 						<KV label='source'>
 							{client.source ? <Chip>{client.source}</Chip> : <KvMono>—</KvMono>}
 						</KV>
-						<KV label='platform'>
-							<KvMono>{client.platform?.title || '—'}</KvMono>
-						</KV>
 						<KV label='location'>
 							{client.location ? (
 								<LocationLine>
@@ -215,11 +211,6 @@ const ClientView = () => {
 							<StatusTag $status={client.status}>
 								{STATUS_LABEL[client.status]}
 							</StatusTag>
-						</KV>
-						<KV label='client since'>
-							<KvMono>
-								{client.clientSince ? client.clientSince.slice(0, 10) : '—'}
-							</KvMono>
 						</KV>
 						<KV label='profile'>
 							{client.profileUrl ? (
@@ -254,14 +245,6 @@ const ClientView = () => {
 					<RawBlock>
 						<pre>{client.notes?.trim() || '(empty — no notes recorded)'}</pre>
 					</RawBlock>
-
-					<Divider />
-					<TermPromptLine>
-						<TermPrompt>$</TermPrompt> ls attachments/
-					</TermPromptLine>
-					<SectionShell>
-						<AttachmentsSection ownerType='client' ownerId={client.id} />
-					</SectionShell>
 
 					<Divider />
 					<TermPromptLine>
@@ -312,7 +295,7 @@ const Shell = ({ children }: { children: React.ReactNode }) => {
 			]}
 			icon={<ContactsOutlined />}
 			title='Client'
-			subtitle='Client card — contact, pipeline, attachments and activity.'
+			subtitle='Client card — contact, pipeline and activity.'
 			action={
 				<BackBtn type='button' onClick={() => navigate(-1)}>
 					<ArrowBackRounded style={{ fontSize: 16 }} />

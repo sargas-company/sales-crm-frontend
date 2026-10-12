@@ -227,7 +227,10 @@ const Input = styled.input<{ $error?: boolean }>`
 	&:focus,
 	&:focus-visible {
 		border-color: ${({ $error }) => ($error ? '#d32f2f' : 'rgba(3, 105, 161, 1)')};
-		outline: ${({ $error }) => ($error ? '#d32f2f' : 'rgba(3, 105, 161, 1)')} solid 2px;
+		/* Mirrors the TextField rule: error ring stays exactly 1.5px —
+		   focus on an invalid field adds no outline and no glow. */
+		outline: ${({ $error }) =>
+			$error ? 'none' : 'rgba(3, 105, 161, 1) solid 2px'};
 		outline-offset: -1px;
 	}
 	&:disabled {

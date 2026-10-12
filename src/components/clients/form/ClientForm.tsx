@@ -1,30 +1,23 @@
-import { FormEvent, useRef, useState } from 'react'
+import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import {
-	TextField,
-	Select,
-	SelectItem,
-} from '../../../ui'
+import { TextField, Select, SelectItem } from '../../../ui'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError, {
 	parseServerFieldErrors,
 } from '../../../utils/parseServerError'
-import ErrorSummary, {
-	ServerErrorBox,
-	focusByName,
-} from '../../_shared/ErrorSummary'
+import { ServerErrorBox, focusByName } from '../../_shared/ErrorSummary'
 import DuplicatesHint from '../../_shared/DuplicatesHint'
 import useTheme from '../../../theme/useTheme'
 import {
 	useCreateClientMutation,
 	useGetClientDuplicatesQuery,
+	useGetClientSourcesQuery,
 	useUpdateClientMutation,
 	type ApiClientStatus,
 	type ClientItem,
 	type CreateClientBody,
 } from '../../../store/clients/clientsApi'
-import { useGetPlatformsQuery } from '../../../store/platforms/platformsApi'
 import CountryAutocomplete from '../../_shared/CountryAutocomplete'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
 import {
@@ -36,11 +29,7 @@ import {
 	phoneCountryIso,
 } from '../../../utils/phone'
 import { T } from '../../sales-analytics/_shared/tokens'
-import {
-	Field,
-	FormHeader,
-	SectionHead,
-} from '../../_shared/FormShell'
+import { Field, FormHeader, SectionHead } from '../../_shared/FormShell'
 import {
 	DotMini,
 	FieldGrid,
@@ -69,17 +58,18 @@ interface FormFields {
 	source: string
 	profileUrl: string
 	status: ApiClientStatus
-	clientSince: string
 	notes: string
-	platformId: string
 	// Country + optional city — joined server-side into Client.location
-	// as `city, country` (or just country when city is empty).
+	// as `city, country` (or just country when city is empty). Same
+	// serialisation as LeadForm.
 	country: string
 	city: string
 }
 
 interface FieldErrors {
 	firstName?: string
+	lastName?: string
+	company?: string
 	email?: string
 	phone?: string
 	profileUrl?: string
@@ -91,6 +81,8 @@ const NOTES_MAX = 4000
 /** Submit-order of error anchors; first present key gets focus. */
 const ERROR_ORDER: { key: keyof FieldErrors; inputName: string }[] = [
 	{ key: 'firstName', inputName: 'firstName' },
+	{ key: 'lastName', inputName: 'lastName' },
+	{ key: 'company', inputName: 'company' },
 	{ key: 'email', inputName: 'email' },
 	{ key: 'phone', inputName: 'phone' },
 	{ key: 'profileUrl', inputName: 'profileUrl' },
@@ -101,6 +93,8 @@ const ERROR_ORDER: { key: keyof FieldErrors; inputName: string }[] = [
  *  start with the property name, see parseServerFieldErrors). */
 const SERVER_FIELDS: Record<string, keyof FieldErrors> = {
 	firstName: 'firstName',
+	lastName: 'lastName',
+	company: 'company',
 	email: 'email',
 	phone: 'phone',
 	profileUrl: 'profileUrl',
@@ -116,16 +110,11 @@ const emptyFields: FormFields = {
 	source: '',
 	profileUrl: '',
 	status: 'ACTIVE',
-	clientSince: '',
 	notes: '',
-	platformId: '',
 	country: '',
 	city: '',
 }
 
-// Parse a persisted `location` into { country, city } by the last
-// comma — same contract as LeadForm so the two surfaces agree on
-// the serialisation.
 const splitLocation = (raw: string | null): { country: string; city: string } => {
 	const trimmed = (raw ?? '').trim()
 	if (!trimmed) return { country: '', city: '' }
@@ -147,9 +136,7 @@ const fromInitial = (c: ClientItem): FormFields => {
 		source: c.source ?? '',
 		profileUrl: c.profileUrl ?? '',
 		status: c.status,
-		clientSince: c.clientSince ? c.clientSince.slice(0, 10) : '',
 		notes: c.notes ?? '',
-		platformId: c.platformId ?? '',
 		country,
 		city,
 	}
@@ -173,7 +160,7 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 	const isDark = theme.mode.name === 'dark'
 	const [createClient, { isLoading: creating }] = useCreateClientMutation()
 	const [updateClient, { isLoading: updating }] = useUpdateClientMutation()
-	const { data: platforms } = useGetPlatformsQuery()
+	const { data: sources } = useGetClientSourcesQuery()
 	const isLoading = creating || updating
 	const isEdit = mode === 'edit'
 	const [fields, setFields] = useState<FormFields>(
@@ -181,12 +168,8 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 	)
 	const [errors, setErrors] = useState<FieldErrors>({})
 	const [serverGeneral, setServerGeneral] = useState<string | null>(null)
-	const summaryRef = useRef<HTMLDivElement>(null)
 
-	// Non-blocking duplicate suggestion. Only queries once the
-	// contact fields look complete enough to be worth checking
-	// (valid-shape email or a plausible E.164 phone). The user may
-	// save regardless — the UI never auto-links or auto-merges.
+	// Non-blocking duplicate suggestion — same contract as LeadForm.
 	const debouncedEmail = useDebouncedValue(fields.email.trim(), 400)
 	const debouncedPhone = useDebouncedValue(fields.phone.trim(), 400)
 	const emailForLookup =
@@ -197,6 +180,12 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 		? normalisePhoneToE164(debouncedPhone) ?? ''
 		: ''
 	const shouldLookup = Boolean(emailForLookup || phoneForLookup)
+	const matchBasis =
+		emailForLookup && phoneForLookup
+			? ('email or phone' as const)
+			: emailForLookup
+				? ('email' as const)
+				: ('phone' as const)
 	const { data: duplicates } = useGetClientDuplicatesQuery(
 		{
 			email: emailForLookup || undefined,
@@ -215,19 +204,17 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 
 	const applyErrors = (next: FieldErrors) => {
 		setErrors(next)
-		const present = ERROR_ORDER.filter((e) => next[e.key])
-		if (present.length > 2) {
-			summaryRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
-			summaryRef.current?.focus({ preventScroll: true })
-		} else if (present.length > 0) {
-			focusByName(present[0].inputName)
-		}
+		const first = ERROR_ORDER.find((e) => next[e.key])
+		if (first) focusByName(first.inputName)
 	}
 
 	const validate = (): FieldErrors => {
 		const next: FieldErrors = {}
 		if (!fields.firstName.trim()) next.firstName = 'First name is required'
-		if (fields.email && !isLikelyValidEmail(fields.email))
+		if (!fields.lastName.trim()) next.lastName = 'Last name is required'
+		if (!fields.company.trim()) next.company = 'Company is required'
+		if (!fields.email.trim()) next.email = 'Email is required'
+		else if (!isLikelyValidEmail(fields.email))
 			next.email = 'Enter a valid email address'
 		if (fields.phone && !isLikelyValidPhone(fields.phone))
 			next.phone = 'Use international format, e.g. +14155550123'
@@ -238,28 +225,32 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 		return next
 	}
 
+	const locationValue = (): string | null => {
+		const country = fields.country.trim()
+		const city = fields.city.trim()
+		if (!country && !city) return null
+		if (country && city) return `${city}, ${country}`
+		return country || city || null
+	}
+
+	// Payload intentionally excludes `platformId`, `clientSince`, and
+	// `rate` (owner rev-5 2026-10-12): those UI inputs are gone; the
+	// backend columns stay to preserve existing data but new writes
+	// never touch them.
 	const buildPayload = (): CreateClientBody => {
 		const trimmedEmail = fields.email.trim()
 		const normalisedPhone = normalisePhoneToE164(fields.phone)
 		return {
 			firstName: fields.firstName.trim(),
-			lastName: fields.lastName.trim() || null,
-			company: fields.company.trim() || null,
-			email: trimmedEmail ? trimmedEmail.toLowerCase() : null,
+			lastName: fields.lastName.trim(),
+			company: fields.company.trim(),
+			email: trimmedEmail.toLowerCase(),
 			phone: normalisedPhone,
 			source: fields.source.trim() || null,
 			profileUrl: fields.profileUrl.trim() || null,
 			status: fields.status,
-			clientSince: fields.clientSince || null,
 			notes: fields.notes.trim() || null,
-			platformId: fields.platformId || null,
-			location: ((): string | null => {
-				const country = fields.country.trim()
-				const city = fields.city.trim()
-				if (!country && !city) return null
-				if (country && city) return `${city}, ${country}`
-				return country || city || null
-			})(),
+			location: locationValue(),
 		}
 	}
 
@@ -306,11 +297,6 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 		}
 	}
 
-	const summaryItems = ERROR_ORDER.filter((e) => errors[e.key]).map((e) => ({
-		name: e.inputName,
-		message: errors[e.key]!,
-	}))
-
 	return (
 		<Shell $dark={isDark}>
 			<Surface $dark={isDark}>
@@ -329,13 +315,6 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 				/>
 
 				<form onSubmit={handleSubmit} noValidate>
-					{summaryItems.length > 2 && (
-						<ErrorSummary
-							ref={summaryRef}
-							items={summaryItems}
-							onJump={focusByName}
-						/>
-					)}
 					<Section $delay={80}>
 						<SectionHead
 							num='01'
@@ -349,24 +328,32 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 									placeholder='e.g. Jane'
 									value={fields.firstName}
 									onChange={(e) => setField('firstName', e.target.value)}
+									error={!!errors.firstName}
 									width='100%'
 								/>
 							</Field>
-							<Field label='Last name'>
+							<Field label='Last name' required error={errors.lastName}>
 								<TextField
 									name='lastName'
 									placeholder='e.g. Doe'
 									value={fields.lastName}
 									onChange={(e) => setField('lastName', e.target.value)}
+									error={!!errors.lastName}
 									width='100%'
 								/>
 							</Field>
-							<Field label='Company' span='full'>
+							<Field
+								label='Company'
+								required
+								span='full'
+								error={errors.company}
+							>
 								<TextField
 									name='company'
 									placeholder='e.g. Acme Corp'
 									value={fields.company}
 									onChange={(e) => setField('company', e.target.value)}
+									error={!!errors.company}
 									width='100%'
 								/>
 							</Field>
@@ -380,20 +367,22 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 							hint='How to reach them'
 						/>
 						<FieldGrid>
-							<Field label='Email' error={errors.email}>
+							<Field label='Email' required error={errors.email}>
 								<TextField
 									name='email'
 									type='email'
 									placeholder='e.g. jane@example.com'
 									value={fields.email}
 									onChange={(e) => setField('email', e.target.value)}
+									error={!!errors.email}
 									width='100%'
 								/>
 							</Field>
 							<Field
 								label='Phone'
+								optional
 								error={errors.phone}
-								hint='International format, e.g. +14155550123'
+								hint='e.g. +14155550123'
 							>
 								<TextField
 									name='phone'
@@ -401,28 +390,56 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 									placeholder='+1 415 555 0123'
 									value={fields.phone}
 									onChange={(e) => setField('phone', e.target.value)}
+									error={!!errors.phone}
 									width='100%'
 								/>
 								<PhonePreview phone={fields.phone} />
 							</Field>
+							{(duplicates?.length ?? 0) > 0 && (
+								<FullRow>
+									<DuplicatesHint
+										entityLabel='client'
+										linkBase='/clients'
+										matchBasis={matchBasis}
+										items={(duplicates ?? []).map((d) => {
+											const name =
+												[d.firstName, d.lastName].filter(Boolean).join(' ') ||
+												d.company ||
+												d.id
+											const extra = [
+												d.company && name !== d.company ? d.company : null,
+												d.email ?? null,
+											]
+												.filter(Boolean)
+												.join(' · ')
+											return {
+												id: d.id,
+												title: name,
+												subtitle: extra || undefined,
+											}
+										})}
+									/>
+								</FullRow>
+							)}
+							<Field label='Country' optional>
+								<CountryAutocomplete
+									value={fields.country}
+									onChange={(v) => setField('country', v)}
+									placeholder='Start typing a country…'
+									ariaLabel='Country'
+									name='country'
+								/>
+							</Field>
+							<Field label='City' optional>
+								<TextField
+									name='city'
+									placeholder='e.g. Berlin'
+									value={fields.city}
+									onChange={(e) => setField('city', e.target.value)}
+									width='100%'
+								/>
+							</Field>
 						</FieldGrid>
-						<DuplicatesHint
-							entityLabel='client'
-							linkBase='/clients'
-							items={(duplicates ?? []).map((d) => {
-								const name =
-									[d.firstName, d.lastName].filter(Boolean).join(' ') ||
-									d.company ||
-									d.id
-								const extra = [
-									d.company && name !== d.company ? d.company : null,
-									d.email ?? null,
-								]
-									.filter(Boolean)
-									.join(' · ')
-								return { id: d.id, title: name, subtitle: extra || undefined }
-							})}
-						/>
 					</Section>
 
 					<Section $delay={240}>
@@ -432,10 +449,10 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 							hint='Status, source, profile'
 						/>
 						<FieldGrid>
-							<Field label='Status'>
+							<Field label='Status' required>
 								<Select
 									label='Status'
-									defaultValue={fields.status}
+									value={fields.status}
 									onChange={(v) => setField('status', v as ApiClientStatus)}
 									width='100%'
 									sizes='normal'
@@ -445,65 +462,32 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 									<SelectItem label='Former' value='FORMER' />
 								</Select>
 							</Field>
-							<Field label='Platform'>
+							<Field label='Source' optional>
 								<Select
-									label='Platform'
-									defaultValue={fields.platformId}
-									onChange={(v) => setField('platformId', v as string)}
+									label='Source'
+									value={fields.source}
+									onChange={(v) => setField('source', v as string)}
 									width='100%'
 									sizes='normal'
 								>
-									<SelectItem label='— unset —' value='' />
-									{(platforms ?? []).map((p) => (
-										<SelectItem key={p.id} label={p.title} value={p.id} />
+									<SelectItem label='Not specified' value='' />
+									{(sources ?? []).map((s) => (
+										<SelectItem key={s} label={s} value={s} />
 									))}
 								</Select>
 							</Field>
-							<Field label='Source'>
-								<TextField
-									name='source'
-									placeholder='e.g. Referral'
-									value={fields.source}
-									onChange={(e) => setField('source', e.target.value)}
-									width='100%'
-								/>
-							</Field>
-							<Field label='Country'>
-								<CountryAutocomplete
-									value={fields.country}
-									onChange={(v) => setField('country', v)}
-									placeholder='Start typing a country…'
-									ariaLabel='Country'
-								/>
-							</Field>
-							<Field label='City (optional)'>
-								<TextField
-									name='city'
-									placeholder='e.g. Berlin'
-									value={fields.city}
-									onChange={(e) => setField('city', e.target.value)}
-									width='100%'
-								/>
-							</Field>
 							<Field
 								label='Profile URL'
+								optional
 								error={errors.profileUrl}
 								span='full'
 							>
 								<TextField
 									name='profileUrl'
-									placeholder='https://…'
+									placeholder='https://www.upwork.com/freelancers/~0123abcd…'
 									value={fields.profileUrl}
 									onChange={(e) => setField('profileUrl', e.target.value)}
-									width='100%'
-								/>
-							</Field>
-							<Field label='Client since'>
-								<TextField
-									name='clientSince'
-									type='date'
-									value={fields.clientSince}
-									onChange={(e) => setField('clientSince', e.target.value)}
+									error={!!errors.profileUrl}
 									width='100%'
 								/>
 							</Field>
@@ -515,6 +499,7 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 						<FieldGrid>
 							<Field
 								label='Notes'
+								optional
 								span='full'
 								error={errors.notes}
 								hint={`Up to ${NOTES_MAX} characters`}
@@ -529,6 +514,8 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 									width='100%'
 									multiline
 									multiRow
+									style={{ minHeight: 160, resize: 'vertical' }}
+									error={!!errors.notes}
 								/>
 							</Field>
 						</FieldGrid>
@@ -569,6 +556,9 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 	)
 }
 
+export default ClientForm
+
+/* Live country-flag + formatted preview under the Phone input. */
 const PhonePreview = ({ phone }: { phone: string }) => {
 	const trimmed = phone.trim()
 	if (!trimmed) return null
@@ -577,15 +567,22 @@ const PhonePreview = ({ phone }: { phone: string }) => {
 	const pretty = formatPhoneDisplay(trimmed)
 	if (!iso && pretty === trimmed) return null
 	return (
-		<Row>
-			{flag && <FlagChip title={iso ?? undefined}>{flag}</FlagChip>}
-			<Pretty>{pretty}</Pretty>
-			{iso && <Country>{iso}</Country>}
-		</Row>
+		<PhonePreviewRow>
+			{flag && <PreviewFlag title={iso ?? undefined}>{flag}</PreviewFlag>}
+			<PreviewText>{pretty}</PreviewText>
+			{iso && <PreviewCountry>{iso}</PreviewCountry>}
+		</PhonePreviewRow>
 	)
 }
 
-const Row = styled.div`
+/* Full-width slot inside the 12-col FieldGrid — hosts the duplicate
+   notice right under the contact inputs it belongs to. */
+const FullRow = styled.div`
+	grid-column: span 12;
+	min-width: 0;
+`
+
+const PhonePreviewRow = styled.div`
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
@@ -595,7 +592,8 @@ const Row = styled.div`
 	background: rgba(15, 23, 42, 0.03);
 	font-size: 12.5px;
 `
-const FlagChip = styled.span`
+
+const PreviewFlag = styled.span`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -606,17 +604,17 @@ const FlagChip = styled.span`
 	font-size: 18px;
 	line-height: 1;
 `
-const Pretty = styled.span`
+
+const PreviewText = styled.span`
 	color: ${T.textStrong};
 	font-weight: 500;
 	font-variant-numeric: tabular-nums;
 `
-const Country = styled.span`
+
+const PreviewCountry = styled.span`
 	color: ${T.textSecondary};
 	font-weight: 600;
 	letter-spacing: 0.3px;
 	font-size: 11px;
 	text-transform: uppercase;
 `
-
-export default ClientForm

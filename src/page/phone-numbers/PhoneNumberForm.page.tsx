@@ -85,7 +85,6 @@ const PhoneNumberForm = ({ mode }: Props) => {
 	const [number, setNumber] = useState('')
 	const [operator, setOperator] = useState<PhoneOperator | ''>('')
 	const [status, setStatus] = useState<PhoneStatus>('ACTIVE')
-	const [holderName, setHolderName] = useState('')
 	const [maintenanceRequired, setMaintenanceRequired] = useState(true)
 	const [nextMaintenanceAt, setNextMaintenanceAt] = useState('')
 	const [notes, setNotes] = useState('')
@@ -151,12 +150,6 @@ const PhoneNumberForm = ({ mode }: Props) => {
 			setNumber(maskPhone(existing.number))
 			setOperator(existing.operator)
 			setStatus(existing.status)
-			setHolderName(
-				existing.holderName ??
-					(existing.holder
-						? `${existing.holder.firstName} ${existing.holder.lastName}`.trim()
-						: ''),
-			)
 			setMaintenanceRequired(existing.maintenanceRequired)
 			setNextMaintenanceAt(
 				existing.nextMaintenanceAt
@@ -181,16 +174,10 @@ const PhoneNumberForm = ({ mode }: Props) => {
 		const existingDate = existing.nextMaintenanceAt
 			? existing.nextMaintenanceAt.slice(0, 10)
 			: ''
-		const existingHolder =
-			existing.holderName ??
-			(existing.holder
-				? `${existing.holder.firstName} ${existing.holder.lastName}`.trim()
-				: '')
 		return (
 			number.replace(/\D/g, '') !== existing.number.replace(/\D/g, '') ||
 			operator !== existing.operator ||
 			status !== existing.status ||
-			holderName.trim() !== existingHolder ||
 			maintenanceRequired !== existing.maintenanceRequired ||
 			nextMaintenanceAt !== existingDate ||
 			(notes ?? '') !== (existing.notes ?? '')
@@ -221,7 +208,6 @@ const PhoneNumberForm = ({ mode }: Props) => {
 						number,
 						operator,
 						status,
-						holderName: holderName.trim() || null,
 						maintenanceRequired,
 						nextMaintenanceAt: nextMaintenanceAt || null,
 						notes,
@@ -234,7 +220,6 @@ const PhoneNumberForm = ({ mode }: Props) => {
 					number,
 					operator,
 					status,
-					holderName: holderName.trim() || null,
 					maintenanceRequired,
 					nextMaintenanceAt: nextMaintenanceAt || null,
 					notes,
@@ -303,7 +288,7 @@ const PhoneNumberForm = ({ mode }: Props) => {
 							? `Read-only view of ${existing?.number ?? ''} — hit "Edit" to make changes.`
 							: isEdit
 								? `Update ${existing?.number ?? ''} identity, status and maintenance policy.`
-								: 'Register a SIM, assign the holder and set up maintenance cadence.'
+								: 'Register a SIM and set up maintenance cadence.'
 					}
 					badgeLabel={isView ? 'View' : isEdit ? 'Edit' : 'Draft'}
 					badgeTone={isView ? 'view' : isEdit ? 'edit' : 'draft'}
@@ -402,15 +387,6 @@ const PhoneNumberForm = ({ mode }: Props) => {
 										)}
 									</Select>
 								)}
-							</Field>
-							<Field label='Holder' htmlFor='phone-holder'>
-								<TextField
-									id='phone-holder'
-									value={holderName}
-									onChange={(e) => setHolderName(e.target.value)}
-									placeholder="Who's carrying this SIM"
-									disabled={readOnly}
-								/>
 							</Field>
 						</FieldGrid>
 					</Section>

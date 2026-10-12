@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import { TextField, Select, SelectItem } from '../../../ui'
@@ -187,11 +187,24 @@ const LeadForm = ({ mode, id, initial }: Props) => {
 	const { data: sources } = useGetLeadSourcesQuery()
 	const isLoading = creating || updating
 
-	const [fields, setFields] = useState<FormFields>(
-		initial ? fromInitial(initial) : empty,
+	// Baseline captured once per mount — the dirty-check compares the
+	// current `fields` to this snapshot so edit-mode's Save button is
+	// disabled while the user hasn't actually changed anything, and
+	// re-disables itself if every field is reverted.
+	const baseline = useMemo<FormFields>(
+		() => (initial ? fromInitial(initial) : empty),
+		[initial],
 	)
+	const [fields, setFields] = useState<FormFields>(baseline)
 	const [errors, setErrors] = useState<FieldErrors>({})
 	const [serverGeneral, setServerGeneral] = useState<string | null>(null)
+
+	// Shallow compare — FormFields is flat strings; keys and shape are
+	// identical in baseline and fields by construction.
+	const isDirty = (Object.keys(fields) as (keyof FormFields)[]).some(
+		(k) => fields[k] !== baseline[k],
+	)
+	const canSubmit = !isLoading && (!isEdit || isDirty)
 
 	// Non-blocking duplicate suggestion — queries only once email/phone
 	// look complete; never blocks save.
@@ -205,6 +218,12 @@ const LeadForm = ({ mode, id, initial }: Props) => {
 		? normalisePhoneToE164(debouncedPhone) ?? ''
 		: ''
 	const shouldLookup = Boolean(emailForLookup || phoneForLookup)
+	const matchBasis =
+		emailForLookup && phoneForLookup
+			? ('email or phone' as const)
+			: emailForLookup
+				? ('email' as const)
+				: ('phone' as const)
 	const { data: duplicates } = useGetLeadDuplicatesQuery(
 		{
 			email: emailForLookup || undefined,
@@ -408,6 +427,23 @@ const LeadForm = ({ mode, id, initial }: Props) => {
 								/>
 								<PhonePreview phone={fields.phone} />
 							</Field>
+							{(duplicates?.length ?? 0) > 0 && (
+								<FullRow>
+									<DuplicatesHint
+										entityLabel='lead'
+										linkBase='/leads/view'
+										matchBasis={matchBasis}
+										items={(duplicates ?? []).map((d) => ({
+											id: d.id,
+											title:
+												[d.firstName, d.lastName].filter(Boolean).join(' ') ||
+												d.companyName ||
+												d.id,
+											subtitle: d.email ?? d.phone ?? undefined,
+										}))}
+									/>
+								</FullRow>
+							)}
 							<Field label='Country' required error={errors.country}>
 								<CountryAutocomplete
 									value={fields.country}
@@ -428,18 +464,6 @@ const LeadForm = ({ mode, id, initial }: Props) => {
 								/>
 							</Field>
 						</FieldGrid>
-						<DuplicatesHint
-							entityLabel='lead'
-							linkBase='/leads/view'
-							items={(duplicates ?? []).map((d) => ({
-								id: d.id,
-								title:
-									[d.firstName, d.lastName].filter(Boolean).join(' ') ||
-									d.companyName ||
-									d.id,
-								subtitle: d.email ?? d.phone ?? undefined,
-							}))}
-						/>
 					</Section>
 
 					<Section $delay={160}>
@@ -600,7 +624,7 @@ const LeadForm = ({ mode, id, initial }: Props) => {
 							>
 								Cancel
 							</PrimaryGhostButton>
-							<PrimarySolidButton type='submit' disabled={isLoading}>
+							<PrimarySolidButton type='submit' disabled={!canSubmit}>
 								{isLoading && <ButtonSpinner aria-hidden />}
 								{isLoading
 									? isEdit
@@ -640,6 +664,13 @@ const PhonePreview = ({ phone }: { phone: string }) => {
 const revealIn = keyframes`
 	from { opacity: 0; transform: translateY(-4px); }
 	to   { opacity: 1; transform: translateY(0); }
+`
+
+/* Full-width slot inside the 12-col FieldGrid — hosts the duplicate
+   notice right under the contact inputs it belongs to. */
+const FullRow = styled.div`
+	grid-column: span 12;
+	min-width: 0;
 `
 
 /* Wrapper for the conditional Company field so it eases in instead of

@@ -178,10 +178,16 @@ export const Input = styled('input')<InputOptions>`
 
 	&:focus,
 	&:focus-visible {
-		border-color: ${({ theme, varient }) =>
-			varient === 'filled' || varient === 'standard' ? 'transparent' : theme.primaryColor.color};
-		outline: ${({ theme, error }) => (error ? alertColors('error') : theme.primaryColor.color)}
-			solid 2px;
+		border-color: ${({ theme, varient, error }) =>
+			varient === 'filled' || varient === 'standard'
+				? 'transparent'
+				: error
+					? alertColors('error')
+					: theme.primaryColor.color};
+		/* Error ring stays exactly 1.5px in every state: on an invalid
+		   field focus adds nothing — no outline, no glow. */
+		outline: ${({ theme, error }) =>
+			error ? 'none' : `${theme.primaryColor.color} solid 2px`};
 		${({ varient }) => (varient === 'filled' || varient === 'standard' ? 'outline: 0;' : '')}
 		outline-offset: -1px;
 	}

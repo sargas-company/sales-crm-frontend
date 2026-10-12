@@ -202,32 +202,6 @@ const PhoneNumbersList = () => {
 				),
 			},
 			{
-				key: 'holder',
-				label: 'Holder',
-				sortable: true,
-				sortValue: (r) => {
-					const name =
-						r.holderName?.trim() ||
-						(r.holder
-							? `${r.holder.lastName} ${r.holder.firstName}`
-							: '')
-					return name ? name.toLowerCase() : '￿'
-				},
-				render: (r) => {
-					const name =
-						r.holderName?.trim() ||
-						(r.holder
-							? `${r.holder.firstName} ${r.holder.lastName}`
-							: '')
-					return name ? (
-						<HolderName>{name}</HolderName>
-					) : (
-						<Muted>—</Muted>
-					)
-				},
-				skeleton: () => <TableSkeleton $w='120px' $h='14px' />,
-			},
-			{
 				key: 'status',
 				label: 'Status',
 				sortable: true,
@@ -315,7 +289,7 @@ const PhoneNumbersList = () => {
 			]}
 			icon={<PhoneAndroidOutlined />}
 			title='Phone numbers'
-			subtitle='SIM inventory with holder, status and the services they power.'
+			subtitle='SIM inventory with status and the services they power.'
 			action={
 				<HeroActions>
 					<PermissionGate permission='phone_numbers:view'>
@@ -386,7 +360,7 @@ const PhoneNumbersList = () => {
 							value={searchInput}
 							onChange={(e) => setSearchInput(e.target.value)}
 							placeholder='Search'
-							aria-label='Search number, holder, service or profile'
+							aria-label='Search number, service or profile'
 						/>
 					</SearchPill>
 
@@ -766,13 +740,6 @@ const Muted = styled.div`
 	font-size: 11px;
 	color: ${T.textMuted};
 `
-const HolderName = styled.span`
-	font-size: 13px;
-	font-weight: 600;
-	color: ${T.textStrong};
-	white-space: nowrap;
-`
-
 const StatusPill = styled.span<{ $status: PhoneStatus }>`
 	display: inline-flex;
 	align-items: center;

@@ -146,13 +146,6 @@ const modeFg = (tone: ModeTone, dark: boolean) => {
 	if (tone === 'view') return dark ? '#cbd5e1' : '#475569'
 	return dark ? '#86efac' : '#15803d'
 }
-const modeBorder = (tone: ModeTone, dark: boolean) => {
-	if (tone === 'edit') return dark ? 'rgba(56, 189, 248, 0.3)' : 'rgba(3, 105, 161, 0.25)'
-	if (tone === 'draft') return dark ? 'rgba(245, 158, 11, 0.25)' : '#ffe6b8'
-	if (tone === 'danger') return dark ? 'rgba(239, 68, 68, 0.25)' : '#fecaca'
-	if (tone === 'view') return dark ? 'rgba(100, 116, 139, 0.28)' : '#d6dde6'
-	return dark ? 'rgba(34, 197, 94, 0.25)' : '#bde5c8'
-}
 const modeDot = (tone: ModeTone) => {
 	if (tone === 'edit') return '#0369a1'
 	if (tone === 'draft') return '#f59e0b'
@@ -174,7 +167,7 @@ export const ModeBadge = styled.div<{ $dark: boolean; $tone: ModeTone }>`
 	flex-shrink: 0;
 	background: ${({ $tone, $dark }) => modeBg($tone, $dark)};
 	color: ${({ $tone, $dark }) => modeFg($tone, $dark)};
-	border: 1px solid ${({ $tone, $dark }) => modeBorder($tone, $dark)};
+	border: none;
 `
 
 export const Dot = styled.span<{ $tone: ModeTone }>`
@@ -277,13 +270,14 @@ export const FieldLabelRow = styled.div`
 	gap: 8px;
 `
 
-export const FieldLabel = styled.label`
+export const FieldLabel = styled.label<{ $error?: boolean }>`
 	font-size: 11px;
 	font-weight: 600;
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
-	color: inherit;
-	opacity: 0.7;
+	color: ${({ $error }) => ($error ? '#d32f2f' : 'inherit')};
+	opacity: ${({ $error }) => ($error ? 1 : 0.7)};
+	transition: color 150ms ease, opacity 150ms ease;
 `
 
 export const ReqStar = styled.span`

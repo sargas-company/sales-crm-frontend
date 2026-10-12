@@ -37,6 +37,7 @@ import {
 	useGetClientCallListQuery,
 } from '../../../store/clientCalls/clientCallsApi'
 import { formatDate } from '../../../utils/format'
+import { getTimezoneLabel } from '../../../utils/timezones'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
 
 const PAGE_SIZE = 20
@@ -221,19 +222,6 @@ const ClientCallList = () => {
 			skeleton: () => <TableSkeleton $w='160px' $h='14px' />,
 		},
 		{
-			key: 'createdBy',
-			label: 'Created by',
-			minWidth: 80,
-			sortable: true,
-			sortValue: (c) => `${c.createdBy.firstName} ${c.createdBy.lastName}`,
-			render: (c) => (
-				<FitMuted>
-					{c.createdBy.firstName} {c.createdBy.lastName}
-				</FitMuted>
-			),
-			skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
-		},
-		{
 			key: 'contactType',
 			label: 'Type',
 			minWidth: 130,
@@ -261,8 +249,29 @@ const ClientCallList = () => {
 			minWidth: 170,
 			sortable: true,
 			sortValue: (c) => new Date(c.scheduledAt),
-			render: (c) => <Muted>{formatDate(c.scheduledAt, 'short')}</Muted>,
-			skeleton: () => <TableSkeleton $w='120px' $h='13px' />,
+			// Date on top, exact HH:mm underneath — same timeline the
+			// `Timezone` column labels. `scheduledAt` is a UTC ISO
+			// stored string; `clientDateTime` is the backend-formatted
+			// value in the call's own timezone when available, so we
+			// prefer it for the clock line.
+			render: (c) => {
+				const timeIso = c.clientDateTime || c.scheduledAt
+				const date = new Date(timeIso)
+				const time = Number.isNaN(date.getTime())
+					? ''
+					: date.toLocaleTimeString(undefined, {
+							hour: '2-digit',
+							minute: '2-digit',
+							hour12: false,
+						})
+				return (
+					<TwoLineCell>
+						<span>{formatDate(c.scheduledAt, 'short')}</span>
+						{time && <TwoLineSub>{time}</TwoLineSub>}
+					</TwoLineCell>
+				)
+			},
+			skeleton: () => <TableSkeleton $w='120px' $h='28px' />,
 		},
 		{
 			key: 'duration',
@@ -276,11 +285,22 @@ const ClientCallList = () => {
 		{
 			key: 'timezone',
 			label: 'Timezone',
-			minWidth: 140,
+			minWidth: 150,
 			sortable: true,
 			sortValue: (c) => c.clientTimezone,
-			render: (c) => <Muted>{c.clientTimezone}</Muted>,
-			skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
+			// Short code on top (PST / EDT / GMT+2), full IANA/raw
+			// value underneath for operators who need to disambiguate.
+			render: (c) => {
+				const short = getTimezoneLabel(c.clientTimezone)
+				const sameAsStored = short === c.clientTimezone
+				return (
+					<TwoLineCell>
+						<TzCode>{short}</TzCode>
+						{!sameAsStored && <TwoLineSub>{c.clientTimezone}</TwoLineSub>}
+					</TwoLineCell>
+				)
+			},
+			skeleton: () => <TableSkeleton $w='90px' $h='28px' />,
 		},
 		{
 			key: 'status',
@@ -466,12 +486,28 @@ const OwnerName = styled.span`
 	line-height: 1.3;
 `
 
-const FitMuted = styled.span`
-	display: inline-block;
-	width: fit-content;
-	white-space: nowrap;
-	font-size: 13.5px;
-	color: ${T.textSecondary};
+/* Two-line cell for Scheduled + Timezone columns: a strong primary
+   line (date / tz short-code) with a quiet secondary caption below
+   (exact HH:mm / full IANA string). */
+const TwoLineCell = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	line-height: 1.25;
+	font-size: 13px;
+	color: ${T.textStrong};
+`
+const TwoLineSub = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 11px;
+	color: ${T.textMuted};
+`
+const TzCode = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.4px;
+	color: ${T.textStrong};
 `
 
 const OwnerLink = styled(Link)`
