@@ -1181,11 +1181,12 @@ const SideNav = styled.nav`
 	border-radius: ${T.radius};
 	border: 1px solid ${T.border};
 	box-shadow: ${T.cardShadow};
-	/* 16px padding on all sides so there's a comfortable breathing
-	 * gap around the item(s) — matters most when the role only has
-	 * My Account visible and the card used to look visually unbalanced
-	 * (button edge was almost kissing the right card border). */
-	padding: 16px;
+	/* Comfortable breathing gap around the item(s). The card has a
+	 * min-width so the active (filled) button never looks like it is
+	 * pasted edge-to-edge inside the card — matters most when the role
+	 * only has My Account visible. */
+	padding: 20px;
+	min-width: 240px;
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
@@ -1195,6 +1196,7 @@ const SideNav = styled.nav`
 		flex-direction: row;
 		overflow-x: auto;
 		padding: 12px;
+		min-width: 0;
 	}
 `
 
@@ -1207,7 +1209,7 @@ const SideItem = styled.button<{ $active: boolean }>`
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	padding: 10px 12px;
+	padding: 10px 16px;
 	border-radius: 10px;
 	border: none;
 	/* Inactive = transparent + muted ink matching the main sidebar's
