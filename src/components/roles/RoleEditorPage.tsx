@@ -12,6 +12,7 @@ import {
 	FootActions,
 	FootBar,
 	FootLeft,
+	PrimaryGhostButton,
 	PrimarySolidButton,
 	Section,
 	Shell,
@@ -270,14 +271,12 @@ const RoleEditorPage = () => {
 							{dirty ? 'Unsaved changes — save to apply.' : 'Everything is up to date.'}
 						</FootLeft>
 						<FootActions>
-							<Button
-								varient='outlined'
-								color='info'
+							<PrimaryGhostButton
 								type='button'
 								onClick={() => navigate('/roles')}
 							>
 								Cancel
-							</Button>
+							</PrimaryGhostButton>
 							<PermissionGate permission='roles:update'>
 								<PrimarySolidButton type='submit' disabled={!dirty || isSaving}>
 									{isSaving ? 'Saving…' : 'Save changes'}

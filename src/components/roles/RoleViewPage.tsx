@@ -12,6 +12,7 @@ import {
 	FootActions,
 	FootBar,
 	FootLeft,
+	PrimaryGhostButton,
 	PrimarySolidButton,
 	Section,
 	Shell,
@@ -169,14 +170,9 @@ const RoleViewPage = () => {
 						Viewing role in read-only mode.
 					</FootLeft>
 					<FootActions>
-						<Button
-							varient='outlined'
-							color='rgba(3, 105, 161, 1)'
-							type='button'
-							onClick={() => navigate('/roles')}
-						>
+						<PrimaryGhostButton type='button' onClick={() => navigate('/roles')}>
 							Back to list
-						</Button>
+						</PrimaryGhostButton>
 						<PermissionGate permission='roles:update'>
 							<PrimarySolidButton
 								type='button'

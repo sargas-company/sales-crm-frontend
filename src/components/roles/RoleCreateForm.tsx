@@ -2,7 +2,7 @@ import { FormEvent, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { AdminPanelSettingsOutlined } from '@mui/icons-material'
-import { TextField, Button } from '../../ui'
+import { TextField } from '../../ui'
 import Loading from '../../ui/state/Loading'
 import useTheme from '../../theme/useTheme'
 import { Field, FormHeader, SectionHead } from '../_shared/FormShell'
@@ -11,6 +11,7 @@ import {
 	FootActions,
 	FootBar,
 	FootLeft,
+	PrimaryGhostButton,
 	PrimarySolidButton,
 	Section,
 	Shell,
@@ -235,11 +236,9 @@ const RoleCreateForm = () => {
 							Role will appear in the list right away.
 						</FootLeft>
 						<FootActions>
-							<CancelSlot>
-								<Button varient='outlined' type='button' onClick={() => navigate('/roles')}>
-									Cancel
-								</Button>
-							</CancelSlot>
+							<PrimaryGhostButton type='button' onClick={() => navigate('/roles')}>
+								Cancel
+							</PrimaryGhostButton>
 							<PrimarySolidButton type='submit' disabled={submitDisabled}>
 								{isLoading ? 'Creating…' : 'Create role'}
 							</PrimarySolidButton>
@@ -252,16 +251,6 @@ const RoleCreateForm = () => {
 }
 
 export default RoleCreateForm
-
-/* Keeps the outlined Cancel button fully transparent on hover —
-   the shared UI Button fills a light-primary tint by default. */
-const CancelSlot = styled.div`
-	display: inline-block;
-
-	& > button:hover:not(:disabled) {
-		background: transparent !important;
-	}
-`
 
 const IdentityGrid = styled.div`
 	display: grid;
