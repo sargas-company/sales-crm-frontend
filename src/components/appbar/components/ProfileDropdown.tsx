@@ -15,6 +15,7 @@ import {
 	VpnKeyOutlined,
 } from '@mui/icons-material'
 import useLogout from '../../../hooks/useLogout'
+import usePermissions from '../../../hooks/usePermissions'
 import { useGetMeQuery } from '../../../store/auth/authApi'
 import { TriggerWrap, Trigger, Popover, ProfileHead, MenuList, MenuFoot } from './profile.styled'
 
@@ -24,6 +25,8 @@ const ProfileDropdown = () => {
 	const navigate = useNavigate()
 	const logout = useLogout()
 	const { data: me } = useGetMeQuery()
+	const { has } = usePermissions()
+	const canSeeSettings = has('settings:view')
 
 	const [open, setOpen] = useState(false)
 	const [closing, setClosing] = useState(false)
@@ -149,12 +152,14 @@ const ProfileDropdown = () => {
 							</span>
 							<span className='item-label'>My account</span>
 						</li>
-						<li onClick={() => handleNavigate('/settings')}>
-							<span className='item-icon'>
-								<SettingsOutlined />
-							</span>
-							<span className='item-label'>Settings</span>
-						</li>
+						{canSeeSettings && (
+							<li onClick={() => handleNavigate('/settings')}>
+								<span className='item-icon'>
+									<SettingsOutlined />
+								</span>
+								<span className='item-label'>Settings</span>
+							</li>
+						)}
 						<li onClick={() => handleNavigate('/credentials/vault-settings')}>
 							<span className='item-icon'>
 								<VpnKeyOutlined />

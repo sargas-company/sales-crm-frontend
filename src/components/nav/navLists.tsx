@@ -192,7 +192,7 @@ const navList: NavOptions[] = [
 				'Maintenance',
 				'/phone-numbers/maintenance',
 				<BuildOutlined />,
-				'phone_numbers:view'
+				'phone_numbers:maintain'
 			),
 			format('Services', '/phone-numbers/services', <AppsOutlined />, 'phone_numbers:view'),
 		],

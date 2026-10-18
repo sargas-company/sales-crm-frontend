@@ -53,6 +53,7 @@ import {
 } from '../../store/settings/settingsRegistryApi'
 import { useToast } from '../../context/toast/ToastContext'
 import parseServerError from '../../utils/parseServerError'
+import usePermissions from '../../hooks/usePermissions'
 import { API_BASE_URL } from '../../api/baseApi'
 import {
 	ContentCopyRounded,
@@ -75,6 +76,9 @@ const SECTION_ICON: Record<RegistrySection, JSX.Element> = {
 }
 
 const SettingsPage = () => {
+	const { has } = usePermissions()
+	const canSeeBackups = has('backups:view')
+	const canSeeDiscord = has('discord_integration:view')
 	const { data: sections = [], isLoading, isError, refetch } = useGetSettingsSectionsQuery()
 	const { data: status } = useGetSettingsStatusQuery()
 	const [updateSection, { isLoading: isSavingSection }] = useUpdateSettingsSectionMutation()
@@ -366,36 +370,40 @@ const SettingsPage = () => {
 							)}
 						</SideItem>
 					))}
-					<SideItem
-						$active={isBackupsActive}
-						onClick={() => {
-							if (dirty && !window.confirm('Discard unsaved changes?')) return
-							setPending({})
-							setActiveKey('backups')
-						}}
-						style={{ animationDelay: `${(sections.length + 1) * 40}ms` }}
-					>
-						<SideIcon $active={isBackupsActive}>
-							<BackupOutlined />
-						</SideIcon>
-						<SideTitle>Backups</SideTitle>
-						<OwnerDot $onDark={isBackupsActive} title='Owner managed' />
-					</SideItem>
-					<SideItem
-						$active={isDiscordActive}
-						onClick={() => {
-							if (dirty && !window.confirm('Discard unsaved changes?')) return
-							setPending({})
-							setActiveKey('discord')
-						}}
-						style={{ animationDelay: `${(sections.length + 2) * 40}ms` }}
-					>
-						<SideIcon $active={isDiscordActive}>
-							<HubOutlined />
-						</SideIcon>
-						<SideTitle>Discord Integration</SideTitle>
-						<OwnerDot $onDark={isDiscordActive} title='Owner managed' />
-					</SideItem>
+					{canSeeBackups && (
+						<SideItem
+							$active={isBackupsActive}
+							onClick={() => {
+								if (dirty && !window.confirm('Discard unsaved changes?')) return
+								setPending({})
+								setActiveKey('backups')
+							}}
+							style={{ animationDelay: `${(sections.length + 1) * 40}ms` }}
+						>
+							<SideIcon $active={isBackupsActive}>
+								<BackupOutlined />
+							</SideIcon>
+							<SideTitle>Backups</SideTitle>
+							<OwnerDot $onDark={isBackupsActive} title='Owner managed' />
+						</SideItem>
+					)}
+					{canSeeDiscord && (
+						<SideItem
+							$active={isDiscordActive}
+							onClick={() => {
+								if (dirty && !window.confirm('Discard unsaved changes?')) return
+								setPending({})
+								setActiveKey('discord')
+							}}
+							style={{ animationDelay: `${(sections.length + 2) * 40}ms` }}
+						>
+							<SideIcon $active={isDiscordActive}>
+								<HubOutlined />
+							</SideIcon>
+							<SideTitle>Discord Integration</SideTitle>
+							<OwnerDot $onDark={isDiscordActive} title='Owner managed' />
+						</SideItem>
+					)}
 				</SideNav>
 
 				{/* Content */}

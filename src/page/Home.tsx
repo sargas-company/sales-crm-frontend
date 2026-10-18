@@ -231,7 +231,7 @@ const Home = () => {
 							<Route
 								path='/settings'
 								element={
-									<ProtectedRoute permission='settings:view'>
+									<ProtectedRoute>
 										<Settings />
 									</ProtectedRoute>
 								}
@@ -576,7 +576,7 @@ const Home = () => {
 							<Route
 								path='/phone-numbers/maintenance'
 								element={
-									<ProtectedRoute permission='phone_numbers:view'>
+									<ProtectedRoute permission='phone_numbers:maintain'>
 										<PhoneMaintenancePage />
 									</ProtectedRoute>
 								}
