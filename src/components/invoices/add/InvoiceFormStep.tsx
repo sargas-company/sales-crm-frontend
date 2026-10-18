@@ -19,7 +19,6 @@ import {
 	CheckRounded,
 	PictureAsPdfOutlined,
 	SaveOutlined,
-	OpenInNewRounded,
 } from '@mui/icons-material'
 import logo from '../../../assets/logo.png'
 import {
@@ -612,16 +611,6 @@ const InvoiceFormStep: FC<Props> = ({
 		}
 	}
 
-	const handleOpenPdf = async () => {
-		try {
-			const { url } = await getInvoicePdf(invoice!.id).unwrap()
-
-			window.open(url, '_blank')
-		} catch (error) {
-			showToast(parseServerError(error), 'error')
-		}
-	}
-
 	const addItem = () => {
 		setItems((current) => [
 			...current,
@@ -649,10 +638,8 @@ const InvoiceFormStep: FC<Props> = ({
 					<BackPill onClick={onBack} />
 
 					<ActionToolbar
-						hasPdf={!!invoice?.pdfUrl}
 						saving={saving}
 						isEdit={!!invoice}
-						onOpenPdf={handleOpenPdf}
 						onSaveDraft={() => handleSaveInvoice(false)}
 						onCreatePdf={() => handleSaveInvoice(true)}
 						formError={formError}
@@ -1652,20 +1639,16 @@ const BackPill: FC<{ onClick?: () => void }> = ({ onClick }) => (
 )
 
 interface ActionToolbarProps {
-	hasPdf: boolean
 	saving: boolean
 	isEdit: boolean
-	onOpenPdf: () => void
 	onSaveDraft: () => void
 	onCreatePdf: () => void
 	formError: string | null
 }
 
 const ActionToolbar: FC<ActionToolbarProps> = ({
-	hasPdf,
 	saving,
 	isEdit,
-	onOpenPdf,
 	onSaveDraft,
 	onCreatePdf,
 	formError,
@@ -1680,17 +1663,6 @@ const ActionToolbar: FC<ActionToolbarProps> = ({
 				justifyContent: 'flex-end',
 			}}
 		>
-			{hasPdf ? (
-				<ToolbarButton
-					onClick={onOpenPdf}
-					disabled={saving}
-					icon={<OpenInNewRounded sx={{ fontSize: 20 }} />}
-					variant='ghost'
-					iconAnim='launch'
-				>
-					Open PDF
-				</ToolbarButton>
-			) : null}
 			<ToolbarButton
 				onClick={onSaveDraft}
 				disabled={saving}

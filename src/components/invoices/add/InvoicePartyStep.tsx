@@ -711,9 +711,11 @@ const InvoicePartyStep: FC<Props> = ({ onContinue }) => {
 											/>
 										) : null}
 
-										<Box sx={{ flex: 1 }} />
-
-										{/* Continue button */}
+										{/* Continue button — sits just below the preview content
+										    with a small margin, independent of how tall the left-side
+										    party list is (previously a flex:1 spacer pinned it to the
+										    bottom of the preview card, which made the gap grow with
+										    the list and forced the user to scroll). */}
 										<Box
 											component='button'
 											type='button'

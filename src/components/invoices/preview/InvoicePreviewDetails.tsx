@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import {
@@ -13,7 +13,7 @@ import {
 } from '@mui/icons-material'
 import Loading from '../../../ui/state/Loading'
 import ErrorState from '../../../ui/state/ErrorState'
-import { PrimarySolidButton } from '../../_shared/formShell.styled'
+import { EditSolidButton, PrimarySolidButton } from '../../_shared/formShell.styled'
 import PermissionGate from '../../auth/PermissionGate'
 import usePermissions from '../../../hooks/usePermissions'
 import {
@@ -25,6 +25,7 @@ import {
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
 import { formatDate } from '../../../utils/formatDate'
+import InvoiceMarkPaidModal from '../list/InvoiceMarkPaidModal'
 
 type Props = { id: string }
 
@@ -65,6 +66,7 @@ const InvoicePreviewDetails = ({ id }: Props) => {
 	const { data: invoice, isLoading, isError } = useGetInvoiceByIdQuery(id, { skip: !id })
 	const [getInvoicePdf, { isLoading: isOpeningPdf }] = useLazyGetInvoicePdfQuery()
 	const [generateInvoicePdf, { isLoading: isGenerating }] = useGenerateInvoicePdfMutation()
+	const [markPaidOpen, setMarkPaidOpen] = useState(false)
 	// Contractor invoices are only mutable by callers with
 	// `contractor_scope:manage`. Reading remains open to callers with
 	// `contractor_scope:view` OR `contractor_scope:manage` — this
@@ -197,19 +199,36 @@ const InvoicePreviewDetails = ({ id }: Props) => {
 								</PermissionGate>
 							)
 						)}
+						{canMutateThisInvoice && invoice.status !== 'paid' && (
+							<PermissionGate permission='invoices:update'>
+								<PaidSolidButton type='button' onClick={() => setMarkPaidOpen(true)}>
+									<PaidOutlined />
+									Mark as paid
+								</PaidSolidButton>
+							</PermissionGate>
+						)}
 						{canMutateThisInvoice && (
 							<PermissionGate permission='invoices:update'>
-								<PrimarySolidButton
+								<EditSolidButton
 									type='button'
 									onClick={() => navigate(`/invoices/edit/${invoice.id}`)}
 								>
 									<EditOutlined />
 									Edit invoice
-								</PrimarySolidButton>
+								</EditSolidButton>
 							</PermissionGate>
 						)}
 					</TopActions>
 				</TopRow>
+
+				{markPaidOpen && (
+					<InvoiceMarkPaidModal
+						id={invoice.id}
+						title={invoice.number ? `#${invoice.number}` : getCounterpartyName(invoice)}
+						onClose={() => setMarkPaidOpen(false)}
+						onSuccess={() => setMarkPaidOpen(false)}
+					/>
+				)}
 
 				<Header>
 					<HeaderLeft>
@@ -455,6 +474,58 @@ const TopActions = styled.div`
 	flex-wrap: wrap;
 `
 
+/* Coin-flip + micro-scale pulse on the dollar glyph when the user
+   hovers the Mark-as-paid CTA. Scoped to this button's inline-svg
+   child so neighbouring icons stay still. */
+const coinFlip = keyframes`
+	0%   { transform: rotateY(0) scale(1); }
+	50%  { transform: rotateY(180deg) scale(1.18); }
+	100% { transform: rotateY(360deg) scale(1); }
+`
+
+/* Solid dark-green sibling of PrimarySolidButton for the "Mark as
+   paid" action — same metrics as Edit so the top-right row reads as
+   a pair. Lifts 1px on hover like Edit, but the surface colour and
+   shadow stay flat; only the coin-flip glyph animates. */
+const PaidSolidButton = styled(PrimarySolidButton)`
+	background: #15803d;
+	box-shadow: none;
+
+	& > svg {
+		transform-origin: 50% 50%;
+		backface-visibility: hidden;
+	}
+
+	&:hover:not(:disabled) {
+		background: #15803d;
+		transform: translateY(-1px);
+		box-shadow: none;
+	}
+
+	&:active:not(:disabled) {
+		transform: translateY(0);
+	}
+
+	&:hover:not(:disabled) > svg {
+		animation: ${coinFlip} 620ms cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		&:hover:not(:disabled) > svg {
+			animation: none;
+		}
+	}
+`
+
+/* "Pop out" nudge for the Open-PDF arrow glyph on hover — mirrors
+   the arrow's own direction (up-right) so the motion reads as
+   "launch into a new tab". */
+const launchPop = keyframes`
+	0%   { transform: translate(0, 0) scale(1); }
+	55%  { transform: translate(3px, -4px) scale(1.12); }
+	100% { transform: translate(0, 0) scale(1); }
+`
+
 const GhostButton = styled.button`
 	appearance: none;
 	background: #fff;
@@ -472,12 +543,24 @@ const GhostButton = styled.button`
 	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 	transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
 
+	& > svg {
+		transform-origin: 50% 50%;
+	}
+
 	&:hover:not(:disabled) {
 		transform: translateY(-1px);
+	}
+	&:hover:not(:disabled) > svg {
+		animation: ${launchPop} 520ms cubic-bezier(0.22, 1, 0.36, 1);
 	}
 	&:disabled {
 		opacity: 0.55;
 		cursor: not-allowed;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		&:hover:not(:disabled) > svg {
+			animation: none;
+		}
 	}
 `
 
@@ -696,7 +779,7 @@ const MetaLabel = styled.span`
 
 const MetaValue = styled.span`
 	font-size: 22px;
-	font-weight: 800;
+	font-weight: 600;
 	letter-spacing: -0.015em;
 	color: ${INK};
 	line-height: 1.1;
