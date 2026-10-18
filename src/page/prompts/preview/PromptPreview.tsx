@@ -124,11 +124,10 @@ const PromptPreview = () => {
 								{!prompt.isActive && (
 									<HeaderBtn
 										type='button'
-										$tone='success'
 										onClick={handleActivate}
 										disabled={isActivating}
 									>
-										<BoltRounded style={{ fontSize: 13 }} />
+										<BoltRounded style={{ fontSize: 17 }} />
 										{isActivating ? 'Activating…' : 'Activate'}
 									</HeaderBtn>
 								)}
@@ -375,32 +374,56 @@ const EditBtn = styled.button`
 	}
 `
 
-const HeaderBtn = styled.button<{ $tone: 'primary' | 'success' }>`
+/* Icon-only motion for ACTIVATE: a short two-step bolt zap on hover
+   (nothing full-rotational — reads as "charge up", not spin). The
+   button body itself keeps the shared Edit/Activate shape. */
+const boltZap = keyframes`
+	0%   { transform: scale(1) rotate(0); }
+	35%  { transform: scale(1.25) rotate(-12deg); }
+	60%  { transform: scale(0.95) rotate(6deg); }
+	100% { transform: scale(1) rotate(0); }
+`
+
+/* Mirrors `EditBtn` metrics so Activate + Edit sit side-by-side with
+   identical shape; swapped to the workspace's success green token so
+   it reads as an action, not a tag. */
+const HeaderBtn = styled.button`
 	display: inline-flex;
 	align-items: center;
-	gap: 5px;
-	padding: 4px 10px;
-	border-radius: 6px;
-	border: 1px solid
-		${(p) => (p.$tone === 'success' ? 'rgba(5, 150, 105, 0.3)' : 'rgba(3, 105, 161, 0.3)')};
-	background: ${(p) =>
-		p.$tone === 'success' ? 'rgba(5, 150, 105, 0.08)' : 'rgba(3, 105, 161, 0.08)'};
-	color: ${(p) => (p.$tone === 'success' ? '#047857' : T.primary)};
-	font-family: 'JetBrains Mono', ui-monospace, monospace;
-	font-size: 11.5px;
-	font-weight: 700;
+	gap: 6px;
+	padding: 7px 14px;
+	border: 0;
+	border-radius: 8px;
+	background: ${T.success};
+	color: #ffffff;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
 	cursor: pointer;
-	transition:
-		filter 140ms ease,
-		transform 140ms ease;
+	transition: transform 140ms ease;
 
+	& > svg {
+		transition: transform 160ms ease;
+		transform-origin: 50% 55%;
+	}
+
+	/* Keep the surface colour steady on hover — feedback lives entirely
+	   on the bolt icon via the keyframe below. */
 	&:hover:not(:disabled) {
-		filter: brightness(1.04);
 		transform: translateY(-1px);
 	}
+	&:hover:not(:disabled) > svg {
+		animation: ${boltZap} 520ms ease-out;
+	}
 	&:disabled {
-		opacity: 0.5;
+		opacity: 0.55;
 		cursor: not-allowed;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		&:hover:not(:disabled) > svg {
+			animation: none;
+		}
 	}
 `
 

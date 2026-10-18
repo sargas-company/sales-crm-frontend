@@ -16,6 +16,7 @@ import {
 	FootActions,
 	FootBar,
 	FootLeft,
+	PrimaryGhostButton,
 	PrimarySolidButton,
 	Section,
 	Shell,
@@ -210,13 +211,12 @@ const PromptEditForm = ({ id }: Props) => {
 						</FootLeft>
 						<FootActions>
 							<CancelSlot>
-								<Button
-									varient='outlined'
+								<PrimaryGhostButton
 									type='button'
 									onClick={() => navigate(`/prompts/preview/${id}`)}
 								>
 									Cancel
-								</Button>
+								</PrimaryGhostButton>
 							</CancelSlot>
 							<PermissionGate permission='prompts:update'>
 								<PrimarySolidButton type='submit' disabled={isSaving || !dirty}>
@@ -287,18 +287,30 @@ const EditorStack = styled.div`
 
 const EditorPanel = styled.div<{ $active: boolean }>`
 	grid-area: cell;
-	display: flex;
+	/* Inactive panel is pulled out of layout entirely so the grid
+	   cell takes the height of the ACTIVE panel only. Keeping both
+	   mounted preserved cross-fade but let the auto-sized textarea
+	   drag the markdown view's height along with it (big empty
+	   space under rendered markdown on long prompts). Fade on the
+	   active panel itself is enough feedback. */
+	display: ${(p) => (p.$active ? 'flex' : 'none')};
 	flex-direction: column;
-	opacity: ${(p) => (p.$active ? 1 : 0)};
-	transform: ${(p) => (p.$active ? 'translateY(0)' : 'translateY(6px)')};
-	pointer-events: ${(p) => (p.$active ? 'auto' : 'none')};
-	transition:
-		opacity 260ms cubic-bezier(0.22, 1, 0.36, 1),
-		transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
-	will-change: opacity, transform;
+	animation: ${(p) =>
+		p.$active ? 'promptEditorFadeIn 220ms ease' : 'none'};
+
+	@keyframes promptEditorFadeIn {
+		from {
+			opacity: 0;
+			transform: translateY(4px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
 
 	@media (prefers-reduced-motion: reduce) {
-		transition: none;
+		animation: none;
 	}
 `
 
