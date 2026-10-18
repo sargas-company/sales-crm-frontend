@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import {
@@ -8,6 +8,7 @@ import {
 	ReceiptLongOutlined,
 	AddRounded,
 	PaidOutlined,
+	DownloadRounded,
 } from '@mui/icons-material'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../../components/_shared/ListPageShell'
@@ -17,8 +18,14 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../../components/_shared/DataTable'
-import type { DataTableColumn, SortState } from '../../../components/_shared/DataTable'
+import type {
+	DataTableColumn,
+	DataTableSelection,
+	SortState,
+} from '../../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
+import BulkActionBar from '../../../components/_shared/BulkActionBar'
+import ConfirmModal from '../../../components/_shared/ConfirmModal'
 import InvoiceDeleteModal from '../../../components/invoices/list/InvoiceDeleteModal'
 import InvoiceMarkPaidModal from '../../../components/invoices/list/InvoiceMarkPaidModal'
 import PermissionGate from '../../../components/auth/PermissionGate'
@@ -28,10 +35,15 @@ import {
 	getInvoiceTotal,
 } from '../../../components/invoices/list/utils'
 import type { InvoiceItem, InvoiceSortBy } from '../../../store/invoices/invoicesApi'
-import { useGetInvoiceListQuery } from '../../../store/invoices/invoicesApi'
+import {
+	bulkDownloadInvoicesZip,
+	useBulkDeleteInvoicesMutation,
+	useGetInvoiceListQuery,
+} from '../../../store/invoices/invoicesApi'
 import { formatDate } from '../../../utils/format'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
 import usePermissions from '../../../hooks/usePermissions'
+import { useToast } from '../../../context/toast/ToastContext'
 
 const PAGE_SIZE = 20
 
@@ -44,12 +56,18 @@ const invoiceLabel = (i: InvoiceItem) => (i.number ? `Invoice #${i.number}` : `I
 
 const InvoiceList = () => {
 	const navigate = useNavigate()
+	const { showToast } = useToast()
 	const [searchInput, setSearchInput] = useState('')
 	const search = useDebouncedValue(searchInput.trim(), 300)
 	const [page, setPage] = useState(1)
 	const [sort, setSort] = useState<SortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<Target | null>(null)
 	const [paidTarget, setPaidTarget] = useState<Target | null>(null)
+
+	const [selected, setSelected] = useState<Set<string>>(() => new Set())
+	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+	const [isDownloading, setIsDownloading] = useState(false)
+	const [bulkDelete, { isLoading: isBulkDeleting }] = useBulkDeleteInvoicesMutation()
 
 	const { data, isLoading, isError, refetch } = useGetInvoiceListQuery({
 		page,
@@ -69,6 +87,93 @@ const InvoiceList = () => {
 	useEffect(() => {
 		setPage(1)
 	}, [search])
+
+	// Count of selected rows that are actually downloadable (status
+	// is open/paid). Drafts count toward the Delete action but not
+	// the Download secondary-action counter.
+	const downloadableSelectedCount = useMemo(
+		() =>
+			allItems.filter(
+				(i) =>
+					selected.has(i.id) && (i.status === 'open' || i.status === 'paid'),
+			).length,
+		[allItems, selected],
+	)
+
+	const selection = useMemo<DataTableSelection<InvoiceItem>>(
+		() => ({
+			selected,
+			onToggleRow: (id, next) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					if (next) n.add(id)
+					else n.delete(id)
+					return n
+				}),
+			onToggleAllOnPage: (rows, next) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					for (const r of rows) {
+						if (next) n.add(r.id)
+						else n.delete(r.id)
+					}
+					return n
+				}),
+			headerLabel: 'Select every invoice on this page',
+			rowLabel: (i) => `Select ${invoiceLabel(i)}`,
+		}),
+		[selected],
+	)
+
+	const handleBulkDelete = async () => {
+		const ids = [...selected]
+		if (ids.length === 0) return
+		try {
+			const res = await bulkDelete(ids).unwrap()
+			const skippedPart = res.skipped.length
+				? ` (${res.skipped.length} skipped)`
+				: ''
+			showToast(
+				`Deleted ${res.deleted} invoice${res.deleted === 1 ? '' : 's'}${skippedPart}`,
+				'success',
+			)
+			setSelected(new Set())
+			setBulkDeleteOpen(false)
+			refetch()
+		} catch {
+			showToast('Bulk delete failed', 'error')
+		}
+	}
+
+	const handleBulkDownload = async () => {
+		const ids = [...selected]
+		if (ids.length === 0) return
+		setIsDownloading(true)
+		try {
+			const { blob, filename, skippedCount } =
+				await bulkDownloadInvoicesZip(ids)
+			const url = URL.createObjectURL(blob)
+			const a = document.createElement('a')
+			a.href = url
+			a.download = filename
+			document.body.appendChild(a)
+			a.click()
+			a.remove()
+			URL.revokeObjectURL(url)
+			const downloaded = ids.length - skippedCount
+			showToast(
+				`Downloaded ${downloaded} of ${ids.length} invoice${ids.length === 1 ? '' : 's'}` +
+					(skippedCount > 0
+						? ` (${skippedCount} skipped — drafts or missing PDF)`
+						: ''),
+				'success',
+			)
+		} catch {
+			showToast('Bulk download failed', 'error')
+		} finally {
+			setIsDownloading(false)
+		}
+	}
 
 	// Invoice scope inherits from the linked counterparty. Callers
 	// without `contractor_scope:manage` cannot mutate a contractor
@@ -212,6 +317,29 @@ const InvoiceList = () => {
 				searchPlaceholder='Search by invoice number'
 				search={searchInput}
 				onSearchChange={setSearchInput}
+				filters={
+					<BulkBarSlot aria-live='polite'>
+						<BulkActionBar
+							persistent
+							count={selected.size}
+							onClear={() => setSelected(new Set())}
+							onConfirm={() => setBulkDeleteOpen(true)}
+							isLoading={isBulkDeleting}
+							secondaryActions={[
+								{
+									key: 'download',
+									label: 'Download selected',
+									count: downloadableSelectedCount,
+									icon: <DownloadRounded />,
+									tone: 'default',
+									onClick: handleBulkDownload,
+									isLoading: isDownloading,
+									disabled: downloadableSelectedCount === 0,
+								},
+							]}
+						/>
+					</BulkBarSlot>
+				}
 			>
 				<DataTable
 					columns={columns}
@@ -223,6 +351,7 @@ const InvoiceList = () => {
 					searchActive={!!search}
 					sort={sort}
 					onSortChange={handleSortChange}
+					selection={selection}
 					pagination={{
 						page,
 						pageSize: PAGE_SIZE,
@@ -231,6 +360,27 @@ const InvoiceList = () => {
 					}}
 				/>
 			</ListPageShell>
+
+			{bulkDeleteOpen && (
+				<ConfirmModal
+					icon={<DeleteOutline />}
+					iconTone='danger'
+					title={`Delete ${selected.size} invoice${selected.size === 1 ? '' : 's'}?`}
+					description={
+						<>
+							You are about to delete <strong>{selected.size}</strong> invoice
+							{selected.size === 1 ? '' : 's'}. This cannot be undone.
+						</>
+					}
+					confirmLabel={`Delete ${selected.size}`}
+					confirmLoadingLabel='Deleting…'
+					confirmColor='error'
+					cancelLabel='Cancel'
+					onClose={() => setBulkDeleteOpen(false)}
+					onConfirm={handleBulkDelete}
+					isLoading={isBulkDeleting}
+				/>
+			)}
 
 			{deleteTarget && (
 				<InvoiceDeleteModal
@@ -283,6 +433,17 @@ const MoneyPill = styled.span`
 	background: ${T.primaryTint};
 	border: 0;
 	white-space: nowrap;
+`
+
+/* Lives inside ListPageShell's FiltersBar (flex-wrap: wrap) — grows
+   to take the remaining horizontal space to the right of the search
+   field. Zero padding so the bar's own inner padding is the only
+   spacer. */
+const BulkBarSlot = styled.div`
+	flex: 1;
+	min-width: 320px;
+	display: flex;
+	justify-content: flex-end;
 `
 
 const StatusPill = styled.span<{ $status: string }>`

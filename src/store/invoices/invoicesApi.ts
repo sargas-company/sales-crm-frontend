@@ -1,4 +1,5 @@
 import { baseApi } from '../../api/baseApi'
+import axiosInstance from '../../api/axiosInstance'
 
 export type InvoiceCurrency = 'USD' | 'EUR' | 'UAH'
 export type InvoiceStatus = 'draft' | 'open' | 'paid'
@@ -187,8 +188,49 @@ export const invoicesApi = baseApi.injectEndpoints({
 			query: (id) => ({ url: `/invoices/${id}`, method: 'DELETE' }),
 			invalidatesTags: ['Invoice'],
 		}),
+
+		bulkDeleteInvoices: builder.mutation<
+			{ deleted: number; skipped: string[] },
+			string[]
+		>({
+			query: (ids) => ({
+				url: '/invoices/bulk-delete',
+				method: 'POST',
+				body: { ids },
+			}),
+			invalidatesTags: ['Invoice'],
+		}),
+
 	}),
 })
+
+/**
+ * Bulk download: the shared `axiosBaseQuery` returns only `data`
+ * (no headers), and RTK Query doesn't surface response headers
+ * either, so we bypass the generated endpoint and talk to axios
+ * directly. Returns the ZIP blob plus the filename and skipped
+ * count parsed off the response headers set by the backend
+ * controller.
+ */
+export const bulkDownloadInvoicesZip = async (
+	ids: string[],
+): Promise<{ blob: Blob; filename: string; skippedCount: number }> => {
+	const res = await axiosInstance.post<Blob>(
+		'/invoices/bulk-download',
+		{ ids },
+		{ responseType: 'blob' },
+	)
+	const cd = String(res.headers['content-disposition'] ?? '')
+	const match = /filename="?([^";]+)"?/.exec(cd)
+	const filename =
+		match?.[1] ?? `invoices-${new Date().toISOString().slice(0, 10)}.zip`
+	const skippedRaw = Number(res.headers['x-skipped-count'] ?? 0)
+	return {
+		blob: res.data,
+		filename,
+		skippedCount: Number.isFinite(skippedRaw) ? skippedRaw : 0,
+	}
+}
 
 export const {
 	useGetInvoiceListQuery,
@@ -199,4 +241,5 @@ export const {
 	useGetInvoicePdfQuery,
 	useLazyGetInvoicePdfQuery,
 	useDeleteInvoiceMutation,
+	useBulkDeleteInvoicesMutation,
 } = invoicesApi
