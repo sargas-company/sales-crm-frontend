@@ -64,6 +64,7 @@ export const baseApi = createApi({
 		'BackupRun',
 		'DiscordProfile',
 		'Attachment',
+		'AiSpend',
 	],
 	endpoints: () => ({}),
 })

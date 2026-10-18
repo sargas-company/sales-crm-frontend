@@ -18,6 +18,29 @@ export interface SalesOverviewSummary {
 	averageScore: KpiValue
 }
 
+export interface AiSpendBreakdownRow {
+	key: string
+	calls: number
+	usd: number
+}
+
+export interface AiSpendPerDayRow {
+	day: string
+	usd: number
+	calls: number
+}
+
+export interface AiSpendSummary {
+	window: { from: string; to: string; label: string }
+	totalUsd: number
+	totalCalls: number
+	totalTokens: { input: number; output: number; cacheRead: number; cacheWrite: number }
+	perModel: AiSpendBreakdownRow[]
+	perOperation: AiSpendBreakdownRow[]
+	perDay: AiSpendPerDayRow[]
+	pricingVersion: string
+}
+
 export type HeatmapMetric = 'all' | 'qualified' | 'hot' | 'qualifiedRate' | 'averageScore'
 
 export interface HeatmapCell {

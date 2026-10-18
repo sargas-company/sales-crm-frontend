@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import ScannerHealthBlock from '../../../components/sales-analytics/overview/ScannerHealthBlock'
 import AiPipelinePanel from '../../../components/sales-analytics/overview/AiPipelinePanel'
+import AiSpendBlock from '../../../components/sales-analytics/overview/AiSpendBlock'
 import KpiSummary from '../../../components/sales-analytics/overview/KpiSummary'
 import OpportunityHeatmap from '../../../components/sales-analytics/overview/OpportunityHeatmap'
 import RecentHighScorePosts from '../../../components/sales-analytics/overview/RecentHighScorePosts'
@@ -21,6 +22,7 @@ const OverviewTab = () => {
 		<TabPanel>
 			<ScannerHealthBlock middleSlot={<AiPipelinePanel />} />
 			<KpiSummary />
+			<AiSpendBlock />
 			<OpportunityHeatmap />
 			<RecentHighScorePosts onViewAll={() => setShowAll(true)} />
 			{showAll && <AllPostsList onClose={() => setShowAll(false)} />}

@@ -2,6 +2,7 @@ import { baseApi } from '../../api/baseApi'
 import type { ScannerHealth, ScannerHealthFilters } from './types/scanner'
 import type { SalesFilters } from './types/filters'
 import type {
+	AiSpendSummary,
 	FiltersOptions,
 	HeatmapData,
 	HeatmapMetric,
@@ -121,6 +122,17 @@ export const salesAnalyticsApi = baseApi.injectEndpoints({
 			providesTags: ['SalesFeedback'],
 		}),
 
+		getAiSpend: builder.query<AiSpendSummary, SalesFilters>({
+			query: (filters) => ({
+				url: '/analytics/ai-spend',
+				params: filtersToQueryParams(filters),
+			}),
+			// `SalesFeedback` is what the analytics stream invalidates
+			// on every JobPost change, so new AI calls auto-refresh
+			// without touching the SSE patcher.
+			providesTags: ['AiSpend', 'SalesFeedback'],
+		}),
+
 	}),
 })
 
@@ -132,6 +144,7 @@ export const {
 	useGetRecentHighScorePostsQuery,
 	useGetJobPostsPageQuery,
 	useGetJobPostByIdQuery,
+	useGetAiSpendQuery,
 } = salesAnalyticsApi
 
 /* Legacy hook alias retained so existing imports continue to compile
