@@ -79,8 +79,19 @@ const SettingsPage = () => {
 	const { has } = usePermissions()
 	const canSeeBackups = has('backups:view')
 	const canSeeDiscord = has('discord_integration:view')
-	const { data: sections = [], isLoading, isError, refetch } = useGetSettingsSectionsQuery()
-	const { data: status } = useGetSettingsStatusQuery()
+	// `settings:view` gates the whole workspace registry. Without it
+	// the sections + status endpoints 403 and the page would surface a
+	// loud "Could not load settings" error for a caller that only
+	// has My Account (e.g. admin_manager). Skip the queries so the
+	// profile tab renders cleanly without the global error state.
+	const canSeeSettingsSections = has('settings:view')
+	const { data: sections = [], isLoading, isError, refetch } = useGetSettingsSectionsQuery(
+		undefined,
+		{ skip: !canSeeSettingsSections },
+	)
+	const { data: status } = useGetSettingsStatusQuery(undefined, {
+		skip: !canSeeSettingsSections,
+	})
 	const [updateSection, { isLoading: isSavingSection }] = useUpdateSettingsSectionMutation()
 	const [updateDiscord, { isLoading: isSavingDiscord }] = useUpdateDiscordProfileMutation()
 	const isSaving = isSavingSection || isSavingDiscord
