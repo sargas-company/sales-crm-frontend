@@ -10,6 +10,7 @@ import {
 	Paper,
 	TextField,
 	Typography,
+	styled,
 } from '@mui/material'
 import {
 	Add,
@@ -490,6 +491,15 @@ const InvoiceFormStep: FC<Props> = ({
 	const [generateInvoicePdf, { isLoading: isGenerating }] = useGenerateInvoicePdfMutation()
 	const [getInvoicePdf, { isLoading: isOpeningPdf }] = useLazyGetInvoicePdfQuery()
 	const saving = isSaving || isUpdating || isGenerating || isOpeningPdf
+	// Which action the user clicked — lets the Create-PDF button show
+	// its own loader instead of just a disabled text. We DON'T AND
+	// this with `saving` because the RTK `isLoading` flags lag behind
+	// `setIsPdfFlow` by one render on each boundary (click + finally),
+	// which made the button text flicker in and out around the loader.
+	// `isPdfFlow` alone brackets the whole flow — set at click, cleared
+	// in the handler's `finally`.
+	const [isPdfFlow, setIsPdfFlow] = useState(false)
+	const savingPdf = isPdfFlow
 
 	const subtotal = useMemo(() => {
 		return items.reduce(
@@ -581,6 +591,7 @@ const InvoiceFormStep: FC<Props> = ({
 	}
 
 	const handleSaveInvoice = async (shouldGeneratePdf = false) => {
+		setIsPdfFlow(shouldGeneratePdf)
 		try {
 			setFormError('')
 
@@ -608,6 +619,8 @@ const InvoiceFormStep: FC<Props> = ({
 		} catch (error) {
 			setFormError(parseServerError(error))
 			console.error('Failed to create invoice', error)
+		} finally {
+			setIsPdfFlow(false)
 		}
 	}
 
@@ -623,30 +636,36 @@ const InvoiceFormStep: FC<Props> = ({
 	}
 
 	return (
-		<Box sx={{ background: 'transparent', p: 2.5 }}>
+		<Box
+			sx={{
+				background: 'transparent',
+				p: 2.5,
+				'@keyframes invoiceStep2CardIn': {
+					from: { opacity: 0, transform: 'translateY(10px)' },
+					to: { opacity: 1, transform: 'translateY(0)' },
+				},
+				'@keyframes invoiceStep2CheckBounce': {
+					'0%, 100%': { transform: 'translateY(-50%) scale(1)' },
+					'30%': { transform: 'translateY(calc(-50% - 5px)) scale(1.3)' },
+					'60%': { transform: 'translateY(-50%) scale(1)' },
+				},
+				'@keyframes invoiceSaveDrop': {
+					'0%, 100%': { transform: 'translateY(0) scale(1)' },
+					'35%': { transform: 'translateY(2px) scale(0.88)' },
+					'65%': { transform: 'translateY(-2px) scale(1.15)' },
+				},
+			}}
+		>
 			<Box sx={{ mx: 'auto' }}>
-				<Box
-					sx={{
-						display: 'flex',
-						justifyContent: 'space-between',
-						alignItems: 'center',
-						mb: 2.5,
-						gap: 2,
-						flexWrap: 'wrap',
-					}}
-				>
-					<BackPill onClick={onBack} />
-
-					<ActionToolbar
-						saving={saving}
-						isEdit={!!invoice}
-						onSaveDraft={() => handleSaveInvoice(false)}
-						onCreatePdf={() => handleSaveInvoice(true)}
-						formError={formError}
-					/>
-				</Box>
-
-				<Step2Progress />
+				<ReceiptTape
+					onBackClick={onBack}
+					onSaveDraft={() => handleSaveInvoice(false)}
+					onCreatePdf={() => handleSaveInvoice(true)}
+					saving={saving}
+					savingPdf={savingPdf}
+					isEdit={!!invoice}
+					formError={formError}
+				/>
 
 				<Card
 					sx={{
@@ -654,6 +673,9 @@ const InvoiceFormStep: FC<Props> = ({
 						background: 'white',
 						boxShadow: '0 8px 30px rgba(15,23,42,0.06)',
 						paddingBottom: 4,
+						animation:
+							'invoiceStep2CardIn 520ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both',
+						'@media (prefers-reduced-motion: reduce)': { animation: 'none' },
 					}}
 				>
 					<CardContent sx={{ p: '34px 38px 36px 38px' }}>
@@ -1600,7 +1622,7 @@ const BackPill: FC<{ onClick?: () => void }> = ({ onClick }) => (
 			background: 'transparent',
 			border: 'none',
 			borderRadius: '999px',
-			padding: '10px 18px 10px 14px',
+			padding: '10px 14px',
 			cursor: 'pointer',
 			display: 'inline-flex',
 			alignItems: 'center',
@@ -1631,10 +1653,9 @@ const BackPill: FC<{ onClick?: () => void }> = ({ onClick }) => (
 			'&:active': { transform: 'translateY(1px)' },
 		}}
 	>
-		<span className='arrow'>
+		<span className='arrow' aria-label='Back to party'>
 			<ArrowBack sx={{ fontSize: 16 }} />
 		</span>
-		<span>Back to party</span>
 	</Box>
 )
 
@@ -1831,8 +1852,319 @@ const STEP_INK = '#0f172a'
 const STEP_INK_45 = 'rgba(15, 23, 42, 0.45)'
 const STEP_INK_10 = 'rgba(15, 23, 42, 0.08)'
 const STEP_TINT = '#e0f2fe'
+const STAMP_FILL = 'rgba(224, 242, 254, 0.5)'
+const CHECK_SUCCESS = '#15803d'
 
-const Step2Progress: FC = () => {
+interface ReceiptTapeProps {
+	onBackClick?: () => void
+	onSaveDraft: () => void
+	onCreatePdf: () => void
+	saving: boolean
+	/** Only true while the create-PDF flow is in flight — drives the
+	 *  wave-dots loader inside the black Create-PDF button. */
+	savingPdf: boolean
+	isEdit: boolean
+	formError: string | null
+}
+
+/**
+ * Receipt-tape style header for invoice creation step 2. Two
+ * stamp-looking tiles on either side (first = done, step-1 nav
+ * back-trigger; second = active current step), a dashed divider in
+ * the middle with a Caveat "by the way" caption, Save-draft ghost
+ * + Create-PDF black buttons on the right. The whole strip has
+ * perforated top/bottom edges via a mask-image, like a shop
+ * receipt. The small ✓ on the first stamp loops forever to signal
+ * "yes, that step is done, we moved on".
+ */
+const ReceiptTape: FC<ReceiptTapeProps> = ({
+	onBackClick,
+	onSaveDraft,
+	onCreatePdf,
+	saving,
+	savingPdf,
+	isEdit,
+	formError,
+}) => {
+	const perforationMask =
+		'radial-gradient(circle at 10px -2px, transparent 6px, #000 7px),' +
+		'radial-gradient(circle at 10px calc(100% + 2px), transparent 6px, #000 7px)'
+	return (
+		<Box
+			sx={{
+				mb: 2.5,
+				animation: 'invoiceStep2CardIn 440ms cubic-bezier(0.22, 1, 0.36, 1) both',
+				'@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+			}}
+		>
+			<Box sx={{ filter: 'drop-shadow(0 10px 30px rgba(15,23,42,0.08))' }}>
+				<Box
+					sx={{
+						background: '#fff',
+						borderRadius: '18px',
+						padding: '22px 32px',
+						display: 'flex',
+						alignItems: 'center',
+						gap: '20px',
+						flexWrap: 'wrap',
+						WebkitMaskImage: perforationMask,
+						WebkitMaskSize: '20px 100%, 20px 100%',
+						WebkitMaskRepeat: 'repeat-x, repeat-x',
+						WebkitMaskPosition: 'top, bottom',
+						maskImage: perforationMask,
+						maskSize: '20px 100%, 20px 100%',
+						maskRepeat: 'repeat-x, repeat-x',
+						maskPosition: 'top, bottom',
+					}}
+				>
+					{/* First stamp — PARTY, done, clickable → navigate back */}
+					<Stamp done onClick={onBackClick} />
+
+					{/* Dashed divider with "by the way" Caveat label on top */}
+					<Box sx={{ flex: 1, borderTop: `2px dashed ${STEP_INK_10}`, position: 'relative', minWidth: 60 }}>
+						<Box
+							sx={{
+								position: 'absolute',
+								top: '-20px',
+								left: '50%',
+								transform: 'translateX(-50%)',
+								background: '#fff',
+								padding: '0 12px',
+								fontFamily: '"Caveat", "Brush Script MT", cursive',
+								fontSize: 28,
+								fontWeight: 700,
+								color: STEP_PRIMARY,
+								whiteSpace: 'nowrap',
+							}}
+						>
+							by the way
+						</Box>
+					</Box>
+
+					{/* Second stamp — current step */}
+					<Stamp active />
+
+					{/* Actions */}
+					<Box sx={{ display: 'inline-flex', gap: '10px' }}>
+						<GhostSaveButton
+							type='button'
+							onClick={onSaveDraft}
+							disabled={saving}
+						>
+							<SaveOutlined sx={{ fontSize: 18 }} />
+							<span>{isEdit ? 'Save changes' : 'Save draft'}</span>
+						</GhostSaveButton>
+						<BlackCreateButton
+							type='button'
+							onClick={onCreatePdf}
+							disabled={saving}
+							aria-busy={savingPdf}
+						>
+							{savingPdf ? (
+								<WaveDots aria-label='Creating PDF'>
+									<span />
+									<span />
+									<span />
+								</WaveDots>
+							) : (
+								'Create PDF'
+							)}
+						</BlackCreateButton>
+					</Box>
+				</Box>
+			</Box>
+			{formError ? (
+				<Alert
+					severity='error'
+					sx={{
+						mt: 1.5,
+						maxWidth: 420,
+						marginLeft: 'auto',
+						whiteSpace: 'pre-line',
+						borderRadius: '10px',
+						fontSize: 12.5,
+					}}
+				>
+					{formError}
+				</Alert>
+			) : null}
+		</Box>
+	)
+}
+
+interface StampProps {
+	done?: boolean
+	active?: boolean
+	onClick?: () => void
+}
+
+const Stamp: FC<StampProps> = ({ done, active, onClick }) => {
+	const clickable = done && !!onClick
+	return (
+		<Box
+			component={clickable ? 'button' : 'div'}
+			type={clickable ? 'button' : undefined}
+			onClick={clickable ? onClick : undefined}
+			aria-label={clickable ? 'Go back to step 1: Party' : undefined}
+			sx={{
+				display: 'inline-flex',
+				flexDirection: 'column',
+				alignItems: 'center',
+				border: `2px dashed ${STEP_PRIMARY}`,
+				borderRadius: '10px',
+				padding: '10px 32px',
+				color: STEP_PRIMARY,
+				fontFamily:
+					'"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+				fontSize: 11,
+				fontWeight: 700,
+				letterSpacing: '1.5px',
+				textAlign: 'center',
+				background: STAMP_FILL,
+				transform: done ? 'rotate(-3deg)' : 'rotate(-4deg)',
+				appearance: 'none',
+				cursor: clickable ? 'pointer' : 'default',
+				outline: 'none',
+				transition: 'transform 200ms cubic-bezier(0.22, 1, 0.36, 1)',
+				'&:hover': clickable
+					? { transform: 'rotate(-3deg) translateY(-1px)' }
+					: undefined,
+				'&:focus-visible': clickable
+					? { boxShadow: `0 0 0 3px ${STEP_PRIMARY}44` }
+					: undefined,
+			}}
+		>
+			{done ? (
+				<Box
+					component='b'
+					sx={{
+						position: 'relative',
+						display: 'inline-block',
+						fontSize: 18,
+						letterSpacing: '2px',
+						mb: '2px',
+					}}
+				>
+					PARTY
+					<Box
+						component='span'
+						aria-hidden
+						sx={{
+							position: 'absolute',
+							left: '100%',
+							top: '50%',
+							ml: '10px',
+							color: CHECK_SUCCESS,
+							fontWeight: 900,
+							fontSize: 18,
+							lineHeight: 1,
+							transform: 'translateY(-50%)',
+							animation:
+								'invoiceStep2CheckBounce 1.6s cubic-bezier(0.22, 1, 0.36, 1) infinite',
+							transformOrigin: '50% 50%',
+							willChange: 'transform',
+							'@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+						}}
+					>
+						✓
+					</Box>
+				</Box>
+			) : (
+				<Box component='b' sx={{ fontSize: 18, letterSpacing: '2px', mb: '2px' }}>
+					02 DETAILS
+				</Box>
+			)}
+			<Box component='span'>{done ? 'DONE' : 'YOU ARE HERE'}</Box>
+			{/* keep `active` used — hint for linters, read as semantic flag */}
+			{active ? null : null}
+		</Box>
+	)
+}
+
+const GhostSaveButton = styled('button')({
+	appearance: 'none',
+	background: '#fff',
+	border: `1px solid ${STEP_INK_10}`,
+	borderRadius: '12px',
+	padding: '10px 16px',
+	cursor: 'pointer',
+	display: 'inline-flex',
+	alignItems: 'center',
+	gap: '8px',
+	color: STEP_INK,
+	fontFamily: 'inherit',
+	fontSize: 13.5,
+	fontWeight: 500,
+	boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+	transition: 'transform 200ms cubic-bezier(0.22, 1, 0.36, 1)',
+	'& svg': { transformOrigin: '50% 50%' },
+	'&:hover:not(:disabled)': { transform: 'translateY(-1px)' },
+	'&:hover:not(:disabled) svg': {
+		animation: 'invoiceSaveDrop 520ms cubic-bezier(0.4, 0, 0.2, 1)',
+	},
+	'&:disabled': { opacity: 0.55, cursor: 'not-allowed' },
+	'@media (prefers-reduced-motion: reduce)': {
+		'&:hover:not(:disabled) svg': { animation: 'none' },
+	},
+})
+
+/* Create-PDF: black surface, PrimarySolidButton metrics (12px radius,
+   11px/18px padding, 14px/600 font), no icon per owner's call. */
+const BlackCreateButton = styled('button')({
+	appearance: 'none',
+	border: 0,
+	cursor: 'pointer',
+	fontFamily: 'inherit',
+	fontSize: 14,
+	fontWeight: 600,
+	letterSpacing: '0.01em',
+	padding: '11px 18px',
+	borderRadius: '12px',
+	background: STEP_INK,
+	color: '#fff',
+	boxShadow: '0 2px 6px rgba(15,23,42,0.22)',
+	transition: 'transform 160ms ease, box-shadow 160ms ease',
+	minWidth: 128,
+	display: 'inline-flex',
+	alignItems: 'center',
+	justifyContent: 'center',
+	'&:hover:not(:disabled)': {
+		transform: 'translateY(-1px)',
+		boxShadow: '0 6px 16px rgba(15,23,42,0.28)',
+	},
+	'&:disabled': { cursor: 'not-allowed' },
+	'&[aria-busy="true"]': { opacity: 1 },
+})
+
+/* Three-dot wave loader shown inside BlackCreateButton while the
+   create-PDF flow is in flight. Each dot bounces up with a stagger
+   so the row reads as a wave. Height is pinned to the "Create PDF"
+   text size so the button doesn't change height on toggle. */
+const WaveDots = styled('span')({
+	display: 'inline-flex',
+	alignItems: 'center',
+	gap: 5,
+	height: '1em',
+	'& > span': {
+		width: 7,
+		height: 7,
+		borderRadius: '50%',
+		background: '#fff',
+		display: 'inline-block',
+		animation: 'invoiceWaveDot 1.1s cubic-bezier(0.22, 1, 0.36, 1) infinite',
+	},
+	'& > span:nth-of-type(2)': { animationDelay: '0.14s' },
+	'& > span:nth-of-type(3)': { animationDelay: '0.28s' },
+	'@keyframes invoiceWaveDot': {
+		'0%, 60%, 100%': { transform: 'translateY(0)', opacity: 0.55 },
+		'30%': { transform: 'translateY(-6px)', opacity: 1 },
+	},
+	'@media (prefers-reduced-motion: reduce)': {
+		'& > span': { animation: 'none', opacity: 0.8 },
+	},
+})
+
+const Step2Progress: FC<{ onNavigate?: (step: number) => void }> = ({ onNavigate }) => {
 	const steps = [
 		{ n: 1, label: 'Party', hint: 'Contractor or client' },
 		{ n: 2, label: 'Details', hint: 'Numbers, dates, line items' },
@@ -1843,7 +2175,6 @@ const Step2Progress: FC = () => {
 			sx={{
 				position: 'relative',
 				width: '100%',
-				mb: 3,
 				animation: 'invoiceStep2ProgressIn 500ms cubic-bezier(0.22, 1, 0.36, 1) both',
 				'@keyframes invoiceStep2ProgressIn': {
 					from: { opacity: 0, transform: 'translateY(6px)' },
@@ -1876,81 +2207,44 @@ const Step2Progress: FC = () => {
 				/>
 			</Box>
 
-			{/* Cursive hand-note between the step circles — invoice-themed */}
+			{/* Cursive hand-note — between the step circles, UNDER the line.
+			    scaleX + letter-spacing stretch the glyphs horizontally so
+			    the phrase spans a bit of the track line, not just the
+			    tight center area between the two circles. */}
 			<Box
 				aria-hidden
 				sx={{
 					position: 'absolute',
-					top: -60,
+					top: 36,
 					left: '50%',
-					transform: 'translateX(-50%) rotate(-4deg)',
+					transform: 'translateX(-50%) rotate(-3deg) scaleX(1.25)',
+					transformOrigin: '50% 50%',
 					pointerEvents: 'none',
 					userSelect: 'none',
-					display: { xs: 'none', sm: 'inline-flex' },
-					flexDirection: 'column',
-					alignItems: 'center',
-					gap: 0.25,
+					display: { xs: 'none', sm: 'inline-block' },
 					zIndex: 2,
+					fontFamily: '"Caveat", "Brush Script MT", cursive',
+					fontSize: 26,
+					fontWeight: 700,
+					lineHeight: 1,
+					letterSpacing: '0.08em',
+					color: STEP_PRIMARY,
+					whiteSpace: 'nowrap',
 					'@keyframes step2NoteIn': {
 						from: {
 							opacity: 0,
-							transform: 'translate(-50%, 6px) rotate(-4deg)',
+							transform: 'translate(-50%, 4px) rotate(-3deg) scaleX(1.25)',
 						},
-						to: { opacity: 1, transform: 'translate(-50%, 0) rotate(-4deg)' },
+						to: {
+							opacity: 1,
+							transform: 'translate(-50%, 0) rotate(-3deg) scaleX(1.25)',
+						},
 					},
 					'@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-					animation: 'step2NoteIn 700ms cubic-bezier(0.22, 1, 0.36, 1) 260ms both',
+					animation: 'step2NoteIn 600ms cubic-bezier(0.22, 1, 0.36, 1) 220ms both',
 				}}
 			>
-				<Box
-					component='span'
-					sx={{
-						fontFamily: '"Caveat", "Brush Script MT", cursive',
-						fontSize: 54,
-						fontWeight: 700,
-						lineHeight: 1,
-						color: STEP_PRIMARY,
-						textShadow: '0 8px 26px rgba(2, 132, 199, 0.22)',
-						whiteSpace: 'nowrap',
-					}}
-				>
-					now the numbers
-				</Box>
-				<Box
-					component='svg'
-					viewBox='0 0 110 20'
-					width='110'
-					height='16'
-					sx={{
-						color: STEP_PRIMARY,
-						opacity: 0.7,
-						mt: 0.25,
-						'& path': {
-							strokeDasharray: 220,
-							strokeDashoffset: 220,
-							animation: 'step2NoteDraw 900ms cubic-bezier(0.22, 1, 0.36, 1) 700ms forwards',
-						},
-						'@keyframes step2NoteDraw': {
-							to: { strokeDashoffset: 0 },
-						},
-					}}
-				>
-					<path
-						d='M4 10 C 24 2, 54 18, 88 6'
-						fill='none'
-						stroke='currentColor'
-						strokeWidth='2'
-						strokeLinecap='round'
-					/>
-					<path
-						d='M82 4 L 90 6 L 86 12'
-						fill='none'
-						stroke='currentColor'
-						strokeWidth='2'
-						strokeLinecap='round'
-						strokeLinejoin='round'
-					/>
-				</Box>
+				by the way
 			</Box>
 
 			<Box
@@ -1978,9 +2272,17 @@ const Step2Progress: FC = () => {
 							}}
 						>
 							<Box
+								component={done && onNavigate ? 'button' : 'div'}
+								type={done && onNavigate ? 'button' : undefined}
+								onClick={done && onNavigate ? () => onNavigate(s.n) : undefined}
+								aria-label={done && onNavigate ? `Go back to step ${s.n}: ${s.label}` : undefined}
 								sx={{
 									width: 56,
 									height: 56,
+									minWidth: 56,
+									maxWidth: 56,
+									flexShrink: 0,
+									boxSizing: 'border-box',
 									borderRadius: '50%',
 									display: 'inline-flex',
 									alignItems: 'center',
@@ -1990,6 +2292,7 @@ const Step2Progress: FC = () => {
 									fontSize: 18,
 									fontWeight: 700,
 									letterSpacing: '0.02em',
+									lineHeight: 1,
 									background: active || done ? STEP_PRIMARY : '#fff',
 									color: active || done ? '#fff' : STEP_INK_45,
 									border: `2px solid ${active || done ? STEP_PRIMARY : STEP_INK_10}`,
@@ -1998,6 +2301,24 @@ const Step2Progress: FC = () => {
 										: 'none',
 									transition: 'all 240ms cubic-bezier(0.22, 1, 0.36, 1)',
 									mb: 1.5,
+									appearance: 'none',
+									WebkitAppearance: 'none',
+									outline: 'none',
+									padding: 0,
+									textAlign: 'center',
+									cursor: done && onNavigate ? 'pointer' : 'default',
+									'& svg': { flexShrink: 0 },
+									'&:hover': done && onNavigate
+										? {
+											transform: 'translateY(-1px)',
+											boxShadow: `0 0 0 6px ${STEP_PRIMARY}20, 0 10px 24px -8px ${STEP_PRIMARY}77`,
+										}
+										: undefined,
+									'&:focus-visible': done && onNavigate
+										? {
+											boxShadow: `0 0 0 4px ${STEP_PRIMARY}44`,
+										}
+										: undefined,
 								}}
 							>
 								{done ? <CheckRounded sx={{ fontSize: 24 }} /> : `0${s.n}`}
@@ -2016,9 +2337,9 @@ const Step2Progress: FC = () => {
 							<Typography
 								sx={{
 									fontSize: 12,
-									color: active ? STEP_PRIMARY : STEP_INK_45,
+									color: STEP_INK_45,
 									mt: 0.5,
-									fontWeight: active ? 600 : 400,
+									fontWeight: 400,
 									textAlign: 'center',
 								}}
 							>
