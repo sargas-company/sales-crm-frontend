@@ -18,8 +18,13 @@ const Signin = () => {
 
 	// Still initializing (checking stored refresh token)
 	if (isAuthenticated === null) return <PageLoading />
-	// Already logged in → go to dashboard
-	if (isAuthenticated) return <Navigate to='/dashboards/sales' replace />
+	// Already logged in → hand off to LandingRedirect so role-aware
+	// rules (admin_manager → /dashboards/projects, generic cascade for
+	// everyone else) decide the destination. Hardcoding a path here
+	// races the imperative navigate('/') inside handleSubmit and wins
+	// every time, which is how admin_manager kept landing on
+	// /dashboards/sales no matter what LandingRedirect said.
+	if (isAuthenticated) return <Navigate to='/' replace />
 
 	const handleSubmit = async (inputs: LoginFormData) => {
 		try {
