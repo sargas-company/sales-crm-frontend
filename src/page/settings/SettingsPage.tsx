@@ -1181,7 +1181,11 @@ const SideNav = styled.nav`
 	border-radius: ${T.radius};
 	border: 1px solid ${T.border};
 	box-shadow: ${T.cardShadow};
-	padding: 12px;
+	/* 16px padding on all sides so there's a comfortable breathing
+	 * gap around the item(s) — matters most when the role only has
+	 * My Account visible and the card used to look visually unbalanced
+	 * (button edge was almost kissing the right card border). */
+	padding: 16px;
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
@@ -1190,7 +1194,7 @@ const SideNav = styled.nav`
 	@media (max-width: 900px) {
 		flex-direction: row;
 		overflow-x: auto;
-		padding: 10px;
+		padding: 12px;
 	}
 `
 

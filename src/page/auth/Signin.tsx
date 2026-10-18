@@ -39,7 +39,11 @@ const Signin = () => {
 			// legitimately empty (the backend answered). Only now may
 			// the authenticated UI render.
 			dispatch(setInitialized())
-			navigate('/dashboards/sales')
+			// Route through the landing redirect so role-based rules
+			// (admin_manager → /dashboards/projects, generic cascade for
+			// everyone else) kick in instead of a hardcoded path which
+			// 403s whenever the caller lacks sales_analytics:view.
+			navigate('/')
 		} catch {
 			// Login itself failed — gate was never closed, but calling
 			// setInitialized is a safe no-op if it is already true.

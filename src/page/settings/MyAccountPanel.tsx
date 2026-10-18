@@ -512,18 +512,12 @@ const RemoveBtn = styled.button`
 	}
 
 	&:hover:not(:disabled) {
-		background: rgba(220, 38, 38, 0.08);
 		border-color: #dc2626;
-		transform: translateY(-1px);
-		box-shadow: 0 6px 16px -8px rgba(220, 38, 38, 0.6);
 	}
 	&:hover:not(:disabled) svg {
 		/* Trash lid tilts up — a tiny gesture that hints at "open to
 		 * throw the avatar away". */
 		transform: rotate(-16deg);
-	}
-	&:active:not(:disabled) {
-		transform: translateY(0);
 	}
 
 	&:disabled {
