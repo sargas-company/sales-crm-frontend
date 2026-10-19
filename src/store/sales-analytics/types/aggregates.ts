@@ -1,4 +1,4 @@
-import type { ClientTier, JobPostAnalyticsSummary, NotificationStatus } from './jobPost'
+import type { ClientTier, NotificationStatus } from './jobPost'
 import type { EmergingScoreBreakdown, TaxonomyCandidateStatus } from './candidates'
 import type { TaxonomyType } from './taxonomy'
 
@@ -100,11 +100,6 @@ export interface InsightItem {
 
 export interface ActionableInsights {
 	items: InsightItem[]
-}
-
-export interface RecentHighScorePostsData {
-	items: JobPostAnalyticsSummary[]
-	total: number
 }
 
 export interface TimePatternPoint {

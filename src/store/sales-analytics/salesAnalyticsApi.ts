@@ -6,7 +6,6 @@ import type {
 	FiltersOptions,
 	HeatmapData,
 	HeatmapMetric,
-	RecentHighScorePostsData,
 	SalesOverviewSummary,
 } from './types/aggregates'
 import type { MockJobPost } from './types/jobPost'
@@ -19,23 +18,6 @@ import type { MockJobPost } from './types/jobPost'
  * mock implementation was removed, so no runtime fetch stands behind
  * them.
  */
-
-/* JobPostAnalyticsPage and JobPostsQuery mirror the backend list
- * contract — kept here so hook consumers do not touch the removed
- * repository interface. */
-export interface JobPostAnalyticsPage {
-	items: MockJobPost[]
-	page: number
-	limit: number
-	total: number
-	totalPages: number
-}
-
-export interface JobPostsQuery {
-	filters: SalesFilters
-	page: number
-	limit: number
-}
 
 const filtersToQueryParams = (
 	filters: SalesFilters,
@@ -98,25 +80,6 @@ export const salesAnalyticsApi = baseApi.injectEndpoints({
 			providesTags: ['SalesFeedback'],
 		}),
 
-		getRecentHighScorePosts: builder.query<
-			RecentHighScorePostsData,
-			{ filters: SalesFilters; limit: number }
-		>({
-			query: ({ filters, limit }) => ({
-				url: '/analytics/recent-high-score-posts',
-				params: { ...filtersToQueryParams(filters), limit },
-			}),
-			providesTags: ['SalesFeedback'],
-		}),
-
-		getJobPostsPage: builder.query<JobPostAnalyticsPage, JobPostsQuery>({
-			query: ({ filters, page, limit }) => ({
-				url: '/analytics/job-posts',
-				params: { ...filtersToQueryParams(filters), page, limit },
-			}),
-			providesTags: ['SalesFeedback'],
-		}),
-
 		getJobPostById: builder.query<MockJobPost | null, string>({
 			query: (id) => ({ url: `/analytics/job-posts/${id}` }),
 			providesTags: ['SalesFeedback'],
@@ -141,8 +104,6 @@ export const {
 	useGetFiltersOptionsQuery,
 	useGetSalesOverviewQuery,
 	useGetOpportunityHeatmapQuery,
-	useGetRecentHighScorePostsQuery,
-	useGetJobPostsPageQuery,
 	useGetJobPostByIdQuery,
 	useGetAiSpendQuery,
 } = salesAnalyticsApi
