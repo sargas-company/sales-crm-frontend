@@ -1,6 +1,6 @@
 import { ChangeEvent, FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TextField, Button, Select, SelectItem } from '../../../ui'
+import { TextField, Select, SelectItem } from '../../../ui'
 import {
 	useGetCounterpartyByIdQuery,
 	useCreateCounterpartyMutation,
@@ -19,6 +19,7 @@ import {
 	FootActions,
 	FootBar,
 	FootLeft,
+	PrimaryGhostButton,
 	PrimarySolidButton,
 	Section,
 	Shell,
@@ -238,14 +239,12 @@ const CounterpartyFormInner = ({ id, initial }: { id?: string; initial: FormFiel
 								: 'Counterparty will be added to the list right away'}
 						</FootLeft>
 						<FootActions>
-							<Button
-								varient='outlined'
-								color='info'
+							<PrimaryGhostButton
 								type='button'
 								onClick={() => navigate('/counterparties/list/')}
 							>
 								Cancel
-							</Button>
+							</PrimaryGhostButton>
 							<PrimarySolidButton
 								type='submit'
 								disabled={isLoading || editingContractorLocked}
