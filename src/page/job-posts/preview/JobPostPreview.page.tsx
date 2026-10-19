@@ -1010,34 +1010,62 @@ const JobPostPreview = () => {
 											</span>
 										</EmptyPane>
 									)
-								) : ai && ai.short_summary ? (
-									<>
-										<AiMarkdown>
-											<ReactMarkdown remarkPlugins={[remarkGfm]}>
-												{ai.short_summary}
-											</ReactMarkdown>
-										</AiMarkdown>
-										{ai.hard_stop ? (
-											<HardStop>
-												<WarningAmberOutlined sx={{ fontSize: 16 }} />
+								) : (() => {
+									// v2 envelope (nested under `evaluation`) first, legacy
+									// snake_case top-level fields as fallback for historical
+									// rows written before the v2 pipeline landed.
+									const summary = ai?.evaluation?.shortSummary ?? ai?.short_summary
+									const hardStop = ai?.evaluation?.hardStop ?? ai?.hard_stop
+									const hardStopReason =
+										ai?.evaluation?.hardStopReason ?? ai?.hard_stop_reason
+									const gatekeeperRejected =
+										ai?.gatekeeper && ai.gatekeeper.fit === false && !ai.evaluation
+									if (summary) {
+										return (
+											<>
+												<AiMarkdown>
+													<ReactMarkdown remarkPlugins={[remarkGfm]}>
+														{summary}
+													</ReactMarkdown>
+												</AiMarkdown>
+												{hardStop ? (
+													<HardStop>
+														<WarningAmberOutlined sx={{ fontSize: 16 }} />
+														<span>
+															Hard stop{hardStopReason ? ` — ${hardStopReason}` : ''}
+														</span>
+													</HardStop>
+												) : null}
+											</>
+										)
+									}
+									if (gatekeeperRejected) {
+										return (
+											<EmptyPane $tone='ink'>
+												<EmptyBubble>
+													<NotesOutlined />
+												</EmptyBubble>
+												<strong>Rejected by gatekeeper</strong>
 												<span>
-													Hard stop{ai.hard_stop_reason ? ` — ${ai.hard_stop_reason}` : ''}
+													{ai!.gatekeeper!.reason ||
+														'The stage-one gate declined this post before full evaluation.'}
 												</span>
-											</HardStop>
-										) : null}
-									</>
-								) : (
-									<EmptyPane $tone='accent'>
-										<EmptyBubble>
-											<AutoAwesomeOutlined />
-										</EmptyBubble>
-										<strong>AI evaluation pending</strong>
-										<span>
-											Claude hasn&apos;t scored this post yet — it&apos;s either in the
-											queue or still processing. Check back in a minute.
-										</span>
-									</EmptyPane>
-								)}
+											</EmptyPane>
+										)
+									}
+									return (
+										<EmptyPane $tone='accent'>
+											<EmptyBubble>
+												<AutoAwesomeOutlined />
+											</EmptyBubble>
+											<strong>AI evaluation pending</strong>
+											<span>
+												Claude hasn&apos;t scored this post yet — it&apos;s either in the
+												queue or still processing. Check back in a minute.
+											</span>
+										</EmptyPane>
+									)
+								})()}
 							</DocSlide>
 						</DocLift>
 					</LeftCol>

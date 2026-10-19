@@ -8,16 +8,44 @@ export type JobPostDecision = 'approve' | 'maybe' | 'decline'
 export type JobPostPriority = 'high' | 'medium' | 'low'
 export type JobPostEnqueueState = 'BACKLOG' | 'PENDING' | 'ENQUEUED'
 
+/**
+ * Shape of the `aiResponse` JSON column on `JobPost`. The backend
+ * (job-post-processor) writes two optional branches:
+ *   • `gatekeeper` — stage-1 cheap-model decision (always set once
+ *     the post has been touched; `fit:false` means the post was
+ *     declined before full evaluation).
+ *   • `evaluation` — stage-2 full Claude evaluation. Present only
+ *     when the gate accepted the post.
+ *
+ * All top-level snake_case fields below are LEGACY (pre-v2 shape).
+ * They stay optional so historical rows and fixtures continue to
+ * typecheck; new code reads from `evaluation.*` first.
+ */
 export interface JobPostAiResponse {
-	decision: string
-	match_score: number
-	priority: string
-	hard_stop: boolean
-	hard_stop_reason: string
-	subscores: Record<string, number>
-	reasons: string[]
-	red_flags: string[]
-	short_summary: string
+	gatekeeper?: {
+		fit: boolean
+		confidence: number
+		reason: string
+	}
+	evaluation?: {
+		shortSummary?: string
+		reasons?: string[]
+		redFlags?: string[]
+		hardStop?: boolean
+		hardStopReason?: string
+		subscores?: Record<string, number>
+	}
+	// Legacy top-level fields (pre-v2 envelope). Kept optional for
+	// backward compat with any historical rows that still carry them.
+	decision?: string
+	match_score?: number
+	priority?: string
+	hard_stop?: boolean
+	hard_stop_reason?: string
+	subscores?: Record<string, number>
+	reasons?: string[]
+	red_flags?: string[]
+	short_summary?: string
 }
 
 export interface JobPostItem {
