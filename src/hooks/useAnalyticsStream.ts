@@ -1,8 +1,13 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
 import { API_BASE_URL, baseApi } from '../api/baseApi'
 import type { AppDispatch, RootState } from '../store/store'
+import type { SalesFilters } from '../store/sales-analytics/types/filters'
+import type {
+	AiSpendSummary,
+	SalesOverviewSummary,
+} from '../store/sales-analytics/types/aggregates'
 
 interface QueueStatsPayload {
 	analysisEnabled: boolean
@@ -36,15 +41,47 @@ interface TickFrame {
 	at: string
 	queueStats: QueueStatsPayload | { error: string; message: string }
 	scanner: ScannerPayload | { error: string; message: string }
+	salesOverview?: SalesOverviewSummary | { error: string; message: string }
+	aiSpend?: AiSpendSummary | { error: string; message: string }
 }
 
 interface Options {
 	/** Pause SSE on this page (false). Default true. */
 	enabled?: boolean
+	/** Current filters — propagated to the stream URL so the server
+	 * sends `salesOverview` / `aiSpend` scoped to the same window the
+	 * UI is showing. Changing filters triggers a reconnect so the new
+	 * window is reflected on the next frame. */
+	filters?: SalesFilters
 	/** Called when a tick is received, after the Redux caches are patched. */
 	onTick?: (frame: TickFrame) => void
 	/** Fallback polling interval while SSE is disconnected. */
 	fallbackPollMs?: number
+}
+
+/** Serialise filters to URL query params the same way the REST
+ * endpoints do, so backend parsing is identical. */
+const filtersToQueryString = (filters: SalesFilters | undefined): string => {
+	if (!filters) return ''
+	const params = new URLSearchParams()
+	if (filters.dateRange) params.set('dateRange', filters.dateRange)
+	if (filters.customFrom) params.set('customFrom', filters.customFrom)
+	if (filters.customTo) params.set('customTo', filters.customTo)
+	if (filters.timezone) params.set('timezone', filters.timezone)
+	if (filters.scoreMin != null) params.set('scoreMin', String(filters.scoreMin))
+	if (filters.scoreMax != null) params.set('scoreMax', String(filters.scoreMax))
+	if (filters.technology?.length) params.set('technology', filters.technology.join(','))
+	if (filters.direction?.length) params.set('direction', filters.direction.join(','))
+	if (filters.platformId?.length) params.set('platformId', filters.platformId.join(','))
+	if (filters.contractType) params.set('contractType', filters.contractType)
+	if (filters.budgetBucket) params.set('budgetBucket', filters.budgetBucket)
+	if (filters.clientCountry?.length)
+		params.set('clientCountry', filters.clientCountry.join(','))
+	if (filters.clientQuality?.length)
+		params.set('clientQuality', filters.clientQuality.join(','))
+	if (filters.notificationStatus) params.set('notificationStatus', filters.notificationStatus)
+	const str = params.toString()
+	return str ? `?${str}` : ''
 }
 
 interface Status {
@@ -75,10 +112,14 @@ interface Status {
  *     polling timer on unmount.
  */
 export function useAnalyticsStream(options: Options = {}): Status {
-	const { enabled = true, onTick, fallbackPollMs = 5_000 } = options
+	const { enabled = true, filters, onTick, fallbackPollMs = 5_000 } = options
 	const dispatch = useDispatch<AppDispatch>()
 	const token = useSelector((s: RootState) => s.auth.accessToken)
 	const statusRef = useRef<Status>({ connected: false, reconnectAttempts: 0 })
+
+	/* Stable string for the useEffect dep array so filter changes
+	 * trigger a reconnect but reference equality churn doesn't. */
+	const queryString = useMemo(() => filtersToQueryString(filters), [filters])
 
 	useEffect(() => {
 		if (!enabled || !token) return
@@ -116,15 +157,42 @@ export function useAnalyticsStream(options: Options = {}): Status {
 					),
 				)
 			}
+			if (frame.salesOverview && !('error' in frame.salesOverview) && filters) {
+				const salesOverview = frame.salesOverview as SalesOverviewSummary
+				dispatch(
+					baseApi.util.updateQueryData(
+						'getSalesOverview' as never,
+						filters as never,
+						(() => salesOverview) as never,
+					),
+				)
+			}
+			if (frame.aiSpend && !('error' in frame.aiSpend) && filters) {
+				const aiSpend = frame.aiSpend as AiSpendSummary
+				dispatch(
+					baseApi.util.updateQueryData(
+						'getAiSpend' as never,
+						filters as never,
+						(() => aiSpend) as never,
+					),
+				)
+			}
 			onTick?.(frame)
 		}
 
 		const startFallbackPoll = () => {
 			if (pollTimer) return
 			pollTimer = setInterval(() => {
-				// Trigger a refetch on each of the two caches via tag
+				// Trigger a refetch on each of the live caches via tag
 				// invalidation. RTK Query dedupes concurrent requests.
-				dispatch(baseApi.util.invalidateTags(['QueueStats', 'ScannerHealth']))
+				dispatch(
+					baseApi.util.invalidateTags([
+						'QueueStats',
+						'ScannerHealth',
+						'SalesFeedback',
+						'AiSpend',
+					]),
+				)
 			}, fallbackPollMs)
 		}
 
@@ -141,7 +209,7 @@ export function useAnalyticsStream(options: Options = {}): Status {
 			stopFallbackPoll()
 			abortCtl = new AbortController()
 			try {
-				const res = await fetch(`${API_BASE_URL}/analytics/stream`, {
+				const res = await fetch(`${API_BASE_URL}/analytics/stream${queryString}`, {
 					method: 'GET',
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -218,7 +286,7 @@ export function useAnalyticsStream(options: Options = {}): Status {
 			stopFallbackPoll()
 			statusRef.current.connected = false
 		}
-	}, [enabled, token, dispatch, onTick, fallbackPollMs])
+	}, [enabled, token, dispatch, onTick, fallbackPollMs, queryString, filters])
 
 	return statusRef.current
 }
