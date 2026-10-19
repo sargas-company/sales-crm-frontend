@@ -62,6 +62,14 @@ export const backupsApi = baseApi.injectEndpoints({
 		>({
 			query: (id) => ({ url: `/backups/${id}/download`, method: 'GET' }),
 		}),
+		/* Human-triggered manual backup. Returns immediately — the UI
+		 * polls `listBackups` after this fires and watches for the new
+		 * `MANUAL` row (triggeredBy='manual-ui', startedAt >=
+		 * response.triggeredAt) to transition out of RUNNING. */
+		triggerBackup: builder.mutation<{ started: true; triggeredAt: string }, void>({
+			query: () => ({ url: '/backups/trigger', method: 'POST' }),
+			invalidatesTags: ['BackupRun'],
+		}),
 	}),
 })
 
@@ -70,4 +78,5 @@ export const {
 	useGetBackupSummaryQuery,
 	useGetBackupRunQuery,
 	useGetBackupDownloadUrlMutation,
+	useTriggerBackupMutation,
 } = backupsApi

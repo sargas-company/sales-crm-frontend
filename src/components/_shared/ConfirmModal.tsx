@@ -3,8 +3,20 @@ import styled, { keyframes } from 'styled-components'
 import Modal from '../modal/Modal'
 import useTheme from '../../theme/useTheme'
 
-export type ConfirmTone = 'danger' | 'success' | 'info' | 'warning' | 'primary'
-export type ConfirmColor = 'error' | 'success' | 'primary' | 'warning' | 'info'
+export type ConfirmTone =
+	| 'danger'
+	| 'success'
+	| 'info'
+	| 'warning'
+	| 'primary'
+	| 'orange'
+export type ConfirmColor =
+	| 'error'
+	| 'success'
+	| 'primary'
+	| 'warning'
+	| 'info'
+	| 'orange'
 
 interface Props {
 	icon: ReactNode
@@ -81,6 +93,15 @@ const toneMap: Record<ConfirmTone, TonePalette> = {
 		solidHover: 'rgb(2, 124, 192)',
 		solidShadow: 'rgba(3, 105, 161, 0.32)',
 	},
+	orange: {
+		bgLight: 'rgba(249, 115, 22, 0.12)',
+		bgDark: 'rgba(249, 115, 22, 0.20)',
+		fg: '#f97316',
+		ring: 'rgba(249, 115, 22, 0.22)',
+		solid: '#f97316',
+		solidHover: '#ea580c',
+		solidShadow: 'rgba(249, 115, 22, 0.32)',
+	},
 }
 
 const colorToTone: Record<ConfirmColor, ConfirmTone> = {
@@ -89,6 +110,7 @@ const colorToTone: Record<ConfirmColor, ConfirmTone> = {
 	primary: 'primary',
 	warning: 'warning',
 	info: 'info',
+	orange: 'orange',
 }
 
 const ConfirmModal = ({
