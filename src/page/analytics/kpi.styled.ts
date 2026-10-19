@@ -73,8 +73,8 @@ export const KpiCell = styled('div')`
 	position: relative;
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 22px 24px 24px;
+	gap: 8px;
+	padding: 16px 24px 18px;
 	border-right: 1px solid ${T.divider};
 
 	&:last-child {
@@ -120,14 +120,18 @@ export const KpiCell = styled('div')`
 		flex-shrink: 0;
 	}
 
+	/* Hero number scale shared with AiPipelinePanel's CounterValue.
+	 * KpiCell carries more vertical padding and a caption below, so
+	 * the same 38px font read visually bigger here — we drop to 34px
+	 * so the two panels feel like one family. */
 	.kpi-value {
 		display: inline-flex;
 		align-items: baseline;
 		gap: 3px;
-		font-size: 44px;
+		font-size: 34px;
 		font-weight: 700;
 		color: ${T.textStrong};
-		letter-spacing: -1.6px;
+		letter-spacing: -1.3px;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
 		font-feature-settings:
@@ -135,7 +139,7 @@ export const KpiCell = styled('div')`
 			'ss02' on;
 	}
 	.kpi-suffix {
-		font-size: 22px;
+		font-size: 18px;
 		font-weight: 600;
 		color: ${T.textSecondary};
 	}

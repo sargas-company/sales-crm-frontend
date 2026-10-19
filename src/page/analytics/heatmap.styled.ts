@@ -212,78 +212,124 @@ export const HeatmapLegend = styled('div')`
 	}
 `
 
+const termBlink = keyframes`
+	0%, 50% { opacity: 1; }
+	51%, 100% { opacity: 0; }
+`
+
+/**
+ * Recommendations block — paper-terminal look. Each recommendation
+ * renders as a monospace row (`TAG → VALUE  hint`). Tags share one
+ * accent colour; a traffic-light header + blinking cursor sell the
+ * terminal metaphor without screaming for attention.
+ */
 export const Recommendations = styled('div')`
 	margin-top: 20px;
 	padding-top: 18px;
 	border-top: 1px dashed rgba(15, 23, 42, 0.1);
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
 	animation: ${tooltipIn} 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 
-	.rec-title {
+	.rec-term {
+		border-radius: 12px;
+		overflow: hidden;
+		background: #fcfcfa;
+		border: 1px solid #e2e8f0;
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+	}
+	.rec-term-head {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 10px 14px;
+		background: #f1f5f9;
+		border-bottom: 1px solid #e2e8f0;
+	}
+	.rec-term-dots {
+		display: inline-flex;
+		gap: 6px;
+
+		em {
+			width: 10px;
+			height: 10px;
+			border-radius: 50%;
+			display: inline-block;
+			border: 1px solid rgba(15, 23, 42, 0.08);
+		}
+		.r {
+			background: #fca5a5;
+		}
+		.y {
+			background: #fcd34d;
+		}
+		.g {
+			background: #86efac;
+		}
+	}
+	.rec-term-title {
+		flex: 1;
+		text-align: center;
+		font-size: 11px;
+		color: #64748b;
+		letter-spacing: 0.4px;
+	}
+
+	.rec-term-body {
+		padding: 14px 18px 16px;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.rec-term-line {
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
-		font-size: 11.5px;
-		font-weight: 800;
 		color: #475569;
-		text-transform: uppercase;
-		letter-spacing: 0.6px;
+		font-size: 12.5px;
 	}
-	.rec-title::before {
-		content: '';
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		background: linear-gradient(135deg, #6366f1, #8b5cf6);
-		box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+	.rec-term-prompt {
+		color: #15803d;
+		font-weight: 700;
+	}
+	.rec-term-cmd {
+		color: #0f172a;
+	}
+	.rec-term-cursor {
+		width: 7px;
+		height: 14px;
+		background: #475569;
+		animation: ${termBlink} 1s steps(2) infinite;
 	}
 
-	.rec-grid {
+	.rec-term-row {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-		gap: 10px;
+		grid-template-columns: 160px 20px auto 1fr;
+		align-items: baseline;
+		gap: 12px;
+		font-size: 12.5px;
+		padding: 3px 0;
 	}
-
-	.rec-card {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-		padding: 18px 20px;
-		border-radius: 14px;
-		background: #ffffff;
-		border: 1px solid #eef1f6;
-		border-left: 4px solid #0369a1;
-		transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-		min-width: 0;
-	}
-	.rec-card:hover {
-		transform: translateY(-1px);
-		box-shadow: 0 8px 20px -12px rgba(15, 23, 42, 0.14);
-	}
-
-	.rec-label {
-		font-size: 10.5px;
-		font-weight: 800;
-		text-transform: uppercase;
+	.rec-term-tag {
+		font-weight: 700;
 		letter-spacing: 0.6px;
 		color: #0369a1;
 	}
-
-	.rec-primary {
-		font-size: 17px;
-		font-weight: 800;
-		color: #0f172a;
-		letter-spacing: -0.3px;
-		line-height: 1.2;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
+	.rec-term-arrow {
+		color: #94a3b8;
 	}
-	.rec-hint {
-		font-size: 12px;
+	.rec-term-val {
+		color: #0f172a;
+		font-weight: 700;
+	}
+	.rec-term-hint {
 		color: #64748b;
-		font-weight: 500;
+		font-size: 11.5px;
+		white-space: nowrap;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.rec-term-cursor {
+			animation: none;
+		}
 	}
 `

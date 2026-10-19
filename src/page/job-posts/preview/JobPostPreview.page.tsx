@@ -175,44 +175,6 @@ const priorityLabel: Record<JobPostPriority, string> = {
 	low: 'Low priority',
 }
 
-/* Hardcoded AI output so Description / AI analysis styles can be
- * worked on independently of the real pipeline. Replace with live
- * `post.aiResponse` once styling is finalised. */
-const HARDCODED_AI = {
-	short_summary: `**Strong fit — recommend applying.** The client profile is clean (**Top Rated Plus · 92**, 4.92 rating across 48 reviews) and the asked-for stack lines up head-on with our Stripe + queue specialisation.
-
-### Why it matches
-
-- Stripe + ERP integration is one of our highest-performing niches.
-- EU client, payment verified, 54 past hires at **4.92★** — low delivery risk.
-- Sane engagement shape: **25–30 hrs/week**, 3-month minimum, long-term intent.
-
-### Watch-outs
-
-- The *"SAP B1 nice-to-have"* wording could expand into a hard requirement mid-engagement. Pin scope in the proposal.
-- Legacy ERP integrations are harder to estimate — buffer the first sprint.
-
-### Positioning
-
-Lead with a concrete **Stripe webhook replay** quick-win inside sprint 1, and defer SAP B1 to a separately scoped follow-up SOW.`,
-	hard_stop: false,
-	hard_stop_reason: '',
-	subscores: {
-		scope_clarity: 85,
-		tech_fit: 92,
-		client_quality: 90,
-		budget_fit: 70,
-	},
-	reasons: [
-		'Stripe + ERP integration work matches our top-performing specialisation.',
-		'EU client with payment verified and 54 past hires at 4.92★ — low delivery risk.',
-		'Long-term engagement with a sane weekly cap (25–30 hrs/week).',
-	],
-	red_flags: [
-		'“SAP B1 nice-to-have” wording may expand into a required scope mid-engagement.',
-	],
-}
-
 const scoreTone = (score: number): { fg: string; soft: string } => {
 	if (score >= 80) return { fg: EMERALD, soft: EMERALD_SOFT }
 	if (score >= 50) return { fg: AMBER, soft: AMBER_SOFT }
@@ -711,10 +673,10 @@ const JobPostPreview = () => {
 		)
 	}
 
-	/* Temporarily use hardcoded AI content while we iterate on styles.
-	 * Swap back to `post.aiResponse` once the layout is settled. */
-	const ai = HARDCODED_AI
-	void post.aiResponse
+	/* Real evaluator output from the AI pipeline. `null` when the
+	 * post hasn't been scored yet (NEW / PROCESSING) — the AI tab
+	 * shows a "pending" empty state in that case. */
+	const ai = post.aiResponse ?? null
 
 	const description = (() => {
 		if (typeof post.rawPayload === 'object' && post.rawPayload !== null) {
@@ -1023,36 +985,61 @@ const JobPostPreview = () => {
 							</OrangeTab>
 						</OrangeTabs>
 
-						<ContentFade key={leftTab}>
-							{leftTab === 'description' ? (
-								description ? (
-									<RawCard>
-										<RawIcon>
-											<NotesOutlined />
-										</RawIcon>
-										<RawBody>{description}</RawBody>
-									</RawCard>
-								) : (
-									<EmptyNote>No description from Upwork.</EmptyNote>
-								)
-							) : (
-								<>
-									<AiMarkdown>
-										<ReactMarkdown remarkPlugins={[remarkGfm]}>
-											{ai.short_summary}
-										</ReactMarkdown>
-									</AiMarkdown>
-									{ai.hard_stop ? (
-										<HardStop>
-											<WarningAmberOutlined sx={{ fontSize: 16 }} />
+						<DocLift>
+							<DocChip $tab={leftTab}>
+								{leftTab === 'description' ? 'Description' : 'AI Summary'}
+							</DocChip>
+							<DocSlide key={leftTab}>
+								{leftTab === 'description' ? (
+									description ? (
+										<RawCard>
+											<RawIcon>
+												<NotesOutlined />
+											</RawIcon>
+											<RawBody>{description}</RawBody>
+										</RawCard>
+									) : (
+										<EmptyPane $tone='ink'>
+											<EmptyBubble>
+												<NotesOutlined />
+											</EmptyBubble>
+											<strong>No description from Upwork</strong>
 											<span>
-												Hard stop{ai.hard_stop_reason ? ` — ${ai.hard_stop_reason}` : ''}
+												This post arrived without a body — the scanner only captured
+												the title and metadata.
 											</span>
-										</HardStop>
-									) : null}
-								</>
-							)}
-						</ContentFade>
+										</EmptyPane>
+									)
+								) : ai && ai.short_summary ? (
+									<>
+										<AiMarkdown>
+											<ReactMarkdown remarkPlugins={[remarkGfm]}>
+												{ai.short_summary}
+											</ReactMarkdown>
+										</AiMarkdown>
+										{ai.hard_stop ? (
+											<HardStop>
+												<WarningAmberOutlined sx={{ fontSize: 16 }} />
+												<span>
+													Hard stop{ai.hard_stop_reason ? ` — ${ai.hard_stop_reason}` : ''}
+												</span>
+											</HardStop>
+										) : null}
+									</>
+								) : (
+									<EmptyPane $tone='accent'>
+										<EmptyBubble>
+											<AutoAwesomeOutlined />
+										</EmptyBubble>
+										<strong>AI evaluation pending</strong>
+										<span>
+											Claude hasn&apos;t scored this post yet — it&apos;s either in the
+											queue or still processing. Check back in a minute.
+										</span>
+									</EmptyPane>
+								)}
+							</DocSlide>
+						</DocLift>
 					</LeftCol>
 
 					<RightCol>
@@ -1754,10 +1741,10 @@ const ScoreBlock = styled.div`
 
 const ScoreNum = styled.div`
 	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-	font-size: 32px;
+	font-size: 28px;
 	font-weight: 700;
 	line-height: 1;
-	letter-spacing: -1px;
+	letter-spacing: -0.8px;
 	font-variant-numeric: tabular-nums;
 
 	.slash {
@@ -1903,7 +1890,6 @@ const LeftCol = styled.div`
 	flex-direction: column;
 	gap: 32px;
 	min-width: 0;
-	max-width: 72ch;
 `
 
 const RightCol = styled.aside`
@@ -2073,21 +2059,107 @@ const OrangeTab = styled.button`
 	}
 `
 
-/* Smooth fade+slide when the active tab's content swaps in.
- * Keyed by the parent on tab change so React remounts the block. */
-const contentIn = keyframes`
-	from { opacity: 0; transform: translateY(6px); }
-	to   { opacity: 1; transform: translateY(0); }
+/* Document-lift wrapper for the Description / AI content.
+ * - Crisp white card with a 2-layer soft shadow (reads as a lifted
+ *   sheet of paper), 32px padding so prose breathes.
+ * - A pill chip pokes out of the top-right corner labelling the
+ *   active tab; it swaps colour between Description (ink) and AI
+ *   (accent orange) so you can tell at a glance which pane is live.
+ * - Content slides in from the right on tab change (keyed on tab),
+ *   giving a tactile "page turn" micro-interaction. */
+const slideSwap = keyframes`
+	from { opacity: 0; transform: translateX(8px); }
+	to   { opacity: 1; transform: translateX(0); }
 `
 
-const ContentFade = styled.div`
-	animation: ${contentIn} 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+const DocLift = styled.div`
+	position: relative;
+	background: #ffffff;
+	border: 1px solid rgba(15, 23, 42, 0.1);
+	border-radius: 14px;
+	padding: 32px;
+`
+
+const DocChip = styled.span<{ $tab: 'description' | 'ai' }>`
+	position: absolute;
+	top: -10px;
+	right: 20px;
+	padding: 5px 12px;
+	border-radius: 999px;
+	font-size: 10.5px;
+	font-weight: 800;
+	letter-spacing: 1.1px;
+	text-transform: uppercase;
+	background: ${(p) => (p.$tab === 'ai' ? ACCENT : INK)};
+	color: #ffffff;
+	transition: background 240ms cubic-bezier(0.22, 1, 0.36, 1);
+`
+
+const DocSlide = styled.div`
+	animation: ${slideSwap} 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
 
 	@media (prefers-reduced-motion: reduce) {
 		animation: none;
+	}
+`
+
+/* Empty-state block shared by Description-missing and AI-pending.
+ * Keeps the DocLift card from feeling hollow when there's nothing to
+ * show: centered icon-in-bubble, a bold title, a one-line hint. Tone
+ * flips the bubble's ink colour between the two tabs so the empty
+ * state echoes the DocChip above it. */
+const EmptyPane = styled.div<{ $tone: 'ink' | 'accent' }>`
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	padding: 44px 24px 48px;
+	text-align: center;
+	max-width: 420px;
+	margin: 0 auto;
+	color: ${INK};
+
+	strong {
+		font-size: 15px;
+		font-weight: 800;
+		letter-spacing: -0.1px;
+		color: ${INK};
+		margin-top: 6px;
+	}
+	span {
+		font-size: 13px;
+		font-weight: 400;
+		line-height: 1.55;
+		color: ${INK_60};
+	}
+
+	${(p) =>
+		p.$tone === 'ink'
+			? `
+		--empty-fg: ${INK};
+		--empty-bg: ${INK_06};
+	`
+			: `
+		--empty-fg: ${ACCENT};
+		--empty-bg: ${INK_06};
+	`}
+`
+
+const EmptyBubble = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 64px;
+	height: 64px;
+	border-radius: 50%;
+	background: var(--empty-bg);
+	color: var(--empty-fg);
+
+	svg {
+		font-size: 32px;
 	}
 `
 
@@ -2650,22 +2722,22 @@ const JobBudgetBig = styled.div`
 	gap: 6px;
 	margin-top: 6px;
 	line-height: 1.05;
-	letter-spacing: -1px;
+	letter-spacing: -0.8px;
 	color: #fff;
 	font-variant-numeric: tabular-nums;
 
 	.amount {
-		font-size: 36px;
+		font-size: 30px;
 		font-weight: 800;
 	}
 	.unit {
-		font-size: 15px;
+		font-size: 14px;
 		font-weight: 500;
 		color: rgba(255, 255, 255, 0.72);
 	}
 
 	@container (max-width: 300px) {
-		.amount { font-size: 30px; }
+		.amount { font-size: 26px; }
 	}
 `
 
@@ -2929,9 +3001,9 @@ const DarkStatValue = styled.div`
 	display: inline-flex;
 	align-items: baseline;
 	gap: 2px;
-	font-size: 34px;
+	font-size: 28px;
 	font-weight: 800;
-	letter-spacing: -1px;
+	letter-spacing: -0.8px;
 	line-height: 1.05;
 	color: #fff;
 	font-variant-numeric: tabular-nums;
@@ -3785,7 +3857,7 @@ const ScoreBigRow = styled.div`
 
 const ScoreBigNum = styled.span`
 	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-	font-size: 44px;
+	font-size: 36px;
 	font-weight: 800;
 	letter-spacing: -0.03em;
 `
@@ -3807,7 +3879,7 @@ const BudgetBigRow = styled.div`
 `
 
 const BudgetBigNum = styled.span`
-	font-size: 30px;
+	font-size: 26px;
 	font-weight: 800;
 	letter-spacing: -0.025em;
 `

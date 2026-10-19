@@ -540,15 +540,35 @@ const OpportunityHeatmap = () => {
 						</HeatmapLegend>
 						{recommendations.length > 0 && (
 							<Recommendations>
-								<div className='rec-title'>Recommendations</div>
-								<div className='rec-grid'>
-									{recommendations.map((r) => (
-										<div key={r.key} className={`rec-card tone-${r.tone}`}>
-											<span className='rec-label'>{r.label}</span>
-											<span className='rec-primary'>{r.primary}</span>
-											<span className='rec-hint'>{r.hint}</span>
+								<div className='rec-term'>
+									<div className='rec-term-head'>
+										<span className='rec-term-dots'>
+											<em className='r' />
+											<em className='y' />
+											<em className='g' />
+										</span>
+										<span className='rec-term-title'>intake-advisor ~ sales</span>
+									</div>
+									<div className='rec-term-body'>
+										<div className='rec-term-line'>
+											<span className='rec-term-prompt'>$</span>
+											<span className='rec-term-cmd'>intake-advisor --today</span>
 										</div>
-									))}
+										{recommendations.map((r) => (
+											<div key={r.key} className='rec-term-row'>
+												<span className='rec-term-tag'>
+													{r.label.toUpperCase().replace(/\s/g, '_')}
+												</span>
+												<span className='rec-term-arrow'>→</span>
+												<span className='rec-term-val'>{r.primary}</span>
+												<span className='rec-term-hint'>{r.hint}</span>
+											</div>
+										))}
+										<div className='rec-term-line'>
+											<span className='rec-term-prompt'>$</span>
+											<span className='rec-term-cursor' />
+										</div>
+									</div>
 								</div>
 							</Recommendations>
 						)}

@@ -218,16 +218,18 @@ const HeroBody = ({
 			</span>
 			<span className='hw-unit'>{unit}</span>
 			{trend !== undefined && trend !== null && (
-				<span
-					className={`hw-trend ${
-						trend > 0 ? 'up' : trend < 0 ? 'down' : 'flat'
-					}`}
-				>
-					<span className='hw-trend-arrow' aria-hidden='true'>
-						{trend > 0 ? '↑' : trend < 0 ? '↓' : '·'}
+				<span className='hw-trend-stack'>
+					<span
+						className={`hw-trend ${
+							trend > 0 ? 'up' : trend < 0 ? 'down' : 'flat'
+						}`}
+					>
+						<span className='hw-trend-arrow' aria-hidden='true'>
+							{trend > 0 ? '↑' : trend < 0 ? '↓' : '·'}
+						</span>
+						{Math.abs(trend)}%
 					</span>
-					{Math.abs(trend)}%
-					{trendTag && <small>{trendTag}</small>}
+					{trendTag && <span className='hw-trend-tag'>{trendTag}</span>}
 				</span>
 			)}
 		</div>
@@ -393,22 +395,27 @@ const PercentBar = ({
 }: {
 	pct: number | null
 	caption: string
-}) => (
-	<div className='hw-pct' aria-hidden='true'>
-		<div className='hw-pct-num'>
-			{pct == null ? '—' : pct}
-			{pct != null && <span className='hw-pct-sign'>%</span>}
-			<span className='hw-pct-caption'>{caption}</span>
+}) => {
+	const empty = pct == null
+	return (
+		<div className='hw-pct' aria-hidden='true'>
+			<div className={`hw-pct-num${empty ? ' hw-pct-num--empty' : ''}`}>
+				{empty ? <span className='hw-pct-empty-dash'>—</span> : pct}
+				{!empty && <span className='hw-pct-sign'>%</span>}
+				<span className='hw-pct-caption'>{caption}</span>
+			</div>
+			<div className='hw-pct-track'>
+				{!empty && (
+					<span
+						className='hw-pct-fill'
+						style={{ width: `${Math.max(4, pct as number)}%` }}
+					>
+						<span className='hw-pct-shine' />
+					</span>
+				)}
+			</div>
 		</div>
-		<div className='hw-pct-track'>
-			<span
-				className='hw-pct-fill'
-				style={{ width: `${pct == null ? 4 : Math.max(4, pct)}%`, opacity: pct == null ? 0.3 : 1 }}
-			>
-				<span className='hw-pct-shine' />
-			</span>
-		</div>
-	</div>
-)
+	)
+}
 
 export default ScannerStatusCard

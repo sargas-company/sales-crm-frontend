@@ -416,15 +416,15 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 		flex-wrap: wrap;
 	}
 	.hw-num {
-		font-size: 46px;
-		font-weight: 800;
+		font-size: 34px;
+		font-weight: 700;
 		color: ${T.textStrong};
-		letter-spacing: -1.6px;
+		letter-spacing: -1.3px;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
 	}
 	.hw-unit {
-		font-size: 14px;
+		font-size: 13px;
 		font-weight: 700;
 		color: ${T.textStrong};
 		opacity: 0.75;
@@ -436,29 +436,38 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 		letter-spacing: 0.1px;
 	}
 
+	/* Stack of [pill above] + [tag caption below], pinned to the
+	 * top-right of the tile so the pill's top edge lines up with the
+	 * LAST HOUR label, not the number below it. */
+	.hw-trend-stack {
+		position: absolute;
+		top: 0;
+		right: 0;
+		display: inline-flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 3px;
+	}
 	.hw-trend {
 		display: inline-flex;
 		align-items: center;
-		gap: 2px;
+		gap: 3px;
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-size: 13px;
+		font-weight: 800;
+		padding: 3px 10px;
+		border-radius: 999px;
+		letter-spacing: 0.2px;
+	}
+	.hw-trend-tag {
 		font-family: 'JetBrains Mono', ui-monospace, monospace;
 		font-size: 10.5px;
-		font-weight: 700;
-		padding: 2px 7px;
-		border-radius: 999px;
-		margin-left: auto;
+		font-weight: 500;
+		color: #64748b;
 		letter-spacing: 0.2px;
-		align-self: center;
-
-		small {
-			font-family: inherit;
-			font-size: 9.5px;
-			font-weight: 500;
-			opacity: 0.75;
-			margin-left: 4px;
-		}
 	}
 	.hw-trend-arrow {
-		font-size: 12px;
+		font-size: 13px;
 		line-height: 1;
 	}
 	.hw-trend.up {
@@ -511,10 +520,10 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 	}
 	.hw-day-time {
 		align-self: center;
-		font-size: 28px;
+		font-size: 23px;
 		font-weight: 700;
 		color: ${T.textStrong};
-		letter-spacing: -0.9px;
+		letter-spacing: -0.6px;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
 		display: inline-flex;
@@ -620,29 +629,39 @@ export const WebhookCard = styled('div')<{ state: ScannerVisualState }>`
 	}
 	.hw-pct-num {
 		align-self: flex-start;
-		font-size: 28px;
-		font-weight: 800;
+		font-size: 23px;
+		font-weight: 700;
 		color: ${T.textStrong};
-		letter-spacing: -0.9px;
+		letter-spacing: -0.6px;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
 		display: inline-flex;
-		align-items: center;
+		align-items: baseline;
 		gap: 2px;
 	}
+	.hw-pct-num--empty {
+		align-items: center;
+	}
+	.hw-pct-empty-dash {
+		font-size: 15px;
+		font-weight: 500;
+		color: ${T.textStrong};
+		opacity: 0.35;
+		letter-spacing: 0;
+		line-height: 1;
+	}
 	.hw-pct-sign {
-		font-size: 16px;
+		font-size: 14px;
 		font-weight: 700;
 		color: ${T.textStrong};
 		opacity: 0.75;
-		margin-right: 8px;
 	}
 	.hw-pct-caption {
 		font-size: 13px;
 		font-weight: 400;
 		color: ${T.textStrong};
 		letter-spacing: 0;
-		align-self: center;
+		margin-left: 10px;
 	}
 	.hw-pct-track {
 		position: relative;
