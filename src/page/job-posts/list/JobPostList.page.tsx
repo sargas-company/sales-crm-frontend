@@ -14,7 +14,7 @@ import {
 	ReplayRounded,
 	StarRounded,
 	VerifiedRounded,
-	PlaceRounded,
+	LocationOnOutlined,
 } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
 import {
@@ -22,6 +22,7 @@ import {
 	countryDisplayName,
 	flagEmoji,
 	formatLocation,
+	locationFlag,
 } from '../../../utils/location'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import {
@@ -937,6 +938,13 @@ const JobPostList = () => {
 					location: r.location,
 				})
 				if (!label) return <Muted>—</Muted>
+				/* Resolve flag from the normalised country field first,
+				 * then fall back to parsing the free-text location — same
+				 * precedence Leads / Clients tables use. `locationFlag`
+				 * handles ISO-2 codes AND common informal aliases
+				 * (UK → GB, USA → US, etc.) so we route everything
+				 * through it instead of calling `flagEmoji` directly. */
+				const flag = locationFlag(r.country) || locationFlag(r.location)
 				/* Split on the first comma so City renders in strong
 				 * ink and Country stays muted — two-tier hierarchy
 				 * makes the cell scannable without inflating font-size. */
@@ -945,7 +953,13 @@ const JobPostList = () => {
 				const tail = comma >= 0 ? label.slice(comma + 1).trim() : null
 				return (
 					<LocationCell>
-						<PlaceRounded className='pin' />
+						<span className='pin'>
+							{flag ? (
+								<span className='flag'>{flag}</span>
+							) : (
+								<LocationOnOutlined />
+							)}
+						</span>
 						<span className='head'>{head}</span>
 						{tail ? <span className='tail'>, {tail}</span> : null}
 					</LocationCell>
@@ -2146,22 +2160,40 @@ const StatusPill = styled.span<{ $status: string }>`
 	}};
 `
 
-/* Two-tier location cell: a muted pin glyph, then the city in
- * strong ink, then ", country" in secondary ink. Regular weight
- * on both tiers, hierarchy carried by colour alone. */
+/* Two-tier location cell: a country-flag badge (same shape and
+ * palette as Leads / Clients tables), then the city in strong ink,
+ * then ", country" in secondary ink. When the country cannot be
+ * resolved the badge falls back to a muted pin icon. */
 const LocationCell = styled.span`
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	gap: 8px;
 	font-size: 14.5px;
 	line-height: 1.3;
 	max-width: 100%;
 	min-width: 0;
 
 	.pin {
-		font-size: 19px !important;
-		color: #e85d2f;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		border-radius: 5px;
+		background: rgba(15, 23, 42, 0.04);
+		color: rgba(15, 23, 42, 0.55);
 		flex-shrink: 0;
+
+		svg {
+			font-size: 16px;
+		}
+	}
+	.flag {
+		font-size: 18px;
+		line-height: 1;
+		/* Reset color so emoji renders at its native, full-colour
+		   palette — same look as the Leads / Clients flag badge. */
+		color: initial;
 	}
 	.head {
 		font-weight: 400;

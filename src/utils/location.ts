@@ -162,10 +162,44 @@ export const COUNTRIES: CountryEntry[] = Object.entries(COUNTRY_NAMES)
 
 /* Reverse name → ISO2 lookup (lowercased) built once. Used by
  * `locationFlag` so a free-text "City, Germany" cell can still
- * resolve to the German flag. */
-const COUNTRY_NAMES_BY_LOWER: Record<string, string> = Object.fromEntries(
-	COUNTRIES.map((c) => [c.name.toLowerCase(), c.iso2]),
-)
+ * resolve to the German flag. Includes a small alias set for the
+ * common informal names users and scrapers emit — most importantly
+ * the UK, which is `GB` in ISO 3166-1 but almost never typed that
+ * way in free text. */
+const COUNTRY_ALIAS_LOWER: Record<string, string> = {
+	uk: 'GB',
+	'u.k.': 'GB',
+	'u.k': 'GB',
+	britain: 'GB',
+	'great britain': 'GB',
+	'united kingdom of great britain and northern ireland': 'GB',
+	england: 'GB',
+	scotland: 'GB',
+	wales: 'GB',
+	'northern ireland': 'GB',
+	usa: 'US',
+	'u.s.': 'US',
+	'u.s.a.': 'US',
+	'united states of america': 'US',
+	america: 'US',
+	uae: 'AE',
+	'u.a.e.': 'AE',
+	russia: 'RU',
+	'south korea': 'KR',
+	'north korea': 'KP',
+	'ivory coast': 'CI',
+	'czech republic': 'CZ',
+	czechia: 'CZ',
+	burma: 'MM',
+	'cape verde': 'CV',
+	swaziland: 'SZ',
+	'east timor': 'TL',
+}
+
+const COUNTRY_NAMES_BY_LOWER: Record<string, string> = {
+	...Object.fromEntries(COUNTRIES.map((c) => [c.name.toLowerCase(), c.iso2])),
+	...COUNTRY_ALIAS_LOWER,
+}
 
 /**
  * Resolve a flag emoji for a free-text location string that stores
@@ -186,12 +220,17 @@ export function locationFlag(raw: string | null | undefined): string {
 		.filter(Boolean)
 		.pop()
 	if (!tail) return ''
-	// ISO2 fast path.
+	// Alias / name path takes priority over ISO2 — otherwise free-text
+	// "UK" would be rendered as the invalid U+K regional-indicator
+	// pair rather than resolving to the GB flag.
+	const aliasMatch = COUNTRY_NAMES_BY_LOWER[tail.toLowerCase()]
+	if (aliasMatch) return flagEmoji(aliasMatch)
+	// ISO2 fast path (only for genuine ISO codes that didn't match an
+	// alias above).
 	if (tail.length === 2 && /^[A-Za-z]{2}$/.test(tail)) {
 		return flagEmoji(tail.toUpperCase())
 	}
-	const iso2 = COUNTRY_NAMES_BY_LOWER[tail.toLowerCase()]
-	return iso2 ? flagEmoji(iso2) : ''
+	return ''
 }
 
 export function formatLocation(input: {
