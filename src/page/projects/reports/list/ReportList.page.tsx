@@ -37,6 +37,7 @@ import {
 	useBulkDeleteProjectReportsMutation,
 } from '../../../../store/project-reports/projectReportsApi'
 import { formatDate } from '../../../../utils/format'
+import { formatDateTimeSec } from '../../../../utils/formatDate'
 import useDebouncedValue from '../../../../hooks/useDebouncedValue'
 
 const PAGE_SIZE = 20
@@ -144,12 +145,25 @@ const ReportList = () => {
 	const columns: DataTableColumn<ProjectReportItem>[] = [
 		{
 			key: 'reportDate',
-			label: 'Date',
+			label: 'Report date',
 			minWidth: 130,
 			sortable: true,
 			sortValue: (r) => new Date(r.reportDate),
 			render: (r) => <DateCell>{formatDate(r.reportDate, 'short')}</DateCell>,
 			skeleton: () => <TableSkeleton $w='80px' $h='14px' />,
+		},
+		{
+			/* When the row was actually inserted into the DB — distinct
+			 * from `reportDate`, which is the business day the report
+			 * covers. Shows date + time so backdated / late submissions
+			 * are visible at a glance. */
+			key: 'createdAt',
+			label: 'Created',
+			minWidth: 170,
+			sortable: true,
+			sortValue: (r) => new Date(r.createdAt),
+			render: (r) => <DateCell>{formatDateTimeSec(r.createdAt)}</DateCell>,
+			skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
 		},
 		{
 			// Project column links to /projects/:id and shrinks to content.
@@ -171,9 +185,9 @@ const ReportList = () => {
 			skeleton: () => <TableSkeleton $w='150px' $h='13px' />,
 		},
 		{
-			// Source badge replaces the old Author column — the report
-			// is a project-day record, not an authored one. The badge
-			// surfaces where the row was filed (CRM UI vs. /report).
+			// Source badge — surfaces where the row was filed
+			// (CRM UI vs. Discord `/report`). Orthogonal to the Discord
+			// column (which shows delivery outcome, not origin).
 			key: 'source',
 			label: 'Source',
 			sortable: true,
@@ -189,6 +203,18 @@ const ReportList = () => {
 			skeleton: () => <TableSkeleton $w='70px' $h='18px' />,
 		},
 		{
+			/* Backend-computed Discord-delivery status. Covers two paths:
+			 * `late` — per-report ping (LATE_REPORT:<id>); `digest` —
+			 * included in the 19:00 daily digest. The pill colour maps
+			 * strictly to `deliveryStatus`; the tooltip adds the `via`
+			 * context so a hover tells you WHICH path. */
+			key: 'delivery',
+			label: 'Discord',
+			minWidth: 110,
+			render: (r) => <DeliveryPillCell row={r} />,
+			skeleton: () => <TableSkeleton $w='78px' $h='22px' />,
+		},
+		{
 			key: 'hours',
 			label: 'Hours',
 			minWidth: 80,
@@ -201,13 +227,6 @@ const ReportList = () => {
 				</HoursPill>
 			),
 			skeleton: () => <TableSkeleton $w='48px' $h='22px' />,
-		},
-		{
-			key: 'content',
-			label: 'Summary',
-			minWidth: 260,
-			render: (r) => <Preview>{r.content}</Preview>,
-			skeleton: () => <TableSkeleton $w='240px' $h='13px' />,
 		},
 		{
 			key: 'actions',
@@ -487,12 +506,71 @@ const HoursUnit = styled.span`
 	opacity: 0.6;
 `
 
-const Preview = styled.span`
-	font-size: 13px;
-	color: ${T.textSecondary};
-	line-height: 1.4;
-	display: -webkit-box;
-	-webkit-line-clamp: 2;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
+/* ─── Delivery status pill ──────────────────────────────────── */
+
+const DELIVERY_LABELS: Record<
+	NonNullable<ProjectReportItem['deliveryStatus']>,
+	string
+> = {
+	sent: 'Sent',
+	pending: 'Pending',
+	failed: 'Failed',
+	none: 'Not sent',
+}
+
+const DELIVERY_TONES: Record<
+	NonNullable<ProjectReportItem['deliveryStatus']>,
+	{ bg: string; fg: string }
+> = {
+	sent: { bg: 'rgba(16, 185, 129, 0.12)', fg: '#047857' },
+	pending: { bg: 'rgba(234, 179, 8, 0.14)', fg: '#a16207' },
+	failed: { bg: 'rgba(239, 68, 68, 0.12)', fg: '#b91c1c' },
+	none: { bg: 'rgba(15, 23, 42, 0.06)', fg: 'rgba(15, 23, 42, 0.55)' },
+}
+
+const deliveryTooltip = (
+	via: ProjectReportItem['deliveryVia'],
+	status: ProjectReportItem['deliveryStatus'],
+): string => {
+	if (!status || status === 'none') {
+		return 'No Discord delivery for this report'
+	}
+	const route = via === 'late' ? 'Late report ping' : via === 'digest' ? 'Daily digest' : 'Unknown route'
+	const outcome =
+		status === 'sent'
+			? 'delivered'
+			: status === 'pending'
+				? 'awaiting delivery'
+				: 'failed to deliver'
+	return `${route} — ${outcome}`
+}
+
+const DeliveryPillCell = ({ row }: { row: ProjectReportItem }) => {
+	const status: ProjectReportItem['deliveryStatus'] =
+		row.deliveryStatus ?? 'none'
+	const tone = DELIVERY_TONES[status]
+	return (
+		<DeliveryPill
+			title={deliveryTooltip(row.deliveryVia, status)}
+			$bg={tone.bg}
+			$fg={tone.fg}
+		>
+			{DELIVERY_LABELS[status]}
+		</DeliveryPill>
+	)
+}
+
+const DeliveryPill = styled.span<{ $bg: string; $fg: string }>`
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
+	border-radius: 999px;
+	background: ${(p) => p.$bg};
+	color: ${(p) => p.$fg};
+	font-size: 11.5px;
+	font-weight: 700;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
 `

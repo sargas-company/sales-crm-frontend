@@ -1,6 +1,18 @@
 import { baseApi } from '../../api/baseApi'
 
 export type EmployeeStatus = 'active' | 'inactive'
+export type EmployeeRateType = 'HOURLY' | 'MONTHLY'
+
+/** Current compensation rate as surfaced by the list endpoint. One
+ *  row max — the most recent EmployeeCompensationRate whose
+ *  effectiveDate has already arrived. `rate` is a decimal string
+ *  (Prisma Decimal serialises to string); callers that need a number
+ *  should parse it client-side. */
+export interface EmployeeCurrentRate {
+	rate: string
+	rateType: EmployeeRateType
+	effectiveDate: string
+}
 
 export interface EmployeeItem {
 	id: string
@@ -21,6 +33,8 @@ export interface EmployeeItem {
 	dateOfBirth: string | null
 	createdAt: string
 	updatedAt: string
+	/** 0 or 1 element. Empty array ⇒ no current salary set, render 0. */
+	compensationRates?: EmployeeCurrentRate[]
 }
 
 export interface EmployeePage {

@@ -39,6 +39,43 @@ const initials = (first: string, last: string) => {
 
 const fullName = (e: EmployeeItem) => `${e.firstName} ${e.lastName}`.trim() || '—'
 
+/** `12 Oct` style — day + short month, no year. Em-dash when null. */
+const formatBirthday = (iso: string | null | undefined): string => {
+	if (!iso) return '—'
+	const d = new Date(iso)
+	if (Number.isNaN(d.getTime())) return '—'
+	return d.toLocaleDateString('en-GB', {
+		day: 'numeric',
+		month: 'short',
+		timeZone: 'UTC',
+	})
+}
+
+/** `$X,XXX /mo` or `$X.XX /h`. Returns `$0` with no suffix when
+ *  the employee has no current compensation rate — matches the owner's
+ *  spec that an empty review history reads as zero. */
+const SalaryCell = ({ row }: { row: EmployeeItem }) => {
+	const current = row.compensationRates?.[0]
+	if (!current) {
+		return <SalaryText $muted>$0</SalaryText>
+	}
+	const value = Number.parseFloat(current.rate)
+	const amount = Number.isFinite(value) ? value : 0
+	const isMonthly = current.rateType === 'MONTHLY'
+	const formatted = amount.toLocaleString('en-US', {
+		style: 'currency',
+		currency: 'USD',
+		minimumFractionDigits: isMonthly ? 0 : 2,
+		maximumFractionDigits: isMonthly ? 0 : 2,
+	})
+	return (
+		<SalaryText>
+			{formatted}
+			<SalarySuffix> /{isMonthly ? 'mo' : 'h'}</SalarySuffix>
+		</SalaryText>
+	)
+}
+
 const EmployeeList = () => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
@@ -92,15 +129,6 @@ const EmployeeList = () => {
 			),
 		},
 		{
-			// Email in its own column; also shrinks to content.
-			key: 'email',
-			label: 'Email',
-			sortable: true,
-			sortValue: (e) => e.email,
-			render: (e) => <EmailCell>{e.email}</EmailCell>,
-			skeleton: () => <TableSkeleton $w='180px' $h='13px' />,
-		},
-		{
 			key: 'positions',
 			label: 'Positions',
 			minWidth: 220,
@@ -133,6 +161,27 @@ const EmployeeList = () => {
 			sortable: true,
 			sortValue: (e) => (e.hiredAt ? new Date(e.hiredAt) : new Date(0)),
 			render: (e) => <Sub>{e.hiredAt ? formatDate(e.hiredAt, 'short') : '—'}</Sub>,
+			skeleton: () => <TableSkeleton $w='80px' $h='13px' />,
+		},
+		{
+			/* Day + month only — the year is stored for display elsewhere
+			 * but not surfaced on the list (keeps the column terse and
+			 * drops a soft PII tier for a glanceable screen). Fallback
+			 * em-dash when the row is missing a date of birth. */
+			key: 'dateOfBirth',
+			label: 'Birthday',
+			minWidth: 110,
+			render: (e) => <Sub>{formatBirthday(e.dateOfBirth)}</Sub>,
+			skeleton: () => <TableSkeleton $w='70px' $h='13px' />,
+		},
+		{
+			/* Current salary = latest EmployeeCompensationRate whose
+			 * effectiveDate has arrived. Empty array ⇒ render 0 per
+			 * owner's spec. Suffix (/mo vs /h) comes from rateType. */
+			key: 'salary',
+			label: 'Salary',
+			minWidth: 120,
+			render: (e) => <SalaryCell row={e} />,
 			skeleton: () => <TableSkeleton $w='80px' $h='13px' />,
 		},
 		{
@@ -281,12 +330,6 @@ const NameText = styled.div`
 	white-space: nowrap;
 `
 
-const EmailCell = styled.span`
-	font-size: 13.5px;
-	color: ${T.textSecondary};
-	white-space: nowrap;
-`
-
 const Sub = styled.span`
 	font-size: 12.5px;
 	color: ${T.textSecondary};
@@ -324,4 +367,20 @@ const StatusPill = styled.span<{ $status: string }>`
 	background: ${({ $status }) =>
 		$status === 'active' ? 'rgba(21, 128, 61, 0.12)' : 'rgba(100, 116, 139, 0.14)'};
 	color: ${({ $status }) => ($status === 'active' ? '#15803d' : '#475569')};
+`
+
+const SalaryText = styled.span<{ $muted?: boolean }>`
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-size: 13px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	color: ${({ $muted }) => ($muted ? T.textSecondary : T.textStrong)};
+	white-space: nowrap;
+`
+
+const SalarySuffix = styled.span`
+	font-size: 11px;
+	font-weight: 500;
+	color: ${T.textSecondary};
+	margin-left: 2px;
 `

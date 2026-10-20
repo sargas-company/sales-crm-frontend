@@ -21,6 +21,13 @@ export interface ProjectReportContributor {
 	} | null
 }
 
+export type ProjectReportDeliveryVia = 'late' | 'digest' | null
+export type ProjectReportDeliveryStatus =
+	| 'sent'
+	| 'pending'
+	| 'failed'
+	| 'none'
+
 export interface ProjectReportItem {
 	id: string
 	projectId: string
@@ -38,6 +45,13 @@ export interface ProjectReportItem {
 		status: ProjectStatus
 	}
 	contributors: ProjectReportContributor[]
+	/** Discord-delivery pair surfaced by the list endpoint only. `via`
+	 * marks which path we expected (`late` = per-report ping, `digest`
+	 * = included in the 19:00 daily digest); `status` is that path's
+	 * outcome. Both are optional for backward-compat with any older
+	 * cached payloads. */
+	deliveryVia?: ProjectReportDeliveryVia
+	deliveryStatus?: ProjectReportDeliveryStatus
 }
 
 export interface ProjectReportPage {
