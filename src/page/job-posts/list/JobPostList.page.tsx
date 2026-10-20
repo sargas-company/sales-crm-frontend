@@ -794,19 +794,26 @@ const JobPostList = () => {
 			),
 		},
 		{
-			// Score + Verdict merged into one cell: tabular numeral,
-			// uppercase verdict label underneath, 2px coloured rail on
-			// the left encodes verdict (approve/maybe/decline). One
-			/* Gatekeeper (Haiku, Stage 1) verdict + confidence as a
-			 * single pill — green when `fit=true` (passed to Sonnet),
-			 * red when `fit=false` (killed at the gate). Confidence is
-			 * the Haiku self-score for the decision. Em-dash when the
-			 * row has not been processed yet. */
+			/* Gatekeeper (Haiku, Stage 1) score + verdict in the same
+			 * two-tier cell as Score · Verdict EV. Score is Haiku's
+			 * self-reported confidence × 100 (so it reads on the same
+			 * /100 scale as the evaluator). Verdict label is Pass /
+			 * Reject with the same colour palette the evaluator uses
+			 * (approve-green for pass, decline-red for reject). */
 			key: 'verdictGK',
-			label: 'Verdict GK',
-			minWidth: 110,
+			label: 'Score · Verdict GK',
+			minWidth: 150,
 			render: (r) => <VerdictGKCell row={r} />,
-			skeleton: () => <TableSkeleton $w='84px' $h='22px' style={{ borderRadius: 999 }} />,
+			skeleton: () => (
+				<ScoreVerdictCell $v={null}>
+					<span className='num'>
+						<TableSkeleton $w='28px' $h='18px' />
+					</span>
+					<span className='meta'>
+						<TableSkeleton $w='48px' $h='10px' />
+					</span>
+				</ScoreVerdictCell>
+			),
 		},
 		{
 			/* Binary gate-pass pill: did the row survive the gate and
@@ -2111,13 +2118,20 @@ const BudgetPill = styled.span`
 const VerdictGKCell = ({ row }: { row: JobPostItem }) => {
 	const gk = row.aiResponse?.gatekeeper
 	if (!gk) return <Muted>—</Muted>
-	const pct = Math.round((gk.confidence ?? 0) * 100)
-	const title = gk.reason ? `${gk.reason} (${pct}%)` : `${pct}%`
+	const score = Math.round((gk.confidence ?? 0) * 100)
+	/* Reuse the EV cell's $v axis so the colour palette matches
+	 * exactly: fit=true → approve (green), fit=false → decline
+	 * (red). Label stays stage-specific (Pass / Reject). */
+	const verdict: VerdictValue = gk.fit ? 'approve' : 'decline'
+	const title = gk.reason ? `${gk.reason} (${score}/100)` : `${score}/100`
 	return (
-		<GKPill $pass={gk.fit} title={title}>
-			<span className='val'>{pct}%</span>
-			<span className='lbl'>{gk.fit ? 'Pass' : 'Reject'}</span>
-		</GKPill>
+		<ScoreVerdictCell $v={verdict} title={title}>
+			<span className='num'>
+				{score}
+				<span className='scale' aria-hidden='true'>/100</span>
+			</span>
+			<span className='meta'>{gk.fit ? 'Pass' : 'Reject'}</span>
+		</ScoreVerdictCell>
 	)
 }
 
@@ -2131,51 +2145,28 @@ const GatePassedCell = ({ row }: { row: JobPostItem }) => {
 			$pass={passed}
 			title={passed ? 'Passed to Sonnet evaluation' : 'Killed at gatekeeper — never reached Sonnet'}
 		>
-			{passed ? '✓ Pass' : '✗ Reject'}
+			{passed ? 'Pass' : 'Reject'}
 		</GatePill>
 	)
 }
 
-const GKPill = styled.span<{ $pass: boolean }>`
-	display: inline-flex;
-	align-items: baseline;
-	gap: 6px;
-	padding: 4px 10px;
-	border-radius: 999px;
-	white-space: nowrap;
-	cursor: default;
-	background: ${(p) =>
-		p.$pass ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)'};
-	color: ${(p) => (p.$pass ? '#047857' : '#b91c1c')};
-
-	.val {
-		font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-		font-size: 13px;
-		font-weight: 700;
-		font-variant-numeric: tabular-nums;
-	}
-	.lbl {
-		font-size: 10.5px;
-		font-weight: 800;
-		letter-spacing: 0.5px;
-		text-transform: uppercase;
-	}
-`
-
 const GatePill = styled.span<{ $pass: boolean }>`
 	display: inline-flex;
 	align-items: center;
-	padding: 4px 12px;
+	padding: 4px 10px;
 	border-radius: 999px;
-	font-size: 11.5px;
+	font-size: 11px;
 	font-weight: 700;
 	letter-spacing: 0.4px;
 	text-transform: uppercase;
 	white-space: nowrap;
 	cursor: default;
+	/* Colours intentionally match the Status column palette so a
+	 * row's gate-pass pill reads in the same visual tone as a
+	 * Processed status chip (green) or a Failed chip (red). */
 	background: ${(p) =>
-		p.$pass ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)'};
-	color: ${(p) => (p.$pass ? '#047857' : '#b91c1c')};
+		p.$pass ? 'rgba(34, 197, 94, 0.14)' : 'rgba(239, 68, 68, 0.14)'};
+	color: ${(p) => (p.$pass ? '#15803d' : '#b91c1c')};
 `
 
 const ScoreVerdictCell = styled.span<{ $v: VerdictValue }>`
