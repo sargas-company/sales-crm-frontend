@@ -797,15 +797,42 @@ const JobPostList = () => {
 			// Score + Verdict merged into one cell: tabular numeral,
 			// uppercase verdict label underneath, 2px coloured rail on
 			// the left encodes verdict (approve/maybe/decline). One
+			/* Gatekeeper (Haiku, Stage 1) verdict + confidence as a
+			 * single pill — green when `fit=true` (passed to Sonnet),
+			 * red when `fit=false` (killed at the gate). Confidence is
+			 * the Haiku self-score for the decision. Em-dash when the
+			 * row has not been processed yet. */
+			key: 'verdictGK',
+			label: 'Verdict GK',
+			minWidth: 110,
+			render: (r) => <VerdictGKCell row={r} />,
+			skeleton: () => <TableSkeleton $w='84px' $h='22px' style={{ borderRadius: 999 }} />,
+		},
+		{
+			/* Binary gate-pass pill: did the row survive the gate and
+			 * reach Sonnet? Derived from `evaluation` presence (which
+			 * is set only when Sonnet actually ran). Overlaps with the
+			 * previous column but is faster to scan in bulk. */
+			key: 'gatePassed',
+			label: 'Gate',
+			minWidth: 90,
+			render: (r) => <GatePassedCell row={r} />,
+			skeleton: () => <TableSkeleton $w='60px' $h='22px' style={{ borderRadius: 999 }} />,
+		},
+		{
 			// colour per row instead of two separate pills — kills the
 			// "zoo" of competing colour chips. Sorts by score; verdict
-			// is the visual accent.
+			// is the visual accent. Shows `—` when the row was killed
+			// at the gate (never reached Sonnet).
 			key: 'matchScore',
-			label: 'Score · Verdict',
+			label: 'Score · Verdict EV',
 			minWidth: 150,
 			sortable: true,
 			sortValue: (r) => r.matchScore,
 			render: (r) => {
+				const gateKilled =
+					r.aiResponse?.gatekeeper && !r.aiResponse?.evaluation
+				if (gateKilled) return <Muted>—</Muted>
 				if (r.matchScore == null && !r.decision) return <Muted>—</Muted>
 				const showVerdict =
 					r.decision && r.status === 'PROCESSED' ? r.decision : null
@@ -2077,6 +2104,78 @@ const BudgetPill = styled.span`
 		color: ${T.textSecondary};
 		margin-left: 1px;
 	}
+`
+
+/* ─── Gatekeeper diagnostic cells ───────────────────────────── */
+
+const VerdictGKCell = ({ row }: { row: JobPostItem }) => {
+	const gk = row.aiResponse?.gatekeeper
+	if (!gk) return <Muted>—</Muted>
+	const pct = Math.round((gk.confidence ?? 0) * 100)
+	const title = gk.reason ? `${gk.reason} (${pct}%)` : `${pct}%`
+	return (
+		<GKPill $pass={gk.fit} title={title}>
+			<span className='val'>{pct}%</span>
+			<span className='lbl'>{gk.fit ? 'Pass' : 'Reject'}</span>
+		</GKPill>
+	)
+}
+
+const GatePassedCell = ({ row }: { row: JobPostItem }) => {
+	const gk = row.aiResponse?.gatekeeper
+	const ev = row.aiResponse?.evaluation
+	if (!gk && !ev) return <Muted>—</Muted>
+	const passed = Boolean(ev)
+	return (
+		<GatePill
+			$pass={passed}
+			title={passed ? 'Passed to Sonnet evaluation' : 'Killed at gatekeeper — never reached Sonnet'}
+		>
+			{passed ? '✓ Pass' : '✗ Reject'}
+		</GatePill>
+	)
+}
+
+const GKPill = styled.span<{ $pass: boolean }>`
+	display: inline-flex;
+	align-items: baseline;
+	gap: 6px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	white-space: nowrap;
+	cursor: default;
+	background: ${(p) =>
+		p.$pass ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)'};
+	color: ${(p) => (p.$pass ? '#047857' : '#b91c1c')};
+
+	.val {
+		font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: 13px;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+	}
+	.lbl {
+		font-size: 10.5px;
+		font-weight: 800;
+		letter-spacing: 0.5px;
+		text-transform: uppercase;
+	}
+`
+
+const GatePill = styled.span<{ $pass: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 12px;
+	border-radius: 999px;
+	font-size: 11.5px;
+	font-weight: 700;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
+	background: ${(p) =>
+		p.$pass ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)'};
+	color: ${(p) => (p.$pass ? '#047857' : '#b91c1c')};
 `
 
 const ScoreVerdictCell = styled.span<{ $v: VerdictValue }>`
