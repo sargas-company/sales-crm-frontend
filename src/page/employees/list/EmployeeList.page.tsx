@@ -11,6 +11,8 @@ import {
 	ClearRounded,
 	FilterListOutlined,
 	PhoneOutlined,
+	PhoneDisabledOutlined,
+	WorkOffOutlined,
 } from '@mui/icons-material'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../../components/_shared/ListPageShell'
@@ -88,6 +90,38 @@ const initials = (first: string, last: string) => {
 	return (a + b || '?').slice(0, 2)
 }
 
+/** Vibrant palette for deterministic avatars — 12 slots, pick by
+ *  employee-id hash so the same person always lands on the same
+ *  colour across sessions. White text sits legibly on all of them. */
+const AVATAR_PALETTE = [
+	'#ef4444', // red
+	'#f97316', // orange
+	'#f59e0b', // amber
+	'#84cc16', // lime
+	'#10b981', // emerald
+	'#14b8a6', // teal
+	'#06b6d4', // cyan
+	'#3b82f6', // blue
+	'#6366f1', // indigo
+	'#8b5cf6', // violet
+	'#ec4899', // pink
+	'#f43f5e', // rose
+] as const
+
+/** Cheap stable string hash — only needs to be deterministic + evenly
+ *  distributed across small ints, not cryptographic. */
+const hashString = (s: string): number => {
+	let h = 0
+	for (let i = 0; i < s.length; i++) {
+		h = (h << 5) - h + s.charCodeAt(i)
+		h |= 0
+	}
+	return Math.abs(h)
+}
+
+const avatarColor = (id: string): string =>
+	AVATAR_PALETTE[hashString(id) % AVATAR_PALETTE.length]
+
 const fullName = (e: EmployeeItem) => `${e.firstName} ${e.lastName}`.trim() || '—'
 
 /** Whole years since the birth date, treating the birthdate as a
@@ -149,12 +183,30 @@ const HiredCell = ({ iso }: { iso: string | null | undefined }) => {
 	)
 }
 
+/** Placeholder for an empty dateOfBirth — mirrors the real tear-off
+ *  calendar block's silhouette so the row stays visually balanced,
+ *  but muted + dashed and with `??` where the day should be. Hover
+ *  tells the owner the field is actually missing. */
+const BirthdayEmpty = () => (
+	<BirthdayCalendarEmpty title='Date of birth unknown'>
+		<BirthdayCalendarEmptyBlock>
+			<BirthdayCalendarEmptyMonth>???</BirthdayCalendarEmptyMonth>
+			<BirthdayCalendarEmptyDay>?</BirthdayCalendarEmptyDay>
+		</BirthdayCalendarEmptyBlock>
+		<BirthdayCalendarEmptyMeta>
+			<span className='top'>unknown</span>
+			<span className='bot'>add DOB</span>
+		</BirthdayCalendarEmptyMeta>
+	</BirthdayCalendarEmpty>
+)
+
 /** Mini tear-off calendar block: small 40px-wide widget with a rose
  *  (or brighter-rose when today) month strip, the day number as the
  *  main glyph and the year + computed age in whole years next to it.
- *  Em-dash when the row has no date of birth. */
+ *  Renders `BirthdayEmpty` (dashed-muted mirror of the real calendar)
+ *  when the row has no date of birth. */
 const BirthdayCell = ({ iso }: { iso: string | null | undefined }) => {
-	if (!iso) return <Sub>—</Sub>
+	if (!iso) return <BirthdayEmpty />
 	const age = computeAge(iso)
 	const today = isBirthdayToday(iso)
 	const d = new Date(iso)
@@ -179,9 +231,17 @@ const BirthdayCell = ({ iso }: { iso: string | null | undefined }) => {
 /** Phone cell: country flag badge (from the number's `+country`
  *  prefix) + pretty-printed phone. Falls back to a muted phone icon
  *  when the country can't be resolved; falls back to the raw string
- *  when parsing fails entirely. Em-dash when the row has no phone. */
+ *  when parsing fails entirely. Empty rows get a dashed "no phone"
+ *  placeholder with a disabled-phone glyph. */
 const PhoneCellRow = ({ raw }: { raw: string | null | undefined }) => {
-	if (!raw) return <Sub>—</Sub>
+	if (!raw) {
+		return (
+			<PhoneEmpty title='No phone on file'>
+				<PhoneDisabledOutlined />
+				<span>no phone</span>
+			</PhoneEmpty>
+		)
+	}
 	const iso = phoneCountryIso(raw)
 	const flag = countryToFlag(iso)
 	const pretty = formatPhoneDisplay(raw)
@@ -343,7 +403,13 @@ const EmployeeList = () => {
 			sortValue: (e) => fullName(e),
 			render: (e) => (
 				<NameCell>
-					<Avatar>{initials(e.firstName, e.lastName)}</Avatar>
+					{e.avatarUrl ? (
+						<AvatarImg src={e.avatarUrl} alt={fullName(e)} loading='lazy' />
+					) : (
+						<Avatar $color={avatarColor(e.id)}>
+							{initials(e.firstName, e.lastName)}
+						</Avatar>
+					)}
 					<NameText>{fullName(e)}</NameText>
 				</NameCell>
 			),
@@ -402,9 +468,22 @@ const EmployeeList = () => {
 						{e.positions.length > 3 && <Sub>+{e.positions.length - 3}</Sub>}
 					</Tags>
 				) : (
-					<Sub>—</Sub>
+					<PositionsEmpty title='No positions assigned'>
+						<WorkOffOutlined />
+						<span>no position</span>
+					</PositionsEmpty>
 				),
 			skeleton: () => <TableSkeleton $w='120px' $h='20px' style={{ borderRadius: 999 }} />,
+		},
+		{
+			/* Birthday — tear-off calendar block. Placed BEFORE Hired
+			 * so the owner reads personal/HR info (DOB) left of the
+			 * employment-timeline (Hired) block. */
+			key: 'dateOfBirth',
+			label: 'Birthday',
+			minWidth: 160,
+			render: (e) => <BirthdayCell iso={e.dateOfBirth} />,
+			skeleton: () => <TableSkeleton $w='120px' $h='40px' style={{ borderRadius: 8 }} />,
 		},
 		{
 			/* Stacked hired-cell: date strong on top, computed tenure
@@ -444,16 +523,6 @@ const EmployeeList = () => {
 			},
 			render: (e) => <SalaryCell row={e} />,
 			skeleton: () => <TableSkeleton $w='100px' $h='32px' />,
-		},
-		{
-			/* Birthday — tear-off calendar block. The row-level highlight
-			 * (soft fill + animation) for employees whose birthday is in
-			 * the next 3 days lives in `rowClassName` below, not here. */
-			key: 'dateOfBirth',
-			label: 'Birthday',
-			minWidth: 160,
-			render: (e) => <BirthdayCell iso={e.dateOfBirth} />,
-			skeleton: () => <TableSkeleton $w='120px' $h='40px' style={{ borderRadius: 8 }} />,
 		},
 		{
 			key: 'actions',
@@ -719,20 +788,30 @@ const NameCell = styled.div`
 	min-width: 0;
 `
 
-const Avatar = styled.span`
+const Avatar = styled.span<{ $color: string }>`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	width: 36px;
 	height: 36px;
 	border-radius: 10px;
-	background: ${T.subtleBg};
-	border: 1px solid ${T.border};
-	color: ${T.textSecondary};
-	font-size: 12px;
+	background: ${({ $color }) => $color};
+	color: #ffffff;
+	font-size: 12.5px;
 	font-weight: 700;
 	letter-spacing: 0.4px;
 	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+	flex-shrink: 0;
+`
+
+const AvatarImg = styled.img`
+	width: 36px;
+	height: 36px;
+	border-radius: 10px;
+	object-fit: cover;
+	background: ${T.subtleBg};
+	border: 1px solid ${T.border};
 	flex-shrink: 0;
 `
 
@@ -842,6 +921,35 @@ const PhoneCell = styled.span`
 		white-space: nowrap;
 	}
 `
+
+/* Shared empty-state placeholder — dashed muted badge with a glyph.
+ * Visually distinct from the plain em-dash so missing fields read as
+ * "nothing here yet", not as broken data. Used for Phone + Positions
+ * empty states; add other columns by styling the alias component
+ * instead of duplicating the primitive. */
+const EmptyBadge = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	border: 1.5px dashed rgba(100, 116, 139, 0.4);
+	background: rgba(100, 116, 139, 0.06);
+	color: ${T.textSecondary};
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+
+	svg {
+		font-size: 15px;
+		opacity: 0.7;
+	}
+`
+
+const PhoneEmpty = EmptyBadge
+const PositionsEmpty = EmptyBadge
 
 /* Email cell — plain mailto link, no icon. */
 const EmailCell = styled.span`
@@ -976,4 +1084,69 @@ const BirthdayCalendarAge = styled.span`
 	font-size: 11px;
 	font-weight: 500;
 	color: ${T.textSecondary};
+`
+
+/* ─── BirthdayEmpty — dashed-muted mirror of the real tear-off block
+ *  for the "no DOB set" state. Keeps the same silhouette so the row
+ *  stays visually balanced, but every colour drops to a muted/dashed
+ *  tone and the day-number becomes "?". */
+
+const BirthdayCalendarEmpty = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	white-space: nowrap;
+	color: ${T.textSecondary};
+`
+
+const BirthdayCalendarEmptyBlock = styled.span`
+	display: inline-flex;
+	flex-direction: column;
+	width: 40px;
+	border-radius: 6px;
+	overflow: hidden;
+	border: 1.5px dashed rgba(100, 116, 139, 0.4);
+	background: rgba(100, 116, 139, 0.04);
+	line-height: 1;
+`
+
+const BirthdayCalendarEmptyMonth = styled.span`
+	font-size: 9px;
+	font-weight: 700;
+	letter-spacing: 0.6px;
+	text-align: center;
+	padding: 2px 0;
+	color: ${T.textSecondary};
+	background: rgba(100, 116, 139, 0.12);
+	opacity: 0.75;
+`
+
+const BirthdayCalendarEmptyDay = styled.span`
+	font-size: 16px;
+	font-weight: 700;
+	text-align: center;
+	padding: 2px 0 3px;
+	color: ${T.textSecondary};
+	opacity: 0.6;
+`
+
+const BirthdayCalendarEmptyMeta = styled.span`
+	display: inline-flex;
+	flex-direction: column;
+	gap: 2px;
+	line-height: 1.1;
+
+	.top {
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.6px;
+		text-transform: uppercase;
+		color: ${T.textSecondary};
+	}
+	.bot {
+		font-size: 10px;
+		font-weight: 500;
+		color: ${T.textSecondary};
+		opacity: 0.7;
+	}
 `

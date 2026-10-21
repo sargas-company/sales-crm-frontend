@@ -40,6 +40,9 @@ export interface EmployeeItem {
 	hiredAt: string | null
 	/** Set when status transitions to TERMINATED; null otherwise. */
 	terminatedAt: string | null
+	/** DiceBear preset URL assigned at create-time; null for legacy
+	 *  rows before the backfill ran. */
+	avatarUrl: string | null
 	userId: string | null
 	user: {
 		id: string
