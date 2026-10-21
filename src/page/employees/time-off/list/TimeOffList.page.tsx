@@ -205,7 +205,7 @@ const TimeOffList = () => {
 						</LinkIcon>
 					</EmpLink>
 					{r.employee.positions.length > 0 && (
-						<EmpPos>{r.employee.positions[0]}</EmpPos>
+						<EmpPos>{r.employee.positions[0].title}</EmpPos>
 					)}
 				</EmpCell>
 			),

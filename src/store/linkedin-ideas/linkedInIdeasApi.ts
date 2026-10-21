@@ -41,7 +41,7 @@ export interface LinkedInIdea {
 		id: string
 		firstName: string
 		lastName: string
-		positions: string[]
+		positions: { id: string; title: string; slug: string }[]
 	} | null
 	posts?: LinkedInIdeaPostSummary[]
 	_count?: { posts: number }

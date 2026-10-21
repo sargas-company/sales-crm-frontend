@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import {
 	DeleteOutline,
@@ -7,6 +7,10 @@ import {
 	VisibilityOutlined,
 	GroupsOutlined,
 	AddRounded,
+	SearchOutlined,
+	ClearRounded,
+	FilterListOutlined,
+	PhoneOutlined,
 } from '@mui/icons-material'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../../components/_shared/ListPageShell'
@@ -18,18 +22,65 @@ import {
 } from '../../../components/_shared/DataTable'
 import type { DataTableColumn, SortState } from '../../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
+import {
+	BottomSlot,
+	ClearBtn as FreshClearBtn,
+	FreshFiltersWrap,
+	InlineField,
+	InlineSelect,
+	RowBreak,
+	SearchPill,
+} from '../../../components/_shared/filters/freshPaperFilters'
+import {
+	TapeIndicator,
+	TapePill,
+	TapePills,
+} from '../../analytics/filters/filters.styled'
 import PermissionGate from '../../../components/auth/PermissionGate'
 import ConfirmModal from '../../../components/_shared/ConfirmModal'
 import { useToast } from '../../../context/toast/ToastContext'
-import type { EmployeeItem, EmployeeSortBy } from '../../../store/employees/employeesApi'
+import type {
+	EmployeeItem,
+	EmployeeSortBy,
+	EmployeeStatus,
+} from '../../../store/employees/employeesApi'
 import {
 	useGetEmployeesQuery,
 	useDeleteEmployeeMutation,
 } from '../../../store/employees/employeesApi'
+import { useGetPositionsQuery } from '../../../store/positions/positionsApi'
 import { formatDate } from '../../../utils/format'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
+import usePermissions from '../../../hooks/usePermissions'
+import { countryToFlag, formatPhoneDisplay, phoneCountryIso } from '../../../utils/phone'
 
 const PAGE_SIZE = 20
+
+/* Status "preset" tabs — same tape visual as Clients page presets.
+ * Empty-string value acts as "All" (no filter applied). */
+type StatusPreset = '' | 'ACTIVE' | 'BENCH' | 'TERMINATED'
+
+const STATUS_PRESETS: { value: StatusPreset; label: string }[] = [
+	{ value: '', label: 'All' },
+	{ value: 'ACTIVE', label: 'Active' },
+	{ value: 'BENCH', label: 'Bench' },
+	{ value: 'TERMINATED', label: 'Terminated' },
+]
+
+const MONTH_OPTIONS: { value: string; label: string }[] = [
+	{ value: '1', label: 'January' },
+	{ value: '2', label: 'February' },
+	{ value: '3', label: 'March' },
+	{ value: '4', label: 'April' },
+	{ value: '5', label: 'May' },
+	{ value: '6', label: 'June' },
+	{ value: '7', label: 'July' },
+	{ value: '8', label: 'August' },
+	{ value: '9', label: 'September' },
+	{ value: '10', label: 'October' },
+	{ value: '11', label: 'November' },
+	{ value: '12', label: 'December' },
+]
 
 const initials = (first: string, last: string) => {
 	const a = (first?.[0] ?? '').toUpperCase()
@@ -39,25 +90,135 @@ const initials = (first: string, last: string) => {
 
 const fullName = (e: EmployeeItem) => `${e.firstName} ${e.lastName}`.trim() || '—'
 
-/** `12 Oct` style — day + short month, no year. Em-dash when null. */
-const formatBirthday = (iso: string | null | undefined): string => {
-	if (!iso) return '—'
-	const d = new Date(iso)
-	if (Number.isNaN(d.getTime())) return '—'
-	return d.toLocaleDateString('en-GB', {
-		day: 'numeric',
-		month: 'short',
-		timeZone: 'UTC',
-	})
+/** Whole years since the birth date, treating the birthdate as a
+ *  calendar date (UTC) so a `2000-02-29` doesn't drift under local
+ *  time. Returns null when the input is missing or unparseable. */
+const computeAge = (iso: string | null | undefined): number | null => {
+	if (!iso) return null
+	const birth = new Date(iso)
+	if (Number.isNaN(birth.getTime())) return null
+	const now = new Date()
+	let age = now.getUTCFullYear() - birth.getUTCFullYear()
+	const m = now.getUTCMonth() - birth.getUTCMonth()
+	if (m < 0 || (m === 0 && now.getUTCDate() < birth.getUTCDate())) age--
+	return age >= 0 && age < 150 ? age : null
 }
 
-/** `$X,XXX /mo` or `$X.XX /h`. Returns `$0` with no suffix when
- *  the employee has no current compensation rate — matches the owner's
- *  spec that an empty review history reads as zero. */
+/** True when today's month+day matches the birth's month+day (UTC). */
+const isBirthdayToday = (iso: string | null | undefined): boolean => {
+	if (!iso) return false
+	const d = new Date(iso)
+	if (Number.isNaN(d.getTime())) return false
+	const now = new Date()
+	return d.getUTCMonth() === now.getUTCMonth() && d.getUTCDate() === now.getUTCDate()
+}
+
+/** Compact tenure stats {years, months} relative to today. Negative
+ *  spans (future hire date) are clamped to 0. */
+const tenureSince = (iso: string | null | undefined): { years: number; months: number } | null => {
+	if (!iso) return null
+	const d = new Date(iso)
+	if (Number.isNaN(d.getTime())) return null
+	const now = new Date()
+	let months = (now.getUTCFullYear() - d.getUTCFullYear()) * 12 + (now.getUTCMonth() - d.getUTCMonth())
+	if (now.getUTCDate() < d.getUTCDate()) months--
+	if (months < 0) return { years: 0, months: 0 }
+	return { years: Math.floor(months / 12), months: months % 12 }
+}
+
+/** `5y 3m` / `11m` / `<1m`. Null-safe. */
+const formatTenureShort = (iso: string | null | undefined): string => {
+	const t = tenureSince(iso)
+	if (!t) return '—'
+	if (t.years === 0 && t.months === 0) return '<1m'
+	if (t.years === 0) return `${t.months}m`
+	if (t.months === 0) return `${t.years}y`
+	return `${t.years}y ${t.months}m`
+}
+
+/** Stacked hired-cell: full date on top (strong), computed tenure
+ *  below (muted). Mirrors the Birthday-cell layout so the row stays
+ *  visually balanced between the two date columns. */
+const HiredCell = ({ iso }: { iso: string | null | undefined }) => {
+	if (!iso) return <Sub>—</Sub>
+	return (
+		<HiredStack>
+			<HiredStackTop>{formatDate(iso, 'short')}</HiredStackTop>
+			<HiredStackBottom>{formatTenureShort(iso)} tenure</HiredStackBottom>
+		</HiredStack>
+	)
+}
+
+/** Mini tear-off calendar block: small 40px-wide widget with a rose
+ *  (or brighter-rose when today) month strip, the day number as the
+ *  main glyph and the year + computed age in whole years next to it.
+ *  Em-dash when the row has no date of birth. */
+const BirthdayCell = ({ iso }: { iso: string | null | undefined }) => {
+	if (!iso) return <Sub>—</Sub>
+	const age = computeAge(iso)
+	const today = isBirthdayToday(iso)
+	const d = new Date(iso)
+	if (Number.isNaN(d.getTime())) return <Sub>—</Sub>
+	const day = String(d.getUTCDate())
+	const month = d.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' }).toUpperCase()
+	const year = String(d.getUTCFullYear())
+	return (
+		<BirthdayCalendar title={today ? 'Birthday today' : undefined}>
+			<BirthdayCalendarBlock>
+				<BirthdayCalendarMonth $today={today}>{month}</BirthdayCalendarMonth>
+				<BirthdayCalendarDay>{day}</BirthdayCalendarDay>
+			</BirthdayCalendarBlock>
+			<BirthdayCalendarMeta>
+				<BirthdayCalendarYear>{year}</BirthdayCalendarYear>
+				{age !== null && <BirthdayCalendarAge>{age}y</BirthdayCalendarAge>}
+			</BirthdayCalendarMeta>
+		</BirthdayCalendar>
+	)
+}
+
+/** Phone cell: country flag badge (from the number's `+country`
+ *  prefix) + pretty-printed phone. Falls back to a muted phone icon
+ *  when the country can't be resolved; falls back to the raw string
+ *  when parsing fails entirely. Em-dash when the row has no phone. */
+const PhoneCellRow = ({ raw }: { raw: string | null | undefined }) => {
+	if (!raw) return <Sub>—</Sub>
+	const iso = phoneCountryIso(raw)
+	const flag = countryToFlag(iso)
+	const pretty = formatPhoneDisplay(raw)
+	return (
+		<PhoneCell title={iso ?? undefined}>
+			<span className='pin'>
+				{flag ? <span className='flag'>{flag}</span> : <PhoneOutlined />}
+			</span>
+			<span className='num'>{pretty}</span>
+		</PhoneCell>
+	)
+}
+
+/** Email cell: plain mailto link, no icon. Empty renders as em-dash. */
+const EmailCellRow = ({ email }: { email: string | null | undefined }) => {
+	if (!email) return <Sub>—</Sub>
+	return (
+		<EmailCell>
+			<a href={`mailto:${email}`} className='addr' onClick={(e) => e.stopPropagation()}>
+				{email}
+			</a>
+		</EmailCell>
+	)
+}
+
+/** Stacked salary cell: amount strong on top, `monthly` / `hourly`
+ *  caption underneath. Null-safe — missing comp history reads as
+ *  `$0` / `no rate` per the owner's spec. */
 const SalaryCell = ({ row }: { row: EmployeeItem }) => {
 	const current = row.compensationRates?.[0]
 	if (!current) {
-		return <SalaryText $muted>$0</SalaryText>
+		return (
+			<SalaryStack>
+				<span className='amt'>$0</span>
+				<span className='cap'>no rate</span>
+			</SalaryStack>
+		)
 	}
 	const value = Number.parseFloat(current.rate)
 	const amount = Number.isFinite(value) ? value : 0
@@ -69,26 +230,45 @@ const SalaryCell = ({ row }: { row: EmployeeItem }) => {
 		maximumFractionDigits: isMonthly ? 0 : 2,
 	})
 	return (
-		<SalaryText>
-			{formatted}
-			<SalarySuffix> /{isMonthly ? 'mo' : 'h'}</SalarySuffix>
-		</SalaryText>
+		<SalaryStack>
+			<span className='amt'>{formatted}</span>
+			<span className='cap'>{isMonthly ? 'monthly' : 'hourly'}</span>
+		</SalaryStack>
 	)
 }
 
 const EmployeeList = () => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
+	const { has } = usePermissions()
+	const canViewSalary = has('employees:view_salary')
+	const [searchParams, setSearchParams] = useSearchParams()
+
+	// URL-synced filter values; the URL is the source of truth so a
+	// deep link reproduces the exact filter configuration (same pattern
+	// as JobPosts / Clients).
+	const statusParam = (searchParams.get('status') ?? '') as EmployeeStatus | ''
+	const positionParam = searchParams.get('position') ?? ''
+	const birthdayMonthParam = searchParams.get('birthdayMonth') ?? ''
+
 	const [searchInput, setSearchInput] = useState('')
 	const search = useDebouncedValue(searchInput.trim(), 300)
 	const [page, setPage] = useState(1)
 	const [sort, setSort] = useState<SortState | null>(null)
 	const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null)
 
+	const { data: positionsData } = useGetPositionsQuery()
+	const positions = useMemo(() => positionsData ?? [], [positionsData])
+
 	const { data, isLoading, isError, refetch } = useGetEmployeesQuery({
 		page,
 		limit: PAGE_SIZE,
 		search: search || undefined,
+		status: statusParam || undefined,
+		position: positionParam || undefined,
+		birthdayMonth: birthdayMonthParam
+			? Number.parseInt(birthdayMonthParam, 10) || undefined
+			: undefined,
 		sortBy: (sort?.key as EmployeeSortBy | undefined) ?? undefined,
 		sortDirection: sort?.direction,
 	})
@@ -102,9 +282,55 @@ const EmployeeList = () => {
 		setPage(1)
 	}
 
+	const updateParam = (key: string, value: string) => {
+		const next = new URLSearchParams(searchParams)
+		if (value) next.set(key, value)
+		else next.delete(key)
+		setSearchParams(next, { replace: true })
+		setPage(1)
+	}
+
+	const clearFilters = () => {
+		const next = new URLSearchParams(searchParams)
+		next.delete('status')
+		next.delete('position')
+		next.delete('birthdayMonth')
+		setSearchParams(next, { replace: true })
+		setSearchInput('')
+		setPage(1)
+	}
+
+	const activeFilterCount =
+		(statusParam ? 1 : 0) +
+		(positionParam ? 1 : 0) +
+		(birthdayMonthParam ? 1 : 0) +
+		(searchInput ? 1 : 0)
+
+	// Tape indicator slide — same pattern as ClientList.
+	const pillsRef = useRef<HTMLDivElement>(null)
+	const [ind, setInd] = useState({ left: 0, width: 0, opacity: 0 })
+	useLayoutEffect(() => {
+		const root = pillsRef.current
+		if (!root) return
+		const el = root.querySelector<HTMLButtonElement>(
+			'[role="tab"][data-active="true"]',
+		)
+		if (!el) {
+			setInd((p) => ({ ...p, opacity: 0 }))
+			return
+		}
+		const rootRect = root.getBoundingClientRect()
+		const r = el.getBoundingClientRect()
+		setInd({
+			left: r.left - rootRect.left - 2,
+			width: r.width + 4,
+			opacity: 1,
+		})
+	}, [statusParam])
+
 	useEffect(() => {
 		setPage(1)
-	}, [search])
+	}, [search, statusParam, positionParam, birthdayMonthParam])
 
 	const columns: DataTableColumn<EmployeeItem>[] = [
 		{
@@ -129,21 +355,30 @@ const EmployeeList = () => {
 			),
 		},
 		{
-			key: 'positions',
-			label: 'Positions',
+			/* Email first (per the owner's spec), then phone. Email is
+			 * visible for every role; it's not gated by the view-salary
+			 * perm or anything else. */
+			key: 'email',
+			label: 'Email',
 			minWidth: 220,
-			render: (e) =>
-				e.positions.length > 0 ? (
-					<Tags>
-						{e.positions.slice(0, 3).map((p) => (
-							<Tag key={p}>{p}</Tag>
-						))}
-						{e.positions.length > 3 && <Sub>+{e.positions.length - 3}</Sub>}
-					</Tags>
-				) : (
-					<Sub>—</Sub>
-				),
-			skeleton: () => <TableSkeleton $w='120px' $h='20px' style={{ borderRadius: 999 }} />,
+			sortable: true,
+			sortValue: (e) => e.email ?? '',
+			render: (e) => <EmailCellRow email={e.email} />,
+			skeleton: () => <TableSkeleton $w='160px' $h='18px' />,
+		},
+		{
+			/* Phone cell mirrors the JobPosts location-cell layout:
+			 * country flag badge → formatted number. The flag is
+			 * resolved from the number's `+country` prefix via
+			 * libphonenumber-js (phoneCountryIso), and the display
+			 * string is pretty-printed through formatPhoneDisplay
+			 * (which falls back to the raw string if parsing fails,
+			 * so historical rows always render). */
+			key: 'phone',
+			label: 'Phone',
+			minWidth: 180,
+			render: (e) => <PhoneCellRow raw={e.phone} />,
+			skeleton: () => <TableSkeleton $w='140px' $h='18px' />,
 		},
 		{
 			key: 'status',
@@ -155,34 +390,70 @@ const EmployeeList = () => {
 			skeleton: () => <TableSkeleton $w='60px' $h='22px' style={{ borderRadius: 999 }} />,
 		},
 		{
-			key: 'hiredAt',
-			label: 'Hired',
-			minWidth: 130,
-			sortable: true,
-			sortValue: (e) => (e.hiredAt ? new Date(e.hiredAt) : new Date(0)),
-			render: (e) => <Sub>{e.hiredAt ? formatDate(e.hiredAt, 'short') : '—'}</Sub>,
-			skeleton: () => <TableSkeleton $w='80px' $h='13px' />,
+			key: 'positions',
+			label: 'Positions',
+			minWidth: 220,
+			render: (e) =>
+				e.positions.length > 0 ? (
+					<Tags>
+						{e.positions.slice(0, 3).map((p) => (
+							<Tag key={p.id}>{p.title}</Tag>
+						))}
+						{e.positions.length > 3 && <Sub>+{e.positions.length - 3}</Sub>}
+					</Tags>
+				) : (
+					<Sub>—</Sub>
+				),
+			skeleton: () => <TableSkeleton $w='120px' $h='20px' style={{ borderRadius: 999 }} />,
 		},
 		{
-			/* Day + month only — the year is stored for display elsewhere
-			 * but not surfaced on the list (keeps the column terse and
-			 * drops a soft PII tier for a glanceable screen). Fallback
-			 * em-dash when the row is missing a date of birth. */
-			key: 'dateOfBirth',
-			label: 'Birthday',
-			minWidth: 110,
-			render: (e) => <Sub>{formatBirthday(e.dateOfBirth)}</Sub>,
-			skeleton: () => <TableSkeleton $w='70px' $h='13px' />,
+			/* Stacked hired-cell: date strong on top, computed tenure
+			 * (e.g. "5y 3m tenure") muted below. Shares the stacked
+			 * layout with Birthday-cell for visual rhythm. */
+			key: 'hiredAt',
+			label: 'Hired',
+			minWidth: 170,
+			sortable: true,
+			sortValue: (e) => (e.hiredAt ? new Date(e.hiredAt) : new Date(0)),
+			render: (e) => <HiredCell iso={e.hiredAt} />,
+			skeleton: () => <TableSkeleton $w='120px' $h='32px' />,
 		},
 		{
 			/* Current salary = latest EmployeeCompensationRate whose
 			 * effectiveDate has arrived. Empty array ⇒ render 0 per
-			 * owner's spec. Suffix (/mo vs /h) comes from rateType. */
+			 * owner's spec. Suffix (/mo vs /h) comes from rateType.
+			 *
+			 * Sort is handled on the backend (special-cased because
+			 * Prisma can't orderBy a nested row). Hourly rates are
+			 * normalised to monthly (rate × 160) so hourly and
+			 * monthly employees sort against the same yardstick.
+			 *
+			 * Entire column is suppressed below the `employees:view_salary`
+			 * permission gate; backend also strips `compensationRates`
+			 * for anyone without the perm (defence in depth). */
 			key: 'salary',
 			label: 'Salary',
-			minWidth: 120,
+			minWidth: 130,
+			sortable: true,
+			sortValue: (e) => {
+				const current = e.compensationRates?.[0]
+				if (!current) return 0
+				const v = Number.parseFloat(current.rate)
+				if (!Number.isFinite(v)) return 0
+				return current.rateType === 'HOURLY' ? v * 160 : v
+			},
 			render: (e) => <SalaryCell row={e} />,
-			skeleton: () => <TableSkeleton $w='80px' $h='13px' />,
+			skeleton: () => <TableSkeleton $w='100px' $h='32px' />,
+		},
+		{
+			/* Birthday — tear-off calendar block. The row-level highlight
+			 * (soft fill + animation) for employees whose birthday is in
+			 * the next 3 days lives in `rowClassName` below, not here. */
+			key: 'dateOfBirth',
+			label: 'Birthday',
+			minWidth: 160,
+			render: (e) => <BirthdayCell iso={e.dateOfBirth} />,
+			skeleton: () => <TableSkeleton $w='120px' $h='40px' style={{ borderRadius: 8 }} />,
 		},
 		{
 			key: 'actions',
@@ -249,12 +520,146 @@ const EmployeeList = () => {
 						</PrimarySolidButton>
 					</PermissionGate>
 				}
-				searchPlaceholder='Search by name or email'
-				search={searchInput}
-				onSearchChange={setSearchInput}
+				filters={
+					<EmployeeFiltersWrap role='region' aria-label='Employees filters'>
+						<div className='filter-lead'>
+							<span className='lead-icon'>
+								<FilterListOutlined />
+							</span>
+							<div className='lead-text'>
+								<span className='top'>Filter</span>
+								<span className='bot'>
+									{STATUS_PRESETS.find((p) => p.value === statusParam)?.label ??
+										'All'}
+								</span>
+							</div>
+						</div>
+
+						<TapePills ref={pillsRef} role='tablist' aria-label='Status preset'>
+							<TapeIndicator
+								style={{
+									transform: `translateX(${ind.left}px) rotate(-1.2deg)`,
+									width: `${ind.width}px`,
+									opacity: ind.opacity,
+								}}
+							/>
+							{STATUS_PRESETS.map((p) => (
+								<TapePill
+									key={p.value || 'all'}
+									type='button'
+									role='tab'
+									data-active={statusParam === p.value || undefined}
+									aria-selected={statusParam === p.value}
+									$active={statusParam === p.value}
+									onClick={() => updateParam('status', p.value)}
+								>
+									{p.label}
+								</TapePill>
+							))}
+						</TapePills>
+
+						<div className='filter-spacer' />
+
+						<div className='upwork-hint' aria-hidden='true'>
+							<span className='row'>
+								<span className='w'>every</span>
+								<span className='amber-wrap'>
+									<span className='a'>PERSON</span>
+									<svg
+										className='squiggle'
+										viewBox='0 0 120 12'
+										width='120'
+										height='12'
+										preserveAspectRatio='none'
+									>
+										<path
+											d='M2 8 Q 12 2, 22 8 T 42 8 T 62 8 T 82 8 T 102 8 T 118 8'
+											fill='none'
+											stroke='currentColor'
+											strokeWidth='2.2'
+											strokeLinecap='round'
+										/>
+									</svg>
+								</span>
+								<span className='w'>on file</span>
+							</span>
+							<span className='stars'>
+								<svg
+									className='s'
+									width='14'
+									height='14'
+									viewBox='0 0 24 24'
+									fill='currentColor'
+								>
+									<path d='M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.9l-6.2 4.4 2.4-7.4L2 9.4h7.6z' />
+								</svg>
+							</span>
+						</div>
+
+						<RowBreak />
+
+						<BottomSlot>
+							<SearchPill>
+								<SearchOutlined className='ico' />
+								<input
+									type='text'
+									value={searchInput}
+									onChange={(e) => setSearchInput(e.target.value)}
+									placeholder='Search by name or email'
+									aria-label='Search employees'
+								/>
+							</SearchPill>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Position</span>
+								<InlineSelect
+									value={positionParam}
+									onChange={(e) => updateParam('position', e.target.value)}
+								>
+									<option value=''>Any</option>
+									{positions.map((p) => (
+										<option key={p.id} value={p.id}>
+											{p.title}
+										</option>
+									))}
+								</InlineSelect>
+							</InlineField>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Birthday month</span>
+								<InlineSelect
+									value={birthdayMonthParam}
+									onChange={(e) => updateParam('birthdayMonth', e.target.value)}
+								>
+									<option value=''>Any</option>
+									{MONTH_OPTIONS.map((m) => (
+										<option key={m.value} value={m.value}>
+											{m.label}
+										</option>
+									))}
+								</InlineSelect>
+							</InlineField>
+						</BottomSlot>
+
+						<div className='filter-spacer' />
+
+						<FreshClearBtn
+							type='button'
+							onClick={clearFilters}
+							disabled={activeFilterCount === 0}
+						>
+							<ClearRounded style={{ fontSize: 15 }} />
+							Clear
+						</FreshClearBtn>
+					</EmployeeFiltersWrap>
+				}
 			>
 				<DataTable
-					columns={columns}
+					columns={canViewSalary ? columns : columns.filter((c) => c.key !== 'salary')}
 					rows={items}
 					rowKey={(e) => e.id}
 					isLoading={isLoading}
@@ -297,6 +702,15 @@ const EmployeeList = () => {
 }
 
 export default EmployeeList
+
+/* Full-width extension of the shared FreshFiltersWrap: the base bar
+ * only grows to its content, which left large blank gutters on wide
+ * screens. Here we stretch to 100% so the right-side spacer actually
+ * has room to push Clear to the far right. */
+const EmployeeFiltersWrap = styled(FreshFiltersWrap)`
+	width: 100%;
+	padding: 18px 22px;
+`
 
 const NameCell = styled.div`
 	display: inline-flex;
@@ -342,17 +756,34 @@ const Tags = styled.div`
 	align-items: center;
 `
 
+/* Position pill — compact uppercase look matching StatusPill below.
+ * Keeps a blue tint to distinguish "role catalogue reference" from
+ * "lifecycle status". */
 const Tag = styled.span`
 	display: inline-flex;
 	align-items: center;
-	padding: 3px 9px;
+	padding: 4px 10px;
 	border-radius: 999px;
-	font-size: 11.5px;
-	font-weight: 600;
-	background: ${T.primaryTint};
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	white-space: nowrap;
+	background: rgba(3, 105, 161, 0.10);
 	color: ${T.primary};
 	border: 0;
 `
+
+/* Status pill tones:
+ *  ACTIVE     — green  (operational, working)
+ *  BENCH      — amber  (hired, idle — needs attention from sales/PM)
+ *  TERMINATED — slate  (left, archive-tier)
+ */
+const STATUS_PILL_TONES: Record<string, { bg: string; fg: string }> = {
+	ACTIVE: { bg: 'rgba(21, 128, 61, 0.12)', fg: '#15803d' },
+	BENCH: { bg: 'rgba(217, 119, 6, 0.14)', fg: '#b45309' },
+	TERMINATED: { bg: 'rgba(100, 116, 139, 0.14)', fg: '#475569' },
+}
 
 const StatusPill = styled.span<{ $status: string }>`
 	display: inline-flex;
@@ -365,22 +796,184 @@ const StatusPill = styled.span<{ $status: string }>`
 	letter-spacing: 0.3px;
 	white-space: nowrap;
 	background: ${({ $status }) =>
-		$status === 'active' ? 'rgba(21, 128, 61, 0.12)' : 'rgba(100, 116, 139, 0.14)'};
-	color: ${({ $status }) => ($status === 'active' ? '#15803d' : '#475569')};
+		(STATUS_PILL_TONES[$status] ?? STATUS_PILL_TONES.TERMINATED).bg};
+	color: ${({ $status }) =>
+		(STATUS_PILL_TONES[$status] ?? STATUS_PILL_TONES.TERMINATED).fg};
 `
 
-const SalaryText = styled.span<{ $muted?: boolean }>`
-	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-	font-size: 13px;
-	font-weight: 600;
-	font-variant-numeric: tabular-nums;
-	color: ${({ $muted }) => ($muted ? T.textSecondary : T.textStrong)};
+/* Phone cell — flag badge + formatted number. Mirrors the JobPosts
+ * LocationCell shape but larger: 28×28 badge, 20px flag, 14px mono
+ * number, so the phone column reads as a primary contact field, not
+ * a secondary chip. */
+const PhoneCell = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 14px;
+	line-height: 1.3;
+	min-width: 0;
+
+	.pin {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		border-radius: 6px;
+		background: rgba(15, 23, 42, 0.04);
+		color: rgba(15, 23, 42, 0.55);
+		flex-shrink: 0;
+
+		svg {
+			font-size: 18px;
+		}
+	}
+	.flag {
+		font-size: 20px;
+		line-height: 1;
+		color: initial;
+	}
+	.num {
+		font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-variant-numeric: tabular-nums;
+		font-size: 14px;
+		font-weight: 400;
+		color: ${T.textStrong};
+		white-space: nowrap;
+	}
+`
+
+/* Email cell — plain mailto link, no icon. */
+const EmailCell = styled.span`
+	display: inline-flex;
+	align-items: center;
+	font-size: 13.5px;
+	line-height: 1.3;
+	min-width: 0;
+	max-width: 100%;
+
+	.addr {
+		color: ${T.textStrong};
+		text-decoration: none;
+		font-weight: 500;
+		font-size: 13px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+
+		&:hover {
+			color: ${T.primary};
+			text-decoration: underline;
+		}
+	}
+`
+
+/* Stacked salary-cell: mono amount strong on top, caption muted. */
+const SalaryStack = styled.span`
+	display: inline-flex;
+	flex-direction: column;
+	gap: 2px;
+	line-height: 1.15;
+	white-space: nowrap;
+
+	.amt {
+		font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: 13.5px;
+		font-weight: 700;
+		color: ${T.textStrong};
+		font-variant-numeric: tabular-nums;
+	}
+	.cap {
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.6px;
+		text-transform: uppercase;
+		color: ${T.textSecondary};
+	}
+`
+
+/* ─── Hired stacked-cell styled components. */
+
+const HiredStack = styled.span`
+	display: inline-flex;
+	flex-direction: column;
+	gap: 2px;
+	line-height: 1.15;
 	white-space: nowrap;
 `
 
-const SalarySuffix = styled.span`
+const HiredStackTop = styled.span`
+	font-size: 13.5px;
+	font-weight: 700;
+	color: ${T.textStrong};
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.1px;
+`
+
+const HiredStackBottom = styled.span`
 	font-size: 11px;
 	font-weight: 500;
 	color: ${T.textSecondary};
-	margin-left: 2px;
+	font-variant-numeric: tabular-nums;
+`
+
+/* ─── Birthday tear-off calendar block styled components. */
+
+const BirthdayCalendar = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	white-space: nowrap;
+	color: ${T.textStrong};
+`
+
+const BirthdayCalendarBlock = styled.span`
+	display: inline-flex;
+	flex-direction: column;
+	width: 40px;
+	border-radius: 6px;
+	overflow: hidden;
+	border: 1px solid ${T.border};
+	background: #ffffff;
+	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+	line-height: 1;
+`
+
+const BirthdayCalendarMonth = styled.span<{ $today: boolean }>`
+	font-size: 9px;
+	font-weight: 700;
+	letter-spacing: 0.6px;
+	text-align: center;
+	padding: 2px 0;
+	color: #ffffff;
+	background: ${({ $today }) => ($today ? '#db2777' : '#f43f5e')};
+`
+
+const BirthdayCalendarDay = styled.span`
+	font-size: 16px;
+	font-weight: 700;
+	text-align: center;
+	padding: 2px 0 3px;
+	color: ${T.textStrong};
+	font-variant-numeric: tabular-nums;
+`
+
+const BirthdayCalendarMeta = styled.span`
+	display: inline-flex;
+	flex-direction: column;
+	gap: 2px;
+	line-height: 1.1;
+`
+
+const BirthdayCalendarYear = styled.span`
+	font-size: 12px;
+	font-weight: 600;
+	color: ${T.textStrong};
+	font-variant-numeric: tabular-nums;
+`
+
+const BirthdayCalendarAge = styled.span`
+	font-size: 11px;
+	font-weight: 500;
+	color: ${T.textSecondary};
 `

@@ -318,7 +318,7 @@ const TimeOffAnalytics = () => {
 													{emp.firstName} {emp.lastName}
 												</EmpName>
 												{emp.positions.length > 0 && (
-													<EmpPos>{emp.positions[0]}</EmpPos>
+													<EmpPos>{emp.positions[0].title}</EmpPos>
 												)}
 											</EmployeeCell>
 											{dayList.map((d) => (
@@ -438,7 +438,7 @@ const TimeOffAnalytics = () => {
 													{row.employee.firstName} {row.employee.lastName}
 												</BalName>
 												{row.employee.positions.length > 0 && (
-													<BalPos>{row.employee.positions[0]}</BalPos>
+													<BalPos>{row.employee.positions[0].title}</BalPos>
 												)}
 											</td>
 											<td>

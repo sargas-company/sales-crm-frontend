@@ -1,6 +1,10 @@
 import { baseApi } from '../../api/baseApi'
 
-export type EmployeeStatus = 'active' | 'inactive'
+/** Lifecycle states:
+ *  - ACTIVE     — on a project / currently working
+ *  - BENCH      — hired, idle between projects
+ *  - TERMINATED — left / fired; kept for history + final payroll */
+export type EmployeeStatus = 'ACTIVE' | 'BENCH' | 'TERMINATED'
 export type EmployeeRateType = 'HOURLY' | 'MONTHLY'
 
 /** Current compensation rate as surfaced by the list endpoint. One
@@ -14,15 +18,28 @@ export interface EmployeeCurrentRate {
 	effectiveDate: string
 }
 
+/** Positions reference the Position catalogue through an implicit
+ *  many-to-many; the backend returns the attached rows ordered by
+ *  title. Empty array ⇒ no positions assigned. */
+export interface EmployeePosition {
+	id: string
+	title: string
+	slug: string
+}
+
 export interface EmployeeItem {
 	id: string
 	firstName: string
 	lastName: string
-	email: string
+	/** Nullable — Employee record is a directory entry and can exist
+	 *  without an email (contractor, early hire). */
+	email: string | null
 	phone: string | null
-	positions: string[]
+	positions: EmployeePosition[]
 	status: EmployeeStatus
 	hiredAt: string | null
+	/** Set when status transitions to TERMINATED; null otherwise. */
+	terminatedAt: string | null
 	userId: string | null
 	user: {
 		id: string
@@ -60,6 +77,12 @@ export interface EmployeeListParams {
 	sortDirection?: EmployeeSortDirection
 	search?: string
 	status?: EmployeeStatus
+	/** Position catalogue UUID; matches employees whose positions
+	 *  include this id. */
+	position?: string
+	/** 1..12 calendar month; matches employees whose dateOfBirth
+	 *  falls in this month (year-agnostic). */
+	birthdayMonth?: number
 }
 
 export interface CreateEmployeeBody {
@@ -67,6 +90,7 @@ export interface CreateEmployeeBody {
 	lastName: string
 	email: string
 	phone?: string
+	/** Position catalogue UUIDs the backend will `connect` on create. */
 	positions?: string[]
 	status?: EmployeeStatus
 	hiredAt?: string
@@ -79,7 +103,16 @@ export type UpdateEmployeeBody = Partial<CreateEmployeeBody>
 export const employeesApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getEmployees: builder.query<EmployeePage, EmployeeListParams>({
-			query: ({ page, limit, sortBy, sortDirection, search, status }) => ({
+			query: ({
+				page,
+				limit,
+				sortBy,
+				sortDirection,
+				search,
+				status,
+				position,
+				birthdayMonth,
+			}) => ({
 				url: '/employees',
 				params: {
 					page,
@@ -88,6 +121,8 @@ export const employeesApi = baseApi.injectEndpoints({
 					sortDirection,
 					search: search || undefined,
 					status: status || undefined,
+					position: position || undefined,
+					birthdayMonth: birthdayMonth ?? undefined,
 				},
 			}),
 			providesTags: ['Employee'],

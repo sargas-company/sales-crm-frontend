@@ -17,6 +17,7 @@ export const baseApi = createApi({
 		'Lead',
 		'Account',
 		'Platform',
+		'Position',
 		'Counterparty',
 		'Client',
 		'ClientActivity',

@@ -91,7 +91,7 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 	const { data: employeesPage } = useGetEmployeesQuery({
 		page: 1,
 		limit: 500,
-		status: 'active',
+		status: 'ACTIVE',
 	})
 	const clientOptions = useMemo(
 		() => clientsPage?.data ?? [],

@@ -200,9 +200,11 @@ const ProjectViewPage = () => {
 					) : (
 						<MembersGrid>
 							{project.members.map((m) => {
-								const isInactive = m.employee.status === 'inactive'
+								const isInactive = m.employee.status === 'TERMINATED'
 								const positionsLine =
-									m.employee.positions.length > 0 ? m.employee.positions.join(' · ') : null
+									m.employee.positions.length > 0
+										? m.employee.positions.map((p) => p.title).join(' · ')
+										: null
 								return (
 									<MemberCard
 										key={m.employeeId}

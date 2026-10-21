@@ -620,7 +620,7 @@ const CompensationAnalytics = () => {
 												<div>
 													{row.employee.firstName} {row.employee.lastName}
 												</div>
-												<Sub>{row.employee.positions[0] ?? row.rateType}</Sub>
+												<Sub>{row.employee.positions[0]?.title ?? row.rateType}</Sub>
 											</BreakName>
 											<BaseCol>
 												<BaseLabel>base</BaseLabel>

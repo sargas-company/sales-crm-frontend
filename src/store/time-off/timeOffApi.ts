@@ -17,8 +17,8 @@ export interface TimeOffItem {
 		id: string
 		firstName: string
 		lastName: string
-		status: 'active' | 'inactive'
-		positions: string[]
+		status: 'ACTIVE' | 'BENCH' | 'TERMINATED'
+		positions: { id: string; title: string; slug: string }[]
 	}
 	createdBy: {
 		id: string
@@ -79,7 +79,7 @@ export interface CalendarEmployee {
 	firstName: string
 	lastName: string
 	status: 'active' | 'inactive'
-	positions: string[]
+	positions: { id: string; title: string; slug: string }[]
 }
 
 export interface CalendarRecord {

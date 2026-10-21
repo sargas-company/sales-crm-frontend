@@ -126,6 +126,7 @@ const navList: NavOptions[] = [
 		parent: formatGroupButton('Employees', <BadgeOutlined />, '/employees'),
 		childrens: [
 			format('List', '/employees/list', <ListAltOutlined />, 'employees:view'),
+			format('Positions', '/positions/list/', <WorkOutlineOutlined />, 'positions:view'),
 			format('Time Off', '/employees/time-off', <BeachAccessOutlined />, 'time_off:view'),
 			format('Credentials', '/credentials', <VpnKeyOutlined />, 'credentials:view'),
 		],

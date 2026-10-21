@@ -17,7 +17,7 @@ export interface LinkedInAccount {
 		id: string
 		firstName: string
 		lastName: string
-		positions: string[]
+		positions: { id: string; title: string; slug: string }[]
 	} | null
 	_count?: { posts: number }
 }

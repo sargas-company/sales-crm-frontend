@@ -71,8 +71,20 @@ const EmployeeViewPage = () => {
 					icon={<GroupsOutlined />}
 					title={name}
 					subtitle={`${employee.email} · created ${formatDate(employee.createdAt, 'short')}`}
-					badgeLabel={employee.status === 'active' ? 'Active' : 'Inactive'}
-					badgeTone={employee.status === 'active' ? 'new' : 'draft'}
+					badgeLabel={
+						employee.status === 'ACTIVE'
+							? 'Active'
+							: employee.status === 'BENCH'
+								? 'Bench'
+								: 'Terminated'
+					}
+					badgeTone={
+						employee.status === 'ACTIVE'
+							? 'new'
+							: employee.status === 'BENCH'
+								? 'edit'
+								: 'draft'
+					}
 				/>
 
 				<Section $delay={80}>
@@ -100,7 +112,7 @@ const EmployeeViewPage = () => {
 						{employee.positions.length > 0 ? (
 							<Tags>
 								{employee.positions.map((p) => (
-									<Tag key={p}>{p}</Tag>
+									<Tag key={p.id}>{p.title}</Tag>
 								))}
 							</Tags>
 						) : (
@@ -111,7 +123,13 @@ const EmployeeViewPage = () => {
 						<Field label='Status'>
 							<TextField
 								name='st'
-								value={employee.status === 'active' ? 'Active' : 'Inactive'}
+								value={
+									employee.status === 'ACTIVE'
+										? 'Active'
+										: employee.status === 'BENCH'
+											? 'Bench'
+											: 'Terminated'
+								}
 								disable
 								sizes='small'
 								width='100%'
@@ -121,19 +139,6 @@ const EmployeeViewPage = () => {
 							<TextField
 								name='hi'
 								value={employee.hiredAt ? formatDate(employee.hiredAt, 'short') : '—'}
-								disable
-								sizes='small'
-								width='100%'
-							/>
-						</Field>
-						<Field label='Linked user' span='full'>
-							<TextField
-								name='us'
-								value={
-									employee.user
-										? `${employee.user.firstName} ${employee.user.lastName} (${employee.user.email})`
-										: '—'
-								}
 								disable
 								sizes='small'
 								width='100%'

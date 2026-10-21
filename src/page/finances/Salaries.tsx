@@ -209,8 +209,8 @@ const Salaries = () => {
 			label: 'Position',
 			render: (r) =>
 				r.employee.positions.length > 0 ? (
-					<PositionPill title={r.employee.positions[0]}>
-						{r.employee.positions[0]}
+					<PositionPill title={r.employee.positions[0].title}>
+						{r.employee.positions[0].title}
 					</PositionPill>
 				) : (
 					<SubText>—</SubText>

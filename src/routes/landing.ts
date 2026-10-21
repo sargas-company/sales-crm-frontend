@@ -28,6 +28,7 @@ export const LANDING_CANDIDATES: LandingCandidate[] = [
 	{ path: '/invoices/list/', permission: 'invoices:view' },
 	{ path: '/counterparties/list/', permission: 'counterparties:view' },
 	{ path: '/employees/list', permission: 'employees:view' },
+	{ path: '/positions/list/', permission: 'positions:view' },
 	{ path: '/employees/time-off', permission: 'time_off:view' },
 	{ path: '/projects/list', permission: 'projects:view' },
 	{ path: '/prompts/list', permission: 'prompts:view' },

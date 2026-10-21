@@ -134,12 +134,17 @@ interface RowState {
 }
 
 const emptyRow = (
-	e: { id: string; firstName: string; lastName: string; positions: string[] },
+	e: {
+		id: string
+		firstName: string
+		lastName: string
+		positions: { id: string; title: string; slug: string }[]
+	},
 ): RowState => ({
 	employeeId: e.id,
 	firstName: e.firstName,
 	lastName: e.lastName,
-	position: e.positions[0] ?? '',
+	position: e.positions[0]?.title ?? '',
 	entryId: null,
 	status: 'NEW',
 	rateType: 'HOURLY',
@@ -152,13 +157,18 @@ const emptyRow = (
 })
 
 const fromEntry = (
-	e: { id: string; firstName: string; lastName: string; positions: string[] },
+	e: {
+		id: string
+		firstName: string
+		lastName: string
+		positions: { id: string; title: string; slug: string }[]
+	},
 	p: PayrollEntry,
 ): RowState => ({
 	employeeId: e.id,
 	firstName: e.firstName,
 	lastName: e.lastName,
-	position: e.positions[0] ?? '',
+	position: e.positions[0]?.title ?? '',
 	entryId: p.id,
 	status: p.status,
 	rateType: p.rateType,

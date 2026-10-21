@@ -1,6 +1,7 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { GroupsOutlined } from '@mui/icons-material'
+import { ChangeEvent, FormEvent, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import styled from 'styled-components'
+import { CheckRounded, GroupsOutlined, AddRounded } from '@mui/icons-material'
 import { TextField, Select, SelectItem } from '../../../ui'
 import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
@@ -19,12 +20,14 @@ import {
 	Shell,
 	Surface,
 } from '../../_shared/formShell.styled'
+import { T } from '../../sales-analytics/_shared/tokens'
 import {
 	useGetEmployeeByIdQuery,
 	useCreateEmployeeMutation,
 	useUpdateEmployeeMutation,
 	type EmployeeStatus,
 } from '../../../store/employees/employeesApi'
+import { useGetPositionsQuery } from '../../../store/positions/positionsApi'
 
 interface Props {
 	id?: string
@@ -35,7 +38,7 @@ interface FormFields {
 	lastName: string
 	email: string
 	phone: string
-	positionsText: string
+	positions: string[]
 	status: EmployeeStatus
 	hiredAt: string
 	dateOfBirth: string
@@ -52,17 +55,11 @@ const empty: FormFields = {
 	lastName: '',
 	email: '',
 	phone: '',
-	positionsText: '',
-	status: 'active',
+	positions: [],
+	status: 'ACTIVE',
 	hiredAt: '',
 	dateOfBirth: '',
 }
-
-const parsePositions = (text: string): string[] =>
-	text
-		.split(',')
-		.map((p) => p.trim())
-		.filter((p) => p.length > 0)
 
 const EmployeeFormInner = ({ id, initial }: { id?: string; initial: FormFields }) => {
 	const navigate = useNavigate()
@@ -86,8 +83,10 @@ const EmployeeFormInner = ({ id, initial }: { id?: string; initial: FormFields }
 		const next: FormErrors = {}
 		if (!fields.firstName.trim()) next.firstName = 'First name is required'
 		if (!fields.lastName.trim()) next.lastName = 'Last name is required'
-		if (!fields.email.trim()) next.email = 'Email is required'
-		else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email.trim()))
+		// Email is optional now; only validate shape when the user
+		// actually typed something.
+		const trimmedEmail = fields.email.trim()
+		if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail))
 			next.email = 'Enter a valid email'
 		setErrors(next)
 		return Object.keys(next).length === 0
@@ -103,9 +102,9 @@ const EmployeeFormInner = ({ id, initial }: { id?: string; initial: FormFields }
 					body: {
 						firstName: fields.firstName,
 						lastName: fields.lastName,
-						email: fields.email,
+						email: fields.email.trim() || undefined,
 						phone: fields.phone || undefined,
-						positions: parsePositions(fields.positionsText),
+						positions: fields.positions,
 						status: fields.status,
 						hiredAt: fields.hiredAt || undefined,
 						dateOfBirth: fields.dateOfBirth || null,
@@ -116,9 +115,9 @@ const EmployeeFormInner = ({ id, initial }: { id?: string; initial: FormFields }
 				await createEmployee({
 					firstName: fields.firstName,
 					lastName: fields.lastName,
-					email: fields.email,
+					email: fields.email.trim() || undefined,
 					phone: fields.phone || undefined,
-					positions: parsePositions(fields.positionsText),
+					positions: fields.positions,
 					status: fields.status,
 					hiredAt: fields.hiredAt || undefined,
 					dateOfBirth: fields.dateOfBirth || null,
@@ -172,7 +171,7 @@ const EmployeeFormInner = ({ id, initial }: { id?: string; initial: FormFields }
 									error={!!errors.lastName}
 								/>
 							</Field>
-							<Field label='Email' required error={errors.email}>
+							<Field label='Email' error={errors.email}>
 								<TextField
 									name='email'
 									placeholder='name@company.com'
@@ -201,21 +200,6 @@ const EmployeeFormInner = ({ id, initial }: { id?: string; initial: FormFields }
 					<Section $delay={140}>
 						<SectionHead num='02' title='Team profile' hint='Roles and hiring info' />
 						<FieldGrid>
-							<Field
-								label='Positions'
-								hint='Comma-separated (e.g. "Backend engineer, Team lead")'
-								span='full'
-							>
-								<TextField
-									name='positions'
-									placeholder='Backend engineer, Team lead'
-									value={fields.positionsText}
-									onChange={(e: ChangeEvent<HTMLInputElement>) =>
-										setField('positionsText', e.target.value)
-									}
-									width='100%'
-								/>
-							</Field>
 							<Field label='Status'>
 								<Select
 									label='Status'
@@ -224,8 +208,9 @@ const EmployeeFormInner = ({ id, initial }: { id?: string; initial: FormFields }
 									width='100%'
 									sizes='normal'
 								>
-									<SelectItem label='Active' value='active' />
-									<SelectItem label='Inactive' value='inactive' />
+									<SelectItem label='Active' value='ACTIVE' />
+									<SelectItem label='Bench' value='BENCH' />
+									<SelectItem label='Terminated' value='TERMINATED' />
 								</Select>
 							</Field>
 							<Field label='Hired at'>
@@ -248,6 +233,16 @@ const EmployeeFormInner = ({ id, initial }: { id?: string; initial: FormFields }
 										setField('dateOfBirth', e.target.value)
 									}
 									width='100%'
+								/>
+							</Field>
+							<Field
+								label='Positions'
+								hint='Pick from the Position catalogue — manage the catalogue on the Positions page.'
+								span='full'
+							>
+								<PositionPicker
+									selected={fields.positions}
+									onChange={(next) => setField('positions', next)}
 								/>
 							</Field>
 						</FieldGrid>
@@ -288,9 +283,9 @@ const EmployeeForm = ({ id }: Props) => {
 		? {
 				firstName: data.firstName,
 				lastName: data.lastName,
-				email: data.email,
+				email: data.email ?? '',
 				phone: data.phone ?? '',
-				positionsText: data.positions.join(', '),
+				positions: data.positions.map((p) => p.id),
 				status: data.status,
 				hiredAt: data.hiredAt ? data.hiredAt.slice(0, 10) : '',
 				dateOfBirth: data.dateOfBirth ? data.dateOfBirth.slice(0, 10) : '',
@@ -301,3 +296,149 @@ const EmployeeForm = ({ id }: Props) => {
 }
 
 export default EmployeeForm
+
+/** Chip-based multi-select over the Position catalogue. `selected`
+ *  carries Position UUIDs; the backend accepts the same shape and
+ *  resolves them to junction rows via `positions.set` / `connect`. */
+const PositionPicker = ({
+	selected,
+	onChange,
+}: {
+	selected: string[]
+	onChange: (next: string[]) => void
+}) => {
+	const { data, isLoading, isError } = useGetPositionsQuery()
+
+	const positions = useMemo(() => data ?? [], [data])
+	const selectedSet = useMemo(() => new Set(selected), [selected])
+
+	const toggle = (id: string) => {
+		if (selectedSet.has(id)) {
+			onChange(selected.filter((p) => p !== id))
+		} else {
+			onChange([...selected, id])
+		}
+	}
+
+	if (isLoading) {
+		return <PickerHint>Loading catalogue…</PickerHint>
+	}
+	if (isError) {
+		return <PickerHint>Failed to load positions.</PickerHint>
+	}
+	if (positions.length === 0) {
+		return (
+			<PickerEmpty>
+				<span>No positions in the catalogue yet.</span>
+				<PickerAddLink to='/positions/add/'>
+					<AddRounded />
+					Add first position
+				</PickerAddLink>
+			</PickerEmpty>
+		)
+	}
+
+	return (
+		<PickerChips>
+			{positions.map((p) => {
+				const active = selectedSet.has(p.id)
+				return (
+					<PickerChip
+						key={p.id}
+						type='button'
+						$active={active}
+						onClick={() => toggle(p.id)}
+					>
+						{active && <CheckRounded />}
+						{p.title}
+					</PickerChip>
+				)
+			})}
+		</PickerChips>
+	)
+}
+
+const PickerChips = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding: 10px 0 2px;
+`
+
+const PickerChip = styled.button<{ $active: boolean; $legacy?: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 12px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	white-space: nowrap;
+	cursor: pointer;
+	border: 1px solid
+		${({ $active, $legacy }) =>
+			$legacy
+				? 'rgba(217, 119, 6, 0.45)'
+				: $active
+					? 'rgba(3, 105, 161, 0.55)'
+					: 'rgba(3, 105, 161, 0.18)'};
+	background: ${({ $active, $legacy }) =>
+		$legacy
+			? 'rgba(217, 119, 6, 0.14)'
+			: $active
+				? 'rgba(3, 105, 161, 0.14)'
+				: 'rgba(3, 105, 161, 0.04)'};
+	color: ${({ $legacy }) => ($legacy ? '#92400e' : T.primary)};
+	transition:
+		background 160ms ease,
+		border-color 160ms ease,
+		transform 160ms ease;
+
+	svg {
+		font-size: 14px;
+	}
+
+	&:hover {
+		transform: translateY(-1px);
+	}
+`
+
+const PickerHint = styled.div`
+	font-size: 12.5px;
+	color: ${T.textSecondary};
+	padding: 10px 0 2px;
+`
+
+const PickerEmpty = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 10px 0 2px;
+	font-size: 12.5px;
+	color: ${T.textSecondary};
+	flex-wrap: wrap;
+`
+
+const PickerAddLink = styled(Link)`
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 12px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 600;
+	text-decoration: none;
+	color: ${T.primary};
+	background: ${T.primaryTint};
+	border: 1px solid rgba(3, 105, 161, 0.25);
+
+	svg {
+		font-size: 15px;
+	}
+
+	&:hover {
+		background: rgba(3, 105, 161, 0.14);
+	}
+`

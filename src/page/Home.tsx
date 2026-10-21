@@ -14,6 +14,7 @@ const Analytics = lazy(() => import('./analytics'))
 const Proposal = lazy(() => import('./proposal'))
 const Leads = lazy(() => import('./leads'))
 const Platforms = lazy(() => import('./platforms'))
+const Positions = lazy(() => import('./positions'))
 const Accounts = lazy(() => import('./accounts'))
 const Counterparties = lazy(() => import('./counterparties'))
 const Clients = lazy(() => import('./clients'))
@@ -161,6 +162,14 @@ const Home = () => {
 								element={
 									<ProtectedRoute permission='platforms:view'>
 										<Platforms />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/positions/*'
+								element={
+									<ProtectedRoute permission='positions:view'>
+										<Positions />
 									</ProtectedRoute>
 								}
 							/>
