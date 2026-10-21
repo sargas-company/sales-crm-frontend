@@ -142,20 +142,80 @@ export type InvoiceSortBy =
 
 export type InvoiceSortDirection = 'asc' | 'desc'
 
-export interface InvoiceListParams {
+/** Shared filter dimensions — same params feed the list endpoint and
+ *  the stats endpoint, so the KPI cards above the table always track
+ *  what the user is actually viewing. */
+export interface InvoiceFilters {
+	search?: string
+	status?: InvoiceStatus
+	counterpartyId?: string
+	type?: 'client' | 'contractor'
+	dateFrom?: string
+	dateTo?: string
+}
+
+export interface InvoiceListParams extends InvoiceFilters {
 	page: number
 	limit: number
 	sortBy?: InvoiceSortBy
 	sortDirection?: InvoiceSortDirection
-	search?: string
+}
+
+export interface InvoiceStats {
+	total: number
+	draft: number
+	open: number
+	paid: number
+	/** Sum of invoice totals across all filtered rows, summed flat
+	 *  across currencies. Use `amountByCurrency` when precision per
+	 *  currency matters. */
+	totalAmount: number
+	amountByCurrency: Record<string, number>
 }
 
 export const invoicesApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getInvoiceList: builder.query<InvoiceListResponse, InvoiceListParams>({
-			query: ({ page, limit, sortBy, sortDirection, search }) => ({
+			query: ({
+				page,
+				limit,
+				sortBy,
+				sortDirection,
+				search,
+				status,
+				counterpartyId,
+				type,
+				dateFrom,
+				dateTo,
+			}) => ({
 				url: '/invoices',
-				params: { page, limit, sortBy, sortDirection, search: search || undefined },
+				params: {
+					page,
+					limit,
+					sortBy,
+					sortDirection,
+					search: search || undefined,
+					status: status || undefined,
+					counterpartyId: counterpartyId || undefined,
+					type: type || undefined,
+					dateFrom: dateFrom || undefined,
+					dateTo: dateTo || undefined,
+				},
+			}),
+			providesTags: ['Invoice'],
+		}),
+
+		getInvoiceStats: builder.query<InvoiceStats, InvoiceFilters>({
+			query: ({ search, status, counterpartyId, type, dateFrom, dateTo }) => ({
+				url: '/invoices/stats',
+				params: {
+					search: search || undefined,
+					status: status || undefined,
+					counterpartyId: counterpartyId || undefined,
+					type: type || undefined,
+					dateFrom: dateFrom || undefined,
+					dateTo: dateTo || undefined,
+				},
 			}),
 			providesTags: ['Invoice'],
 		}),
@@ -234,6 +294,7 @@ export const bulkDownloadInvoicesZip = async (
 
 export const {
 	useGetInvoiceListQuery,
+	useGetInvoiceStatsQuery,
 	useGetInvoiceByIdQuery,
 	useCreateInvoiceMutation,
 	useUpdateInvoiceMutation,

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import {
 	DeleteOutline,
@@ -9,6 +9,13 @@ import {
 	AddRounded,
 	PaidOutlined,
 	DownloadRounded,
+	SearchOutlined,
+	ClearRounded,
+	FilterListOutlined,
+	DescriptionOutlined,
+	MailOutline,
+	CheckCircleOutline,
+	AttachMoneyOutlined,
 } from '@mui/icons-material'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../../components/_shared/ListPageShell'
@@ -24,6 +31,20 @@ import type {
 	SortState,
 } from '../../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
+import {
+	BottomSlot,
+	ClearBtn as FreshClearBtn,
+	FreshFiltersWrap,
+	InlineField,
+	InlineSelect,
+	RowBreak,
+	SearchPill,
+} from '../../../components/_shared/filters/freshPaperFilters'
+import {
+	TapeIndicator,
+	TapePill,
+	TapePills,
+} from '../../analytics/filters/filters.styled'
 import BulkActionBar from '../../../components/_shared/BulkActionBar'
 import ConfirmModal from '../../../components/_shared/ConfirmModal'
 import InvoiceDeleteModal from '../../../components/invoices/list/InvoiceDeleteModal'
@@ -34,12 +55,18 @@ import {
 	getCounterpartyName,
 	getInvoiceTotal,
 } from '../../../components/invoices/list/utils'
-import type { InvoiceItem, InvoiceSortBy } from '../../../store/invoices/invoicesApi'
+import type {
+	InvoiceItem,
+	InvoiceSortBy,
+	InvoiceStatus,
+} from '../../../store/invoices/invoicesApi'
 import {
 	bulkDownloadInvoicesZip,
 	useBulkDeleteInvoicesMutation,
 	useGetInvoiceListQuery,
+	useGetInvoiceStatsQuery,
 } from '../../../store/invoices/invoicesApi'
+import { useGetCounterpartiesQuery } from '../../../store/counterparties/counterpartiesApi'
 import { formatDate } from '../../../utils/format'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
 import usePermissions from '../../../hooks/usePermissions'
@@ -54,9 +81,72 @@ interface Target {
 
 const invoiceLabel = (i: InvoiceItem) => (i.number ? `Invoice #${i.number}` : `Invoice ${i.id}`)
 
+/** Status "preset" tabs — same tape visual as Employees / Clients. */
+type StatusPreset = '' | InvoiceStatus
+const STATUS_PRESETS: { value: StatusPreset; label: string }[] = [
+	{ value: '', label: 'All' },
+	{ value: 'open', label: 'Open' },
+	{ value: 'paid', label: 'Paid' },
+	{ value: 'draft', label: 'Draft' },
+]
+
+/** Light-weight count-up: animates `target` from the previous value
+ *  on each render, used for KPI card counters. Mirrors the inline
+ *  copies elsewhere in the codebase. */
+function useCountUp(target: number, duration = 500): number {
+	const [value, setValue] = useState(target)
+	useEffect(() => {
+		const from = value
+		const to = target
+		if (from === to) return
+		const start = performance.now()
+		let raf = 0
+		const tick = (now: number) => {
+			const t = Math.min(1, (now - start) / duration)
+			const eased = 1 - Math.pow(1 - t, 3)
+			setValue(Math.round(from + (to - from) * eased))
+			if (t < 1) raf = requestAnimationFrame(tick)
+		}
+		raf = requestAnimationFrame(tick)
+		return () => cancelAnimationFrame(raf)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [target])
+	return value
+}
+
+const KpiCounter = ({ value }: { value: number | undefined }) => {
+	const v = useCountUp(value ?? 0)
+	if (value === undefined) return <>—</>
+	return <>{v}</>
+}
+
+/** Money-counter: animates integer part of USD-ish amount and renders
+ *  with grouped thousands + decimals. The animation targets the
+ *  rounded-cents representation so tweens stay smooth. */
+const KpiMoneyCounter = ({ value }: { value: number | undefined }) => {
+	const cents = Math.round((value ?? 0) * 100)
+	const animated = useCountUp(cents)
+	if (value === undefined) return <>—</>
+	const whole = animated / 100
+	return (
+		<>
+			${whole.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+		</>
+	)
+}
+
 const InvoiceList = () => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
+	const [searchParams, setSearchParams] = useSearchParams()
+
+	// URL-synced filter values; deep link reproduces the exact state.
+	const statusParam = (searchParams.get('status') ?? '') as StatusPreset
+	const counterpartyIdParam = searchParams.get('counterparty') ?? ''
+	const typeParam = (searchParams.get('type') ?? '') as '' | 'client' | 'contractor'
+	const dateFromParam = searchParams.get('from') ?? ''
+	const dateToParam = searchParams.get('to') ?? ''
+
 	const [searchInput, setSearchInput] = useState('')
 	const search = useDebouncedValue(searchInput.trim(), 300)
 	const [page, setPage] = useState(1)
@@ -69,13 +159,90 @@ const InvoiceList = () => {
 	const [isDownloading, setIsDownloading] = useState(false)
 	const [bulkDelete, { isLoading: isBulkDeleting }] = useBulkDeleteInvoicesMutation()
 
+	// Pull a big page of counterparties for the dropdown. 500 is more
+	// than enough for any realistic directory; if the owner ever grows
+	// past that, swap for a typeahead.
+	const { data: counterpartiesData } = useGetCounterpartiesQuery({
+		page: 1,
+		limit: 500,
+		sortBy: 'firstName',
+		sortDirection: 'asc',
+	})
+	const counterparties = counterpartiesData?.data ?? []
+
+	const filterParams = {
+		search: search || undefined,
+		status: statusParam || undefined,
+		counterpartyId: counterpartyIdParam || undefined,
+		type: typeParam || undefined,
+		dateFrom: dateFromParam || undefined,
+		dateTo: dateToParam || undefined,
+	}
+
+	const { data: stats } = useGetInvoiceStatsQuery(filterParams)
+
 	const { data, isLoading, isError, refetch } = useGetInvoiceListQuery({
 		page,
 		limit: PAGE_SIZE,
-		search: search || undefined,
+		...filterParams,
 		sortBy: (sort?.key as InvoiceSortBy | undefined) ?? undefined,
 		sortDirection: sort?.direction,
 	})
+
+	const updateParam = (key: string, value: string) => {
+		const next = new URLSearchParams(searchParams)
+		if (value) next.set(key, value)
+		else next.delete(key)
+		setSearchParams(next, { replace: true })
+		setPage(1)
+	}
+
+	const clearFilters = () => {
+		const next = new URLSearchParams(searchParams)
+		next.delete('status')
+		next.delete('counterparty')
+		next.delete('type')
+		next.delete('from')
+		next.delete('to')
+		setSearchParams(next, { replace: true })
+		setSearchInput('')
+		setPage(1)
+	}
+
+	const activeFilterCount =
+		(statusParam ? 1 : 0) +
+		(counterpartyIdParam ? 1 : 0) +
+		(typeParam ? 1 : 0) +
+		(dateFromParam ? 1 : 0) +
+		(dateToParam ? 1 : 0) +
+		(searchInput ? 1 : 0)
+
+	// Status TapePills sliding indicator — same pattern as other
+	// list pages (Clients / Employees / Phone numbers).
+	const pillsRef = useRef<HTMLDivElement>(null)
+	const [ind, setInd] = useState({ left: 0, width: 0, opacity: 0 })
+	useLayoutEffect(() => {
+		const root = pillsRef.current
+		if (!root) return
+		const el = root.querySelector<HTMLButtonElement>(
+			'[role="tab"][data-active="true"]',
+		)
+		if (!el) {
+			setInd((p) => ({ ...p, opacity: 0 }))
+			return
+		}
+		const rootRect = root.getBoundingClientRect()
+		const r = el.getBoundingClientRect()
+		setInd({
+			left: r.left - rootRect.left - 2,
+			width: r.width + 4,
+			opacity: 1,
+		})
+	}, [statusParam])
+
+	useEffect(() => {
+		setPage(1)
+	}, [search, statusParam, counterpartyIdParam, typeParam, dateFromParam, dateToParam])
 	const allItems = data ? (Array.isArray(data) ? data : data.data) : []
 	const total = data ? (Array.isArray(data) ? data.length : data.total) : 0
 
@@ -314,33 +481,234 @@ const InvoiceList = () => {
 						</PrimarySolidButton>
 					</PermissionGate>
 				}
-				searchPlaceholder='Search by invoice number'
-				search={searchInput}
-				onSearchChange={setSearchInput}
 				filters={
-					<BulkBarSlot aria-live='polite'>
-						<BulkActionBar
-							persistent
-							count={selected.size}
-							onClear={() => setSelected(new Set())}
-							onConfirm={() => setBulkDeleteOpen(true)}
-							isLoading={isBulkDeleting}
-							secondaryActions={[
-								{
-									key: 'download',
-									label: 'Download selected',
-									count: downloadableSelectedCount,
-									icon: <DownloadRounded />,
-									tone: 'default',
-									onClick: handleBulkDownload,
-									isLoading: isDownloading,
-									disabled: downloadableSelectedCount === 0,
-								},
-							]}
-						/>
-					</BulkBarSlot>
+					<InvoiceFiltersWrap role='region' aria-label='Invoices filters'>
+						<div className='filter-lead'>
+							<span className='lead-icon'>
+								<FilterListOutlined />
+							</span>
+							<div className='lead-text'>
+								<span className='top'>Filter</span>
+								<span className='bot'>
+									{STATUS_PRESETS.find((p) => p.value === statusParam)?.label ??
+										'All'}
+								</span>
+							</div>
+						</div>
+
+						<TapePills ref={pillsRef} role='tablist' aria-label='Status preset'>
+							<TapeIndicator
+								style={{
+									transform: `translateX(${ind.left}px) rotate(-1.2deg)`,
+									width: `${ind.width}px`,
+									opacity: ind.opacity,
+								}}
+							/>
+							{STATUS_PRESETS.map((p) => (
+								<TapePill
+									key={p.value || 'all'}
+									type='button'
+									role='tab'
+									data-active={statusParam === p.value || undefined}
+									aria-selected={statusParam === p.value}
+									$active={statusParam === p.value}
+									onClick={() => updateParam('status', p.value)}
+								>
+									{p.label}
+								</TapePill>
+							))}
+						</TapePills>
+
+						<div className='filter-spacer' />
+
+						<div className='upwork-hint' aria-hidden='true'>
+							<span className='row'>
+								<span className='w'>every</span>
+								<span className='amber-wrap'>
+									<span className='a'>INVOICE</span>
+									<svg
+										className='squiggle'
+										viewBox='0 0 120 12'
+										width='120'
+										height='12'
+										preserveAspectRatio='none'
+									>
+										<path
+											d='M2 8 Q 12 2, 22 8 T 42 8 T 62 8 T 82 8 T 102 8 T 118 8'
+											fill='none'
+											stroke='currentColor'
+											strokeWidth='2.2'
+											strokeLinecap='round'
+										/>
+									</svg>
+								</span>
+								<span className='w'>in sight</span>
+							</span>
+							<span className='stars'>
+								<svg
+									className='s'
+									width='14'
+									height='14'
+									viewBox='0 0 24 24'
+									fill='currentColor'
+								>
+									<path d='M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.9l-6.2 4.4 2.4-7.4L2 9.4h7.6z' />
+								</svg>
+							</span>
+						</div>
+
+						<RowBreak />
+
+						<BottomSlot>
+							<SearchPill>
+								<SearchOutlined className='ico' />
+								<input
+									type='text'
+									value={searchInput}
+									onChange={(e) => setSearchInput(e.target.value)}
+									placeholder='Search by invoice number'
+									aria-label='Search invoices'
+								/>
+							</SearchPill>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Counterparty</span>
+								<InlineSelect
+									value={counterpartyIdParam}
+									onChange={(e) => updateParam('counterparty', e.target.value)}
+								>
+									<option value=''>Any</option>
+									{counterparties.map((c) => (
+										<option key={c.id} value={c.id}>
+											{`${c.firstName} ${c.lastName}`.trim() ||
+												c.company ||
+												c.id}
+										</option>
+									))}
+								</InlineSelect>
+							</InlineField>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Type</span>
+								<InlineSelect
+									value={typeParam}
+									onChange={(e) => updateParam('type', e.target.value)}
+								>
+									<option value=''>Any</option>
+									<option value='client'>Client</option>
+									<option value='contractor'>Contractor</option>
+								</InlineSelect>
+							</InlineField>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>From</span>
+								<InlineDateInput
+									type='date'
+									value={dateFromParam}
+									onChange={(e) => updateParam('from', e.target.value)}
+								/>
+							</InlineField>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>To</span>
+								<InlineDateInput
+									type='date'
+									value={dateToParam}
+									onChange={(e) => updateParam('to', e.target.value)}
+								/>
+							</InlineField>
+						</BottomSlot>
+
+						<div className='filter-spacer' />
+
+						<FreshClearBtn
+							type='button'
+							onClick={clearFilters}
+							disabled={activeFilterCount === 0}
+						>
+							<ClearRounded style={{ fontSize: 15 }} />
+							Clear
+						</FreshClearBtn>
+					</InvoiceFiltersWrap>
 				}
 			>
+				<KpiRow>
+					<KpiCard>
+						<KpiIcon>
+							<DescriptionOutlined />
+						</KpiIcon>
+						<KpiBody>
+							<KpiLabel>Total</KpiLabel>
+							<KpiNum>
+								<KpiCounter value={stats?.total} />
+							</KpiNum>
+						</KpiBody>
+					</KpiCard>
+					<KpiCard>
+						<KpiIcon>
+							<AttachMoneyOutlined />
+						</KpiIcon>
+						<KpiBody>
+							<KpiLabel>Total amount</KpiLabel>
+							<KpiNum>
+								<KpiMoneyCounter value={stats?.totalAmount} />
+							</KpiNum>
+						</KpiBody>
+					</KpiCard>
+					<KpiCard>
+						<KpiIcon>
+							<MailOutline />
+						</KpiIcon>
+						<KpiBody>
+							<KpiLabel>Open</KpiLabel>
+							<KpiNum>
+								<KpiCounter value={stats?.open} />
+							</KpiNum>
+						</KpiBody>
+					</KpiCard>
+					<KpiCard>
+						<KpiIcon>
+							<CheckCircleOutline />
+						</KpiIcon>
+						<KpiBody>
+							<KpiLabel>Paid</KpiLabel>
+							<KpiNum>
+								<KpiCounter value={stats?.paid} />
+							</KpiNum>
+						</KpiBody>
+					</KpiCard>
+				</KpiRow>
+
+				<BulkBarSlot aria-live='polite'>
+					<BulkActionBar
+						persistent
+						count={selected.size}
+						onClear={() => setSelected(new Set())}
+						onConfirm={() => setBulkDeleteOpen(true)}
+						isLoading={isBulkDeleting}
+						secondaryActions={[
+							{
+								key: 'download',
+								label: 'Download selected',
+								count: downloadableSelectedCount,
+								icon: <DownloadRounded />,
+								tone: 'default',
+								onClick: handleBulkDownload,
+								isLoading: isDownloading,
+								disabled: downloadableSelectedCount === 0,
+							},
+						]}
+					/>
+				</BulkBarSlot>
+
 				<DataTable
 					columns={columns}
 					rows={allItems}
@@ -444,6 +812,107 @@ const BulkBarSlot = styled.div`
 	min-width: 320px;
 	display: flex;
 	justify-content: flex-end;
+`
+
+/* Full-width extension of the shared FreshFiltersWrap (same width:100%
+ * trick used on EmployeeList). */
+const InvoiceFiltersWrap = styled(FreshFiltersWrap)`
+	width: 100%;
+	padding: 18px 22px;
+`
+
+/* Native date input styled to visually match InlineSelect — min-height
+ * 42px, same radius / border / typography. */
+const InlineDateInput = styled.input`
+	appearance: none;
+	-webkit-appearance: none;
+	box-sizing: border-box;
+	min-height: 42px;
+	border: 1.5px solid rgba(36, 30, 22, 0.14);
+	border-radius: 999px;
+	background: #ffffff;
+	padding: 10px 14px;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	color: #241e16;
+	line-height: 1.2;
+	cursor: pointer;
+	transition: border-color 180ms ease;
+
+	&:hover,
+	&:focus,
+	&:focus-visible {
+		outline: none;
+		border-color: #241e16;
+	}
+`
+
+/* ─── KPI cards (clone of TimeOffList's row). ───────────────── */
+
+const KpiRow = styled.div`
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 14px;
+	margin-bottom: 18px;
+`
+
+const KpiCard = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 16px 18px;
+	border-radius: 14px;
+	background: #ffffff;
+	border: 1px solid ${T.border};
+	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+	transition: transform 180ms ease, box-shadow 180ms ease;
+
+	&:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 4px 14px rgba(39, 36, 45, 0.08);
+	}
+`
+
+const KpiIcon = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	border-radius: 12px;
+	background: ${T.primaryTint};
+	color: ${T.primary};
+	flex-shrink: 0;
+
+	svg {
+		font-size: 22px;
+	}
+`
+
+const KpiBody = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+`
+
+const KpiLabel = styled.div`
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.5px;
+	text-transform: uppercase;
+	color: ${T.textSecondary};
+`
+
+const KpiNum = styled.div`
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-size: 26px;
+	font-weight: 700;
+	color: ${T.textStrong};
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.3px;
+	line-height: 1.1;
 `
 
 const StatusPill = styled.span<{ $status: string }>`
