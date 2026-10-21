@@ -84,44 +84,6 @@ const MONTH_OPTIONS: { value: string; label: string }[] = [
 	{ value: '12', label: 'December' },
 ]
 
-const initials = (first: string, last: string) => {
-	const a = (first?.[0] ?? '').toUpperCase()
-	const b = (last?.[0] ?? '').toUpperCase()
-	return (a + b || '?').slice(0, 2)
-}
-
-/** Vibrant palette for deterministic avatars — 12 slots, pick by
- *  employee-id hash so the same person always lands on the same
- *  colour across sessions. White text sits legibly on all of them. */
-const AVATAR_PALETTE = [
-	'#ef4444', // red
-	'#f97316', // orange
-	'#f59e0b', // amber
-	'#84cc16', // lime
-	'#10b981', // emerald
-	'#14b8a6', // teal
-	'#06b6d4', // cyan
-	'#3b82f6', // blue
-	'#6366f1', // indigo
-	'#8b5cf6', // violet
-	'#ec4899', // pink
-	'#f43f5e', // rose
-] as const
-
-/** Cheap stable string hash — only needs to be deterministic + evenly
- *  distributed across small ints, not cryptographic. */
-const hashString = (s: string): number => {
-	let h = 0
-	for (let i = 0; i < s.length; i++) {
-		h = (h << 5) - h + s.charCodeAt(i)
-		h |= 0
-	}
-	return Math.abs(h)
-}
-
-const avatarColor = (id: string): string =>
-	AVATAR_PALETTE[hashString(id) % AVATAR_PALETTE.length]
-
 const fullName = (e: EmployeeItem) => `${e.firstName} ${e.lastName}`.trim() || '—'
 
 /** Whole years since the birth date, treating the birthdate as a
@@ -403,20 +365,12 @@ const EmployeeList = () => {
 			sortValue: (e) => fullName(e),
 			render: (e) => (
 				<NameCell>
-					{e.avatarUrl ? (
-						<AvatarImg src={e.avatarUrl} alt={fullName(e)} loading='lazy' />
-					) : (
-						<Avatar $color={avatarColor(e.id)}>
-							{initials(e.firstName, e.lastName)}
-						</Avatar>
-					)}
 					<NameText>{fullName(e)}</NameText>
 				</NameCell>
 			),
 			skeleton: () => (
 				<NameCell>
-					<TableSkeleton $w='36px' $h='36px' style={{ borderRadius: 10, flexShrink: 0 }} />
-					<TableSkeleton $w='120px' $h='14px' />
+					<TableSkeleton $w='140px' $h='14px' />
 				</NameCell>
 			),
 		},
@@ -786,33 +740,6 @@ const NameCell = styled.div`
 	align-items: center;
 	gap: 14px;
 	min-width: 0;
-`
-
-const Avatar = styled.span<{ $color: string }>`
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 36px;
-	height: 36px;
-	border-radius: 10px;
-	background: ${({ $color }) => $color};
-	color: #ffffff;
-	font-size: 12.5px;
-	font-weight: 700;
-	letter-spacing: 0.4px;
-	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-	flex-shrink: 0;
-`
-
-const AvatarImg = styled.img`
-	width: 36px;
-	height: 36px;
-	border-radius: 10px;
-	object-fit: cover;
-	background: ${T.subtleBg};
-	border: 1px solid ${T.border};
-	flex-shrink: 0;
 `
 
 const NameText = styled.div`
