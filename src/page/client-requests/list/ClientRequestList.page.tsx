@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { DeleteOutline, VisibilityOutlined, EditOutlined, MailOutline } from '@mui/icons-material'
+import {
+	DeleteOutline,
+	VisibilityOutlined,
+	EditOutlined,
+	MailOutline,
+	BadgeOutlined,
+	BusinessOutlined,
+	PhoneDisabledOutlined,
+} from '@mui/icons-material'
+import { formatDateTimeSec } from '../../../utils/formatDate'
 import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 
@@ -159,19 +168,33 @@ const ClientRequestList = () => {
 		{
 			key: 'name',
 			label: 'Contact',
-			minWidth: 200,
 			sortable: true,
 			sortValue: (r) => r.name,
-			render: (r) => <ContactName>{r.name || '—'}</ContactName>,
+			render: (r) =>
+				r.name ? (
+					<ContactName>{r.name}</ContactName>
+				) : (
+					<EmptyBadge title='No contact name on file'>
+						<BadgeOutlined />
+						no name
+					</EmptyBadge>
+				),
 			skeleton: () => <TableSkeleton $w='150px' $h='14px' />,
 		},
 		{
 			key: 'company',
 			label: 'Company',
-			minWidth: 180,
 			sortable: true,
 			sortValue: (r) => r.company ?? '',
-			render: (r) => (r.company ? <Muted>{r.company}</Muted> : <Muted>—</Muted>),
+			render: (r) =>
+				r.company ? (
+					<CompanyText>{r.company}</CompanyText>
+				) : (
+					<EmptyBadge title='No company on file'>
+						<BusinessOutlined />
+						no company
+					</EmptyBadge>
+				),
 			skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
 		},
 		{
@@ -180,7 +203,15 @@ const ClientRequestList = () => {
 			minWidth: 220,
 			sortable: true,
 			sortValue: (r) => r.email,
-			render: (r) => <Muted>{r.email}</Muted>,
+			render: (r) =>
+				r.email ? (
+					<Muted>{r.email}</Muted>
+				) : (
+					<EmptyBadge title='No email on file'>
+						<MailOutline />
+						no email
+					</EmptyBadge>
+				),
 			skeleton: () => <TableSkeleton $w='180px' $h='13px' />,
 		},
 		{
@@ -200,7 +231,10 @@ const ClientRequestList = () => {
 						<PhoneNumber>{formatPhone(r.phone, r.phoneCountry)}</PhoneNumber>
 					</PhoneCell>
 				) : (
-					<Muted>—</Muted>
+					<EmptyBadge title='No phone on file'>
+						<PhoneDisabledOutlined />
+						no phone
+					</EmptyBadge>
 				),
 			skeleton: () => <TableSkeleton $w='130px' $h='13px' />,
 		},
@@ -216,11 +250,11 @@ const ClientRequestList = () => {
 		{
 			key: 'created',
 			label: 'Created',
-			minWidth: 140,
+			minWidth: 170,
 			sortable: true,
 			sortValue: (r) => new Date(r.createdAt),
-			render: (r) => <Muted>{formatDate(r.createdAt, 'short')}</Muted>,
-			skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
+			render: (r) => <DateTimeCell iso={r.createdAt} />,
+			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
 		},
 		{
 			key: 'actions',
@@ -335,11 +369,80 @@ const ClientRequestList = () => {
 
 export default ClientRequestList
 
-const ContactName = styled.span`
-	font-size: 14.5px;
-	font-weight: 600;
+const ContactName = styled.strong`
+	display: inline-block;
+	font-weight: 700;
 	color: ${T.textStrong};
-	line-height: 1.3;
+	white-space: nowrap;
+`
+
+const CompanyText = styled.span`
+	display: inline-block;
+	color: ${T.textStrong};
+	white-space: nowrap;
+`
+
+/* Dashed muted badge for empty cells — mirrors Employees / Projects /
+ * Leads / Clients list pattern. Thematic icon + lowercase label. */
+const EmptyBadge = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	border: 1.5px dashed rgba(100, 116, 139, 0.4);
+	background: rgba(100, 116, 139, 0.06);
+	color: ${T.textSecondary};
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
+
+	svg {
+		font-size: 15px;
+		opacity: 0.7;
+	}
+`
+
+/* Date + time cell — mirrors Projects / Leads / Clients list. Date in
+ * dark slate semi-bold, time trailing in muted monospace. */
+const DateTimeCell = ({ iso }: { iso: string }) => {
+	const d = new Date(iso)
+	const timeStr = d.toLocaleTimeString('en-GB', {
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+	})
+	return (
+		<DateTimeWrap title={formatDateTimeSec(iso)}>
+			<DatePart>{formatDate(iso, 'short')}</DatePart>
+			<TimePart>{timeStr}</TimePart>
+		</DateTimeWrap>
+	)
+}
+
+const DateTimeWrap = styled.span`
+	display: inline-flex;
+	align-items: baseline;
+	gap: 8px;
+	white-space: nowrap;
+`
+
+const DatePart = styled.span`
+	font-size: 13.5px;
+	font-weight: 600;
+	color: #0f172a;
+	letter-spacing: -0.1px;
+`
+
+const TimePart = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 11.5px;
+	font-weight: 400;
+	color: ${T.textMuted};
+	font-variant-numeric: tabular-nums;
 `
 
 const PhoneCell = styled.div`
@@ -353,23 +456,24 @@ const CountryFlag = styled.span`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 20px;
-	height: 20px;
-	border-radius: 4px;
+	width: 24px;
+	height: 24px;
+	border-radius: 5px;
 	background: rgba(15, 23, 42, 0.04);
-	font-size: 14px;
+	font-size: 18px;
 	line-height: 1;
 	user-select: none;
 	flex-shrink: 0;
 `
 
 const PhoneNumber = styled.span`
-	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-	font-size: 12.5px;
-	font-weight: 600;
-	color: ${T.textStrong};
-	letter-spacing: 0.2px;
+	display: inline-block;
+	max-width: 220px;
+	overflow: hidden;
+	text-overflow: ellipsis;
 	white-space: nowrap;
+	color: ${T.textStrong};
+	font-variant-numeric: tabular-nums;
 `
 
 const Muted = styled.span`

@@ -11,10 +11,16 @@ import {
 	SearchOutlined,
 	ClearRounded,
 	LocationOnOutlined,
+	BusinessOutlined,
+	MailOutline,
+	PhoneDisabledOutlined,
+	CallSplitOutlined,
+	LocationOffOutlined,
 } from '@mui/icons-material'
 import { locationFlag } from '../../../utils/location'
 import CountryAutocomplete from '../../../components/_shared/CountryAutocomplete'
 import { formatDate } from '../../../utils/format'
+import { formatDateTimeSec } from '../../../utils/formatDate'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../../components/_shared/ListPageShell'
 import {
@@ -228,7 +234,14 @@ const ClientList = () => {
 				sortable: true,
 				sortValue: (c) => c.company ?? '',
 				render: (c) =>
-					c.company ? c.company : <Muted>—</Muted>,
+					c.company ? (
+						c.company
+					) : (
+						<EmptyBadge title='No company on file'>
+							<BusinessOutlined />
+							no company
+						</EmptyBadge>
+					),
 				skeleton: () => <TableSkeleton $w='120px' $h='13px' />,
 			},
 			{
@@ -247,7 +260,14 @@ const ClientList = () => {
 				sortable: true,
 				sortValue: (c) => c.email ?? '',
 				render: (c) =>
-					c.email ? <EmailText title={c.email}>{c.email}</EmailText> : <Muted>—</Muted>,
+					c.email ? (
+						<EmailText title={c.email}>{c.email}</EmailText>
+					) : (
+						<EmptyBadge title='No email on file'>
+							<MailOutline />
+							no email
+						</EmptyBadge>
+					),
 				skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
 			},
 			{
@@ -256,7 +276,13 @@ const ClientList = () => {
 				sortable: true,
 				sortValue: (c) => c.phone ?? '',
 				render: (c) => {
-					if (!c.phone) return <Muted>—</Muted>
+					if (!c.phone)
+						return (
+							<EmptyBadge title='No phone on file'>
+								<PhoneDisabledOutlined />
+								no phone
+							</EmptyBadge>
+						)
 					const iso = phoneCountryIso(c.phone)
 					const flag = countryToFlag(iso)
 					return (
@@ -273,7 +299,14 @@ const ClientList = () => {
 				label: 'Source',
 				sortable: false,
 				render: (c) =>
-					c.source ? <SourcePill>{c.source}</SourcePill> : <Muted>—</Muted>,
+					c.source ? (
+						<SourcePill>{c.source}</SourcePill>
+					) : (
+						<EmptyBadge title='Source not recorded'>
+							<CallSplitOutlined />
+							no source
+						</EmptyBadge>
+					),
 				skeleton: () => <TableSkeleton $w='70px' $h='13px' />,
 			},
 			{
@@ -281,7 +314,13 @@ const ClientList = () => {
 				label: 'Location',
 				sortable: false,
 				render: (c) => {
-					if (!c.location) return <Muted>—</Muted>
+					if (!c.location)
+						return (
+							<EmptyBadge title='No location on file'>
+								<LocationOffOutlined />
+								no location
+							</EmptyBadge>
+						)
 					const flag = locationFlag(c.location)
 					return (
 						<LocationCell>
@@ -301,20 +340,20 @@ const ClientList = () => {
 			{
 				key: 'updatedAt',
 				label: 'Updated',
-				minWidth: 140,
+				minWidth: 170,
 				sortable: true,
 				sortValue: (c) => new Date(c.updatedAt),
-				render: (c) => <Muted>{formatDate(c.updatedAt, 'short')}</Muted>,
-				skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
+				render: (c) => <DateTimeCell iso={c.updatedAt} />,
+				skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
 			},
 			{
 				key: 'createdAt',
 				label: 'Created',
-				minWidth: 140,
+				minWidth: 170,
 				sortable: true,
 				sortValue: (c) => new Date(c.createdAt),
-				render: (c) => <Muted>{formatDate(c.createdAt, 'short')}</Muted>,
-				skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
+				render: (c) => <DateTimeCell iso={c.createdAt} />,
+				skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
 			},
 			{
 				key: 'actions',
@@ -527,6 +566,75 @@ const ClientList = () => {
 const Muted = styled.span`
 	color: ${T.textSecondary};
 `
+
+/* Date + time cell. The DATE pops (semi-bold, dark slate) and the
+ * time trails it in a lighter weight / muted colour — scannable at a
+ * glance without hiding the exact timestamp. Mirrors the Projects
+ * list implementation. */
+const DateTimeCell = ({ iso }: { iso: string }) => {
+	const d = new Date(iso)
+	const timeStr = d.toLocaleTimeString('en-GB', {
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+	})
+	return (
+		<DateTimeWrap title={formatDateTimeSec(iso)}>
+			<DatePart>{formatDate(iso, 'short')}</DatePart>
+			<TimePart>{timeStr}</TimePart>
+		</DateTimeWrap>
+	)
+}
+
+const DateTimeWrap = styled.span`
+	display: inline-flex;
+	align-items: baseline;
+	gap: 8px;
+	white-space: nowrap;
+`
+
+const DatePart = styled.span`
+	font-size: 13.5px;
+	font-weight: 600;
+	color: #0f172a;
+	letter-spacing: -0.1px;
+`
+
+const TimePart = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 11.5px;
+	font-weight: 400;
+	color: ${T.textMuted};
+	font-variant-numeric: tabular-nums;
+`
+
+
+/* Dashed muted badge for empty cells — mirrors the Employees / Projects
+ * list pattern. Replaces plain em-dash so missing fields read as
+ * "nothing here yet", not broken data. Thematic icon + lowercase label
+ * per cell type. */
+const EmptyBadge = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	border: 1.5px dashed rgba(100, 116, 139, 0.4);
+	background: rgba(100, 116, 139, 0.06);
+	color: ${T.textSecondary};
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
+
+	svg {
+		font-size: 15px;
+		opacity: 0.7;
+	}
+`
+
 const NumLink = styled(Link)`
 	font-variant-numeric: tabular-nums;
 	font-weight: 600;
@@ -601,12 +709,13 @@ const Flag = styled.span`
 const StatusPill = styled.span<{ $status: ApiClientStatus }>`
 	display: inline-flex;
 	align-items: center;
-	padding: 2px 10px;
+	padding: 4px 10px;
 	border-radius: 999px;
 	font-size: 11px;
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.3px;
+	white-space: nowrap;
 	background: ${({ $status }) =>
 		$status === 'ACTIVE'
 			? 'rgba(34, 197, 94, 0.14)'

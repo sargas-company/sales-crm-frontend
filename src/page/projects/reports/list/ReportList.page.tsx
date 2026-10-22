@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import {
@@ -8,6 +8,13 @@ import {
 	AssessmentOutlined,
 	AddRounded,
 	ArrowOutwardOutlined,
+	FilterListOutlined,
+	SearchOutlined,
+	ClearRounded,
+	ArticleOutlined,
+	AccessTimeOutlined,
+	TrendingUpOutlined,
+	CalendarMonthOutlined,
 } from '@mui/icons-material'
 import { T } from '../../../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../../../components/_shared/ListPageShell'
@@ -23,6 +30,20 @@ import type {
 	SortState,
 } from '../../../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../../../components/_shared/formShell.styled'
+import {
+	FreshFiltersWrap,
+	SearchPill,
+	InlineField,
+	InlineSelect,
+	BottomSlot,
+	RowBreak,
+	ClearBtn as FreshClearBtn,
+} from '../../../../components/_shared/filters/freshPaperFilters'
+import {
+	TapeIndicator,
+	TapePill,
+	TapePills,
+} from '../../../analytics/filters/filters.styled'
 import PermissionGate from '../../../../components/auth/PermissionGate'
 import BulkActionBar from '../../../../components/_shared/BulkActionBar'
 import ConfirmModal from '../../../../components/_shared/ConfirmModal'
@@ -33,22 +54,71 @@ import type {
 } from '../../../../store/project-reports/projectReportsApi'
 import {
 	useGetProjectReportsQuery,
+	useGetProjectReportStatsQuery,
 	useDeleteProjectReportMutation,
 	useBulkDeleteProjectReportsMutation,
 } from '../../../../store/project-reports/projectReportsApi'
+import { useGetProjectsQuery } from '../../../../store/projects/projectsApi'
 import { formatDate } from '../../../../utils/format'
 import { formatDateTimeSec } from '../../../../utils/formatDate'
 import useDebouncedValue from '../../../../hooks/useDebouncedValue'
 
 const PAGE_SIZE = 20
 
+/** Light-weight count-up: animates `target` from the previous value on
+ *  each render; used for KPI card counters. Mirrors the inline copies
+ *  on Invoices and other list pages — intentionally duplicated to
+ *  avoid pulling an entire motion lib for 20 lines. */
+function useCountUp(target: number, duration = 500): number {
+	const [value, setValue] = useState(target)
+	useEffect(() => {
+		const from = value
+		const to = target
+		if (from === to) return
+		const start = performance.now()
+		let raf = 0
+		const tick = (now: number) => {
+			const t = Math.min(1, (now - start) / duration)
+			const eased = 1 - Math.pow(1 - t, 3)
+			setValue(Math.round(from + (to - from) * eased))
+			if (t < 1) raf = requestAnimationFrame(tick)
+		}
+		raf = requestAnimationFrame(tick)
+		return () => cancelAnimationFrame(raf)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [target])
+	return value
+}
+
+const KpiCounter = ({ value }: { value: number | undefined }) => {
+	const v = useCountUp(value ?? 0)
+	if (value === undefined) return <>—</>
+	return <>{v}</>
+}
+
+/** Hours counter — animates in tenths, renders with one decimal. */
+const KpiHoursCounter = ({ value }: { value: number | undefined }) => {
+	const tenths = Math.round((value ?? 0) * 10)
+	const animated = useCountUp(tenths)
+	if (value === undefined) return <>—</>
+	return <>{(animated / 10).toFixed(1)}</>
+}
+
+type SourcePreset = '' | 'MANUAL' | 'DISCORD'
+const SOURCE_PRESETS: { value: SourcePreset; label: string }[] = [
+	{ value: '', label: 'All' },
+	{ value: 'MANUAL', label: 'CRM' },
+	{ value: 'DISCORD', label: 'Discord' },
+]
+
 const ReportList = () => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
-	const [searchParams] = useSearchParams()
-	const projectFilter = searchParams.get('projectId') ?? undefined
-	const fromFilter = searchParams.get('from') ?? undefined
-	const toFilter = searchParams.get('to') ?? undefined
+	const [searchParams, setSearchParams] = useSearchParams()
+	const projectParam = searchParams.get('projectId') ?? ''
+	const fromParam = searchParams.get('from') ?? ''
+	const toParam = searchParams.get('to') ?? ''
+	const sourceParam = (searchParams.get('source') ?? '') as SourcePreset
 
 	const [searchInput, setSearchInput] = useState('')
 	const search = useDebouncedValue(searchInput.trim(), 300)
@@ -58,15 +128,32 @@ const ReportList = () => {
 	const [selected, setSelected] = useState<Set<string>>(() => new Set())
 	const [bulkOpen, setBulkOpen] = useState(false)
 
+	// Project list for the dropdown. 500 covers any realistic org
+	// today; if we outgrow it, swap for a typeahead.
+	const { data: projectsData } = useGetProjectsQuery({
+		page: 1,
+		limit: 500,
+		sortBy: 'name',
+		sortDirection: 'asc',
+	})
+	const projects = projectsData?.data ?? []
+
+	const filterParams = {
+		search: search || undefined,
+		projectId: projectParam || undefined,
+		from: fromParam || undefined,
+		to: toParam || undefined,
+		source: sourceParam || undefined,
+	}
+
+	const { data: stats } = useGetProjectReportStatsQuery(filterParams)
+
 	const { data, isLoading, isError, refetch } = useGetProjectReportsQuery({
 		page,
 		limit: PAGE_SIZE,
-		search: search || undefined,
+		...filterParams,
 		sortBy: (sort?.key as ProjectReportSortBy | undefined) ?? undefined,
 		sortDirection: sort?.direction,
-		projectId: projectFilter,
-		from: fromFilter,
-		to: toFilter,
 	})
 	const [deleteReport, { isLoading: deleting }] = useDeleteProjectReportMutation()
 	const [bulkDeleteReports, { isLoading: bulkDeleting }] =
@@ -75,13 +162,61 @@ const ReportList = () => {
 	const items = data?.data ?? []
 	const total = data?.total ?? 0
 
+	const updateParam = (key: string, value: string) => {
+		const next = new URLSearchParams(searchParams)
+		if (value) next.set(key, value)
+		else next.delete(key)
+		setSearchParams(next, { replace: true })
+		setPage(1)
+	}
+
+	const clearFilters = () => {
+		const next = new URLSearchParams(searchParams)
+		next.delete('projectId')
+		next.delete('from')
+		next.delete('to')
+		next.delete('source')
+		setSearchParams(next, { replace: true })
+		setSearchInput('')
+		setPage(1)
+	}
+
+	const activeFilterCount =
+		(projectParam ? 1 : 0) +
+		(fromParam ? 1 : 0) +
+		(toParam ? 1 : 0) +
+		(sourceParam ? 1 : 0) +
+		(searchInput ? 1 : 0)
+
+	// TapePills sliding indicator — same pattern as Invoices / Clients.
+	const pillsRef = useRef<HTMLDivElement>(null)
+	const [ind, setInd] = useState({ left: 0, width: 0, opacity: 0 })
+	useLayoutEffect(() => {
+		const root = pillsRef.current
+		if (!root) return
+		const el = root.querySelector<HTMLButtonElement>(
+			'[role="tab"][data-active="true"]',
+		)
+		if (!el) {
+			setInd((p) => ({ ...p, opacity: 0 }))
+			return
+		}
+		const rootRect = root.getBoundingClientRect()
+		const r = el.getBoundingClientRect()
+		setInd({
+			left: r.left - rootRect.left - 2,
+			width: r.width + 4,
+			opacity: 1,
+		})
+	}, [sourceParam])
+
 	const handleSortChange = (next: SortState | null) => {
 		setSort(next)
 		setPage(1)
 	}
 	useEffect(() => {
 		setPage(1)
-	}, [search, projectFilter, fromFilter, toFilter])
+	}, [search, projectParam, fromParam, toParam, sourceParam])
 
 	// Drop stale selections every time the server returns a new page —
 	// a row that just scrolled off the page should not count toward
@@ -315,10 +450,200 @@ const ReportList = () => {
 						</PermissionGate>
 					</HeaderActions>
 				}
-				searchPlaceholder='Search summary'
-				search={searchInput}
-				onSearchChange={setSearchInput}
+				filters={
+					<FreshFiltersWrap role='region' aria-label='Reports filters'>
+						<div className='filter-lead'>
+							<span className='lead-icon'>
+								<FilterListOutlined />
+							</span>
+							<div className='lead-text'>
+								<span className='top'>Filter</span>
+								<span className='bot'>
+									{SOURCE_PRESETS.find((p) => p.value === sourceParam)
+										?.label ?? 'All'}
+								</span>
+							</div>
+						</div>
+
+						<TapePills
+							ref={pillsRef}
+							role='tablist'
+							aria-label='Source preset'
+						>
+							<TapeIndicator
+								style={{
+									transform: `translateX(${ind.left}px) rotate(-1.2deg)`,
+									width: `${ind.width}px`,
+									opacity: ind.opacity,
+								}}
+							/>
+							{SOURCE_PRESETS.map((p) => (
+								<TapePill
+									key={p.value || 'all'}
+									type='button'
+									role='tab'
+									data-active={sourceParam === p.value || undefined}
+									aria-selected={sourceParam === p.value}
+									$active={sourceParam === p.value}
+									onClick={() => updateParam('source', p.value)}
+								>
+									{p.label}
+								</TapePill>
+							))}
+						</TapePills>
+
+						<div className='filter-spacer' />
+
+						<div className='upwork-hint' aria-hidden='true'>
+							<span className='row'>
+								<span className='w'>every</span>
+								<span className='amber-wrap'>
+									<span className='a'>REPORT</span>
+									<svg
+										className='squiggle'
+										viewBox='0 0 120 12'
+										width='120'
+										height='12'
+										preserveAspectRatio='none'
+									>
+										<path
+											d='M2 8 Q 12 2, 22 8 T 42 8 T 62 8 T 82 8 T 102 8 T 118 8'
+											fill='none'
+											stroke='currentColor'
+											strokeWidth='2.2'
+											strokeLinecap='round'
+										/>
+									</svg>
+								</span>
+								<span className='w'>on the board</span>
+							</span>
+							<span className='stars'>
+								<svg
+									className='s'
+									width='14'
+									height='14'
+									viewBox='0 0 24 24'
+									fill='currentColor'
+								>
+									<path d='M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.9l-6.2 4.4 2.4-7.4L2 9.4h7.6z' />
+								</svg>
+							</span>
+						</div>
+
+						<RowBreak />
+
+						<BottomSlot>
+							<SearchPill>
+								<SearchOutlined className='ico' />
+								<input
+									type='text'
+									value={searchInput}
+									onChange={(e) => setSearchInput(e.target.value)}
+									placeholder='Search summary'
+									aria-label='Search reports'
+								/>
+							</SearchPill>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Project</span>
+								<InlineSelect
+									value={projectParam}
+									onChange={(e) => updateParam('projectId', e.target.value)}
+								>
+									<option value=''>Any</option>
+									{projects.map((p) => (
+										<option key={p.id} value={p.id}>
+											{p.name}
+										</option>
+									))}
+								</InlineSelect>
+							</InlineField>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>From</span>
+								<InlineDateInput
+									type='date'
+									value={fromParam}
+									onChange={(e) => updateParam('from', e.target.value)}
+								/>
+							</InlineField>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>To</span>
+								<InlineDateInput
+									type='date'
+									value={toParam}
+									onChange={(e) => updateParam('to', e.target.value)}
+								/>
+							</InlineField>
+						</BottomSlot>
+
+						<div className='filter-spacer' />
+
+						<FreshClearBtn
+							type='button'
+							onClick={clearFilters}
+							disabled={activeFilterCount === 0}
+						>
+							<ClearRounded style={{ fontSize: 15 }} />
+							Clear
+						</FreshClearBtn>
+					</FreshFiltersWrap>
+				}
 			>
+				<KpiRow>
+					<KpiCard>
+						<KpiIcon>
+							<ArticleOutlined />
+						</KpiIcon>
+						<KpiBody>
+							<KpiLabel>Total reports</KpiLabel>
+							<KpiNum>
+								<KpiCounter value={stats?.totalReports} />
+							</KpiNum>
+						</KpiBody>
+					</KpiCard>
+					<KpiCard>
+						<KpiIcon>
+							<AccessTimeOutlined />
+						</KpiIcon>
+						<KpiBody>
+							<KpiLabel>Total hours</KpiLabel>
+							<KpiNum>
+								<KpiHoursCounter value={stats?.totalHours} />
+							</KpiNum>
+						</KpiBody>
+					</KpiCard>
+					<KpiCard>
+						<KpiIcon>
+							<TrendingUpOutlined />
+						</KpiIcon>
+						<KpiBody>
+							<KpiLabel>Avg h / report</KpiLabel>
+							<KpiNum>
+								<KpiHoursCounter value={stats?.avgHoursPerReport} />
+							</KpiNum>
+						</KpiBody>
+					</KpiCard>
+					<KpiCard>
+						<KpiIcon>
+							<CalendarMonthOutlined />
+						</KpiIcon>
+						<KpiBody>
+							<KpiLabel>Days covered</KpiLabel>
+							<KpiNum>
+								<KpiCounter value={stats?.daysCovered} />
+							</KpiNum>
+						</KpiBody>
+					</KpiCard>
+				</KpiRow>
+
 				<DataTable
 					columns={columns}
 					rows={items}
@@ -390,6 +715,92 @@ const HeaderActions = styled.div`
 	align-items: center;
 	gap: 10px;
 	flex-wrap: wrap;
+`
+
+/* ─── Filter-bar date input (clone of Invoices) ─── */
+const InlineDateInput = styled.input`
+	appearance: none;
+	-webkit-appearance: none;
+	box-sizing: border-box;
+	min-height: 42px;
+	border: 1.5px solid rgba(36, 30, 22, 0.14);
+	border-radius: 999px;
+	background: #ffffff;
+	padding: 10px 14px;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	color: #241e16;
+	line-height: 1.2;
+	cursor: pointer;
+	transition: border-color 180ms ease;
+
+	&:hover,
+	&:focus,
+	&:focus-visible {
+		outline: none;
+		border-color: #241e16;
+	}
+`
+
+/* ─── KPI row + cards (mirrors Invoices) ─── */
+const KpiRow = styled.div`
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 14px;
+	margin-bottom: 18px;
+`
+
+const KpiCard = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 16px 18px;
+	border-radius: 14px;
+	background: #ffffff;
+	border: 1px solid ${T.border};
+	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+`
+
+const KpiIcon = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	border-radius: 12px;
+	background: ${T.primaryTint};
+	color: ${T.primary};
+	flex-shrink: 0;
+
+	svg {
+		font-size: 22px;
+	}
+`
+
+const KpiBody = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+`
+
+const KpiLabel = styled.div`
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.5px;
+	text-transform: uppercase;
+	color: ${T.textSecondary};
+`
+
+const KpiNum = styled.div`
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-size: 26px;
+	font-weight: 700;
+	color: ${T.textStrong};
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.3px;
+	line-height: 1.1;
 `
 const DateCell = styled.span`
 	font-size: 13px;

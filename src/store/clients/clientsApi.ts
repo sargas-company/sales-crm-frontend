@@ -64,8 +64,11 @@ export interface ClientListParams {
 export interface CreateClientBody {
 	firstName: string
 	lastName: string
-	company: string
-	email: string
+	// company / email are optional now (owner rev-6 2026-10-22) — only
+	// first + last name identify a Client; everything else can be
+	// filled in later via edit.
+	company?: string | null
+	email?: string | null
 	phone?: string | null
 	source?: string | null
 	profileUrl?: string | null

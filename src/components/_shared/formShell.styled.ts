@@ -495,6 +495,64 @@ export const PrimaryGhostButton = styled.button`
 	}
 `
 
+const trashShake = keyframes`
+	0%   { transform: rotate(0); }
+	20%  { transform: rotate(-12deg); }
+	45%  { transform: rotate(10deg); }
+	70%  { transform: rotate(-6deg); }
+	100% { transform: rotate(0); }
+`
+
+/* Red ghost — same geometry as PrimaryGhostButton. Used for
+   hard-delete CTAs. No hover background by design: hover only lifts
+   (translateY) and shakes the leading icon. */
+export const DangerGhostButton = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	background: transparent;
+	color: #b91c1c;
+	border: 1px solid rgba(185, 28, 28, 0.4);
+	padding: 10px 17px;
+	font-family: inherit;
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+	border-radius: 12px;
+	cursor: pointer;
+	transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+
+	svg {
+		font-size: 18px;
+		transition: transform 220ms cubic-bezier(0.22, 1.35, 0.36, 1);
+		transform-origin: center 55%;
+	}
+
+	&:hover:not(:disabled) {
+		transform: translateY(-1px);
+	}
+
+	&:hover:not(:disabled) svg {
+		animation: ${trashShake} 520ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		&:hover:not(:disabled) svg {
+			animation: none;
+		}
+	}
+
+	&:active:not(:disabled) {
+		transform: translateY(0);
+	}
+
+	&:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
+	}
+`
+
 /* Icon micro-animations shared by "Edit …" and "Back …" buttons.
    Mirrors the pattern used in the client-calls / invoices previews so
    every mutation-CTA feels alive on hover. */

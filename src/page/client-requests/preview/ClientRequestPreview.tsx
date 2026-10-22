@@ -13,7 +13,13 @@ import {
 	TableChartOutlined,
 	VisibilityOutlined,
 	WarningAmberRounded,
+	BadgeOutlined,
+	BusinessOutlined,
+	MailOutline,
+	PhoneDisabledOutlined,
+	HelpOutline,
 } from '@mui/icons-material'
+import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import ListPageShell from '../../../components/_shared/ListPageShell/ListPageShell'
@@ -53,6 +59,27 @@ const fileIcon = (mimetype: string, size = 20) => {
 	if (mimetype.includes('sheet') || mimetype.includes('excel'))
 		return <TableChartOutlined sx={sx} />
 	return <InsertDriveFileOutlined sx={sx} />
+}
+
+/** 2-letter ISO country code → Unicode flag emoji. */
+const countryToFlag = (code: string): string => {
+	if (!code || code.length !== 2) return ''
+	const base = 0x1f1e6 - 'A'.charCodeAt(0)
+	const chars = code.toUpperCase().split('')
+	if (chars.some((c) => c < 'A' || c > 'Z')) return ''
+	return String.fromCodePoint(...chars.map((c) => base + c.charCodeAt(0)))
+}
+
+/** Pretty-format a phone to international shape. Falls back to raw. */
+const formatPhone = (raw: string, country?: string | null): string => {
+	try {
+		const cc = country ? (country.toUpperCase() as CountryCode) : undefined
+		const parsed = parsePhoneNumberFromString(raw, cc)
+		if (parsed?.isValid()) return parsed.formatInternational()
+	} catch {
+		/* fall through */
+	}
+	return raw
 }
 
 const downloadFile = (url: string, name: string) => {
@@ -118,27 +145,23 @@ const ClientRequestPreview = () => {
 		)
 	}
 
-	const createdDate = new Date(request.createdAt)
-	const updatedDate = new Date(request.updatedAt)
-	const createdStr = createdDate.toLocaleString('en-US', {
-		day: '2-digit',
-		month: 'short',
-		year: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-	})
-	const updatedStr = updatedDate.toLocaleString('en-US', {
-		day: '2-digit',
-		month: 'short',
-		year: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-	})
 	const sameTs = request.createdAt === request.updatedAt
-	const phoneLine =
-		request.phone && request.phoneCountry
-			? `+${request.phoneCountry.toUpperCase()} ${request.phone}`
-			: request.phone || ''
+	const prettyPhone = request.phone
+		? formatPhone(request.phone, request.phoneCountry)
+		: ''
+	const telHref = request.phone
+		? `tel:${(request.phoneCountry ? '+' + request.phoneCountry : '') + request.phone.replace(/\s+/g, '')}`
+		: '#'
+	// Human string for the hero "received <date>" line — kept as a
+	// one-line value matching the list cell (date + time).
+	const createdHero = `${new Date(request.createdAt).toLocaleDateString('en-GB', {
+		day: '2-digit',
+		month: 'short',
+		year: 'numeric',
+	})} · ${new Date(request.createdAt).toLocaleTimeString('en-GB', {
+		hour: '2-digit',
+		minute: '2-digit',
+	})}`
 
 	const termPath = `crm@sargas:~/client-requests/${STATUS_LABEL[request.status].replace(
 		/\s+/g,
@@ -175,7 +198,7 @@ const ClientRequestPreview = () => {
 							<Hero>{request.name || 'Anonymous'}</Hero>
 							<HeroMeta>
 								<ScheduleRounded style={{ fontSize: 13 }} />
-								<span>received {createdStr}</span>
+								<span>received {createdHero}</span>
 								{request.company && (
 									<>
 										<Sep>·</Sep>
@@ -188,23 +211,50 @@ const ClientRequestPreview = () => {
 
 					<KeyLines>
 						<KV label='name'>
-							<KvMono>{request.name || '—'}</KvMono>
+							{request.name ? (
+								<KvMono>{request.name}</KvMono>
+							) : (
+								<EmptyBadge title='No contact name on file'>
+									<BadgeOutlined />
+									no name
+								</EmptyBadge>
+							)}
 						</KV>
 						<KV label='company'>
-							<KvMono>{request.company || '—'}</KvMono>
+							{request.company ? (
+								<KvMono>{request.company}</KvMono>
+							) : (
+								<EmptyBadge title='No company on file'>
+									<BusinessOutlined />
+									no company
+								</EmptyBadge>
+							)}
 						</KV>
 						<KV label='email'>
 							{request.email ? (
 								<KvLink href={`mailto:${request.email}`}>{request.email}</KvLink>
 							) : (
-								<KvMono>—</KvMono>
+								<EmptyBadge title='No email on file'>
+									<MailOutline />
+									no email
+								</EmptyBadge>
 							)}
 						</KV>
 						<KV label='phone'>
-							{phoneLine ? (
-								<KvLink href={`tel:${phoneLine.replace(/\s+/g, '')}`}>{phoneLine}</KvLink>
+							{request.phone ? (
+								<PhoneLine>
+									{request.phoneCountry && (
+										<CountryFlag title={request.phoneCountry.toUpperCase()}>
+											{countryToFlag(request.phoneCountry)}
+										</CountryFlag>
+									)}
+									<KvLink href={telHref}>{prettyPhone}</KvLink>
+								</PhoneLine>
 							) : (
-								<KvMono>—</KvMono>
+								<EmptyBadge title='No phone on file'>
+									<PhoneDisabledOutlined />
+									no phone
+								</EmptyBadge>
 							)}
 						</KV>
 						<KV label='services'>
@@ -215,18 +265,21 @@ const ClientRequestPreview = () => {
 									))}
 								</ChipRow>
 							) : (
-								<KvMono>—</KvMono>
+								<EmptyBadge title='No services selected'>
+									<HelpOutline />
+									no services
+								</EmptyBadge>
 							)}
 						</KV>
 						<KV label='status'>
 							<StatusTag $status={request.status}>{STATUS_LABEL[request.status]}</StatusTag>
 						</KV>
 						<KV label='received'>
-							<KvMono>{createdStr}</KvMono>
+							<DateTimeInline iso={request.createdAt} />
 						</KV>
 						{!sameTs && (
 							<KV label='updated'>
-								<KvMono>{updatedStr}</KvMono>
+								<DateTimeInline iso={request.updatedAt} />
 							</KV>
 						)}
 						<KV label='id'>
@@ -293,7 +346,7 @@ const ClientRequestPreview = () => {
 				</TermBody>
 
 				<TermFooter>
-					request · {createdStr} · {request.id}
+					request · {createdHero} · {request.id}
 					<TermCursor />
 				</TermFooter>
 			</Terminal>
@@ -677,6 +730,93 @@ const KvValue = styled.span`
 	font-size: 13.5px;
 	color: ${T.textStrong};
 	word-break: break-word;
+`
+
+/* Dashed muted badge for empty KV lines — mirrors list pattern. */
+const EmptyBadge = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	border: 1.5px dashed rgba(100, 116, 139, 0.4);
+	background: rgba(100, 116, 139, 0.06);
+	color: ${T.textSecondary};
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
+
+	svg {
+		font-size: 15px;
+		opacity: 0.7;
+	}
+`
+
+const PhoneLine = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+`
+
+const CountryFlag = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 5px;
+	background: rgba(15, 23, 42, 0.04);
+	font-size: 18px;
+	line-height: 1;
+	flex-shrink: 0;
+`
+
+/* Inline date + time pair for KV lines on the preview — bold date in
+ * slate, muted monospace time. Mirrors the Projects / Leads / Clients
+ * list cell style. */
+const DateTimeInline = ({ iso }: { iso: string }) => {
+	const d = new Date(iso)
+	const dateStr = d.toLocaleDateString('en-GB', {
+		day: '2-digit',
+		month: 'short',
+		year: 'numeric',
+	})
+	const timeStr = d.toLocaleTimeString('en-GB', {
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+	})
+	return (
+		<DateTimeWrap>
+			<DatePart>{dateStr}</DatePart>
+			<TimePart>{timeStr}</TimePart>
+		</DateTimeWrap>
+	)
+}
+
+const DateTimeWrap = styled.span`
+	display: inline-flex;
+	align-items: baseline;
+	gap: 8px;
+	white-space: nowrap;
+`
+
+const DatePart = styled.span`
+	font-size: 13px;
+	font-weight: 700;
+	color: #e2e8f0;
+	letter-spacing: -0.1px;
+`
+
+const TimePart = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 11.5px;
+	font-weight: 400;
+	color: ${T.textMuted};
+	font-variant-numeric: tabular-nums;
 `
 
 const KvMono = styled.span`

@@ -11,6 +11,13 @@ import {
 	SearchOutlined,
 	ClearRounded,
 	LocationOnOutlined,
+	MailOutline,
+	PhoneDisabledOutlined,
+	HelpOutline,
+	ThermostatOutlined,
+	CallSplitOutlined,
+	LocationOffOutlined,
+	BusinessOutlined,
 } from '@mui/icons-material'
 import { locationFlag } from '../../../utils/location'
 import {
@@ -50,6 +57,7 @@ import {
 	useGetLeadSourcesQuery,
 } from '../../../store/leads/leadsApi'
 import { formatDate } from '../../../utils/format'
+import { formatDateTimeSec } from '../../../utils/formatDate'
 import {
 	countryToFlag,
 	formatPhoneDisplay,
@@ -239,18 +247,33 @@ const LeadList = () => {
 			skeleton: () => <TableSkeleton $w='40px' $h='13px' />,
 		},
 		{
+			// Shrinks to content; `white-space: nowrap` keeps the name
+			// on a single line (no two-line wrap in a wide table).
 			key: 'name',
-			label: 'Lead',
-			minWidth: 160,
+			label: 'Name',
 			sortable: true,
 			sortValue: (l) => leadName(l),
-			render: (l) => (
-				<LeadCellCompact>
-					<LeadName>{leadName(l)}</LeadName>
-					{l.companyName && <LeadMeta>{l.companyName}</LeadMeta>}
-				</LeadCellCompact>
-			),
+			render: (l) => <NameCell>{leadName(l)}</NameCell>,
 			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
+		},
+		{
+			// Mirror of the Clients list — separate Company column, empty
+			// cells get the dashed-pill `no company` placeholder.
+			// `white-space: nowrap` prevents two-line wrap in dense rows.
+			key: 'companyName',
+			label: 'Company',
+			sortable: true,
+			sortValue: (l) => l.companyName ?? '',
+			render: (l) =>
+				l.companyName ? (
+					<CompanyCell>{l.companyName}</CompanyCell>
+				) : (
+					<EmptyBadge title='No company on file'>
+						<BusinessOutlined />
+						no company
+					</EmptyBadge>
+				),
+			skeleton: () => <TableSkeleton $w='120px' $h='14px' />,
 		},
 		{
 			key: 'email',
@@ -262,7 +285,10 @@ const LeadList = () => {
 				l.email ? (
 					<EmailText title={l.email}>{l.email}</EmailText>
 				) : (
-					<Muted>—</Muted>
+					<EmptyBadge title='No email on file'>
+						<MailOutline />
+						no email
+					</EmptyBadge>
 				),
 			skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
 		},
@@ -273,7 +299,13 @@ const LeadList = () => {
 			sortable: true,
 			sortValue: (l) => l.phone ?? '',
 			render: (l) => {
-				if (!l.phone) return <Muted>—</Muted>
+				if (!l.phone)
+					return (
+						<EmptyBadge title='No phone on file'>
+							<PhoneDisabledOutlined />
+							no phone
+						</EmptyBadge>
+					)
 				const iso = phoneCountryIso(l.phone)
 				const flag = countryToFlag(iso)
 				return (
@@ -301,7 +333,10 @@ const LeadList = () => {
 						{l.clientType === 'company' ? 'Company' : 'Individual'}
 					</ClientTypePill>
 				) : (
-					<Muted>—</Muted>
+					<EmptyBadge title='Client type not set'>
+						<HelpOutline />
+						no type
+					</EmptyBadge>
 				),
 			skeleton: () => <TableSkeleton $w='70px' $h='13px' />,
 		},
@@ -324,7 +359,10 @@ const LeadList = () => {
 				l.temperature ? (
 					<TempBadge $t={l.temperature}>{l.temperature}</TempBadge>
 				) : (
-					<Muted>—</Muted>
+					<EmptyBadge title='Temperature not rated'>
+						<ThermostatOutlined />
+						no temp
+					</EmptyBadge>
 				),
 			skeleton: () => <TableSkeleton $w='60px' $h='18px' style={{ borderRadius: 999 }} />,
 		},
@@ -334,7 +372,14 @@ const LeadList = () => {
 			minWidth: 60,
 			sortable: false,
 			render: (l) =>
-				l.source ? <SourcePill>{l.source}</SourcePill> : <Muted>—</Muted>,
+				l.source ? (
+					<SourcePill>{l.source}</SourcePill>
+				) : (
+					<EmptyBadge title='Source not recorded'>
+						<CallSplitOutlined />
+						no source
+					</EmptyBadge>
+				),
 			skeleton: () => <TableSkeleton $w='60px' $h='13px' />,
 		},
 		{
@@ -344,7 +389,13 @@ const LeadList = () => {
 			sortable: true,
 			sortValue: (l) => l.location ?? '',
 			render: (l) => {
-				if (!l.location) return <Muted>—</Muted>
+				if (!l.location)
+					return (
+						<EmptyBadge title='No location on file'>
+							<LocationOffOutlined />
+							no location
+						</EmptyBadge>
+					)
 				const flag = locationFlag(l.location)
 				return (
 					<LocationCell>
@@ -360,20 +411,20 @@ const LeadList = () => {
 		{
 			key: 'updatedAt',
 			label: 'Updated',
-			minWidth: 140,
+			minWidth: 170,
 			sortable: true,
 			sortValue: (l) => new Date(l.updatedAt),
-			render: (l) => <Muted>{formatDate(l.updatedAt, 'short')}</Muted>,
-			skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
+			render: (l) => <DateTimeCell iso={l.updatedAt} />,
+			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
 		},
 		{
 			key: 'created',
 			label: 'Created',
-			minWidth: 140,
+			minWidth: 170,
 			sortable: true,
 			sortValue: (l) => new Date(l.createdAt),
-			render: (l) => <Muted>{formatDate(l.createdAt, 'short')}</Muted>,
-			skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
+			render: (l) => <DateTimeCell iso={l.createdAt} />,
+			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
 		},
 		{
 			key: 'actions',
@@ -592,11 +643,17 @@ const LeadCellCompact = styled.div`
 	width: fit-content;
 `
 
-const LeadName = styled.div`
-	font-size: 14.5px;
-	font-weight: 600;
+const NameCell = styled.strong`
+	display: inline-block;
+	font-weight: 700;
 	color: ${T.textStrong};
-	line-height: 1.3;
+	white-space: nowrap;
+`
+
+const CompanyCell = styled.span`
+	display: inline-block;
+	color: ${T.textStrong};
+	white-space: nowrap;
 `
 
 const LeadMeta = styled.div`
@@ -743,6 +800,74 @@ const Muted = styled.span`
 	color: ${T.textSecondary};
 `
 
+/* Date + time cell. The DATE pops (semi-bold, dark slate) and the
+ * time trails it in a lighter weight / muted colour — scannable at a
+ * glance without hiding the exact timestamp. Mirrors the Projects
+ * list implementation. */
+const DateTimeCell = ({ iso }: { iso: string }) => {
+	const d = new Date(iso)
+	const timeStr = d.toLocaleTimeString('en-GB', {
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+	})
+	return (
+		<DateTimeWrap title={formatDateTimeSec(iso)}>
+			<DatePart>{formatDate(iso, 'short')}</DatePart>
+			<TimePart>{timeStr}</TimePart>
+		</DateTimeWrap>
+	)
+}
+
+const DateTimeWrap = styled.span`
+	display: inline-flex;
+	align-items: baseline;
+	gap: 8px;
+	white-space: nowrap;
+`
+
+const DatePart = styled.span`
+	font-size: 13.5px;
+	font-weight: 600;
+	color: #0f172a;
+	letter-spacing: -0.1px;
+`
+
+const TimePart = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 11.5px;
+	font-weight: 400;
+	color: ${T.textMuted};
+	font-variant-numeric: tabular-nums;
+`
+
+
+/* Dashed muted badge for empty cells — mirrors the Employees /
+ * Projects / Clients pattern. Thematic icon + lowercase label per
+ * cell type, same visual shape across all list pages. */
+const EmptyBadge = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	border: 1.5px dashed rgba(100, 116, 139, 0.4);
+	background: rgba(100, 116, 139, 0.06);
+	color: ${T.textSecondary};
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
+
+	svg {
+		font-size: 15px;
+		opacity: 0.7;
+	}
+`
+
+
 const Num = styled.span`
 	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 	font-size: 13px;
@@ -782,11 +907,13 @@ const StatusPill = styled.span<{ $status: string }>`
 const TempBadge = styled.span<{ $t: ApiLeadTemperature }>`
 	display: inline-flex;
 	align-items: center;
-	padding: 2px 10px;
+	padding: 4px 10px;
 	border-radius: 999px;
 	font-size: 11px;
 	font-weight: 700;
+	text-transform: uppercase;
 	letter-spacing: 0.3px;
+	white-space: nowrap;
 	background: ${({ $t }) =>
 		$t === 'HOT'
 			? 'rgba(239, 68, 68, 0.14)'

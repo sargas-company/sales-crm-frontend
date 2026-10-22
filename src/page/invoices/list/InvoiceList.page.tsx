@@ -866,12 +866,6 @@ const KpiCard = styled.div`
 	background: #ffffff;
 	border: 1px solid ${T.border};
 	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-	transition: transform 180ms ease, box-shadow 180ms ease;
-
-	&:hover {
-		transform: translateY(-1px);
-		box-shadow: 0 4px 14px rgba(39, 36, 45, 0.08);
-	}
 `
 
 const KpiIcon = styled.span`

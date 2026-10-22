@@ -160,7 +160,7 @@ const ProfileDropdown = () => {
 								<span className='item-label'>Settings</span>
 							</li>
 						)}
-						<li onClick={() => handleNavigate('/credentials/vault-settings')}>
+						<li onClick={() => handleNavigate('/settings?s=vault_mfa')}>
 							<span className='item-icon'>
 								<VpnKeyOutlined />
 							</span>

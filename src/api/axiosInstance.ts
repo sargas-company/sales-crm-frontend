@@ -103,21 +103,29 @@ axiosInstance.interceptors.response.use(
 			return Promise.reject(error)
 		}
 
-		// Vault-protected endpoints return 401 when the HttpOnly vault
-		// session cookie is missing / expired, but the user's AUTH session
-		// is still valid. Those 401s must NOT trigger the global auth
-		// refresh+logout flow — the UI handles them separately by prompting
-		// the user to unlock the vault.
-		const url: string = original?.url ?? ''
-		const isVaultProtected =
-			url.includes('/vault/') ||
-			(url.includes('/credential-accounts/') &&
-				(url.endsWith('/reveal') ||
-					url.endsWith('/copy') ||
-					url.endsWith('/hard-delete') ||
-					url.includes('/attachments')))
+		// Vault-protected endpoints return 401 with a distinguishable
+		// error body (`{ code: 'VAULT_SESSION_REQUIRED' }`) when the
+		// HttpOnly vault cookie is missing / expired, but the user's
+		// AUTH session is still valid. Those 401s must NOT trigger the
+		// global auth refresh+logout flow — the UI pops an unlock
+		// drawer in place and keeps the form data.
+		//
+		// We key off the response body code (authoritative, set by the
+		// backend's VaultSessionGuard). We also raise the window event
+		// here so mid-edit expiry on ANY credentials mutation surfaces
+		// the unlock drawer without each caller having to catch the
+		// error itself.
+		const responseData = error.response?.data as
+			| { code?: string }
+			| undefined
+		const isVaultSessionIssue =
+			error.response?.status === 401 &&
+			responseData?.code === 'VAULT_SESSION_REQUIRED'
 
-		if (error.response?.status === 401 && isVaultProtected) {
+		if (isVaultSessionIssue) {
+			if (typeof window !== 'undefined') {
+				window.dispatchEvent(new CustomEvent('vault:request-unlock'))
+			}
 			return Promise.reject(error)
 		}
 

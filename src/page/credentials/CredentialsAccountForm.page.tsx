@@ -1,18 +1,13 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
-import {
-	AddRounded,
-	CloseRounded,
-	LockOutlined,
-	UploadFileOutlined,
-	VpnKeyOutlined,
-} from '@mui/icons-material'
+import { AddRounded, CloseRounded, DeleteOutline, VpnKeyOutlined } from '@mui/icons-material'
 import { TextField } from '../../ui'
 import { useToast } from '../../context/toast/ToastContext'
 import parseServerError from '../../utils/parseServerError'
 import useTheme from '../../theme/useTheme'
 import PermissionGate from '../../components/auth/PermissionGate'
+import { useAppSelector } from '../../hooks'
 import {
 	Field,
 	FormHeader,
@@ -21,6 +16,7 @@ import {
 	SectionHead,
 } from '../../components/_shared/FormShell'
 import {
+	DangerGhostButton,
 	DotMini,
 	FieldGrid,
 	FootActions,
@@ -32,22 +28,16 @@ import {
 	Shell,
 	Surface,
 } from '../../components/_shared/formShell.styled'
-import { useAppSelector } from '../../hooks'
 import {
-	useArchiveAccountMutation,
 	useCreateAccountMutation,
-	useDeleteAttachmentMutation,
 	useGetAccountQuery,
 	useHardDeleteAccountMutation,
-	useListAttachmentsQuery,
 	useUpdateAccountMutation,
-	useUploadAttachmentMutation,
-	useGetCredentialsPolicyQuery,
 	type SecretPayload,
 } from '../../store/credentials/credentialsApi'
-import { API_BASE_URL } from '../../api/baseApi'
+import { fetchAccountReveal } from '../../store/credentials/revealTransport'
 import HardDeleteModal from './HardDeleteModal'
-import VaultSetupGate from './VaultSetupGate'
+import PasswordStrengthField from './PasswordStrengthField'
 
 interface Props {
 	mode: 'create' | 'edit'
@@ -55,10 +45,7 @@ interface Props {
 
 interface FormFields {
 	serviceName: string
-	category: string
 	serviceUrl: string
-	tagsStr: string
-	usernameHint: string
 	username: string
 	email: string
 	password: string
@@ -71,15 +58,13 @@ interface FormFields {
 
 interface FormErrors {
 	serviceName?: string
-	category?: string
+	identity?: string
+	password?: string
 }
 
 const empty: FormFields = {
 	serviceName: '',
-	category: '',
 	serviceUrl: '',
-	tagsStr: '',
-	usernameHint: '',
 	username: '',
 	email: '',
 	password: '',
@@ -106,24 +91,67 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 	const [errors, setErrors] = useState<FormErrors>({})
 	const [createAcct, { isLoading: creating }] = useCreateAccountMutation()
 	const [updateAcct, { isLoading: updating }] = useUpdateAccountMutation()
-	const [archive] = useArchiveAccountMutation()
-	const [hardDelete] = useHardDeleteAccountMutation()
-	const [showDelete, setShowDelete] = useState(false)
+	const [hardDeleteAcct] = useHardDeleteAccountMutation()
 	const permissions = useAppSelector((s) => s.auth.permissions ?? [])
 	const canHardDelete = permissions.includes('credentials:hard_delete')
+	const [showDelete, setShowDelete] = useState(false)
 	const busy = creating || updating
+	// Snapshot of initial values — used on submit to diff and ship
+	// only fields that actually changed. Keeps metadata-only edits
+	// from forging a secrets update + no-op Discord notif.
+	const initialRef = useRef<FormFields>(empty)
+	// Guard so we auto-reveal exactly once per form mount.
+	const revealedRef = useRef(false)
+	const [revealing, setRevealing] = useState(false)
 
 	useEffect(() => {
 		if (!existing || !isEdit) return
 		setFields((prev) => ({
 			...prev,
 			serviceName: existing.serviceName,
-			category: existing.category,
 			serviceUrl: existing.serviceUrl ?? '',
-			tagsStr: existing.tags.join(', '),
-			usernameHint: existing.usernameHint ?? '',
 		}))
 	}, [existing, isEdit])
+
+	// Auto-reveal secrets on edit so the form opens pre-populated. One
+	// `reveal` audit event per form mount (same cost as a manual reveal
+	// click). Failure is non-fatal — fields just stay blank and the
+	// user can fill them manually.
+	useEffect(() => {
+		if (!isEdit || !existing || revealedRef.current) return
+		revealedRef.current = true
+		setRevealing(true)
+		fetchAccountReveal(paramId)
+			.then((res) => {
+				const s = res.secrets
+				setFields((prev) => {
+					const next: FormFields = {
+						...prev,
+						username: s.username ?? '',
+						email: s.email ?? '',
+						password: s.password ?? '',
+						totpSeed: s.totpSeed ?? '',
+						pin: s.pin ?? '',
+						secureNote: s.secureNote ?? '',
+						recoveryStr: (s.recoveryCodes ?? []).join('\n'),
+						customFields: (s.customFields ?? []).map((f) => ({
+							label: f.label,
+							value: f.value,
+						})),
+					}
+					// Capture the "as-opened" snapshot so submit diff works.
+					initialRef.current = next
+					return next
+				})
+			})
+			.catch((err) => {
+				showToast(
+					`Could not auto-reveal: ${parseServerError(err)}`,
+					'error',
+				)
+			})
+			.finally(() => setRevealing(false))
+	}, [isEdit, existing, paramId, showToast])
 
 	const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) => {
 		setFields((prev) => ({ ...prev, [key]: value }))
@@ -134,7 +162,15 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 	const validate = () => {
 		const next: FormErrors = {}
 		if (!fields.serviceName.trim()) next.serviceName = 'Service name is required'
-		if (!fields.category.trim()) next.category = 'Category is required'
+		// Username OR Email required (either one is enough).
+		if (!fields.username.trim() && !fields.email.trim()) {
+			next.identity = 'Username or Email is required'
+		}
+		// Password required on create; on edit a blank value keeps the
+		// stored secret unchanged.
+		if (!isEdit && !fields.password) {
+			next.password = 'Password is required'
+		}
 		setErrors(next)
 		return Object.keys(next).length === 0
 	}
@@ -158,50 +194,46 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 		e.preventDefault()
 		if (!validate()) return
 
-		const secrets: SecretPayload = {}
-		if (fields.username) secrets.username = fields.username
-		if (fields.email) secrets.email = fields.email
-		if (fields.password) secrets.password = fields.password
-		if (fields.totpSeed) secrets.totpSeed = fields.totpSeed
-		if (fields.pin) secrets.pin = fields.pin
-		if (fields.secureNote) secrets.secureNote = fields.secureNote
-		const recovery = fields.recoveryStr
-			.split(/[\s,]+/)
-			.map((c) => c.trim())
-			.filter(Boolean)
-		if (recovery.length) secrets.recoveryCodes = recovery
-		const custom = fields.customFields.filter((c) => c.label.trim())
-		if (custom.length) secrets.customFields = custom
-
-		const tags = fields.tagsStr
-			.split(',')
-			.map((t) => t.trim())
-			.filter(Boolean)
-
 		try {
 			if (!isEdit) {
+				// Create: send every non-empty secret the user filled in.
+				const secrets = buildFullSecrets(fields)
 				await createAcct({
 					profileId: paramId,
 					serviceName: fields.serviceName.trim(),
-					category: fields.category.trim(),
+					// Category removed from UI per owner spec — backend DTO
+					// still requires it, so synthesise a stable placeholder.
+					// Dropping the backend column is a destructive migration;
+					// deferring until the next DB-touching release.
+					category: 'default',
 					serviceUrl: fields.serviceUrl.trim() || undefined,
-					tags,
-					usernameHint: fields.usernameHint.trim() || undefined,
 					secrets,
 				}).unwrap()
 				showToast('Account created', 'success')
 				navigate(`/credentials/profiles/${paramId}`)
 			} else {
+				// Edit: diff against the "as opened" snapshot so Discord
+				// doesn't scream for no reason + the backend's own change-
+				// detector reports an accurate changed-field list.
+				const changed = buildChangedSecrets(initialRef.current, fields)
+				const body: Record<string, unknown> = {}
+				if (fields.serviceName.trim() !== initialRef.current.serviceName) {
+					body.serviceName = fields.serviceName.trim()
+				}
+				if (
+					fields.serviceUrl.trim() !==
+					(initialRef.current.serviceUrl ?? '').trim()
+				) {
+					body.serviceUrl = fields.serviceUrl.trim() || undefined
+				}
+				if (changed) body.secrets = changed
+				if (Object.keys(body).length === 0) {
+					showToast('No changes to save', 'info')
+					return
+				}
 				const result = await updateAcct({
 					id: paramId,
-					body: {
-						serviceName: fields.serviceName.trim(),
-						category: fields.category.trim(),
-						serviceUrl: fields.serviceUrl.trim() || undefined,
-						tags,
-						usernameHint: fields.usernameHint.trim() || undefined,
-						secrets: Object.keys(secrets).length ? secrets : undefined,
-					},
+					body: body as never,
 				}).unwrap()
 				showToast('Account updated', 'success')
 				navigate(`/credentials/profiles/${result.profileId}`)
@@ -222,7 +254,6 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 
 	return (
 		<Shell $dark={isDark}>
-			<VaultSetupGate />
 			<Surface $dark={isDark}>
 				<FormHeader
 					backTo={backTo}
@@ -249,6 +280,7 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 								label='Service name'
 								required
 								error={errors.serviceName}
+								span='full'
 							>
 								<TextField
 									name='service-name'
@@ -261,50 +293,13 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 									error={!!errors.serviceName}
 								/>
 							</Field>
-							<Field label='Category' required error={errors.category}>
-								<TextField
-									name='category'
-									placeholder='Platform, Email, DevOps…'
-									value={fields.category}
-									onChange={(e: ChangeEvent<HTMLInputElement>) =>
-										setField('category', e.target.value)
-									}
-									width='100%'
-									error={!!errors.category}
-								/>
-							</Field>
-							<Field label='Service URL' span='full'>
+							<Field label='Service URL (optional)' span='full'>
 								<TextField
 									name='service-url'
 									placeholder='https://example.com'
 									value={fields.serviceUrl}
 									onChange={(e: ChangeEvent<HTMLInputElement>) =>
 										setField('serviceUrl', e.target.value)
-									}
-									width='100%'
-								/>
-							</Field>
-							<Field
-								label='Login hint'
-								hint='Shown while vault is locked (e.g. va****@gmail.com)'
-							>
-								<TextField
-									name='username-hint'
-									placeholder='va****@gmail.com'
-									value={fields.usernameHint}
-									onChange={(e: ChangeEvent<HTMLInputElement>) =>
-										setField('usernameHint', e.target.value)
-									}
-									width='100%'
-								/>
-							</Field>
-							<Field label='Tags' hint='Comma-separated'>
-								<TextField
-									name='tags'
-									placeholder='work, team-shared'
-									value={fields.tagsStr}
-									onChange={(e: ChangeEvent<HTMLInputElement>) =>
-										setField('tagsStr', e.target.value)
 									}
 									width='100%'
 								/>
@@ -319,38 +314,54 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 							hint='Encrypted at rest · never cached in Redux or localStorage'
 						/>
 						<FieldGrid>
-							<Field label='Username'>
+							<Field
+								label='Username'
+								hint='Either Username or Email is required'
+								error={errors.identity}
+							>
 								<TextField
 									name='username'
+									placeholder='e.g. vadym.sargas'
 									value={fields.username}
 									onChange={(e: ChangeEvent<HTMLInputElement>) =>
 										setField('username', e.target.value)
 									}
 									width='100%'
+									error={!!errors.identity}
 								/>
 							</Field>
-							<Field label='Email'>
+							<Field
+								label='Email'
+								hint='Either Email or Username is required'
+								error={errors.identity}
+							>
 								<TextField
 									name='email'
+									placeholder='name@example.com'
 									value={fields.email}
 									onChange={(e: ChangeEvent<HTMLInputElement>) =>
 										setField('email', e.target.value)
 									}
 									width='100%'
+									error={!!errors.identity}
 								/>
 							</Field>
-							<Field label='Password' span='full'>
-								<TextField
+							<Field
+								label='Password'
+								required={!isEdit}
+								span='full'
+								error={errors.password}
+							>
+								<PasswordStrengthField
 									name='password'
-									type='password'
-									placeholder={
-										isEdit ? 'Leave blank to keep current' : ''
-									}
 									value={fields.password}
-									onChange={(e: ChangeEvent<HTMLInputElement>) =>
-										setField('password', e.target.value)
+									onChange={(next) => setField('password', next)}
+									placeholder={
+										isEdit
+											? 'Leave blank to keep current'
+											: 'Enter a strong password'
 									}
-									width='100%'
+									hasError={!!errors.password}
 								/>
 							</Field>
 						</FieldGrid>
@@ -360,12 +371,12 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 						<SectionHead
 							num='03'
 							title='Two-factor'
-							hint='TOTP seed and recovery codes'
+							hint='TOTP seed and recovery codes (optional)'
 						/>
 						<FieldGrid>
 							<Field
-								label='TOTP seed (base32)'
-								hint='Scanned from authenticator setup QR'
+								label='TOTP seed (optional)'
+								hint='base32 — scanned from authenticator setup QR'
 								span='full'
 							>
 								<TextField
@@ -379,7 +390,7 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 								/>
 							</Field>
 							<Field
-								label='Recovery codes'
+								label='Recovery codes (optional)'
 								hint='One per line, or comma-separated'
 								span='full'
 							>
@@ -399,12 +410,13 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 						<SectionHead
 							num='04'
 							title='Extras'
-							hint='PIN, note, and custom fields'
+							hint='PIN, note, and custom fields (all optional)'
 						/>
 						<FieldGrid>
-							<Field label='PIN'>
+							<Field label='PIN (optional)'>
 								<TextField
 									name='pin'
+									placeholder='e.g. 1234'
 									value={fields.pin}
 									onChange={(e: ChangeEvent<HTMLInputElement>) =>
 										setField('pin', e.target.value)
@@ -412,9 +424,10 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 									width='100%'
 								/>
 							</Field>
-							<Field label='Secure note' span='full'>
+							<Field label='Secure note (optional)' span='full'>
 								<TextareaStyled
 									rows={4}
+									placeholder='e.g. backup email, support PIN, whatever you need to remember about this account'
 									value={fields.secureNote}
 									onChange={(e) =>
 										setField('secureNote', e.target.value)
@@ -422,7 +435,7 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 								/>
 							</Field>
 							<Field
-								label='Custom secret fields'
+								label='Custom secret fields (optional)'
 								hint='Add any key/value secret not covered above'
 								span='full'
 							>
@@ -452,7 +465,7 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 												onClick={() => rmCustom(i)}
 												aria-label='Remove field'
 											>
-												<CloseRounded style={{ fontSize: 16 }} />
+												<CloseRounded />
 											</RemoveBtn>
 										</CustomRow>
 									))}
@@ -465,17 +478,6 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 						</FieldGrid>
 					</Section>
 
-					{isEdit && existing && (
-						<Section $delay={320}>
-							<SectionHead
-								num='05'
-								title='Attachments'
-								hint='Encrypted files — PDFs, images, docs'
-							/>
-							<AttachmentsSection accountId={paramId} />
-						</Section>
-					)}
-
 					<FootBar $dark={isDark}>
 						<FootLeft $dark={isDark}>
 							<DotMini />
@@ -484,32 +486,14 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 								: 'Account will be created immediately · secrets AES-encrypted'}
 						</FootLeft>
 						<FootActions>
-							{isEdit && existing?.status === 'ACTIVE' && (
-								<PrimaryGhostButton
-									type='button'
-									onClick={async () => {
-										if (!confirm('Archive this account?')) return
-										try {
-											await archive(paramId).unwrap()
-											showToast('Account archived', 'success')
-											navigate(
-												`/credentials/profiles/${existing.profileId}`,
-											)
-										} catch (err) {
-											showToast(parseServerError(err), 'error')
-										}
-									}}
-								>
-									Archive
-								</PrimaryGhostButton>
-							)}
 							{isEdit && canHardDelete && existing && (
-								<PrimaryGhostButton
+								<DangerGhostButton
 									type='button'
 									onClick={() => setShowDelete(true)}
 								>
+									<DeleteOutline style={{ fontSize: 16 }} />
 									Hard delete
-								</PrimaryGhostButton>
+								</DangerGhostButton>
 							)}
 							<PrimaryGhostButton
 								type='button'
@@ -538,12 +522,16 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 			{showDelete && existing && (
 				<HardDeleteModal
 					title='Permanently delete account'
-					description='This also removes every attachment. Audit entries remain forever.'
+					description='Encrypted secrets + full history will be removed. Audit entries remain forever. This cannot be undone.'
 					confirmationLabel={existing.serviceName}
 					expectedConfirmation={existing.serviceName}
 					onClose={() => setShowDelete(false)}
 					onConfirm={async ({ confirmation, mfa }) => {
-						await hardDelete({ id: paramId, confirmation, mfa }).unwrap()
+						await hardDeleteAcct({
+							id: paramId,
+							confirmation,
+							mfa,
+						}).unwrap()
 						showToast('Account deleted', 'success')
 						navigate(`/credentials/profiles/${existing.profileId}`)
 					}}
@@ -555,107 +543,76 @@ const CredentialsAccountForm = ({ mode }: Props) => {
 
 export default CredentialsAccountForm
 
-/* ─── Attachments (shown only in edit mode) ─────────────────────── */
+/* ─── Secret payload builders ──────────────────────────────────────
+ *
+ * `buildFullSecrets` is used on CREATE (initial values are empty, so
+ * we just drop empty strings).
+ *
+ * `buildChangedSecrets` is used on EDIT: it compares the current form
+ * state against the "as opened" snapshot and returns the smallest
+ * SecretPayload that reflects just the user's changes. Returns null
+ * when nothing changed — the caller then omits `secrets` from the
+ * PATCH entirely, which prevents a no-op Discord notif / version row.
+ */
+function buildFullSecrets(f: FormFields): SecretPayload {
+	const s: SecretPayload = {}
+	if (f.username) s.username = f.username
+	if (f.email) s.email = f.email
+	if (f.password) s.password = f.password
+	if (f.totpSeed) s.totpSeed = f.totpSeed
+	if (f.pin) s.pin = f.pin
+	if (f.secureNote) s.secureNote = f.secureNote
+	const recovery = f.recoveryStr
+		.split(/[\s,]+/)
+		.map((c) => c.trim())
+		.filter(Boolean)
+	if (recovery.length) s.recoveryCodes = recovery
+	const custom = f.customFields.filter((c) => c.label.trim())
+	if (custom.length) s.customFields = custom
+	return s
+}
 
-const AttachmentsSection = ({ accountId }: { accountId: string }) => {
-	const { data: items = [] } = useListAttachmentsQuery(accountId)
-	const [upload, { isLoading: uploading }] = useUploadAttachmentMutation()
-	const [remove] = useDeleteAttachmentMutation()
-	const { data: policy } = useGetCredentialsPolicyQuery()
-	const maxMb = policy?.maxAttachmentMegabytes ?? 10
-	const { showToast } = useToast()
-
-	const onPick = async (e: ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0]
-		if (!file) return
-		const maxBytes = maxMb * 1024 * 1024
-		if (file.size > maxBytes) {
-			showToast(
-				`File exceeds the ${maxMb} MB limit.`,
-				'error',
-			)
-			e.target.value = ''
-			return
+function buildChangedSecrets(
+	initial: FormFields,
+	current: FormFields,
+): SecretPayload | null {
+	const diff: SecretPayload = {}
+	let changed = false
+	const scalarKeys = [
+		'username',
+		'email',
+		'password',
+		'totpSeed',
+		'pin',
+		'secureNote',
+	] as const
+	for (const k of scalarKeys) {
+		if ((initial[k] ?? '').trim() !== (current[k] ?? '').trim()) {
+			diff[k] = current[k] ?? ''
+			changed = true
 		}
-		try {
-			await upload({ accountId, file }).unwrap()
-			showToast('File uploaded', 'success')
-		} catch (ex) {
-			showToast(parseServerError(ex), 'error')
-		}
-		e.target.value = ''
 	}
-
-	const download = async (attachmentId: string, filename: string) => {
-		try {
-			const res = await fetch(
-				`${API_BASE_URL}/credential-accounts/attachments/${attachmentId}/download`,
-				{ credentials: 'include' },
-			)
-			if (!res.ok) throw new Error(`HTTP ${res.status}`)
-			const blob = await res.blob()
-			const url = URL.createObjectURL(blob)
-			const a = document.createElement('a')
-			a.href = url
-			a.download = filename
-			a.click()
-			setTimeout(() => URL.revokeObjectURL(url), 1000)
-		} catch (ex) {
-			showToast((ex as Error).message, 'error')
-		}
+	// Recovery codes: compare normalised arrays.
+	const normalise = (raw: string) =>
+		raw.split(/[\s,]+/).map((c) => c.trim()).filter(Boolean)
+	const prevRec = normalise(initial.recoveryStr).join('|')
+	const nextRec = normalise(current.recoveryStr).join('|')
+	if (prevRec !== nextRec) {
+		diff.recoveryCodes = normalise(current.recoveryStr)
+		changed = true
 	}
-
-	return (
-		<AttachBox>
-			{items.length === 0 ? (
-				<AttachEmpty>
-					<LockOutlined style={{ fontSize: 22, opacity: 0.4 }} />
-					<span>No attachments yet</span>
-				</AttachEmpty>
-			) : (
-				<AttachList>
-					{items.map((a) => (
-						<AttachRow key={a.id}>
-							<AttachInfo>
-								<AttachName>{a.filename}</AttachName>
-								<AttachMeta>
-									{a.mime} · {Math.round(a.size / 1024)} KB ·{' '}
-									{new Date(a.createdAt).toLocaleDateString()}
-								</AttachMeta>
-							</AttachInfo>
-							<AttachActions>
-								<AttachLink
-									type='button'
-									onClick={() => download(a.id, a.filename)}
-								>
-									Download
-								</AttachLink>
-								<AttachDanger
-									type='button'
-									onClick={async () => {
-										if (!confirm('Delete attachment?')) return
-										try {
-											await remove({ id: a.id, accountId }).unwrap()
-											showToast('Attachment deleted', 'success')
-										} catch (ex) {
-											showToast(parseServerError(ex), 'error')
-										}
-									}}
-								>
-									Delete
-								</AttachDanger>
-							</AttachActions>
-						</AttachRow>
-					))}
-				</AttachList>
-			)}
-			<UploadLabel>
-				<input type='file' hidden onChange={onPick} />
-				<UploadFileOutlined style={{ fontSize: 16 }} />
-				{uploading ? 'Uploading…' : `Add file (max ${maxMb} MB)`}
-			</UploadLabel>
-		</AttachBox>
-	)
+	// Custom fields: compare as a (label, value) multiset.
+	const asBag = (list: { label: string; value: string }[]) =>
+		list
+			.filter((f) => f.label.trim())
+			.map((f) => `${f.label.trim()}=${f.value.trim()}`)
+			.sort()
+			.join('\n')
+	if (asBag(initial.customFields) !== asBag(current.customFields)) {
+		diff.customFields = current.customFields.filter((f) => f.label.trim())
+		changed = true
+	}
+	return changed ? diff : null
 }
 
 /* ─── Styled components ──────────────────────────────────────────── */
@@ -678,36 +635,59 @@ const TextareaStyled = styled.textarea`
 	}
 `
 
+/* Custom-secret list wrapper. Extra top margin lifts the first row
+ * away from the "Custom secret fields" field-label, and extra bottom
+ * padding gives the "Add field" button air so it doesn't collide
+ * with the Section's bottom edge. Inner `gap` separates stacked
+ * rows + the Add button from each other. */
 const CustomList = styled.div`
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: 14px;
+	margin-top: 10px;
+	padding: 4px 4px 6px;
 `
 
 const CustomRow = styled.div`
 	display: grid;
-	grid-template-columns: 1fr 1fr 32px;
-	gap: 8px;
-	align-items: center;
+	grid-template-columns: 1fr 1fr auto;
+	gap: 10px;
+	/* Stretch so the X button matches the TextField height instead of
+	 * floating as a small square next to tall inputs. */
+	align-items: stretch;
 `
 
+/* Remove-X: borderless + transparent so it reads as a glyph next to
+ * the inputs, not a hard-outlined button. On hover: colour shifts to
+ * destructive red and the X rotates 180° — gives the deliberate "I
+ * really meant delete" feel without a jarring border swap. */
 const RemoveBtn = styled.button`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 32px;
-	height: 32px;
+	width: 44px;
 	padding: 0;
-	border-radius: 8px;
-	border: 1.5px solid rgba(15, 23, 42, 0.1);
-	background: #ffffff;
-	color: #64748b;
+	border: none;
+	background: transparent;
+	color: #94a3b8;
 	cursor: pointer;
-	transition: all 160ms;
+	transition: color 160ms;
+
 	&:hover {
-		border-color: #dc2626;
 		color: #dc2626;
-		background: rgba(220, 38, 38, 0.04);
+	}
+	&:focus-visible {
+		outline: 2px solid rgba(220, 38, 38, 0.35);
+		outline-offset: 2px;
+		border-radius: 10px;
+	}
+
+	svg {
+		font-size: 20px;
+		transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+	}
+	&:hover svg {
+		transform: rotate(180deg);
 	}
 `
 
@@ -716,117 +696,13 @@ const AddFieldBtn = styled.button`
 	align-items: center;
 	gap: 6px;
 	align-self: flex-start;
-	padding: 8px 14px;
+	margin-top: 4px;
+	padding: 10px 16px;
 	border-radius: 999px;
 	border: 1.5px dashed rgba(15, 23, 42, 0.14);
 	background: transparent;
 	color: #64748b;
 	font: inherit;
-	font-size: 12px;
-	font-weight: 600;
-	cursor: pointer;
-	transition: all 160ms;
-	&:hover {
-		border-color: #0369a1;
-		color: #0369a1;
-		background: rgba(3, 105, 161, 0.04);
-	}
-`
-
-const AttachBox = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-`
-
-const AttachList = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-`
-
-const AttachRow = styled.div`
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	padding: 10px 14px;
-	background: rgba(15, 23, 42, 0.03);
-	border-radius: 10px;
-	border: 1px solid rgba(15, 23, 42, 0.06);
-`
-
-const AttachInfo = styled.div`
-	min-width: 0;
-`
-
-const AttachName = styled.div`
-	font-size: 13px;
-	font-weight: 600;
-	color: #0f172a;
-	word-break: break-all;
-`
-
-const AttachMeta = styled.div`
-	font-family: 'JetBrains Mono', ui-monospace, monospace;
-	font-size: 11px;
-	color: #64748b;
-	margin-top: 2px;
-`
-
-const AttachActions = styled.div`
-	display: inline-flex;
-	gap: 6px;
-	flex-shrink: 0;
-`
-
-const AttachLink = styled.button`
-	padding: 6px 12px;
-	border-radius: 999px;
-	border: none;
-	background: rgba(3, 105, 161, 0.08);
-	color: #0369a1;
-	font: inherit;
-	font-size: 11px;
-	font-weight: 600;
-	cursor: pointer;
-	transition: background 160ms;
-	&:hover {
-		background: rgba(3, 105, 161, 0.14);
-	}
-`
-
-const AttachDanger = styled(AttachLink)`
-	background: rgba(220, 38, 38, 0.08);
-	color: #dc2626;
-	&:hover {
-		background: rgba(220, 38, 38, 0.14);
-	}
-`
-
-const AttachEmpty = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	padding: 20px;
-	border-radius: 10px;
-	border: 1px dashed rgba(15, 23, 42, 0.12);
-	background: #fafafd;
-	color: #64748b;
-	font-size: 13px;
-	justify-content: center;
-`
-
-const UploadLabel = styled.label`
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	align-self: flex-start;
-	padding: 8px 14px;
-	border-radius: 999px;
-	border: 1.5px dashed rgba(15, 23, 42, 0.14);
-	background: transparent;
-	color: #64748b;
 	font-size: 12px;
 	font-weight: 600;
 	cursor: pointer;

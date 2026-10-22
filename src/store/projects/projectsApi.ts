@@ -4,6 +4,8 @@ import type { ProjectReportSource } from '../project-reports/projectReportsApi'
 
 export type ProjectStatus = 'planned' | 'active' | 'paused' | 'completed' | 'archived'
 
+export type ProjectType = 'HOURLY' | 'FIXED' | 'RETAINER'
+
 export interface ProjectMemberItem {
 	projectId: string
 	employeeId: string
@@ -62,6 +64,10 @@ export interface ProjectItem {
 	members: ProjectMemberItem[]
 	reports?: ProjectRecentReport[]
 	discordChannelId: string | null
+	type: ProjectType | null
+	rate: string | null
+	rateCurrency: string | null
+	hoursBudget: number | null
 	createdAt: string
 	updatedAt: string
 }
@@ -83,6 +89,7 @@ export interface ProjectListParams {
 	search?: string
 	status?: ProjectStatus
 	clientId?: string
+	crmClientId?: string
 }
 
 export interface CreateProjectBody {
@@ -90,13 +97,16 @@ export interface CreateProjectBody {
 	// Legacy — Counterparty FK. Nullable / optional; the new flow
 	// drives `crmClientId` → Client instead.
 	clientId?: string
-	crmClientId: string
+	crmClientId?: string
 	status?: ProjectStatus
 	description?: string
-	startDate?: string
-	endDate?: string
 	memberIds?: string[]
 	discordChannelId?: string | null
+	// Billing shape (all optional; see schema comments)
+	type?: ProjectType
+	rate?: number
+	rateCurrency?: string
+	hoursBudget?: number
 }
 
 export type UpdateProjectBody = Partial<CreateProjectBody>
@@ -104,7 +114,16 @@ export type UpdateProjectBody = Partial<CreateProjectBody>
 export const projectsApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getProjects: builder.query<ProjectPage, ProjectListParams>({
-			query: ({ page, limit, sortBy, sortDirection, search, status, clientId }) => ({
+			query: ({
+				page,
+				limit,
+				sortBy,
+				sortDirection,
+				search,
+				status,
+				clientId,
+				crmClientId,
+			}) => ({
 				url: '/projects',
 				params: {
 					page,
@@ -114,6 +133,7 @@ export const projectsApi = baseApi.injectEndpoints({
 					search: search || undefined,
 					status: status || undefined,
 					clientId: clientId || undefined,
+					crmClientId: crmClientId || undefined,
 				},
 			}),
 			providesTags: ['Project'],

@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import { SearchOutlined } from '@mui/icons-material'
 import { T } from '../../sales-analytics/_shared/tokens'
@@ -41,7 +42,13 @@ const ListPageShell = ({
 					<span className='crumb-dot' aria-hidden='true' />
 					{crumbs.map((c, i) => (
 						<span key={i} className={c.current ? 'current' : 'crumb-parent'}>
-							{c.label}
+							{c.href && !c.current ? (
+								<Link to={c.href} className='crumb-link'>
+									{c.label}
+								</Link>
+							) : (
+								c.label
+							)}
 							{i < crumbs.length - 1 && (
 								<span className='crumb-sep' aria-hidden='true'>
 									{' '}
@@ -141,6 +148,16 @@ const Crumbs = styled.div`
 	.current {
 		color: ${T.textSecondary};
 		font-weight: 600;
+	}
+	.crumb-link {
+		color: inherit;
+		text-decoration: none;
+		transition: color 120ms ease;
+		&:hover {
+			color: ${T.textStrong};
+			text-decoration: underline;
+			text-underline-offset: 2px;
+		}
 	}
 `
 

@@ -210,12 +210,14 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 	}
 
 	const validate = (): FieldErrors => {
+		// Only first + last name are required (owner rev-6 2026-10-22).
+		// Everything else — company, email, phone, profile — is
+		// optional; still validated for FORMAT when the user fills it
+		// in, but a blank field is accepted.
 		const next: FieldErrors = {}
 		if (!fields.firstName.trim()) next.firstName = 'First name is required'
 		if (!fields.lastName.trim()) next.lastName = 'Last name is required'
-		if (!fields.company.trim()) next.company = 'Company is required'
-		if (!fields.email.trim()) next.email = 'Email is required'
-		else if (!isLikelyValidEmail(fields.email))
+		if (fields.email.trim() && !isLikelyValidEmail(fields.email))
 			next.email = 'Enter a valid email address'
 		if (fields.phone && !isLikelyValidPhone(fields.phone))
 			next.phone = 'Use international format, e.g. +14155550123'
@@ -244,8 +246,8 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 		return {
 			firstName: fields.firstName.trim(),
 			lastName: fields.lastName.trim(),
-			company: fields.company.trim(),
-			email: trimmedEmail.toLowerCase(),
+			company: fields.company.trim() || null,
+			email: trimmedEmail ? trimmedEmail.toLowerCase() : null,
 			phone: normalisedPhone,
 			source: fields.source.trim() || null,
 			profileUrl: fields.profileUrl.trim() || null,
@@ -343,12 +345,7 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 									width='100%'
 								/>
 							</Field>
-							<Field
-								label='Company'
-								required
-								span='full'
-								error={errors.company}
-							>
+							<Field label='Company' span='full' error={errors.company}>
 								<TextField
 									name='company'
 									placeholder='e.g. Acme Corp'
@@ -368,7 +365,7 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 							hint='How to reach them'
 						/>
 						<FieldGrid>
-							<Field label='Email' required error={errors.email}>
+							<Field label='Email' error={errors.email}>
 								<TextField
 									name='email'
 									type='email'
@@ -450,7 +447,7 @@ const ClientForm = ({ mode, id, initial }: Props) => {
 							hint='Status, source, profile'
 						/>
 						<FieldGrid>
-							<Field label='Status' required>
+							<Field label='Status'>
 								<Select
 									label='Status'
 									value={fields.status}

@@ -1,12 +1,14 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
-import { VpnKeyOutlined } from '@mui/icons-material'
+import { DeleteOutline, VpnKeyOutlined } from '@mui/icons-material'
 import { TextField, Select, SelectItem } from '../../ui'
 import { useToast } from '../../context/toast/ToastContext'
 import parseServerError from '../../utils/parseServerError'
 import useTheme from '../../theme/useTheme'
 import PermissionGate from '../../components/auth/PermissionGate'
+import { useAppSelector } from '../../hooks'
+import HardDeleteModal from './HardDeleteModal'
 import {
 	Field,
 	FormHeader,
@@ -15,6 +17,7 @@ import {
 	SectionHead,
 } from '../../components/_shared/FormShell'
 import {
+	DangerGhostButton,
 	DotMini,
 	FieldGrid,
 	FootActions,
@@ -26,17 +29,13 @@ import {
 	Shell,
 	Surface,
 } from '../../components/_shared/formShell.styled'
-import { useAppSelector } from '../../hooks'
 import {
 	type CredentialProfileType,
-	useArchiveProfileMutation,
 	useCreateProfileMutation,
 	useGetProfileQuery,
 	useHardDeleteProfileMutation,
 	useUpdateProfileMutation,
 } from '../../store/credentials/credentialsApi'
-import HardDeleteModal from './HardDeleteModal'
-import VaultSetupGate from './VaultSetupGate'
 
 interface Props {
 	mode: 'create' | 'edit'
@@ -46,7 +45,6 @@ interface FormFields {
 	name: string
 	type: CredentialProfileType
 	description: string
-	tagsText: string
 	avatarUrl: string
 }
 
@@ -58,28 +56,19 @@ const empty: FormFields = {
 	name: '',
 	type: 'PERSON',
 	description: '',
-	tagsText: '',
 	avatarUrl: '',
 }
-
-const parseTags = (text: string): string[] =>
-	text
-		.split(',')
-		.map((t) => t.trim())
-		.filter((t) => t.length > 0)
 
 const CredentialsProfileFormInner = ({
 	mode,
 	id,
 	initial,
 	existingName,
-	existingStatus,
 }: {
 	mode: 'create' | 'edit'
 	id?: string
 	initial: FormFields
 	existingName?: string
-	existingStatus?: 'ACTIVE' | 'ARCHIVED'
 }) => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
@@ -89,11 +78,10 @@ const CredentialsProfileFormInner = ({
 	const [errors, setErrors] = useState<FormErrors>({})
 	const [createProfile, { isLoading: creating }] = useCreateProfileMutation()
 	const [updateProfile, { isLoading: updating }] = useUpdateProfileMutation()
-	const [archive] = useArchiveProfileMutation()
-	const [hardDelete] = useHardDeleteProfileMutation()
-	const [showDelete, setShowDelete] = useState(false)
+	const [hardDeleteProfile] = useHardDeleteProfileMutation()
 	const permissions = useAppSelector((s) => s.auth.permissions ?? [])
 	const canHardDelete = permissions.includes('credentials:hard_delete')
+	const [showDelete, setShowDelete] = useState(false)
 	const isLoading = creating || updating
 	const isEdit = mode === 'edit'
 
@@ -117,7 +105,6 @@ const CredentialsProfileFormInner = ({
 			name: fields.name.trim(),
 			type: fields.type,
 			description: fields.description.trim() || undefined,
-			tags: parseTags(fields.tagsText),
 			avatarUrl: fields.avatarUrl.trim() || undefined,
 		}
 		try {
@@ -137,7 +124,6 @@ const CredentialsProfileFormInner = ({
 
 	return (
 		<Shell $dark={isDark}>
-			<VaultSetupGate />
 			<Surface $dark={isDark}>
 				<FormHeader
 					backTo={
@@ -194,7 +180,7 @@ const CredentialsProfileFormInner = ({
 							<Field label='Avatar URL' span='full'>
 								<TextField
 									name='avatarUrl'
-									placeholder='https://… (optional)'
+									placeholder='https://example.com/avatar.png'
 									value={fields.avatarUrl}
 									onChange={(e: ChangeEvent<HTMLInputElement>) =>
 										setField('avatarUrl', e.target.value)
@@ -209,12 +195,12 @@ const CredentialsProfileFormInner = ({
 						<SectionHead
 							num='02'
 							title='Context'
-							hint='Short description and tags to organize profiles'
+							hint='Short description for this profile'
 						/>
 						<FieldGrid>
 							<Field
 								label='Description'
-								hint='One-line note about this profile (optional)'
+								hint={`One-line note (optional, max 100 chars — ${fields.description.length}/100)`}
 								span='full'
 							>
 								<TextField
@@ -222,22 +208,10 @@ const CredentialsProfileFormInner = ({
 									placeholder='e.g. External sales contractor'
 									value={fields.description}
 									onChange={(e: ChangeEvent<HTMLInputElement>) =>
-										setField('description', e.target.value)
-									}
-									width='100%'
-								/>
-							</Field>
-							<Field
-								label='Tags'
-								hint='Comma-separated (e.g. "owner, founder")'
-								span='full'
-							>
-								<TextField
-									name='tags'
-									placeholder='owner, founder, contractor'
-									value={fields.tagsText}
-									onChange={(e: ChangeEvent<HTMLInputElement>) =>
-										setField('tagsText', e.target.value)
+										setField(
+											'description',
+											e.target.value.slice(0, 100),
+										)
 									}
 									width='100%'
 								/>
@@ -253,30 +227,14 @@ const CredentialsProfileFormInner = ({
 								: 'Profile will be created immediately'}
 						</FootLeft>
 						<FootActions>
-							{isEdit && existingStatus === 'ACTIVE' && id && (
-								<PrimaryGhostButton
-									type='button'
-									onClick={async () => {
-										if (!confirm('Archive this profile?')) return
-										try {
-											await archive(id).unwrap()
-											showToast('Profile archived', 'success')
-											navigate('/credentials')
-										} catch (err) {
-											showToast(parseServerError(err), 'error')
-										}
-									}}
-								>
-									Archive
-								</PrimaryGhostButton>
-							)}
-							{isEdit && canHardDelete && id && (
-								<PrimaryGhostButton
+							{isEdit && canHardDelete && id && existingName && (
+								<DangerGhostButton
 									type='button'
 									onClick={() => setShowDelete(true)}
 								>
+									<DeleteOutline style={{ fontSize: 16 }} />
 									Hard delete
-								</PrimaryGhostButton>
+								</DangerGhostButton>
 							)}
 							<PrimaryGhostButton
 								type='button'
@@ -311,12 +269,12 @@ const CredentialsProfileFormInner = ({
 			{showDelete && id && existingName && (
 				<HardDeleteModal
 					title='Permanently delete profile'
-					description='This also removes every account and attachment inside. Audit entries remain forever.'
+					description='This removes every account, encrypted secret and version history inside. Audit entries remain forever. This cannot be undone.'
 					confirmationLabel={existingName}
 					expectedConfirmation={existingName}
 					onClose={() => setShowDelete(false)}
 					onConfirm={async ({ confirmation, mfa }) => {
-						await hardDelete({ id, confirmation, mfa }).unwrap()
+						await hardDeleteProfile({ id, confirmation, mfa }).unwrap()
 						showToast('Profile deleted', 'success')
 						navigate('/credentials')
 					}}
@@ -343,7 +301,6 @@ const CredentialsProfileForm = ({ mode }: Props) => {
 					name: data.name,
 					type: data.type,
 					description: data.description ?? '',
-					tagsText: data.tags.join(', '),
 					avatarUrl: data.avatarUrl ?? '',
 				}
 			: empty
@@ -354,7 +311,6 @@ const CredentialsProfileForm = ({ mode }: Props) => {
 			id={id}
 			initial={initial}
 			existingName={data?.name}
-			existingStatus={data?.status}
 		/>
 	)
 }

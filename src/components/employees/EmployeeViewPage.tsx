@@ -21,6 +21,7 @@ import {
 import { useGetEmployeeByIdQuery } from '../../store/employees/employeesApi'
 import { formatDate } from '../../utils/format'
 import { T } from '../sales-analytics/_shared/tokens'
+import EmployeeAttachmentsSection from './form/EmployeeAttachmentsSection'
 
 const fullName = (first: string, last: string) => `${first} ${last}`.trim() || '—'
 
@@ -146,6 +147,10 @@ const EmployeeViewPage = () => {
 						</Field>
 					</Grid>
 				</Section>
+
+				<PermissionGate permission='employees:attachments:view'>
+					<EmployeeAttachmentsSection employeeId={employee.id} hideAdd />
+				</PermissionGate>
 
 				<FootBar $dark={isDark}>
 					<FootLeft $dark={isDark}>

@@ -7,6 +7,7 @@ import { useToast } from '../../../context/toast/ToastContext'
 import parseServerError from '../../../utils/parseServerError'
 import useTheme from '../../../theme/useTheme'
 import PermissionGate from '../../auth/PermissionGate'
+import ProjectAttachmentsSection from './ProjectAttachmentsSection'
 import { Field, FormHeader, FormLoading, FormNotFound, SectionHead } from '../../_shared/FormShell'
 import {
 	DotMini,
@@ -26,6 +27,7 @@ import {
 	useCreateProjectMutation,
 	useUpdateProjectMutation,
 	type ProjectStatus,
+	type ProjectType,
 } from '../../../store/projects/projectsApi'
 import { useGetClientsQuery } from '../../../store/clients/clientsApi'
 import { useGetEmployeesQuery } from '../../../store/employees/employeesApi'
@@ -39,10 +41,14 @@ interface FormFields {
 	crmClientId: string
 	status: ProjectStatus
 	description: string
-	startDate: string
-	endDate: string
 	memberIds: string[]
 	discordChannelId: string
+	// Billing (all optional). Empty strings mean "unset" in the form
+	// layer; the submit path maps them back to undefined / null.
+	type: '' | ProjectType
+	rate: string
+	rateCurrency: string
+	hoursBudget: string
 }
 
 const initials = (first: string, last: string): string => {
@@ -56,10 +62,12 @@ const empty: FormFields = {
 	crmClientId: '',
 	status: 'planned',
 	description: '',
-	startDate: '',
-	endDate: '',
 	memberIds: [],
 	discordChannelId: '',
+	type: '',
+	rate: '',
+	rateCurrency: 'USD',
+	hoursBudget: '',
 }
 
 const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields }) => {
@@ -71,7 +79,6 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 	const [errors, setErrors] = useState<{
 		name?: string
 		crmClientId?: string
-		endDate?: string
 	}>({})
 	const [createProject, { isLoading: creating }] = useCreateProjectMutation()
 	const [updateProject, { isLoading: updating }] = useUpdateProjectMutation()
@@ -220,16 +227,8 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 	}
 
 	const validate = (): boolean => {
-		const next: { name?: string; crmClientId?: string; endDate?: string } = {}
+		const next: { name?: string; crmClientId?: string } = {}
 		if (!fields.name.trim()) next.name = 'Name is required'
-		if (!fields.crmClientId) next.crmClientId = 'Client is required'
-		if (
-			fields.startDate &&
-			fields.endDate &&
-			fields.endDate < fields.startDate
-		) {
-			next.endDate = 'End date must be on or after start date'
-		}
 		setErrors(next)
 		return Object.keys(next).length === 0
 	}
@@ -237,15 +236,32 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
 		if (!validate()) return
+		// Billing: send undefined when empty so the backend treats it
+		// as "unchanged" on update. Rate / hoursBudget go through
+		// Number() — empty becomes NaN which we filter to undefined.
+		const parsedRate = fields.rate.trim() ? Number(fields.rate) : undefined
+		const parsedHoursBudget = fields.hoursBudget.trim()
+			? Number(fields.hoursBudget)
+			: undefined
 		const payload = {
 			name: fields.name.trim(),
-			crmClientId: fields.crmClientId,
+			// Omit the field entirely when empty so the backend treats it
+			// as "unchanged" on update and "no link" on create.
+			crmClientId: fields.crmClientId || undefined,
 			status: fields.status,
 			description: fields.description || undefined,
-			startDate: fields.startDate || undefined,
-			endDate: fields.endDate || undefined,
 			memberIds: fields.memberIds,
 			discordChannelId: fields.discordChannelId.trim() || null,
+			type: fields.type || undefined,
+			rate:
+				parsedRate !== undefined && Number.isFinite(parsedRate)
+					? parsedRate
+					: undefined,
+			rateCurrency: fields.type && fields.rateCurrency ? fields.rateCurrency : undefined,
+			hoursBudget:
+				parsedHoursBudget !== undefined && Number.isFinite(parsedHoursBudget)
+					? parsedHoursBudget
+					: undefined,
 		}
 		try {
 			if (isEdit) {
@@ -297,7 +313,6 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 							</Field>
 							<Field
 								label='Client'
-								required
 								error={
 									errors.crmClientId ||
 									(clientsError
@@ -362,31 +377,81 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 									<SelectItem label='Archived' value='archived' />
 								</Select>
 							</Field>
-							<Field label='Start date'>
-								<TextField
-									name='startDate'
-									type='date'
-									placeholder='YYYY-MM-DD'
-									value={fields.startDate}
-									onChange={(e: ChangeEvent<HTMLInputElement>) =>
-										setField('startDate', e.target.value)
+							<Field label='Billing type' hint='Optional — tag how this engagement is billed.'>
+								<Select
+									label='Type'
+									defaultValue={fields.type || '__NONE__'}
+									onChange={(value) =>
+										setField('type', value === '__NONE__' ? '' : (value as ProjectType))
 									}
 									width='100%'
-								/>
+									sizes='normal'
+								>
+									<SelectItem label='—' value='__NONE__' />
+									<SelectItem label='Hourly' value='HOURLY' />
+									<SelectItem label='Fixed price' value='FIXED' />
+									<SelectItem label='Monthly retainer' value='RETAINER' />
+								</Select>
 							</Field>
-							<Field label='End date' error={errors.endDate}>
-								<TextField
-									name='endDate'
-									type='date'
-									placeholder='YYYY-MM-DD'
-									value={fields.endDate}
-									onChange={(e: ChangeEvent<HTMLInputElement>) =>
-										setField('endDate', e.target.value)
-									}
-									width='100%'
-									error={!!errors.endDate}
-								/>
-							</Field>
+							{fields.type && (
+								<>
+									<Field
+										label={
+											fields.type === 'HOURLY'
+												? 'Rate (per hour)'
+												: fields.type === 'RETAINER'
+													? 'Rate (per month)'
+													: 'Contract value'
+										}
+									>
+										<RateRow>
+											<TextField
+												name='rate'
+												type='number'
+												placeholder='0.00'
+												value={fields.rate}
+												onChange={(e: ChangeEvent<HTMLInputElement>) =>
+													setField('rate', e.target.value)
+												}
+												width='100%'
+											/>
+											<CurrencyBox>
+												<Select
+													label='Currency'
+													defaultValue={fields.rateCurrency}
+													onChange={(value) =>
+														setField('rateCurrency', value as string)
+													}
+													width='100%'
+													sizes='normal'
+												>
+													<SelectItem label='USD' value='USD' />
+													<SelectItem label='EUR' value='EUR' />
+													<SelectItem label='UAH' value='UAH' />
+													<SelectItem label='GBP' value='GBP' />
+												</Select>
+											</CurrencyBox>
+										</RateRow>
+									</Field>
+									{fields.type === 'HOURLY' && (
+										<Field
+											label='Hours budget'
+											hint='Optional cap. Compare against total reported hours to track burn.'
+										>
+											<TextField
+												name='hoursBudget'
+												type='number'
+												placeholder='e.g. 200'
+												value={fields.hoursBudget}
+												onChange={(e: ChangeEvent<HTMLInputElement>) =>
+													setField('hoursBudget', e.target.value)
+												}
+												width='100%'
+											/>
+										</Field>
+									)}
+								</>
+							)}
 							<Field label='Description' span='full'>
 								<TextField
 									name='description'
@@ -492,6 +557,12 @@ const ProjectFormInner = ({ id, initial }: { id?: string; initial: FormFields })
 						</TeamContent>
 					</Section>
 
+					{isEdit && id && (
+						<PermissionGate permission='projects:attachments:view'>
+							<ProjectAttachmentsSection projectId={id} />
+						</PermissionGate>
+					)}
+
 					<FootBar $dark={isDark}>
 						<FootLeft $dark={isDark}>
 							<DotMini />
@@ -527,10 +598,16 @@ const ProjectForm = ({ id }: Props) => {
 					(data as { crmClientId?: string | null }).crmClientId ?? '',
 				status: data.status,
 				description: data.description ?? '',
-				startDate: data.startDate ? data.startDate.slice(0, 10) : '',
-				endDate: data.endDate ? data.endDate.slice(0, 10) : '',
 				memberIds: data.members.map((m) => m.employeeId),
-				discordChannelId: (data as { discordChannelId?: string | null }).discordChannelId ?? '',
+				discordChannelId:
+					(data as { discordChannelId?: string | null }).discordChannelId ?? '',
+				type: data.type ?? '',
+				rate: data.rate ?? '',
+				rateCurrency: data.rateCurrency ?? 'USD',
+				hoursBudget:
+					data.hoursBudget !== null && data.hoursBudget !== undefined
+						? String(data.hoursBudget)
+						: '',
 			}
 		: empty
 
@@ -538,6 +615,17 @@ const ProjectForm = ({ id }: Props) => {
 }
 
 export default ProjectForm
+
+const RateRow = styled.div`
+	display: grid;
+	grid-template-columns: 1fr 120px;
+	gap: 10px;
+	align-items: start;
+`
+
+const CurrencyBox = styled.div`
+	min-width: 110px;
+`
 
 const chipEnter = keyframes`
 	0%   { opacity: 0; transform: scale(0.85) translateY(4px); }

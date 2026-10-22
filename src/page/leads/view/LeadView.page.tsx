@@ -7,6 +7,15 @@ import {
 	PersonSearchOutlined,
 	ScheduleRounded,
 	WarningAmberRounded,
+	BadgeOutlined,
+	BusinessOutlined,
+	MailOutline,
+	PhoneDisabledOutlined,
+	CallSplitOutlined,
+	LinkOffOutlined,
+	LocationOffOutlined,
+	HelpOutline,
+	ThermostatOutlined,
 } from '@mui/icons-material'
 
 import { T } from '../../../components/sales-analytics/_shared/tokens'
@@ -187,27 +196,54 @@ const LeadView = () => {
 
 					<KeyLines>
 						<KV label='name'>
-							<KvMono>{fullName || '—'}</KvMono>
+							{fullName ? (
+								<KvMono>{fullName}</KvMono>
+							) : (
+								<EmptyBadge title='No contact name on file'>
+									<BadgeOutlined />
+									no name
+								</EmptyBadge>
+							)}
 						</KV>
 						<KV label='company'>
-							<KvMono>{lead.companyName || '—'}</KvMono>
+							{lead.companyName ? (
+								<KvMono>{lead.companyName}</KvMono>
+							) : (
+								<EmptyBadge title='No company on file'>
+									<BusinessOutlined />
+									no company
+								</EmptyBadge>
+							)}
 						</KV>
 						<KV label='email'>
 							{lead.email ? (
 								<KvLink href={`mailto:${lead.email}`}>{lead.email}</KvLink>
 							) : (
-								<KvMono>—</KvMono>
+								<EmptyBadge title='No email on file'>
+									<MailOutline />
+									no email
+								</EmptyBadge>
 							)}
 						</KV>
 						<KV label='phone'>
 							{lead.phone ? (
 								<KvLink href={`tel:${lead.phone}`}>{lead.phone}</KvLink>
 							) : (
-								<KvMono>—</KvMono>
+								<EmptyBadge title='No phone on file'>
+									<PhoneDisabledOutlined />
+									no phone
+								</EmptyBadge>
 							)}
 						</KV>
 						<KV label='source'>
-							{lead.source ? <Chip>{lead.source}</Chip> : <KvMono>—</KvMono>}
+							{lead.source ? (
+								<Chip>{lead.source}</Chip>
+							) : (
+								<EmptyBadge title='Source not recorded'>
+									<CallSplitOutlined />
+									no source
+								</EmptyBadge>
+							)}
 						</KV>
 						<KV label='profile'>
 							{lead.profileUrl ? (
@@ -219,7 +255,10 @@ const LeadView = () => {
 									{lead.profileUrl}
 								</KvLink>
 							) : (
-								<KvMono>—</KvMono>
+								<EmptyBadge title='No profile link on file'>
+									<LinkOffOutlined />
+									no profile
+								</EmptyBadge>
 							)}
 						</KV>
 						<KV label='location'>
@@ -231,7 +270,10 @@ const LeadView = () => {
 									<span>{lead.location}</span>
 								</LocationLine>
 							) : (
-								<KvMono>—</KvMono>
+								<EmptyBadge title='No location on file'>
+									<LocationOffOutlined />
+									no location
+								</EmptyBadge>
 							)}
 						</KV>
 						<KV label='status'>
@@ -245,14 +287,20 @@ const LeadView = () => {
 									{lead.clientType}
 								</ClientTypeChip>
 							) : (
-								<KvMono>—</KvMono>
+								<EmptyBadge title='Client type not set'>
+									<HelpOutline />
+									no type
+								</EmptyBadge>
 							)}
 						</KV>
 						<KV label='temperature'>
 							{lead.temperature ? (
 								<TempBadge $t={lead.temperature}>{lead.temperature}</TempBadge>
 							) : (
-								<KvMono>—</KvMono>
+								<EmptyBadge title='Temperature not rated'>
+									<ThermostatOutlined />
+									no temp
+								</EmptyBadge>
 							)}
 						</KV>
 						{/* repliedAt defaults to createdAt on the backend — only a
@@ -666,6 +714,33 @@ const KvMono = styled.span`
 	color: ${T.textStrong};
 	word-break: break-all;
 `
+
+/* Dashed muted badge for empty KV lines — mirrors the Employees /
+ * Projects / Clients / Leads-list pattern. Visual shape is identical
+ * across the app so "nothing here yet" reads consistently; only the
+ * icon + lowercase label change per field. */
+const EmptyBadge = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	border: 1.5px dashed rgba(100, 116, 139, 0.4);
+	background: rgba(100, 116, 139, 0.06);
+	color: ${T.textSecondary};
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
+
+	svg {
+		font-size: 15px;
+		opacity: 0.7;
+	}
+`
+
 
 const KvLink = styled.a`
 	font-family: 'JetBrains Mono', ui-monospace, monospace;

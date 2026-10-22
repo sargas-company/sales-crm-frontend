@@ -6,30 +6,36 @@ import {
 	BusinessOutlined,
 	CheckRounded,
 	ContentCopyRounded,
+	DeleteOutlineRounded,
+	EditOutlined,
 	EditRounded,
-	LaunchRounded,
 	LockOpenRounded,
 	PersonOutlined,
-	TimerOutlined,
 	VisibilityOffRounded,
 	VisibilityRounded,
 	VpnKeyOutlined,
 } from '@mui/icons-material'
+import { IconAction, Actions as RowActions } from '../../components/_shared/DataTable'
 import {
 	useCopyAuditMutation,
 	useGetProfileQuery,
+	useHardDeleteAccountMutation,
 	useListAccountsQuery,
 	useGetCredentialsPolicyQuery,
 	type CredentialAccount,
 	type SecretPayload,
 } from '../../store/credentials/credentialsApi'
 import { fetchAccountReveal } from '../../store/credentials/revealTransport'
+import HistoryPanel from './HistoryPanel'
 import { T } from '../../components/sales-analytics/_shared/tokens'
 import { usePageHeader } from './CredentialsLayout'
 import { PrimarySolidButton } from '../../components/_shared/formShell.styled'
 import PermissionGate from '../../components/auth/PermissionGate'
-import VaultSetupGate, { VAULT_REQUEST_UNLOCK } from './VaultSetupGate'
+import { useAppSelector } from '../../hooks'
+import { useToast } from '../../context/toast/ToastContext'
+import { VAULT_REQUEST_UNLOCK } from './VaultSetupGate'
 import VaultIsland from './VaultIsland'
+import HardDeleteModal from './HardDeleteModal'
 import { useGetVaultStatusQuery } from '../../store/credentials/vaultApi'
 
 const CredentialsProfilePage = () => {
@@ -43,6 +49,11 @@ const CredentialsProfilePage = () => {
 	const { data: vaultStatus } = useGetVaultStatusQuery()
 
 	const [revealing, setRevealing] = useState<CredentialAccount | null>(null)
+	const [deleting, setDeleting] = useState<CredentialAccount | null>(null)
+	const [hardDeleteAccount] = useHardDeleteAccountMutation()
+	const { showToast } = useToast()
+	const permissions = useAppSelector((s) => s.auth.permissions ?? [])
+	const canHardDelete = permissions.includes('credentials:hard_delete')
 
 	const items = accounts?.data ?? []
 
@@ -63,7 +74,7 @@ const CredentialsProfilePage = () => {
 	usePageHeader({
 		crumbs: [
 			{ label: 'Secure' },
-			{ label: 'Credentials' },
+			{ label: 'Credentials', href: '/credentials' },
 			{
 				label: profile?.name ?? 'Profile',
 				current: true,
@@ -78,7 +89,13 @@ const CredentialsProfilePage = () => {
 				<VpnKeyOutlined />
 			),
 		title: profile?.name ?? 'Loading…',
-		subtitle: profile?.description || undefined,
+		// Cap description at 100 chars on the hero — anything longer
+		// becomes visual noise next to the title.
+		subtitle: profile?.description
+			? profile.description.length > 100
+				? `${profile.description.slice(0, 100).trimEnd()}…`
+				: profile.description
+			: undefined,
 		action: (
 			<HeroActions>
 				<VaultIsland />
@@ -107,15 +124,9 @@ const CredentialsProfilePage = () => {
 
 	return (
 		<>
-			<VaultSetupGate />
-			{profile && (profile.tags.length > 0 || profile.status === 'ARCHIVED') && (
+			{profile && profile.status === 'ARCHIVED' && (
 					<ProfileMetaRow>
-						{profile.status === 'ARCHIVED' && (
-							<ArchivedChip>Archived</ArchivedChip>
-						)}
-						{profile.tags.map((t) => (
-							<TagChip key={t}>{t}</TagChip>
-						))}
+						<ArchivedChip>Archived</ArchivedChip>
 					</ProfileMetaRow>
 				)}
 
@@ -173,6 +184,12 @@ const CredentialsProfilePage = () => {
 								key={a.id}
 								account={a}
 								onReveal={() => handleReveal(a)}
+								onEdit={() =>
+									navigate(`/credentials/accounts/${a.id}/edit`)
+								}
+								onHardDelete={
+									canHardDelete ? () => setDeleting(a) : undefined
+								}
 							/>
 						))}
 						<TermFooter>
@@ -189,6 +206,25 @@ const CredentialsProfilePage = () => {
 					onClose={() => setRevealing(null)}
 				/>
 			)}
+
+			{deleting && (
+				<HardDeleteModal
+					title='Permanently delete account'
+					description='Encrypted secrets + full history will be removed. Audit entries remain forever. This cannot be undone.'
+					confirmationLabel={deleting.serviceName}
+					expectedConfirmation={deleting.serviceName}
+					onClose={() => setDeleting(null)}
+					onConfirm={async ({ confirmation, mfa }) => {
+						await hardDeleteAccount({
+							id: deleting.id,
+							confirmation,
+							mfa,
+						}).unwrap()
+						showToast('Account deleted', 'success')
+						setDeleting(null)
+					}}
+				/>
+			)}
 		</>
 	)
 }
@@ -200,9 +236,13 @@ export default CredentialsProfilePage
 const TerminalRow = ({
 	account,
 	onReveal,
+	onEdit,
+	onHardDelete,
 }: {
 	account: CredentialAccount
 	onReveal: () => void
+	onEdit: () => void
+	onHardDelete?: () => void
 }) => {
 	let hostname: string | null = null
 	if (account.serviceUrl) {
@@ -216,14 +256,7 @@ const TerminalRow = ({
 		<TermRow>
 			<TermArrow>→</TermArrow>
 			<TermName>{account.serviceName.toLowerCase()}</TermName>
-			<TermCat>[{account.category.toUpperCase()}]</TermCat>
 			<TermLogin>
-				{account.usernameHint && (
-					<span>{account.usernameHint}</span>
-				)}
-				{account.usernameHint && hostname && (
-					<TermSep>·</TermSep>
-				)}
 				{hostname && (
 					<TermUrl
 						href={account.serviceUrl ?? '#'}
@@ -235,12 +268,25 @@ const TerminalRow = ({
 				)}
 			</TermLogin>
 			<TermActions>
-				<TermEditLink
-					to={`/credentials/accounts/${account.id}/edit`}
-					aria-label='Edit account'
-				>
-					<EditRounded style={{ fontSize: 17 }} />
-				</TermEditLink>
+				<RowActions>
+					<IconAction
+						type='button'
+						onClick={onEdit}
+						aria-label='Edit account'
+					>
+						<EditOutlined />
+					</IconAction>
+					{onHardDelete && (
+						<IconAction
+							type='button'
+							$danger
+							onClick={onHardDelete}
+							aria-label='Permanently delete account'
+						>
+							<DeleteOutlineRounded />
+						</IconAction>
+					)}
+				</RowActions>
 				<TermReveal type='button' onClick={onReveal}>
 					<LockOpenRounded style={{ fontSize: 15 }} />
 					reveal
@@ -275,6 +321,19 @@ const RevealDrawer = ({
 	const [copiedKey, setCopiedKey] = useState<string | null>(null)
 	const [isLoading, setIsLoading] = useState(true)
 	const [revealError, setRevealError] = useState<Error | null>(null)
+	const [historicView, setHistoricView] = useState<{
+		versionId: string
+		changedAt: string
+		secrets: SecretPayload
+	} | null>(null)
+	const [lastHistoricView, setLastHistoricView] = useState<{
+		versionId: string
+		changedAt: string
+		secrets: SecretPayload
+	} | null>(null)
+	useEffect(() => {
+		if (historicView) setLastHistoricView(historicView)
+	}, [historicView])
 	const timer = useRef<number | null>(null)
 	const copyTimer = useRef<number | null>(null)
 
@@ -283,6 +342,7 @@ const RevealDrawer = ({
 		setClosing(true)
 		window.setTimeout(() => {
 			setSecrets(null)
+			setHistoricView(null)
 			setVisible({})
 			onClose()
 		}, 720)
@@ -336,6 +396,7 @@ const RevealDrawer = ({
 			setRemaining((r) => {
 				if (r <= 1) {
 					setSecrets(null)
+					setHistoricView(null)
 					setVisible({})
 					if (timer.current) window.clearInterval(timer.current)
 					return 0
@@ -355,6 +416,7 @@ const RevealDrawer = ({
 	useEffect(
 		() => () => {
 			setSecrets(null)
+			setHistoricView(null)
 			setVisible({})
 			if (timer.current) window.clearInterval(timer.current)
 			if (copyTimer.current) window.clearTimeout(copyTimer.current)
@@ -367,6 +429,7 @@ const RevealDrawer = ({
 	// the uncommon case where the same drawer is reused).
 	useEffect(() => {
 		setSecrets(null)
+		setHistoricView(null)
 		setVisible({})
 	}, [account.id])
 
@@ -376,6 +439,7 @@ const RevealDrawer = ({
 	useEffect(() => {
 		const scrub = () => {
 			setSecrets(null)
+			setHistoricView(null)
 			setVisible({})
 		}
 		window.addEventListener('vault:locked', scrub)
@@ -401,6 +465,7 @@ const RevealDrawer = ({
 		}
 	}
 
+	const shown = historicView?.secrets ?? secrets
 	const slug = account.serviceName.toLowerCase().replace(/\s+/g, '-')
 	return (
 		<Scrim onClick={requestClose} $closing={closing}>
@@ -421,40 +486,82 @@ const RevealDrawer = ({
 				<CollapsingBody $closing={closing}>
 					<div>
 				<TermCmd>
-					<TermPrompt>$</TermPrompt> cat secrets --decrypt
+					<TermPrompt>$</TermPrompt>{' '}
+					{historicView ? (
+						<>
+							cat secrets@
+							{new Date(historicView.changedAt)
+								.toISOString()
+								.slice(0, 16)
+								.replace('T', '_')}{' '}
+							--decrypt
+						</>
+					) : (
+						'cat secrets --decrypt'
+					)}
 				</TermCmd>
-				{isLoading && <TermStatus>decrypting...</TermStatus>}
-				{revealError && (
+				<HBv4Slot $show={!!historicView} aria-hidden={!historicView}>
+					<HBv4Inner $show={!!historicView}>
+						{lastHistoricView && (
+							<HBv4>
+								<HBv4Left>
+									<HBv4Kicker>SNAPSHOT OF</HBv4Kicker>
+									<HBv4Time>
+										{new Date(lastHistoricView.changedAt).toLocaleString(
+											'en-GB',
+											{
+												day: '2-digit',
+												month: 'long',
+												year: 'numeric',
+												hour: '2-digit',
+												minute: '2-digit',
+											},
+										)}
+									</HBv4Time>
+								</HBv4Left>
+								<HBv4Back
+									type='button'
+									onClick={() => setHistoricView(null)}
+								>
+									<HBv4Arrow>←</HBv4Arrow>
+									back to live
+								</HBv4Back>
+							</HBv4>
+						)}
+					</HBv4Inner>
+				</HBv4Slot>
+				{isLoading && !historicView && <TermStatus>decrypting...</TermStatus>}
+				{revealError && !historicView && (
 					<TermError>
 						✗ {revealError.message || 'could not reveal secrets'}
 					</TermError>
 				)}
-				{secrets && (
+				{shown && (
 					<TermBody>
-						{secrets.username && (
+						{shown.username && (
 							<TermSecretRow
 								keyLabel='username:'
-								value={secrets.username}
-								onCopy={() => copy('username', secrets.username!)}
+								value={shown.username}
+								onCopy={() => copy('username', shown.username!)}
 								isVisible
 								isCopied={copiedKey === 'username'}
 							/>
 						)}
-						{secrets.email && (
+						{shown.email && (
 							<TermSecretRow
 								keyLabel='email:'
-								value={secrets.email}
-								onCopy={() => copy('email', secrets.email!)}
+								value={shown.email}
+								onCopy={() => copy('email', shown.email!)}
 								isVisible
 								isCopied={copiedKey === 'email'}
 							/>
 						)}
-						{secrets.password && (
+						{shown.password && (
 							<TermSecretRow
 								keyLabel='password:'
-								value={secrets.password}
+								value={shown.password}
 								onCopy={() =>
-									copy('password', secrets.password!)
+									copy('password', shown.password!)
 								}
 								isVisible={!!visible.password}
 								onToggle={() =>
@@ -467,11 +574,11 @@ const RevealDrawer = ({
 								isCopied={copiedKey === 'password'}
 							/>
 						)}
-						{secrets.totpSeed && (
+						{shown.totpSeed && (
 							<TermSecretRow
 								keyLabel='totp_seed:'
-								value={secrets.totpSeed}
-								onCopy={() => copy('totpSeed', secrets.totpSeed!)}
+								value={shown.totpSeed}
+								onCopy={() => copy('totpSeed', shown.totpSeed!)}
 								isVisible={!!visible.totp}
 								onToggle={() =>
 									setVisible((v) => ({ ...v, totp: !v.totp }))
@@ -480,11 +587,11 @@ const RevealDrawer = ({
 								isCopied={copiedKey === 'totpSeed'}
 							/>
 						)}
-						{secrets.pin && (
+						{shown.pin && (
 							<TermSecretRow
 								keyLabel='pin:'
-								value={secrets.pin}
-								onCopy={() => copy('pin', secrets.pin!)}
+								value={shown.pin}
+								onCopy={() => copy('pin', shown.pin!)}
 								isVisible={!!visible.pin}
 								onToggle={() =>
 									setVisible((v) => ({ ...v, pin: !v.pin }))
@@ -493,18 +600,18 @@ const RevealDrawer = ({
 								isCopied={copiedKey === 'pin'}
 							/>
 						)}
-						{secrets.secureNote && (
+						{shown.secureNote && (
 							<TermNote>
 								<TermNoteKey># secure_note</TermNoteKey>
-								<TermNoteBody>{secrets.secureNote}</TermNoteBody>
+								<TermNoteBody>{shown.secureNote}</TermNoteBody>
 							</TermNote>
 						)}
-						{secrets.recoveryCodes &&
-							secrets.recoveryCodes.length > 0 && (
+						{shown.recoveryCodes &&
+							shown.recoveryCodes.length > 0 && (
 								<TermNote>
 									<TermNoteKey># recovery_codes</TermNoteKey>
 									<TermRecoveryGrid>
-										{secrets.recoveryCodes.map((c, i) => (
+										{shown.recoveryCodes.map((c, i) => (
 											<li key={i}>
 												<span className='n'>
 													{String(i + 1).padStart(2, '0')}
@@ -515,7 +622,7 @@ const RevealDrawer = ({
 									</TermRecoveryGrid>
 								</TermNote>
 							)}
-						{secrets.customFields?.map((f, i) => (
+						{shown.customFields?.map((f, i) => (
 							<TermSecretRow
 								key={i}
 								keyLabel={`${f.label.toLowerCase().replace(/\s+/g, '_')}:`}
@@ -534,6 +641,10 @@ const RevealDrawer = ({
 						))}
 					</TermBody>
 				)}
+				<HistoryPanel
+					accountId={account.id}
+					onVersionRevealed={(v) => setHistoricView(v)}
+				/>
 					</div>
 				</CollapsingBody>
 				<TermPanelFoot>
@@ -897,47 +1008,6 @@ const TermActions = styled.div`
 	flex-shrink: 0;
 `
 
-const pencilWriteKf = keyframes`
-	0% { transform: rotate(0) translate(0, 0); }
-	20% { transform: rotate(-15deg) translate(-1px, 1px); }
-	45% { transform: rotate(10deg) translate(1px, -1px); }
-	70% { transform: rotate(-6deg) translate(-1px, 1px); }
-	100% { transform: rotate(0) translate(0, 0); }
-`
-
-const TermEditLink = styled(Link)`
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 36px;
-	height: 36px;
-	border-radius: 10px;
-	color: ${T.primary};
-	background: transparent;
-	border: 1px solid rgba(3, 105, 161, 0.2);
-	text-decoration: none;
-	transition: transform 180ms cubic-bezier(0.22, 1.35, 0.36, 1);
-
-	svg {
-		transition: transform 220ms cubic-bezier(0.22, 1.35, 0.36, 1);
-		transform-origin: center 60%;
-	}
-
-	&:hover {
-		transform: scale(1.05);
-	}
-
-	&:hover svg {
-		animation: ${pencilWriteKf} 600ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		&:hover svg {
-			animation: none;
-		}
-	}
-`
-
 const lockWiggleKf = keyframes`
 	0% { transform: rotate(0) scale(1); }
 	30% { transform: rotate(-12deg) scale(1.15); }
@@ -1146,6 +1216,91 @@ const TermError = styled.div`
 	border-radius: 6px;
 	border-left: 2px solid #dc2626;
 	margin: 6px 0 10px;
+`
+
+/* Historical-version banner — "hero snapshot" variant with
+   grid-template-rows reveal/collapse. */
+const HBv4Slot = styled.div<{ $show: boolean }>`
+	display: grid;
+	grid-template-rows: ${(p) => (p.$show ? '1fr' : '0fr')};
+	margin-top: ${(p) => (p.$show ? '4px' : '0px')};
+	margin-bottom: ${(p) => (p.$show ? '10px' : '0px')};
+	transition:
+		grid-template-rows 260ms cubic-bezier(0.22, 1, 0.36, 1),
+		margin-top 260ms cubic-bezier(0.22, 1, 0.36, 1),
+		margin-bottom 260ms cubic-bezier(0.22, 1, 0.36, 1);
+`
+const HBv4Inner = styled.div<{ $show: boolean }>`
+	overflow: hidden;
+	min-height: 0;
+	opacity: ${(p) => (p.$show ? 1 : 0)};
+	transform: ${(p) => (p.$show ? 'translateY(0)' : 'translateY(-4px)')};
+	transition:
+		opacity 200ms ease ${(p) => (p.$show ? '80ms' : '0ms')},
+		transform 200ms ease ${(p) => (p.$show ? '80ms' : '0ms')};
+`
+const HBv4 = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 12px 16px;
+	border-radius: 10px;
+	background: transparent;
+	border: 1px solid #0f172a;
+`
+const HBv4Left = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+`
+const HBv4Kicker = styled.div`
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 9.5px;
+	letter-spacing: 1.5px;
+	font-weight: 700;
+	color: #94a3b8;
+`
+const HBv4Time = styled.div`
+	font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+	font-size: 16px;
+	font-weight: 800;
+	color: #0f172a;
+	letter-spacing: -0.3px;
+`
+const HBv4Back = styled.button`
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: #0f172a;
+	color: #ffffff;
+	border: none;
+	font-family: 'Inter', system-ui, sans-serif;
+	font-size: 11.5px;
+	font-weight: 700;
+	padding: 7px 14px;
+	border-radius: 999px;
+	cursor: pointer;
+	transition:
+		background 160ms ease,
+		transform 180ms cubic-bezier(0.22, 1.35, 0.36, 1);
+	&:hover {
+		background: #1e293b;
+		transform: scale(1.04);
+	}
+	&:active {
+		transform: scale(0.98);
+	}
+`
+
+const HBv4Arrow = styled.span`
+	display: inline-block;
+	transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+	${HBv4Back}:hover & {
+		transform: translateX(-3px);
+	}
 `
 
 const CollapsingBody = styled.div<{ $closing?: boolean }>`

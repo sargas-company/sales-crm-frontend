@@ -242,12 +242,13 @@ const LeadForm = ({ mode, id, initial }: Props) => {
 	}
 
 	const validate = (): FieldErrors => {
+		// Only first + last name are required (owner rev-6 2026-10-22).
+		// Everything else — company, country, email, phone, profile —
+		// is optional; still validated for FORMAT when the user fills
+		// it in, but a blank field is accepted.
 		const next: FieldErrors = {}
 		if (!fields.firstName.trim()) next.firstName = 'First name is required'
 		if (!fields.lastName.trim()) next.lastName = 'Last name is required'
-		if (fields.clientType === 'company' && !fields.companyName.trim())
-			next.companyName = 'Company name is required for a company lead'
-		if (!fields.country.trim()) next.country = 'Country is required'
 		if (fields.email && !isLikelyValidEmail(fields.email))
 			next.email = 'Enter a valid email address'
 		if (fields.phone && !isLikelyValidPhone(fields.phone))
@@ -445,7 +446,7 @@ const LeadForm = ({ mode, id, initial }: Props) => {
 									/>
 								</FullRow>
 							)}
-							<Field label='Country' required error={errors.country}>
+							<Field label='Country' error={errors.country}>
 								<CountryAutocomplete
 									value={fields.country}
 									onChange={(v) => setField('country', v)}
@@ -474,7 +475,7 @@ const LeadForm = ({ mode, id, initial }: Props) => {
 							hint='Individual or company — pick the type that fits'
 						/>
 						<FieldGrid>
-							<Field label='Client type' required>
+							<Field label='Client type'>
 								<Select
 									label='Client type'
 									value={fields.clientType}
@@ -490,11 +491,7 @@ const LeadForm = ({ mode, id, initial }: Props) => {
 							</Field>
 							{fields.clientType === 'company' && (
 								<Reveal>
-									<Field
-										label='Company name'
-										required
-										error={errors.companyName}
-									>
+									<Field label='Company name' error={errors.companyName}>
 										<TextField
 											name='companyName'
 											placeholder='e.g. Acme Corp'
@@ -516,7 +513,7 @@ const LeadForm = ({ mode, id, initial }: Props) => {
 							hint='Status, temperature and where this lead came from'
 						/>
 						<FieldGrid>
-							<Field label='Status' required>
+							<Field label='Status'>
 								<Select
 									label='Status'
 									value={fields.status}
@@ -533,7 +530,7 @@ const LeadForm = ({ mode, id, initial }: Props) => {
 									<SelectItem label='Client' value='CLIENT' />
 								</Select>
 							</Field>
-							<Field label='Temperature' required>
+							<Field label='Temperature'>
 								<Select
 									label='Temperature'
 									value={fields.temperature}

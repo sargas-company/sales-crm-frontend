@@ -61,16 +61,6 @@ export interface RevealResponse {
 	secrets: SecretPayload
 }
 
-export interface CredentialAttachmentPreview {
-	id: string
-	accountId: string
-	filename: string
-	mime: string
-	size: number
-	uploadedById: string | null
-	createdAt: string
-}
-
 interface Paginated<T> {
 	data: T[]
 	total: number
@@ -242,42 +232,43 @@ export const credentialsApi = baseApi.injectEndpoints({
 			}),
 		}),
 
-		// ─── Attachments ─────────────────────────────────────────────
-		listAttachments: builder.query<CredentialAttachmentPreview[], string>({
+		// Credentials-attachments feature removed. If files-per-account
+		// come back, re-wire via a new module — don't resurrect the old
+		// endpoints directly.
+
+		// ─── History (encrypted-payload version list + restore) ─────
+		listAccountHistory: builder.query<
+			{
+				data: Array<{
+					id: string
+					changedAt: string
+					changeReason: 'edit' | 'restore'
+					changedBy:
+						| { id: string; email: string; name: string }
+						| null
+				}>
+			},
+			string
+		>({
 			query: (accountId) => ({
-				url: `/credential-accounts/${accountId}/attachments`,
+				url: `/credential-accounts/${accountId}/history`,
 			}),
 			providesTags: (_r, _e, accountId) => [
-				{ type: 'CredentialAttachment', id: accountId },
+				{ type: 'CredentialAccount', id: `history:${accountId}` },
 			],
 		}),
-		uploadAttachment: builder.mutation<
-			CredentialAttachmentPreview,
-			{ accountId: string; file: File }
-		>({
-			query: ({ accountId, file }) => {
-				const fd = new FormData()
-				fd.append('file', file)
-				return {
-					url: `/credential-accounts/${accountId}/attachments`,
-					method: 'POST',
-					body: fd,
-				}
-			},
-			invalidatesTags: (_r, _e, { accountId }) => [
-				{ type: 'CredentialAttachment', id: accountId },
-			],
-		}),
-		deleteAttachment: builder.mutation<
+		restoreAccountVersion: builder.mutation<
 			{ id: string },
-			{ id: string; accountId: string }
+			{ accountId: string; versionId: string }
 		>({
-			query: ({ id }) => ({
-				url: `/credential-accounts/attachments/${id}`,
-				method: 'DELETE',
+			query: ({ accountId, versionId }) => ({
+				url: `/credential-accounts/${accountId}/history/${versionId}/restore`,
+				method: 'POST',
 			}),
 			invalidatesTags: (_r, _e, { accountId }) => [
-				{ type: 'CredentialAttachment', id: accountId },
+				'CredentialAccount',
+				{ type: 'CredentialAccount', id: accountId },
+				{ type: 'CredentialAccount', id: `history:${accountId}` },
 			],
 		}),
 
@@ -299,16 +290,15 @@ export const credentialsApi = baseApi.injectEndpoints({
 		}),
 
 		/* Effective Credentials policy — safe non-secret snapshot used
-		 * by the UI to drive the reveal auto-hide timer and the
-		 * attachment pre-check label. Served under `credentials:view`
-		 * (same gate as the drawer that reveals the secret), so
-		 * Admin Manager — who has Credentials but NOT Settings — can
-		 * read these values without touching the Settings API. */
+		 * by the UI to drive the reveal auto-hide timer. Served under
+		 * `credentials:view` (same gate as the drawer that reveals the
+		 * secret), so Admin Manager — who has Credentials but NOT
+		 * Settings — can read these values without touching the
+		 * Settings API. */
 		getCredentialsPolicy: builder.query<
 			{
 				vaultSessionMinutes: number
 				revealAutoHideSeconds: number
-				maxAttachmentMegabytes: number
 			},
 			void
 		>({
@@ -333,8 +323,7 @@ export const {
 	useArchiveAccountMutation,
 	useRestoreAccountMutation,
 	useCopyAuditMutation,
-	useListAttachmentsQuery,
-	useUploadAttachmentMutation,
-	useDeleteAttachmentMutation,
 	useHardDeleteAccountMutation,
+	useListAccountHistoryQuery,
+	useRestoreAccountVersionMutation,
 } = credentialsApi

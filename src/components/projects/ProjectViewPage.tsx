@@ -12,6 +12,7 @@ import Loading from '../../ui/state/Loading'
 import ErrorState from '../../ui/state/ErrorState'
 import useTheme from '../../theme/useTheme'
 import PermissionGate from '../auth/PermissionGate'
+import ProjectAttachmentsSection from './form/ProjectAttachmentsSection'
 import { Field, FormHeader, SectionHead } from '../_shared/FormShell'
 import {
 	BackGhostButton,
@@ -65,6 +66,25 @@ const clientName = (p: {
 }
 
 const statusLabel = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
+const typeLabel = (t: string | null | undefined): string => {
+	if (t === 'HOURLY') return 'Hourly'
+	if (t === 'FIXED') return 'Fixed price'
+	if (t === 'RETAINER') return 'Monthly retainer'
+	return '—'
+}
+
+/** Pretty-print a Decimal (string from server) + ISO currency. Returns
+ *  em-dash when either side is missing. */
+const formatRate = (
+	rate: string | null | undefined,
+	currency: string | null | undefined,
+): string => {
+	if (!rate || !currency) return '—'
+	const n = Number(rate)
+	if (!Number.isFinite(n)) return '—'
+	return `${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
+}
 
 const initials = (first: string, last: string): string => {
 	const a = (first?.[0] ?? '').toUpperCase()
@@ -157,24 +177,49 @@ const ProjectViewPage = () => {
 								width='100%'
 							/>
 						</Field>
-						<Field label='Start date'>
+						<Field label='Billing type'>
 							<TextField
-								name='sd'
-								value={project.startDate ? formatDate(project.startDate, 'short') : '—'}
+								name='bt'
+								value={typeLabel(project.type)}
 								disable
 								sizes='small'
 								width='100%'
 							/>
 						</Field>
-						<Field label='End date'>
+						<Field
+							label={
+								project.type === 'HOURLY'
+									? 'Rate (per hour)'
+									: project.type === 'RETAINER'
+										? 'Rate (per month)'
+										: project.type === 'FIXED'
+											? 'Contract value'
+											: 'Rate'
+							}
+						>
 							<TextField
-								name='ed'
-								value={project.endDate ? formatDate(project.endDate, 'short') : '—'}
+								name='rt'
+								value={formatRate(project.rate, project.rateCurrency)}
 								disable
 								sizes='small'
 								width='100%'
 							/>
 						</Field>
+						{project.type === 'HOURLY' && (
+							<Field label='Hours budget'>
+								<TextField
+									name='hb'
+									value={
+										project.hoursBudget !== null && project.hoursBudget !== undefined
+											? `${project.hoursBudget} h`
+											: '—'
+									}
+									disable
+									sizes='small'
+									width='100%'
+								/>
+							</Field>
+						)}
 						<Field label='Description' span='full'>
 							<TextField
 								name='desc'
@@ -292,6 +337,10 @@ const ProjectViewPage = () => {
 						</PrimaryGhostButton>
 					</ReportsActions>
 				</Section>
+
+				<PermissionGate permission='projects:attachments:view'>
+					<ProjectAttachmentsSection projectId={project.id} hideAdd />
+				</PermissionGate>
 
 				<FootBar $dark={isDark}>
 					<FootLeft $dark={isDark}>

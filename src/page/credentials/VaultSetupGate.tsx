@@ -5,13 +5,15 @@ import type {
 } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 import {
-	ShieldOutlined,
-	LockOpenOutlined,
-	FingerprintOutlined,
-	KeyOutlined,
+	ArrowBackRounded,
+	BlockRounded,
+	CheckRounded,
+	CloseRounded,
 	ContentCopyOutlined,
 	FileDownloadOutlined,
-	CheckRounded,
+	FingerprintOutlined,
+	KeyOutlined,
+	ShieldOutlined,
 } from '@mui/icons-material'
 import { useToast } from '../../context/toast/ToastContext'
 import {
@@ -42,6 +44,11 @@ type DrawerMode = null | 'setup' | 'unlock'
  * `CredentialsLanding.page.tsx` so it does not steal layout space here.
  */
 export const VAULT_REQUEST_UNLOCK = 'vault:request-unlock'
+/** Fired by either drawer when the user dismisses without unlocking.
+ *  `VaultSessionRequired` listens for this and sends the user back
+ *  where they came from (or `/` if there's no SPA history) so they
+ *  are never stranded on a blank credentials page. */
+export const VAULT_CANCELLED = 'vault:cancelled'
 
 const VaultSetupGate = () => {
 	const { data: status, refetch } = useGetVaultStatusQuery()
@@ -106,6 +113,7 @@ const VaultSetupGate = () => {
 					onClose={() => {
 						setDrawer(null)
 						refetch()
+						window.dispatchEvent(new CustomEvent(VAULT_CANCELLED))
 					}}
 					onDone={() => {
 						setDrawer('unlock')
@@ -116,7 +124,10 @@ const VaultSetupGate = () => {
 			{drawer === 'unlock' && (
 				<UnlockDrawer
 					mfa={mfa}
-					onClose={() => setDrawer(null)}
+					onClose={() => {
+						setDrawer(null)
+						window.dispatchEvent(new CustomEvent(VAULT_CANCELLED))
+					}}
 					onSuccess={() => {
 						setDrawer(null)
 						refetch()
@@ -150,6 +161,19 @@ const MfaSetupDrawer = ({
 	const [confirmCode, setConfirmCode] = useState('')
 	const [recovery, setRecovery] = useState<string[] | null>(null)
 	const [err, setErr] = useState<string | null>(null)
+	const [lastErr, setLastErr] = useState<string | null>(null)
+	useEffect(() => {
+		if (err) setLastErr(err)
+	}, [err])
+	const [open, setOpen] = useState(false)
+	useEffect(() => {
+		const r = requestAnimationFrame(() => setOpen(true))
+		return () => cancelAnimationFrame(r)
+	}, [])
+	const closeWithAnim = () => {
+		setOpen(false)
+		window.setTimeout(onClose, 220)
+	}
 	const [passkeyLabel, setPasskeyLabel] = useState('')
 	const [codesConfirmed, setCodesConfirmed] = useState(false)
 	const [copiedCodes, setCopiedCodes] = useState(false)
@@ -233,13 +257,20 @@ const MfaSetupDrawer = ({
 			setRecovery(codes)
 			setStage('recovery')
 		} catch (e) {
-			setErr((e as Error).message ?? 'TOTP code did not verify')
+			setErr(parseServerError(e) || 'TOTP code did not verify')
 		}
 	}
 
 	return (
-		<Scrim onClick={onClose}>
-			<Panel onClick={(e) => e.stopPropagation()}>
+		<Scrim $closing={!open} onClick={closeWithAnim}>
+			<Panel $closing={!open} onClick={(e) => e.stopPropagation()}>
+				<CloseBtn
+					type='button'
+					onClick={closeWithAnim}
+					aria-label='Close'
+				>
+					<CloseRounded style={{ fontSize: 22 }} />
+				</CloseBtn>
 				<PanelHead>
 					<span className='ico'>
 						<ShieldOutlined />
@@ -251,16 +282,21 @@ const MfaSetupDrawer = ({
 				</PanelHead>
 				{stage === 'intro' && (
 					<FactorGrid>
-						<FactorCard onClick={() => setStage('passkey-label')}>
-							<FingerprintOutlined />
-							<strong>Passkey</strong>
-							<span>Device biometrics or security key. Preferred.</span>
-						</FactorCard>
-						<FactorCard onClick={beginTotp}>
-							<KeyOutlined />
-							<strong>Authenticator app</strong>
-							<span>Google Authenticator, 1Password, Authy…</span>
-						</FactorCard>
+						<TileCard onClick={() => setStage('passkey-label')}>
+							<TileIcon $kind='passkey'>
+								<FingerprintOutlined />
+							</TileIcon>
+							<TileTitle>Passkey</TileTitle>
+							<TileDesc>Device biometrics or security key.</TileDesc>
+							<TilePref>Preferred</TilePref>
+						</TileCard>
+						<TileCard onClick={beginTotp}>
+							<TileIcon $kind='totp'>
+								<KeyOutlined />
+							</TileIcon>
+							<TileTitle>Authenticator app</TileTitle>
+							<TileDesc>Google Authenticator, 1Password, Authy</TileDesc>
+						</TileCard>
 					</FactorGrid>
 				)}
 				{stage === 'passkey-label' && (
@@ -276,12 +312,40 @@ const MfaSetupDrawer = ({
 							onChange={(e) => setPasskeyLabel(e.target.value)}
 							autoFocus
 						/>
-						<PrimaryBtn
-							onClick={beginPasskey}
-							disabled={!passkeyLabel.trim()}
-						>
-							Register passkey
-						</PrimaryBtn>
+						<SetupErrSlot $show={!!err} aria-hidden={!err}>
+							<SetupErrInner $show={!!err}>
+								{lastErr && (
+									<StickerBanner>
+										<StickerIcon>
+											<BlockRounded style={{ fontSize: 18 }} />
+										</StickerIcon>
+										<StickerText>
+											<StickerTitle>Nope</StickerTitle>
+											<StickerSub>{lastErr}</StickerSub>
+										</StickerText>
+									</StickerBanner>
+								)}
+							</SetupErrInner>
+						</SetupErrSlot>
+						<StageFooter>
+							<SecondaryBtn
+								type='button'
+								onClick={() => {
+									setErr(null)
+									setPasskeyLabel('')
+									setStage('intro')
+								}}
+							>
+								<ArrowBackRounded style={{ fontSize: 16 }} />
+								Back
+							</SecondaryBtn>
+							<PrimaryBtn
+								onClick={beginPasskey}
+								disabled={!passkeyLabel.trim()}
+							>
+								Register passkey
+							</PrimaryBtn>
+						</StageFooter>
 					</PasskeyLabelStage>
 				)}
 				{stage === 'totp-confirm' && totp && (
@@ -310,21 +374,55 @@ const MfaSetupDrawer = ({
 							</SecretTop>
 							<span>Shared secret (keep private)</span>
 						</SecretBox>
-						<OtpauthLink href={totp.otpauth}>
-							Open otpauth:// URL
-						</OtpauthLink>
 						<CodeInput
+							$shake={!!err}
 							value={confirmCode}
-							onChange={(e) => setConfirmCode(e.target.value)}
+							onChange={(e) => {
+								const digits = e.target.value.replace(/\D/g, '').slice(0, 6)
+								setConfirmCode(digits)
+								if (err) setErr(null)
+							}}
+							inputMode='numeric'
+							pattern='[0-9]*'
+							autoComplete='one-time-code'
 							maxLength={6}
 							placeholder='123456'
 						/>
-						<PrimaryBtn
-							onClick={confirmTotp}
-							disabled={confirmCode.length < 6}
-						>
-							Confirm & save
-						</PrimaryBtn>
+						<SetupErrSlot $show={!!err} aria-hidden={!err}>
+							<SetupErrInner $show={!!err}>
+								{lastErr && (
+									<StickerBanner>
+										<StickerIcon>
+											<BlockRounded style={{ fontSize: 18 }} />
+										</StickerIcon>
+										<StickerText>
+											<StickerTitle>Nope</StickerTitle>
+											<StickerSub>{lastErr}</StickerSub>
+										</StickerText>
+									</StickerBanner>
+								)}
+							</SetupErrInner>
+						</SetupErrSlot>
+						<StageFooter>
+							<SecondaryBtn
+								type='button'
+								onClick={() => {
+									setErr(null)
+									setConfirmCode('')
+									setTotp(null)
+									setStage('intro')
+								}}
+							>
+								<ArrowBackRounded style={{ fontSize: 16 }} />
+								Back
+							</SecondaryBtn>
+							<PrimaryBtn
+								onClick={confirmTotp}
+								disabled={confirmCode.length < 6}
+							>
+								Confirm & save
+							</PrimaryBtn>
+						</StageFooter>
 					</TotpConfirm>
 				)}
 				{stage === 'recovery' && recovery && (
@@ -385,7 +483,6 @@ const MfaSetupDrawer = ({
 						</PrimaryBtn>
 					</RecoveryList>
 				)}
-				{err && <ErrBanner>{err}</ErrBanner>}
 			</Panel>
 		</Scrim>
 	)
@@ -595,6 +692,7 @@ const UnlockDrawer = ({
 				onClick={(e) => e.stopPropagation()}
 				$shake={shake}
 				$closing={closing}
+				$tabs={tabs.length}
 			>
 				<HeroLeft>
 					<HeroIcon>
@@ -793,14 +891,72 @@ const Scrim = styled.div<{ $closing?: boolean }>`
 	animation: ${(p) => (p.$closing ? fadeOut : fadeIn)} 220ms ease-out forwards;
 `
 
-const Panel = styled.div`
+const panelOut = keyframes`
+	from { opacity: 1; transform: translateY(0) scale(1); }
+	to { opacity: 0; transform: translateY(10px) scale(0.96); }
+`
+
+const Panel = styled.div<{ $closing?: boolean }>`
+	position: relative;
 	background: #ffffff;
 	border-radius: 20px;
-	padding: 28px 32px 26px;
-	max-width: 460px;
+	padding: 32px 36px 30px;
+	max-width: 520px;
 	width: calc(100% - 40px);
 	box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
-	animation: ${fadeIn} 220ms cubic-bezier(0.22, 1.35, 0.36, 1);
+	/* Allow the panel to animate between stages whose intrinsic
+	   heights differ (intro vs totp-confirm). The CSS keyword
+	   lets height/min-height transitions interpolate from/to
+	   \`auto\`. Shipping in Chrome 129+ / Edge 129+ / FF 130+;
+	   older browsers degrade to an instant height change, which
+	   is exactly what we had before — no regression. */
+	interpolate-size: allow-keywords;
+	transition:
+		height 320ms cubic-bezier(0.22, 1, 0.36, 1),
+		min-height 320ms cubic-bezier(0.22, 1, 0.36, 1);
+	animation: ${(p) => (p.$closing ? panelOut : fadeIn)}
+		${(p) => (p.$closing ? '200ms' : '220ms')}
+		cubic-bezier(0.22, 1.35, 0.36, 1) forwards;
+`
+
+const CloseBtn = styled.button`
+	position: absolute;
+	top: 22px;
+	right: 22px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 24px;
+	min-width: 24px;
+	height: 24px;
+	min-height: 24px;
+	padding: 0;
+	margin: 0;
+	line-height: 0;
+	appearance: none;
+	-webkit-appearance: none;
+	border: none;
+	background: transparent;
+	color: #64748b;
+	cursor: pointer;
+	border-radius: 50%;
+	transition:
+		color 160ms ease,
+		transform 220ms cubic-bezier(0.22, 1.35, 0.36, 1);
+	svg {
+		transition: transform 320ms cubic-bezier(0.22, 1.35, 0.36, 1);
+	}
+	&:hover {
+		color: #0f172a;
+		transform: scale(1.1);
+	}
+	&:hover svg {
+		transform: rotate(90deg);
+	}
+	&:active {
+		transform: scale(0.95);
+	}
 `
 
 const PanelHead = styled.div`
@@ -833,52 +989,149 @@ const PanelHead = styled.div`
 	}
 `
 
+/* Fade-up applied per-child (staggered) so each block in a stage
+   lands one after another instead of the whole container appearing
+   at once. The container itself does NOT animate — children do. */
+const stageFadeIn = keyframes`
+	0%   { opacity: 0; transform: translateY(8px); }
+	100% { opacity: 1; transform: translateY(0); }
+`
+
+const stagger = (count: number, base = 60, start = 80) => {
+	const rules = []
+	for (let i = 1; i <= count; i++) {
+		rules.push(css`
+			> *:nth-child(${i}) {
+				animation: ${stageFadeIn} 320ms cubic-bezier(0.22, 1, 0.36, 1)
+					${start + (i - 1) * base}ms both;
+			}
+		`)
+	}
+	return rules
+}
+
 const FactorGrid = styled.div`
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	gap: 12px;
+	${stagger(2, 80, 60)}
 	@media (max-width: 540px) {
 		grid-template-columns: 1fr;
 	}
 `
 
-const FactorCard = styled.button`
+/* Icon hover animations — scan-line sweep for the fingerprint,
+   full 3D flip for the key. */
+const fpSweep = keyframes`
+	0% { clip-path: inset(100% 0 0 0); }
+	50% { clip-path: inset(0 0 0 0); }
+	100% { clip-path: inset(0 0 100% 0); }
+`
+const keyFlip = keyframes`
+	0% { transform: rotateY(0); }
+	50% { transform: rotateY(180deg); }
+	100% { transform: rotateY(360deg); }
+`
+
+/* Shared hover-animation mixin: scan-line sweep for passkey, 3D flip for key.
+   Attach via `${iconHover('passkey'|'totp')}` on any card wrapper. */
+const iconHover = (kind: 'passkey' | 'totp') => css`
+	svg {
+		font-size: 26px;
+		border-radius: 50%;
+		transform-origin: ${kind === 'totp' ? '35% 60%' : 'center'};
+		transition: transform 240ms cubic-bezier(0.22, 1.35, 0.36, 1);
+	}
+	&:hover svg {
+		animation: ${kind === 'passkey' ? fpSweep : keyFlip}
+			${kind === 'passkey' ? '1400ms' : '900ms'}
+			cubic-bezier(0.36, 0.07, 0.19, 0.97);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		&:hover svg {
+			animation: none;
+		}
+	}
+`
+
+/* ─── Variant 2: icon-tile saas card ─────────────────────────── */
+const TileCard = styled.button`
+	position: relative;
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
-	padding: 18px 16px;
-	border-radius: 14px;
-	border: 1.5px solid rgba(15, 23, 42, 0.1);
-	background: #fafafd;
+	gap: 10px;
+	padding: 22px 18px;
+	border-radius: 16px;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	background: #ffffff;
 	text-align: left;
 	cursor: pointer;
 	font: inherit;
+	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 	transition:
-		border-color 200ms,
+		border-color 220ms,
+		box-shadow 220ms,
 		transform 220ms;
 	&:hover {
-		border-color: #0369a1;
-		transform: translateY(-2px);
+		border-color: transparent;
+		box-shadow: 0 6px 20px -10px rgba(15, 23, 42, 0.18);
+		transform: translateY(-3px);
 	}
-	svg {
-		font-size: 26px;
-		color: #0369a1;
-	}
-	strong {
-		font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
-		font-weight: 700;
-		font-size: 14px;
-	}
-	span {
-		font-size: 12px;
-		color: #64748b;
+	${iconHover('passkey')};
+	&:nth-child(2) {
+		${iconHover('totp')};
 	}
 `
+const TileIcon = styled.span<{ $kind: 'passkey' | 'totp' }>`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 46px;
+	height: 46px;
+	border-radius: 12px;
+	background: ${(p) =>
+		p.$kind === 'passkey'
+			? 'linear-gradient(135deg, #0369a1, #38bdf8)'
+			: 'linear-gradient(135deg, #475569, #64748b)'};
+	color: #ffffff;
+	svg {
+		color: #ffffff;
+		font-size: 24px;
+	}
+`
+const TileTitle = styled.div`
+	font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+	font-weight: 700;
+	font-size: 15px;
+	color: #0f172a;
+	letter-spacing: -0.2px;
+`
+const TileDesc = styled.div`
+	font-size: 12.5px;
+	color: #64748b;
+	line-height: 1.4;
+`
+const TilePref = styled.span`
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: rgba(3, 105, 161, 0.12);
+	color: #0369a1;
+	font-size: 9.5px;
+	font-weight: 800;
+	letter-spacing: 0.8px;
+	text-transform: uppercase;
+`
+
+
 
 const TotpConfirm = styled.div`
 	display: flex;
 	flex-direction: column;
 	gap: 14px;
+	${stagger(5, 70, 80)}
 	p {
 		margin: 0;
 		font-size: 13px;
@@ -906,34 +1159,37 @@ const SecretBox = styled.div`
 	}
 `
 
-const OtpauthLink = styled.a`
-	display: inline-block;
-	padding: 7px 14px;
-	border-radius: 999px;
-	background: rgba(3, 105, 161, 0.08);
-	color: #0369a1;
-	font-weight: 600;
-	font-size: 12.5px;
-	text-decoration: none;
-	align-self: flex-start;
+const inputShake = keyframes`
+	0%, 100% { transform: translateX(0); }
+	15% { transform: translateX(-6px); }
+	30% { transform: translateX(5px); }
+	45% { transform: translateX(-4px); }
+	60% { transform: translateX(3px); }
+	75% { transform: translateX(-2px); }
 `
 
-const CodeInput = styled.input`
+const CodeInput = styled.input<{ $shake?: boolean }>`
 	padding: 12px 14px;
 	border-radius: 10px;
-	border: 1.5px solid rgba(15, 23, 42, 0.14);
+	border: 1.5px solid
+		${(p) => (p.$shake ? '#dc2626' : 'rgba(15, 23, 42, 0.14)')};
 	font-family: 'JetBrains Mono', ui-monospace, monospace;
 	font-size: 18px;
 	letter-spacing: 4px;
 	text-align: center;
 	outline: none;
+	transition: border-color 160ms ease;
+	animation: ${(p) => (p.$shake ? inputShake : 'none')} 420ms
+		cubic-bezier(0.36, 0.07, 0.19, 0.97);
 	&:focus {
-		border-color: #0369a1;
-		box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.14);
+		border-color: ${(p) => (p.$shake ? '#dc2626' : '#0369a1')};
 	}
 `
 
 const PrimaryBtn = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	padding: 11px 16px;
 	border-radius: 10px;
 	border: none;
@@ -941,10 +1197,26 @@ const PrimaryBtn = styled.button`
 	color: #fff;
 	font: inherit;
 	font-weight: 700;
+	text-align: center;
+	white-space: nowrap;
 	cursor: pointer;
+	box-shadow: 0 2px 6px rgba(3, 105, 161, 0.22);
+	transition:
+		transform 180ms cubic-bezier(0.22, 1.35, 0.36, 1),
+		box-shadow 180ms ease,
+		filter 180ms ease;
+	&:hover:not(:disabled) {
+		transform: translateY(-1px);
+		box-shadow: 0 6px 14px rgba(3, 105, 161, 0.28);
+		filter: brightness(1.05);
+	}
+	&:active:not(:disabled) {
+		transform: translateY(0);
+	}
 	&:disabled {
 		opacity: 0.5;
 		cursor: default;
+		box-shadow: none;
 	}
 `
 
@@ -952,6 +1224,7 @@ const RecoveryList = styled.div`
 	display: flex;
 	flex-direction: column;
 	gap: 14px;
+	${stagger(8, 70, 80)}
 	h3 {
 		margin: 0;
 		font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
@@ -995,11 +1268,45 @@ const PasskeyLabelStage = styled.div`
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
+	${stagger(5, 70, 80)}
 
 	p {
 		margin: 0;
 		font-size: 13px;
 		color: #475569;
+	}
+
+`
+
+const StageFooter = styled.div`
+	display: flex;
+	gap: 10px;
+	align-items: stretch;
+	> * {
+		flex: 1 1 0;
+	}
+`
+
+const SecondaryBtn = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	padding: 11px 16px;
+	border-radius: 10px;
+	border: 1.5px solid rgba(3, 105, 161, 0.3);
+	background: transparent;
+	color: rgba(3, 105, 161, 1);
+	font: inherit;
+	font-weight: 700;
+	text-align: center;
+	white-space: nowrap;
+	cursor: pointer;
+	svg {
+		transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	&:hover svg {
+		transform: translateX(-3px);
 	}
 `
 
@@ -1010,10 +1317,10 @@ const LabelInput = styled.input`
 	font: inherit;
 	font-size: 13px;
 	outline: none;
+	transition: border-color 160ms ease;
 
 	&:focus {
 		border-color: #0369a1;
-		box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.14);
 	}
 `
 
@@ -1124,13 +1431,87 @@ const MethodChip = styled.button<{ $active: boolean }>`
 	cursor: pointer;
 `
 
-const ErrBanner = styled.div`
-	margin-top: 12px;
-	padding: 10px 14px;
-	border-radius: 10px;
-	background: rgba(220, 38, 38, 0.1);
-	color: #b91c1c;
-	font-size: 12.5px;
+/* Smooth-reveal error banner — matches the sticker-burst banner in
+   HardDeleteModal (orange→pinky→purple shimmering platform-palette
+   gradient). Height transitions via grid-template-rows so the panel
+   grows/shrinks smoothly instead of snapping. */
+const stickerPop = keyframes`
+	0%   { transform: scale(0.85) rotate(-3deg); opacity: 0; }
+	60%  { transform: scale(1.04) rotate(1deg); opacity: 1; }
+	100% { transform: scale(1) rotate(0); opacity: 1; }
+`
+const stickerShimmer = keyframes`
+	0%   { background-position:   0% 50%; }
+	50%  { background-position: 100% 50%; }
+	100% { background-position:   0% 50%; }
+`
+
+const SetupErrSlot = styled.div<{ $show: boolean }>`
+	display: grid;
+	grid-template-rows: ${(p) => (p.$show ? '1fr' : '0fr')};
+	margin-top: ${(p) => (p.$show ? '14px' : '0px')};
+	transition:
+		grid-template-rows 240ms cubic-bezier(0.22, 1, 0.36, 1),
+		margin-top 240ms cubic-bezier(0.22, 1, 0.36, 1);
+`
+const SetupErrInner = styled.div<{ $show: boolean }>`
+	overflow: hidden;
+	min-height: 0;
+	opacity: ${(p) => (p.$show ? 1 : 0)};
+	transition: opacity 180ms ease ${(p) => (p.$show ? '60ms' : '0ms')};
+`
+const StickerBanner = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 16px;
+	border-radius: 999px 999px 999px 6px;
+	background: linear-gradient(
+		120deg,
+		rgba(255, 91, 0, 1) 0%,
+		rgba(249, 72, 146, 1) 25%,
+		rgba(166, 108, 255, 1) 50%,
+		rgba(249, 72, 146, 1) 75%,
+		rgba(255, 91, 0, 1) 100%
+	);
+	background-size: 280% 280%;
+	color: #fff;
+	box-shadow:
+		0 10px 24px -8px rgba(249, 72, 146, 0.55),
+		inset 0 1px 0 rgba(255, 255, 255, 0.3);
+	animation:
+		${stickerPop} 320ms cubic-bezier(0.34, 1.56, 0.64, 1) 1,
+		${stickerShimmer} 6s ease-in-out infinite;
+`
+const StickerIcon = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.22);
+	backdrop-filter: blur(4px);
+	flex: 0 0 auto;
+`
+const StickerText = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 0;
+`
+const StickerTitle = styled.span`
+	font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+	font-size: 14px;
+	font-weight: 800;
+	letter-spacing: -0.3px;
+	line-height: 1.15;
+`
+const StickerSub = styled.span`
+	font-size: 12px;
+	font-weight: 500;
+	opacity: 0.9;
+	line-height: 1.3;
 `
 
 /* ─── V2 · Split card hero styles ─────────────────────────────── */
@@ -1167,11 +1548,19 @@ const contentFadeIn = keyframes`
 	to { opacity: 1; transform: translateY(0); }
 `
 
-const SplitPanel = styled.div<{ $shake: boolean; $closing?: boolean }>`
+const SplitPanel = styled.div<{
+	$shake: boolean
+	$closing?: boolean
+	$tabs?: number
+}>`
 	display: grid;
 	grid-template-columns: 190px 1fr;
 	width: calc(100% - 40px);
-	max-width: 560px;
+	/* Adaptive: 1 tab → 480, 2 tabs → 560, 3 tabs → 640. Keeps the
+	   row of tab labels on a single line regardless of how many
+	   factors the user has enrolled. */
+	max-width: ${(p) =>
+		(p.$tabs ?? 2) >= 3 ? '640px' : (p.$tabs ?? 2) === 2 ? '560px' : '480px'};
 	background: #ffffff;
 	border-radius: 22px;
 	overflow: hidden;
@@ -1319,6 +1708,10 @@ const UnderlineTabs = styled.div`
 	gap: 20px;
 	margin: 0 0 18px;
 	border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+	flex-wrap: nowrap;
+	> button {
+		white-space: nowrap;
+	}
 `
 
 const keyWiggleKf = keyframes`
@@ -1465,6 +1858,9 @@ const OtpRow = styled.div`
 	display: flex;
 	gap: 8px;
 	margin: 0 0 18px;
+	/* Fixed-size cells, left-aligned; trailing space on wider panels
+	   stays empty instead of stretching every box. */
+	justify-content: flex-start;
 `
 
 const OtpBox = styled.input<{
@@ -1472,7 +1868,8 @@ const OtpBox = styled.input<{
 	$error: boolean
 	$pop: boolean
 }>`
-	flex: 1;
+	flex: 0 0 52px;
+	width: 52px;
 	min-width: 0;
 	height: 52px;
 	border: 2px solid

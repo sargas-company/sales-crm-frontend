@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import MyAccountPanel from './MyAccountPanel'
+import VaultMfaPanel from './VaultMfaPanel'
 import BackupsSettingsPanel, {
 	BACKUPS_LS_KEY,
 	BACKUPS_DEFAULTS,
@@ -79,6 +80,14 @@ const SettingsPage = () => {
 	const { has } = usePermissions()
 	const canSeeBackups = has('backups:view')
 	const canSeeDiscord = has('discord_integration:view')
+	// Vault MFA management (personal passkeys / TOTP / recovery codes).
+	// Available to anyone with Credentials-vault access — this panel
+	// manages the caller's OWN factors only, so Managers must be able
+	// to add/remove their own passkeys even though they can't see
+	// Owner-only sections. Chicken-and-egg: without this gate open to
+	// Managers, they'd be unable to set up MFA → unable to unlock the
+	// vault → unable to use the Credentials section at all.
+	const canSeeVaultMfa = has('credentials:view')
 	// `settings:view` gates the whole workspace registry. Without it
 	// the sections + status endpoints 403 and the page would surface a
 	// loud "Could not load settings" error for a caller that only
@@ -124,10 +133,11 @@ const SettingsPage = () => {
 	const [searchParams, setSearchParams] = useSearchParams()
 	const urlKey = searchParams.get('s')
 
-	const activeKey = useMemo<RegistrySection | 'my_account' | 'backups' | 'discord' | null>(() => {
+	const activeKey = useMemo<RegistrySection | 'my_account' | 'backups' | 'discord' | 'vault_mfa' | null>(() => {
 		if (urlKey === 'my_account') return 'my_account'
 		if (urlKey === 'backups') return 'backups'
 		if (urlKey === 'discord') return 'discord'
+		if (urlKey === 'vault_mfa') return 'vault_mfa'
 		if (urlKey && sections.find((s) => s.key === urlKey)) {
 			return urlKey as RegistrySection
 		}
@@ -140,7 +150,7 @@ const SettingsPage = () => {
 		return 'my_account'
 	}, [urlKey, sections, isLoading])
 
-	const setActiveKey = (key: RegistrySection | 'my_account' | 'backups' | 'discord') => {
+	const setActiveKey = (key: RegistrySection | 'my_account' | 'backups' | 'discord' | 'vault_mfa') => {
 		const next = new URLSearchParams(searchParams)
 		next.set('s', key)
 		setSearchParams(next, { replace: true })
@@ -163,12 +173,13 @@ const SettingsPage = () => {
 	}, [activeKey, isLoading])
 
 	const section =
-		activeKey && activeKey !== 'my_account' && activeKey !== 'backups' && activeKey !== 'discord'
+		activeKey && activeKey !== 'my_account' && activeKey !== 'backups' && activeKey !== 'discord' && activeKey !== 'vault_mfa'
 			? (sections.find((s) => s.key === activeKey) ?? null)
 			: null
 	const isMyAccountActive = activeKey === 'my_account'
 	const isBackupsActive = activeKey === 'backups'
 	const isDiscordActive = activeKey === 'discord'
+	const isVaultMfaActive = activeKey === 'vault_mfa'
 	/* Pulled only when the Discord tab is open — the panel renders its
 	   own list independently; we need these here to resolve the saved
 	   value of a `discord.{profile}.{field}` pending key for revert-
@@ -415,6 +426,23 @@ const SettingsPage = () => {
 							<OwnerDot $onDark={isDiscordActive} title='Owner managed' />
 						</SideItem>
 					)}
+					{canSeeVaultMfa && (
+						<SideItem
+							$active={isVaultMfaActive}
+							onClick={() => {
+								if (dirty && !window.confirm('Discard unsaved changes?')) return
+								setPending({})
+								setActiveKey('vault_mfa')
+							}}
+							style={{ animationDelay: `${(sections.length + 3) * 40}ms` }}
+						>
+							<SideIcon $active={isVaultMfaActive}>
+								<ShieldOutlined />
+							</SideIcon>
+							<SideTitle>Vault &amp; 2FA</SideTitle>
+							<OwnerDot $onDark={isVaultMfaActive} title='Owner managed' />
+						</SideItem>
+					)}
 				</SideNav>
 
 				{/* Content */}
@@ -467,6 +495,22 @@ const SettingsPage = () => {
 								</SectionSubtitle>
 							</SectionHead>
 							<DiscordIntegrationPanel pending={pending} onFieldChange={handleFieldChange} />
+						</SectionHero>
+					) : isVaultMfaActive ? (
+						<SectionHero key='vault_mfa'>
+							<SectionHead>
+								<SectionTitle>
+									Vault &amp; 2FA
+									<OwnerBadge>Owner managed</OwnerBadge>
+								</SectionTitle>
+								<SectionSubtitle>
+									Your personal MFA factors (passkey, authenticator app) and the
+									recovery codes you keep offline. These credentials unlock the
+									Credentials vault — manage them here so you can replace a lost
+									device without needing to be already unlocked.
+								</SectionSubtitle>
+							</SectionHead>
+							<VaultMfaPanel />
 						</SectionHero>
 					) : !section ? (
 						<EmptyState>

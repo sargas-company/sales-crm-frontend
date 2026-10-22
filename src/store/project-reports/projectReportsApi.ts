@@ -77,6 +77,7 @@ export interface ProjectReportListParams {
 	projectId?: string
 	from?: string
 	to?: string
+	source?: ProjectReportSource
 }
 
 export interface CreateProjectReportBody {
@@ -91,10 +92,24 @@ export interface UpdateProjectReportBody {
 	content?: string
 }
 
+export interface ProjectReportStats {
+	totalReports: number
+	totalHours: number
+	avgHoursPerReport: number
+	daysCovered: number
+}
+
+/** Filter shape the stats endpoint accepts — same as list minus
+ *  pagination/sort (the aggregator ignores those). */
+export type ProjectReportStatsParams = Pick<
+	ProjectReportListParams,
+	'search' | 'projectId' | 'from' | 'to' | 'source'
+>
+
 export const projectReportsApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getProjectReports: builder.query<ProjectReportPage, ProjectReportListParams>({
-			query: ({ page, limit, sortBy, sortDirection, search, projectId, from, to }) => ({
+			query: ({ page, limit, sortBy, sortDirection, search, projectId, from, to, source }) => ({
 				url: '/project-reports',
 				params: {
 					page,
@@ -105,6 +120,23 @@ export const projectReportsApi = baseApi.injectEndpoints({
 					projectId: projectId || undefined,
 					from: from || undefined,
 					to: to || undefined,
+					source: source || undefined,
+				},
+			}),
+			providesTags: ['ProjectReport'],
+		}),
+		getProjectReportStats: builder.query<
+			ProjectReportStats,
+			ProjectReportStatsParams
+		>({
+			query: ({ search, projectId, from, to, source }) => ({
+				url: '/project-reports/stats',
+				params: {
+					search: search || undefined,
+					projectId: projectId || undefined,
+					from: from || undefined,
+					to: to || undefined,
+					source: source || undefined,
 				},
 			}),
 			providesTags: ['ProjectReport'],
@@ -145,6 +177,7 @@ export const projectReportsApi = baseApi.injectEndpoints({
 
 export const {
 	useGetProjectReportsQuery,
+	useGetProjectReportStatsQuery,
 	useGetProjectReportByIdQuery,
 	useCreateProjectReportMutation,
 	useUpdateProjectReportMutation,

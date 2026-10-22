@@ -30,6 +30,12 @@ interface Props {
 	onClose: () => void
 	onConfirm: () => void
 	isLoading?: boolean
+	/** When true the confirm button is rendered in the disabled state,
+	 * matching the greyed-out styling the user already sees on other
+	 * forms (opacity + not-allowed cursor + no hover shift). Use for
+	 * destructive flows that need a pre-condition — e.g. "6-digit code
+	 * must be entered before Remove is clickable". */
+	confirmDisabled?: boolean
 	maxWidth?: number
 	/** Optional extra content rendered between the description and
 	 * the action buttons — e.g. a radio-group of strategies for the
@@ -125,6 +131,7 @@ const ConfirmModal = ({
 	onClose,
 	onConfirm,
 	isLoading,
+	confirmDisabled,
 	maxWidth = 460,
 	children,
 }: Props) => {
@@ -180,7 +187,7 @@ const ConfirmModal = ({
 						<ConfirmButton
 							type='button'
 							onClick={requestConfirm}
-							disabled={isLoading || closing}
+							disabled={isLoading || closing || !!confirmDisabled}
 							$solid={confirmTone.solid}
 							$solidHover={confirmTone.solidHover}
 							$shadow={confirmTone.solidShadow}

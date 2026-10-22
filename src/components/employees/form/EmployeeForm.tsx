@@ -28,6 +28,7 @@ import {
 	type EmployeeStatus,
 } from '../../../store/employees/employeesApi'
 import { useGetPositionsQuery } from '../../../store/positions/positionsApi'
+import EmployeeAttachmentsSection from './EmployeeAttachmentsSection'
 
 interface Props {
 	id?: string
@@ -247,6 +248,12 @@ const EmployeeFormInner = ({ id, initial }: { id?: string; initial: FormFields }
 							</Field>
 						</FieldGrid>
 					</Section>
+
+					{isEdit && id && (
+						<PermissionGate permission='employees:attachments:view'>
+							<EmployeeAttachmentsSection employeeId={id} />
+						</PermissionGate>
+					)}
 
 					<FootBar $dark={isDark}>
 						<FootLeft $dark={isDark}>

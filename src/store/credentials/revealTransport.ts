@@ -53,3 +53,34 @@ export async function fetchAccountReveal(
 	}
 	return res.data
 }
+
+/**
+ * Imperative reveal of a specific historical version. Same contract as
+ * `fetchAccountReveal`: plaintext is handed back to the caller and
+ * never enters Redux. Guarded by the vault session alone — same gate
+ * as the live reveal, no extra MFA step on top.
+ */
+export async function fetchVersionReveal(
+	accountId: string,
+	versionId: string,
+): Promise<RevealResponse> {
+	let res: AxiosResponse<RevealResponse>
+	try {
+		res = await axiosInstance.post(
+			`/credential-accounts/${encodeURIComponent(accountId)}/history/${encodeURIComponent(versionId)}/reveal`,
+			undefined,
+			{ headers: { 'Cache-Control': 'no-store' } },
+		)
+	} catch (err) {
+		const ax = err as AxiosError<{ message?: string }>
+		const status = ax.response?.status ?? 0
+		const safeMessage =
+			typeof ax.response?.data?.message === 'string' && ax.response.data.message.length < 240
+				? ax.response.data.message
+				: ax.message || 'Historical reveal failed'
+		const wrapped: Error & { status?: number } = new Error(safeMessage)
+		wrapped.status = status
+		throw wrapped
+	}
+	return res.data
+}

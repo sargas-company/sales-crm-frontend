@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import styled, { keyframes } from 'styled-components'
 import {
 	FingerprintOutlined,
@@ -15,7 +16,6 @@ import {
 import {
 	startRegistration,
 } from '@simplewebauthn/browser'
-import { usePageHeader } from './CredentialsLayout'
 import ConfirmModal from '../../components/_shared/ConfirmModal'
 import { useToast } from '../../context/toast/ToastContext'
 import parseServerError from '../../utils/parseServerError'
@@ -36,20 +36,15 @@ type Modal =
 	| 'add-totp-confirm'
 	| 'remove-totp'
 	| 'show-recovery'
+	| 'regen-confirm'
 
-const VaultSettings = () => {
-	usePageHeader({
-		crumbs: [
-			{ label: 'Secure' },
-			{ label: 'Credentials' },
-			{ label: 'My vault access', current: true },
-		],
-		icon: <ShieldOutlined />,
-		title: 'My vault access',
-		subtitle:
-			'Your personal MFA factors and recovery codes. Org-wide vault policy lives in Settings.',
-	})
-
+/** Owner-only settings panel for personal MFA factors + recovery
+ *  codes. Lives inside `/settings` so configuration survives even
+ *  when the credentials vault itself is locked (chicken-and-egg: a
+ *  lost passkey must be replaceable without needing to unlock the
+ *  vault first). Sidebar entry gated by `canSeeVaultMfa` in the
+ *  parent SettingsPage. */
+const VaultMfaPanel = () => {
 	const { data: status, refetch } = useGetVaultStatusQuery()
 	const { showToast } = useToast()
 
@@ -63,7 +58,7 @@ const VaultSettings = () => {
 			setModal(null)
 			setClosing(false)
 			afterReset?.()
-		}, 720)
+		}, 220)
 	}
 	const [totp, setTotp] = useState<{ secret: string; otpauth: string } | null>(
 		null,
@@ -137,6 +132,7 @@ const VaultSettings = () => {
 			})
 			refetch()
 		} catch (e) {
+			setCodeInvalid(true)
 			showToast(parseServerError(e) || 'Code did not verify', 'error')
 		} finally {
 			setBusy(false)
@@ -161,14 +157,18 @@ const VaultSettings = () => {
 		}
 	}
 
-	const regenerateRecovery = async () => {
-		if (
-			!window.confirm(
-				'Regenerating replaces ALL existing recovery codes. Any unused codes will stop working. Continue?',
-			)
-		) {
+	const regenerateRecovery = () => {
+		// First-time generation goes straight through (no codes to
+		// invalidate). Any subsequent regeneration must be confirmed,
+		// since existing unused codes will stop working.
+		if (!recovery) {
+			void performRegenerate()
 			return
 		}
+		setModal('regen-confirm')
+	}
+
+	const performRegenerate = async () => {
 		setBusy(true)
 		try {
 			const { codes } = await recoveryGen().unwrap()
@@ -383,13 +383,19 @@ const VaultSettings = () => {
 			</Card>
 
 			{/* ── Modals ───────────────────────────────────────────── */}
-			{modal === 'add-passkey' && (
+			{modal === 'add-passkey' && createPortal(
 				<Scrim $closing={closing} onClick={() => !busy && closeModal()}>
 					<Modal $closing={closing} onClick={(e) => e.stopPropagation()}>
-						<ModalHead>
-							<FingerprintOutlined />
-							<h3>Add a passkey</h3>
-						</ModalHead>
+						<PasskeyHead>
+							<PasskeyTile>
+								<PasskeyGlow />
+								<FingerprintOutlined style={{ fontSize: 28 }} />
+							</PasskeyTile>
+							<PasskeyText>
+								<PasskeyKicker>SECURE SIGN-IN</PasskeyKicker>
+								<PasskeyTitle>Add a passkey</PasskeyTitle>
+							</PasskeyText>
+						</PasskeyHead>
 						<p>
 							Give this device a label so you can identify it later (e.g.
 							&quot;MacBook Pro&quot; or &quot;YubiKey 5C&quot;).
@@ -400,33 +406,40 @@ const VaultSettings = () => {
 							onChange={(e) => setDeviceLabel(e.target.value)}
 							autoFocus
 						/>
-						<ModalActions>
-							<GhostBtn
+						<PasskeyFooter>
+							<PasskeyCancel
 								type='button'
 								onClick={() => closeModal()}
 								disabled={busy}
 							>
 								Cancel
-							</GhostBtn>
-							<PrimaryBtn
+							</PasskeyCancel>
+							<PasskeyConfirm
 								type='button'
 								onClick={beginAddPasskey}
 								disabled={busy || !deviceLabel.trim()}
 							>
 								{busy ? 'Working…' : 'Continue'}
-							</PrimaryBtn>
-						</ModalActions>
+							</PasskeyConfirm>
+						</PasskeyFooter>
 					</Modal>
-				</Scrim>
+				</Scrim>,
+				document.body,
 			)}
 
-			{modal === 'add-totp-confirm' && totp && (
+			{modal === 'add-totp-confirm' && totp && createPortal(
 				<Scrim $closing={closing} onClick={() => !busy && closeModal()}>
 					<Modal $closing={closing} onClick={(e) => e.stopPropagation()}>
-						<ModalHead>
-							<KeyOutlined />
-							<h3>Link authenticator app</h3>
-						</ModalHead>
+						<TotpHead>
+							<TotpTile>
+								<TotpGlow />
+								<KeyOutlined style={{ fontSize: 28 }} />
+							</TotpTile>
+							<TotpHeadText>
+								<TotpKicker>AUTHENTICATOR APP</TotpKicker>
+								<TotpTitle>Link authenticator app</TotpTitle>
+							</TotpHeadText>
+						</TotpHead>
 						<p>
 							Scan this with your authenticator app or paste the secret.
 							Then enter the 6-digit code to confirm.
@@ -441,18 +454,42 @@ const VaultSettings = () => {
 								Copy
 							</CopySecretBtn>
 						</SecretBox>
-						<OtpauthLink href={totp.otpauth}>
-							Open otpauth:// URL
-						</OtpauthLink>
-						<CodeInput
+						<CodeInputConfirm
 							value={totpCode}
-							onChange={(e) => setTotpCode(e.target.value)}
+							onChange={(e) => {
+								const digits = e.target.value.replace(/\D/g, '').slice(0, 6)
+								setTotpCode(digits)
+								if (codeInvalid) setCodeInvalid(false)
+							}}
+							onKeyDown={(e) => {
+								const allowed = [
+									'Backspace',
+									'Delete',
+									'ArrowLeft',
+									'ArrowRight',
+									'Tab',
+									'Home',
+									'End',
+									'Enter',
+								]
+								if (
+									!/^\d$/.test(e.key) &&
+									!allowed.includes(e.key) &&
+									!(e.metaKey || e.ctrlKey)
+								) {
+									e.preventDefault()
+								}
+							}}
+							$invalid={codeInvalid}
 							maxLength={6}
 							placeholder='123456'
 							inputMode='numeric'
+							pattern='\d*'
+							autoComplete='one-time-code'
+							autoFocus
 						/>
-						<ModalActions>
-							<GhostBtn
+						<TotpFooter>
+							<TotpCancel
 								type='button'
 								onClick={() =>
 									closeModal(() => {
@@ -463,17 +500,18 @@ const VaultSettings = () => {
 								disabled={busy}
 							>
 								Cancel
-							</GhostBtn>
-							<PrimaryBtn
+							</TotpCancel>
+							<TotpConfirmBtn
 								type='button'
 								onClick={confirmAddTotp}
 								disabled={busy || totpCode.length < 6}
 							>
 								{busy ? 'Working…' : 'Confirm & save'}
-							</PrimaryBtn>
-						</ModalActions>
+							</TotpConfirmBtn>
+						</TotpFooter>
 					</Modal>
-				</Scrim>
+				</Scrim>,
+				document.body,
 			)}
 
 			{modal === 'remove-totp' && (
@@ -528,6 +566,7 @@ const VaultSettings = () => {
 					confirmLabel='Remove'
 					confirmLoadingLabel='Removing…'
 					confirmColor='error'
+					confirmDisabled={totpCode.length < 6}
 					isLoading={busy}
 					onClose={() => {
 						setModal(null)
@@ -541,7 +580,7 @@ const VaultSettings = () => {
 				/>
 			)}
 
-			{modal === 'show-recovery' && newRecovery && (
+			{modal === 'show-recovery' && newRecovery && createPortal(
 				<Scrim
 					$closing={closing}
 					onClick={() => codesSaved && closeModal()}
@@ -600,7 +639,7 @@ const VaultSettings = () => {
 								shown again
 							</span>
 						</ConfirmCheckbox>
-						<ModalActions>
+						<RecoveryFooter>
 							<PrimaryBtn
 								type='button'
 								onClick={() =>
@@ -613,15 +652,55 @@ const VaultSettings = () => {
 							>
 								Done
 							</PrimaryBtn>
-						</ModalActions>
+						</RecoveryFooter>
 					</Modal>
-				</Scrim>
+				</Scrim>,
+				document.body,
+			)}
+
+			{modal === 'regen-confirm' && createPortal(
+				<Scrim $closing={closing} onClick={() => !busy && closeModal()}>
+					<Modal $closing={closing} onClick={(e) => e.stopPropagation()}>
+						<RegenV5Head>
+							<RegenV5Spin>
+								<RefreshRounded style={{ fontSize: 28 }} />
+							</RegenV5Spin>
+							<RegenV5Text>
+								<RegenV5Title>Regenerate recovery codes?</RegenV5Title>
+								<RegenV5Desc>
+									This replaces <strong>all</strong> existing recovery
+									codes. Any unused codes stop working immediately. You
+									will see the new set once — save it before closing.
+								</RegenV5Desc>
+							</RegenV5Text>
+						</RegenV5Head>
+						<RegenFooter>
+							<RegenCancel
+								type='button'
+								onClick={() => closeModal()}
+								disabled={busy}
+							>
+								Cancel
+							</RegenCancel>
+							<RegenConfirm
+								type='button'
+								onClick={() => {
+									closeModal(() => void performRegenerate())
+								}}
+								disabled={busy}
+							>
+								{busy ? 'Working…' : 'Regenerate'}
+							</RegenConfirm>
+						</RegenFooter>
+					</Modal>
+				</Scrim>,
+				document.body,
 			)}
 		</Grid>
 	)
 }
 
-export default VaultSettings
+export default VaultMfaPanel
 
 /* ─── Styles ────────────────────────────────────────────────────── */
 
@@ -714,10 +793,10 @@ const HeadText = styled.div`
 `
 
 const StatusPill = styled.span<{ $tone: 'ok' | 'warn' | 'off' }>`
-	padding: 4px 10px;
+	padding: 7px 14px;
 	border-radius: 999px;
 	font-family: 'JetBrains Mono', ui-monospace, monospace;
-	font-size: 10.5px;
+	font-size: 13px;
 	font-weight: 700;
 	letter-spacing: 0.3px;
 	white-space: nowrap;
@@ -932,29 +1011,26 @@ const Scrim = styled.div<{ $closing?: boolean }>`
 	justify-content: center;
 	z-index: 1000;
 	animation: ${(p) => (p.$closing ? scrimFadeOut : scrimFadeIn)}
-		${(p) => (p.$closing ? '400ms' : '220ms')}
-		cubic-bezier(0.4, 0, 0.2, 1)
-		${(p) => (p.$closing ? '320ms' : '0ms')}
-		forwards;
+		${(p) => (p.$closing ? '200ms' : '220ms')}
+		cubic-bezier(0.4, 0, 0.2, 1) forwards;
 `
 
 const Modal = styled.div<{ $closing?: boolean }>`
 	background: #ffffff;
-	border-radius: 16px;
-	padding: 24px 26px;
+	border-radius: 18px;
+	padding: 32px 36px 28px;
 	width: calc(100% - 40px);
-	max-width: 460px;
+	max-width: 480px;
 	display: flex;
 	flex-direction: column;
-	gap: 14px;
+	gap: 20px;
 	box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
 	animation: ${(p) => (p.$closing ? panelScaleOut : panelScaleIn)}
-		${(p) => (p.$closing ? '400ms' : '240ms')}
+		${(p) => (p.$closing ? '200ms' : '240ms')}
 		${(p) =>
 			p.$closing
 				? 'cubic-bezier(0.65, 0, 0.35, 1)'
 				: 'cubic-bezier(0.4, 0, 0.2, 1)'}
-		${(p) => (p.$closing ? '320ms' : '0ms')}
 		forwards;
 
 	p {
@@ -962,6 +1038,118 @@ const Modal = styled.div<{ $closing?: boolean }>`
 		font-size: 13px;
 		color: #475569;
 		line-height: 1.5;
+	}
+`
+
+/* Regen-confirm header — spinning refresh icon */
+const spinKf = keyframes`
+	from { transform: rotate(0); }
+	to   { transform: rotate(360deg); }
+`
+const RegenV5Head = styled.div`
+	display: flex;
+	gap: 14px;
+	align-items: center;
+`
+const RegenV5Spin = styled.div`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	background: rgba(220, 38, 38, 0.1);
+	color: #dc2626;
+	flex: 0 0 auto;
+	svg {
+		animation: ${spinKf} 2.6s linear infinite;
+	}
+`
+const RegenV5Text = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+`
+const RegenV5Title = styled.div`
+	font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+	font-size: 17px;
+	font-weight: 700;
+	color: #0f172a;
+	letter-spacing: -0.3px;
+`
+const RegenV5Desc = styled.div`
+	font-size: 13px;
+	color: #475569;
+	line-height: 1.5;
+	strong {
+		color: #dc2626;
+		font-weight: 700;
+	}
+`
+
+const RegenFooter = styled.div`
+	display: flex;
+	gap: 10px;
+	margin-top: 8px;
+	> * {
+		flex: 1 1 0;
+	}
+`
+
+const RegenCancel = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 11px 16px;
+	border-radius: 10px;
+	border: 1.5px solid rgba(15, 23, 42, 0.18);
+	background: #ffffff;
+	color: #334155;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: border-color 160ms ease;
+	&:hover:not(:disabled) {
+		border-color: rgba(15, 23, 42, 0.4);
+	}
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+`
+
+const RegenConfirm = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 11px 16px;
+	border-radius: 10px;
+	border: none;
+	background: linear-gradient(135deg, #ef4444, #b91c1c);
+	color: #ffffff;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+	box-shadow: 0 4px 12px -4px rgba(220, 38, 38, 0.45);
+	transition:
+		transform 160ms cubic-bezier(0.22, 1.35, 0.36, 1),
+		box-shadow 160ms ease,
+		filter 160ms ease;
+	&:hover:not(:disabled) {
+		transform: translateY(-1px);
+		box-shadow: 0 8px 18px -4px rgba(220, 38, 38, 0.55);
+		filter: brightness(1.05);
+	}
+	&:active:not(:disabled) {
+		transform: translateY(0);
+	}
+	&:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
+		box-shadow: none;
 	}
 `
 
@@ -996,10 +1184,10 @@ const LabelInput = styled.input`
 	font: inherit;
 	font-size: 13px;
 	outline: none;
+	transition: border-color 160ms ease;
 
 	&:focus {
 		border-color: #0369a1;
-		box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.14);
 	}
 `
 
@@ -1139,47 +1327,446 @@ const RecoveryGrid = styled.ol`
 
 const CodeActions = styled.div`
 	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
+	gap: 10px;
+	> * {
+		flex: 1 1 0;
+	}
+`
+
+const copyPop = keyframes`
+	0%, 100% { transform: translate(0, 0); }
+	40% { transform: translate(2px, -2px); }
+	60% { transform: translate(2px, -2px); }
+`
+
+const downloadDrop = keyframes`
+	0%, 100% { transform: translateY(0); }
+	40% { transform: translateY(3px); }
+	80% { transform: translateY(0); }
 `
 
 const CodeActionBtn = styled.button<{ $success?: boolean }>`
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
-	padding: 8px 14px;
+	justify-content: center;
+	gap: 8px;
+	padding: 11px 14px;
 	border-radius: 10px;
 	border: 1.5px solid
-		${(p) => (p.$success ? '#047857' : 'rgba(15, 23, 42, 0.12)')};
+		${(p) => (p.$success ? '#047857' : 'rgba(15, 23, 42, 0.14)')};
 	background: ${(p) => (p.$success ? 'rgba(5, 150, 105, 0.08)' : '#ffffff')};
 	color: ${(p) => (p.$success ? '#047857' : '#334155')};
 	font: inherit;
 	font-size: 12.5px;
 	font-weight: 600;
 	cursor: pointer;
+	transition:
+		border-color 160ms ease,
+		transform 180ms cubic-bezier(0.22, 1.35, 0.36, 1);
+	svg {
+		transition: transform 260ms cubic-bezier(0.22, 1.35, 0.36, 1);
+	}
+	&:hover:not(:disabled) {
+		border-color: rgba(3, 105, 161, 0.5);
+		transform: translateY(-1px);
+	}
+	/* Nth-child-based icon animation so each button gets its own
+	   motion personality (copy slides up-right, download drops down).
+	   Works because show-recovery renders them in this exact order. */
+	&:nth-of-type(1):hover:not(:disabled) svg {
+		animation: ${copyPop} 520ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+	}
+	&:nth-of-type(2):hover:not(:disabled) svg {
+		animation: ${downloadDrop} 520ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+	}
+`
+
+const checkPopIn = keyframes`
+	0% { transform: scale(0); opacity: 0; }
+	60% { transform: scale(1.2); opacity: 1; }
+	100% { transform: scale(1); opacity: 1; }
 `
 
 const ConfirmCheckbox = styled.label`
+	position: relative;
 	display: flex;
-	align-items: flex-start;
-	gap: 10px;
-	padding: 12px 14px;
-	border-radius: 10px;
-	background: rgba(3, 105, 161, 0.08);
-	border: 1px solid rgba(3, 105, 161, 0.25);
+	align-items: center;
+	gap: 14px;
+	padding: 14px 16px;
+	border-radius: 12px;
+	background: rgba(3, 105, 161, 0.05);
+	border: 1.5px dashed rgba(3, 105, 161, 0.35);
 	cursor: pointer;
+	transition:
+		border-color 180ms ease,
+		border-style 180ms ease,
+		background 180ms ease,
+		transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+	&:hover {
+		transform: translateY(-1px);
+		border-color: rgba(3, 105, 161, 0.6);
+	}
+	&:has(input:checked) {
+		border-style: solid;
+		border-color: #047857;
+		background: rgba(5, 150, 105, 0.06);
+	}
 
 	input {
-		margin-top: 2px;
-		accent-color: #0369a1;
-		width: 16px;
-		height: 16px;
+		appearance: none;
+		-webkit-appearance: none;
+		width: 22px;
+		height: 22px;
 		flex-shrink: 0;
+		border-radius: 6px;
+		border: 2px solid rgba(3, 105, 161, 0.4);
+		background: #ffffff;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		transition:
+			border-color 180ms ease,
+			background 180ms ease;
+		margin: 0;
+	}
+	input:checked {
+		border-color: #047857;
+		background: #047857;
+	}
+	input:checked::after {
+		content: '';
+		display: block;
+		width: 6px;
+		height: 11px;
+		border: solid #ffffff;
+		border-width: 0 2.5px 2.5px 0;
+		transform: rotate(45deg) translate(-1px, -1px);
+		animation: ${checkPopIn} 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
 	span {
-		font-size: 12.5px;
+		font-size: 13px;
 		color: #0c4a6e;
 		line-height: 1.45;
+		font-weight: 500;
+	}
+	&:has(input:checked) span {
+		color: #065f46;
+	}
+`
+
+/* ── Add-passkey modal visuals ───────────────────────────────── */
+
+const fpPulse = keyframes`
+	0%, 100% { opacity: 0.5; transform: scale(1); }
+	50% { opacity: 1; transform: scale(1.25); }
+`
+
+/* Biometric-scanner feel: a horizontal "scan line" sweeps the
+   fingerprint top-to-bottom and back, while the ridge itself
+   brightens in sync. The combo of radial glow (behind) + sweep
+   bar (above) reads as "device is reading your print". */
+const fpScanSweep = keyframes`
+	0%   { top: 0%; opacity: 0; }
+	10%  { opacity: 1; }
+	50%  { top: 100%; opacity: 1; }
+	60%  { opacity: 0; }
+	100% { top: 100%; opacity: 0; }
+`
+
+const fpBrighten = keyframes`
+	0%, 100% { filter: brightness(1) drop-shadow(0 0 0 rgba(255,255,255,0)); transform: scale(1); }
+	50% { filter: brightness(1.4) drop-shadow(0 0 6px rgba(255,255,255,0.9)); transform: scale(1.08); }
+`
+
+const PasskeyHead = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 14px;
+`
+
+const PasskeyTile = styled.div`
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 56px;
+	height: 56px;
+	border-radius: 16px;
+	background: linear-gradient(135deg, #0369a1 0%, #0284c7 55%, #38bdf8 100%);
+	color: #ffffff;
+	box-shadow: 0 10px 24px -8px rgba(3, 105, 161, 0.5);
+	flex: 0 0 auto;
+	overflow: hidden;
+	svg {
+		position: relative;
+		z-index: 1;
+		animation: ${fpBrighten} 2.4s ease-in-out infinite;
+	}
+	&::after {
+		content: '';
+		position: absolute;
+		left: 10%;
+		right: 10%;
+		top: 0;
+		height: 2px;
+		background: linear-gradient(
+			90deg,
+			transparent 0%,
+			rgba(255, 255, 255, 0.95) 50%,
+			transparent 100%
+		);
+		filter: blur(0.5px) drop-shadow(0 0 6px rgba(255, 255, 255, 0.9));
+		z-index: 2;
+		animation: ${fpScanSweep} 2.4s cubic-bezier(0.4, 0, 0.4, 1) infinite;
+	}
+`
+
+const PasskeyGlow = styled.span`
+	position: absolute;
+	inset: -20%;
+	border-radius: 50%;
+	background: radial-gradient(
+		circle,
+		rgba(255, 255, 255, 0.4) 0%,
+		transparent 60%
+	);
+	animation: ${fpPulse} 2.4s ease-in-out infinite;
+`
+
+const PasskeyText = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+`
+
+const PasskeyKicker = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 10px;
+	font-weight: 800;
+	letter-spacing: 2px;
+	color: #0369a1;
+`
+
+const PasskeyTitle = styled.div`
+	font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+	font-size: 20px;
+	font-weight: 700;
+	color: #0f172a;
+	letter-spacing: -0.4px;
+`
+
+const PasskeyFooter = styled.div`
+	display: flex;
+	gap: 10px;
+	margin-top: 4px;
+	> * {
+		flex: 1 1 0;
+	}
+`
+
+const PasskeyCancel = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 11px 16px;
+	border-radius: 10px;
+	border: 1.5px solid rgba(15, 23, 42, 0.18);
+	background: #ffffff;
+	color: #334155;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: border-color 160ms ease;
+	&:hover:not(:disabled) {
+		border-color: rgba(15, 23, 42, 0.4);
+	}
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+`
+
+const PasskeyConfirm = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 11px 16px;
+	border-radius: 10px;
+	border: none;
+	background: linear-gradient(135deg, #0284c7, #0369a1);
+	color: #ffffff;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+	box-shadow: 0 4px 12px -4px rgba(3, 105, 161, 0.5);
+	transition:
+		transform 160ms cubic-bezier(0.22, 1.35, 0.36, 1),
+		box-shadow 160ms ease,
+		filter 160ms ease;
+	&:hover:not(:disabled) {
+		transform: translateY(-1px);
+		box-shadow: 0 8px 18px -4px rgba(3, 105, 161, 0.55);
+		filter: brightness(1.05);
+	}
+	&:active:not(:disabled) {
+		transform: translateY(0);
+	}
+	&:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
+		box-shadow: none;
+	}
+`
+
+/* ── Add-TOTP (authenticator) modal visuals ──────────────────── */
+
+const totpGlowPulse = keyframes`
+	0%, 100% { opacity: 0.5; transform: scale(1); }
+	50% { opacity: 1; transform: scale(1.25); }
+`
+
+const totpKeyWiggle = keyframes`
+	0%, 100% { transform: rotate(0); }
+	40% { transform: rotate(-10deg); }
+	70% { transform: rotate(6deg); }
+`
+
+const TotpHead = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 14px;
+`
+
+const TotpTile = styled.div`
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 56px;
+	height: 56px;
+	border-radius: 16px;
+	background: linear-gradient(135deg, #475569 0%, #334155 55%, #0f172a 100%);
+	color: #ffffff;
+	box-shadow: 0 10px 24px -8px rgba(15, 23, 42, 0.45);
+	flex: 0 0 auto;
+	overflow: hidden;
+	svg {
+		position: relative;
+		z-index: 1;
+		transform-origin: 40% 60%;
+		animation: ${totpKeyWiggle} 2.6s ease-in-out infinite;
+	}
+`
+
+const TotpGlow = styled.span`
+	position: absolute;
+	inset: -20%;
+	border-radius: 50%;
+	background: radial-gradient(
+		circle,
+		rgba(255, 255, 255, 0.35) 0%,
+		transparent 60%
+	);
+	animation: ${totpGlowPulse} 2.6s ease-in-out infinite;
+`
+
+const TotpHeadText = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+`
+
+const TotpKicker = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 10px;
+	font-weight: 800;
+	letter-spacing: 2px;
+	color: #475569;
+`
+
+const TotpTitle = styled.div`
+	font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+	font-size: 20px;
+	font-weight: 700;
+	color: #0f172a;
+	letter-spacing: -0.4px;
+`
+
+const TotpFooter = styled.div`
+	display: flex;
+	gap: 10px;
+	margin-top: 4px;
+	> * {
+		flex: 1 1 0;
+	}
+`
+
+const TotpCancel = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 11px 16px;
+	border-radius: 10px;
+	border: 1.5px solid rgba(15, 23, 42, 0.18);
+	background: #ffffff;
+	color: #334155;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: border-color 160ms ease;
+	&:hover:not(:disabled) {
+		border-color: rgba(15, 23, 42, 0.4);
+	}
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+`
+
+const TotpConfirmBtn = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 11px 16px;
+	border-radius: 10px;
+	border: none;
+	background: linear-gradient(135deg, #0284c7, #0369a1);
+	color: #ffffff;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+	box-shadow: 0 4px 12px -4px rgba(3, 105, 161, 0.5);
+	transition:
+		transform 160ms cubic-bezier(0.22, 1.35, 0.36, 1),
+		box-shadow 160ms ease,
+		filter 160ms ease;
+	&:hover:not(:disabled) {
+		transform: translateY(-1px);
+		box-shadow: 0 8px 18px -4px rgba(3, 105, 161, 0.55);
+		filter: brightness(1.05);
+	}
+	&:active:not(:disabled) {
+		transform: translateY(0);
+	}
+	&:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
+		box-shadow: none;
+	}
+`
+
+const RecoveryFooter = styled.div`
+	display: flex;
+	margin-top: 4px;
+	> button {
+		width: 100%;
 	}
 `
