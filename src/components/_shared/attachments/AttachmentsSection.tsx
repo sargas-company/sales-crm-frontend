@@ -38,6 +38,11 @@ interface Props {
 	) => Promise<{ url: string; fileName: string }>
 	/** Hide the "Add more files" trigger. Delete still works. */
 	hideAdd?: boolean
+	/** Hide the per-file delete button. Read-only surfaces (e.g. the
+	 *  client-request preview) pass this so the row only exposes
+	 *  Download. `onDelete` is still required by the type but never
+	 *  called in that mode. */
+	hideDelete?: boolean
 }
 
 const MAX_BYTES = 50 * 1024 * 1024
@@ -55,6 +60,7 @@ const AttachmentsSection = ({
 	onDelete,
 	fetchDownloadUrl,
 	hideAdd = false,
+	hideDelete = false,
 }: Props) => {
 	const { showToast } = useToast()
 	const inputRef = useRef<HTMLInputElement>(null)
@@ -231,15 +237,17 @@ const AttachmentsSection = ({
 									>
 										<DownloadRounded style={{ fontSize: 17 }} />
 									</DownloadBtn>
-									<CloseBtn
-										type='button'
-										$danger
-										onClick={() => setPendingDelete(att)}
-										aria-label='Delete'
-										title='Delete'
-									>
-										<DeleteOutlineRounded style={{ fontSize: 17 }} />
-									</CloseBtn>
+									{!hideDelete && (
+										<CloseBtn
+											type='button'
+											$danger
+											onClick={() => setPendingDelete(att)}
+											aria-label='Delete'
+											title='Delete'
+										>
+											<DeleteOutlineRounded style={{ fontSize: 17 }} />
+										</CloseBtn>
+									)}
 								</CardActions>
 							</FileCard>
 						))}

@@ -22,6 +22,9 @@ import {
 import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 
 import { T } from '../../../components/sales-analytics/_shared/tokens'
+import AttachmentsSection, {
+	type AttachmentItem,
+} from '../../../components/_shared/attachments/AttachmentsSection'
 import ListPageShell from '../../../components/_shared/ListPageShell/ListPageShell'
 import {
 	useGetClientRequestByIdQuery,
@@ -81,6 +84,24 @@ const formatPhone = (raw: string, country?: string | null): string => {
 	}
 	return raw
 }
+
+/** Map `ClientRequestSignedFile[]` → `AttachmentItem[]` so the shared
+ *  AttachmentsSection can render them. The signed URL is kept out of
+ *  the item (the component asks for it per download via
+ *  `fetchDownloadUrl`). `id` doubles as the lookup key, so it carries
+ *  the originalName since client-request files have no DB id. */
+const toAttachmentItems = (
+	files: ClientRequestSignedFile[] | undefined,
+	request: { createdAt: string },
+): AttachmentItem[] =>
+	(files ?? []).map((f) => ({
+		id: f.originalName,
+		originalName: f.originalName,
+		mimeType: f.mimetype,
+		size: f.size,
+		createdAt: request.createdAt,
+		uploadedBy: null,
+	}))
 
 const downloadFile = (url: string, name: string) => {
 	const a = document.createElement('a')
@@ -302,45 +323,25 @@ const ClientRequestPreview = () => {
 								<TermPrompt>$</TermPrompt> ls files/{' '}
 								<CountInline>{request.files.length}</CountInline>
 							</TermPromptLine>
-							{isLoadingFiles ? (
-								<FilesLoading>fetching signed URLs…</FilesLoading>
-							) : (
-								<FileList>
-									{(signedFiles ?? ([] as ClientRequestSignedFile[])).map((file) => (
-										<FileRow key={file.originalName}>
-											<FileIconBox>{fileIcon(file.mimetype)}</FileIconBox>
-											<FileInfo>
-												<FileName>{file.originalName}</FileName>
-												<FileMeta>
-													{file.mimetype}
-													<Sep>·</Sep>
-													{formatSize(file.size)}
-												</FileMeta>
-											</FileInfo>
-											<FileActions>
-												<FileIconBtn
-													type='button'
-													onClick={() =>
-														window.open(file.url, '_blank', 'noopener,noreferrer')
-													}
-													aria-label='View file'
-													title='View'
-												>
-													<VisibilityOutlined style={{ fontSize: 16 }} />
-												</FileIconBtn>
-												<FileIconBtn
-													type='button'
-													onClick={() => downloadFile(file.url, file.originalName)}
-													aria-label='Download file'
-													title='Download'
-												>
-													<FileDownloadOutlined style={{ fontSize: 16 }} />
-												</FileIconBtn>
-											</FileActions>
-										</FileRow>
-									))}
-								</FileList>
-							)}
+							<AttachmentsBox>
+								<AttachmentsSection
+									items={toAttachmentItems(signedFiles, request)}
+									isLoading={isLoadingFiles}
+									onUpload={async () => undefined /* unused — hideAdd */}
+									onDelete={async () => undefined /* unused — hideDelete */}
+									fetchDownloadUrl={async (attachmentId) => {
+										const file = (signedFiles ?? []).find(
+											(f) => f.originalName === attachmentId,
+										)
+										return {
+											url: file?.url ?? '',
+											fileName: file?.originalName ?? attachmentId,
+										}
+									}}
+									hideAdd
+									hideDelete
+								/>
+							</AttachmentsBox>
 						</>
 					)}
 				</TermBody>
@@ -882,6 +883,16 @@ const StatusTag = styled.span<{ $status: ClientRequestStatus }>`
 `
 
 /* ─── Divider / message / files ─────────────────────────────── */
+
+/* Wrapper for the shared AttachmentsSection inside the terminal
+ * theme — tints the surrounding bg to a soft paper color so the
+ * light-themed file cards don't float on a dark terminal background. */
+const AttachmentsBox = styled.div`
+	background: #f8fafc;
+	border-radius: 10px;
+	padding: 12px;
+	margin-top: 10px;
+`
 
 const Divider = styled.div`
 	border-top: 1px dashed rgba(15, 23, 42, 0.08);
