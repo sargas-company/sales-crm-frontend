@@ -67,6 +67,8 @@ export interface ClientCallListParams {
 	sortBy?: ClientCallSortBy
 	sortDirection?: ClientCallSortDirection
 	search?: string
+	status?: ClientCallStatus
+	clientType?: ClientCallClientType
 }
 
 export type CreateClientCallBody = {

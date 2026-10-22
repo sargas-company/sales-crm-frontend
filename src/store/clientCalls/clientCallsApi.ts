@@ -10,9 +10,17 @@ import type {
 export const clientCallsApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getClientCallList: builder.query<ClientCallPage, ClientCallListParams>({
-			query: ({ page, limit, sortBy, sortDirection, search }) => ({
+			query: ({ page, limit, sortBy, sortDirection, search, status, clientType }) => ({
 				url: '/client-calls',
-				params: { page, limit, sortBy, sortDirection, search: search || undefined },
+				params: {
+					page,
+					limit,
+					sortBy,
+					sortDirection,
+					search: search || undefined,
+					status: status || undefined,
+					clientType: clientType || undefined,
+				},
 			}),
 			providesTags: ['ClientCall'],
 		}),

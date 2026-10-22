@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import {
 	DeleteOutline,
@@ -8,6 +8,9 @@ import {
 	VideocamOutlined,
 	AddRounded,
 	NorthEastRounded,
+	FilterListOutlined,
+	SearchOutlined,
+	ClearRounded,
 } from '@mui/icons-material'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../../components/_shared/ListPageShell'
@@ -23,20 +26,37 @@ import type {
 	SortState,
 } from '../../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
+import {
+	FreshFiltersWrap,
+	SearchPill,
+	InlineField,
+	InlineSelect,
+	BottomSlot,
+	RowBreak,
+	ClearBtn as FreshClearBtn,
+} from '../../../components/_shared/filters/freshPaperFilters'
+import {
+	TapeIndicator,
+	TapePill,
+	TapePills,
+} from '../../analytics/filters/filters.styled'
 import BulkActionBar from '../../../components/_shared/BulkActionBar'
 import ClientCallDeleteModal from '../../../components/client-call/list/ProposalDeleteModal'
 import ConfirmModal from '../../../components/_shared/ConfirmModal'
 import PermissionGate from '../../../components/auth/PermissionGate'
 import { useToast } from '../../../context/toast/ToastContext'
 import type {
+	ClientCallClientType,
 	ClientCallItem,
 	ClientCallSortBy,
+	ClientCallStatus,
 } from '../../../store/clientCalls/types/definition'
 import {
 	useBulkDeleteClientCallsMutation,
 	useGetClientCallListQuery,
 } from '../../../store/clientCalls/clientCallsApi'
 import { formatDate } from '../../../utils/format'
+import { formatDateTimeSec } from '../../../utils/formatDate'
 import { getTimezoneLabel } from '../../../utils/timezones'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
 
@@ -103,9 +123,21 @@ const ownerInfo = (
 	return { name: '—', kind: 'unknown', href: null }
 }
 
+type StatusPreset = '' | ClientCallStatus
+const STATUS_PRESETS: { value: StatusPreset; label: string }[] = [
+	{ value: '', label: 'All' },
+	{ value: 'scheduled', label: 'Scheduled' },
+	{ value: 'completed', label: 'Completed' },
+	{ value: 'cancelled', label: 'Cancelled' },
+]
+
 const ClientCallList = () => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
+	const [searchParams, setSearchParams] = useSearchParams()
+	const statusParam = (searchParams.get('status') ?? '') as StatusPreset
+	const typeParam = (searchParams.get('type') ?? '') as '' | ClientCallClientType
+
 	const [searchInput, setSearchInput] = useState('')
 	const search = useDebouncedValue(searchInput.trim(), 300)
 	const [page, setPage] = useState(1)
@@ -118,6 +150,8 @@ const ClientCallList = () => {
 		page,
 		limit: PAGE_SIZE,
 		search: search || undefined,
+		status: statusParam || undefined,
+		clientType: typeParam || undefined,
 		sortBy: (sort?.key as ClientCallSortBy | undefined) ?? undefined,
 		sortDirection: sort?.direction,
 	})
@@ -126,6 +160,48 @@ const ClientCallList = () => {
 	const items = data?.data ?? []
 	const total = data?.total ?? 0
 
+	const updateParam = (key: string, value: string) => {
+		const next = new URLSearchParams(searchParams)
+		if (value) next.set(key, value)
+		else next.delete(key)
+		setSearchParams(next, { replace: true })
+		setPage(1)
+	}
+
+	const clearFilters = () => {
+		const next = new URLSearchParams(searchParams)
+		next.delete('status')
+		next.delete('type')
+		setSearchParams(next, { replace: true })
+		setSearchInput('')
+		setPage(1)
+	}
+
+	const activeFilterCount =
+		(statusParam ? 1 : 0) + (typeParam ? 1 : 0) + (searchInput ? 1 : 0)
+
+	// TapePills sliding indicator — same pattern as other list pages.
+	const pillsRef = useRef<HTMLDivElement>(null)
+	const [ind, setInd] = useState({ left: 0, width: 0, opacity: 0 })
+	useLayoutEffect(() => {
+		const root = pillsRef.current
+		if (!root) return
+		const el = root.querySelector<HTMLButtonElement>(
+			'[role="tab"][data-active="true"]',
+		)
+		if (!el) {
+			setInd((p) => ({ ...p, opacity: 0 }))
+			return
+		}
+		const rootRect = root.getBoundingClientRect()
+		const r = el.getBoundingClientRect()
+		setInd({
+			left: r.left - rootRect.left - 2,
+			width: r.width + 4,
+			opacity: 1,
+		})
+	}, [statusParam])
+
 	const handleSortChange = (next: SortState | null) => {
 		setSort(next)
 		setPage(1)
@@ -133,7 +209,7 @@ const ClientCallList = () => {
 
 	useEffect(() => {
 		setPage(1)
-	}, [search])
+	}, [search, statusParam, typeParam])
 
 	useEffect(() => {
 		if (selected.size === 0) return
@@ -249,29 +325,12 @@ const ClientCallList = () => {
 			minWidth: 170,
 			sortable: true,
 			sortValue: (c) => new Date(c.scheduledAt),
-			// Date on top, exact HH:mm underneath — same timeline the
-			// `Timezone` column labels. `scheduledAt` is a UTC ISO
-			// stored string; `clientDateTime` is the backend-formatted
-			// value in the call's own timezone when available, so we
-			// prefer it for the clock line.
-			render: (c) => {
-				const timeIso = c.clientDateTime || c.scheduledAt
-				const date = new Date(timeIso)
-				const time = Number.isNaN(date.getTime())
-					? ''
-					: date.toLocaleTimeString(undefined, {
-							hour: '2-digit',
-							minute: '2-digit',
-							hour12: false,
-						})
-				return (
-					<TwoLineCell>
-						<span>{formatDate(c.scheduledAt, 'short')}</span>
-						{time && <TwoLineSub>{time}</TwoLineSub>}
-					</TwoLineCell>
-				)
-			},
-			skeleton: () => <TableSkeleton $w='120px' $h='28px' />,
+			// Same date+time format as Leads / Clients Created columns —
+			// bold date in slate + muted monospace time inline. The
+			// client-local time (if present) wins for the time segment;
+			// scheduledAt wins for the date header.
+			render: (c) => <DateTimeCell iso={c.clientDateTime || c.scheduledAt} />,
+			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
 		},
 		{
 			key: 'duration',
@@ -285,22 +344,21 @@ const ClientCallList = () => {
 		{
 			key: 'timezone',
 			label: 'Timezone',
-			minWidth: 150,
+			minWidth: 200,
 			sortable: true,
 			sortValue: (c) => c.clientTimezone,
-			// Short code on top (PST / EDT / GMT+2), full IANA/raw
-			// value underneath for operators who need to disambiguate.
-			render: (c) => {
-				const short = getTimezoneLabel(c.clientTimezone)
-				const sameAsStored = short === c.clientTimezone
-				return (
-					<TwoLineCell>
-						<TzCode>{short}</TzCode>
-						{!sameAsStored && <TwoLineSub>{c.clientTimezone}</TwoLineSub>}
-					</TwoLineCell>
-				)
-			},
-			skeleton: () => <TableSkeleton $w='90px' $h='28px' />,
+			// Short code (EST / PST / GMT+2) + city label from IANA
+			// zone ("America/New_York" → "New York") on one line. The
+			// raw IANA value stays available via hover title.
+			render: (c) => (
+				<TzLine title={c.clientTimezone}>
+					<TzCode>{getTimezoneLabel(c.clientTimezone)}</TzCode>
+					{tzCityLabel(c.clientTimezone) && (
+						<TzCity>· {tzCityLabel(c.clientTimezone)}</TzCity>
+					)}
+				</TzLine>
+			),
+			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
 		},
 		{
 			key: 'status',
@@ -314,11 +372,11 @@ const ClientCallList = () => {
 		{
 			key: 'created',
 			label: 'Created',
-			minWidth: 140,
+			minWidth: 170,
 			sortable: true,
 			sortValue: (c) => new Date(c.createdAt),
-			render: (c) => <Muted>{formatDate(c.createdAt, 'short')}</Muted>,
-			skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
+			render: (c) => <DateTimeCell iso={c.createdAt} />,
+			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
 		},
 		{
 			key: 'actions',
@@ -383,9 +441,128 @@ const ClientCallList = () => {
 						</PermissionGate>
 					</HeaderActions>
 				}
-				searchPlaceholder='Search by title'
-				search={searchInput}
-				onSearchChange={setSearchInput}
+				filters={
+					<FreshFiltersWrap role='region' aria-label='Calls filters'>
+						<div className='filter-lead'>
+							<span className='lead-icon'>
+								<FilterListOutlined />
+							</span>
+							<div className='lead-text'>
+								<span className='top'>Filter</span>
+								<span className='bot'>
+									{STATUS_PRESETS.find((p) => p.value === statusParam)
+										?.label ?? 'All'}
+								</span>
+							</div>
+						</div>
+
+						<TapePills
+							ref={pillsRef}
+							role='tablist'
+							aria-label='Status preset'
+						>
+							<TapeIndicator
+								style={{
+									transform: `translateX(${ind.left}px) rotate(-1.2deg)`,
+									width: `${ind.width}px`,
+									opacity: ind.opacity,
+								}}
+							/>
+							{STATUS_PRESETS.map((p) => (
+								<TapePill
+									key={p.value || 'all'}
+									type='button'
+									role='tab'
+									data-active={statusParam === p.value || undefined}
+									aria-selected={statusParam === p.value}
+									$active={statusParam === p.value}
+									onClick={() => updateParam('status', p.value)}
+								>
+									{p.label}
+								</TapePill>
+							))}
+						</TapePills>
+
+						<div className='filter-spacer' />
+
+						<div className='upwork-hint' aria-hidden='true'>
+							<span className='row'>
+								<span className='w'>every</span>
+								<span className='amber-wrap'>
+									<span className='a'>CALL</span>
+									<svg
+										className='squiggle'
+										viewBox='0 0 120 12'
+										width='120'
+										height='12'
+										preserveAspectRatio='none'
+									>
+										<path
+											d='M2 8 Q 12 2, 22 8 T 42 8 T 62 8 T 82 8 T 102 8 T 118 8'
+											fill='none'
+											stroke='currentColor'
+											strokeWidth='2.2'
+											strokeLinecap='round'
+										/>
+									</svg>
+								</span>
+								<span className='w'>on the clock</span>
+							</span>
+							<span className='stars'>
+								<svg
+									className='s'
+									width='14'
+									height='14'
+									viewBox='0 0 24 24'
+									fill='currentColor'
+								>
+									<path d='M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.9l-6.2 4.4 2.4-7.4L2 9.4h7.6z' />
+								</svg>
+							</span>
+						</div>
+
+						<RowBreak />
+
+						<BottomSlot>
+							<SearchPill>
+								<SearchOutlined className='ico' />
+								<input
+									type='text'
+									value={searchInput}
+									onChange={(e) => setSearchInput(e.target.value)}
+									placeholder='Search by title'
+									aria-label='Search calls'
+								/>
+							</SearchPill>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Client type</span>
+								<InlineSelect
+									value={typeParam}
+									onChange={(e) => updateParam('type', e.target.value)}
+								>
+									<option value=''>Any</option>
+									<option value='lead'>Lead</option>
+									<option value='client'>Client</option>
+									<option value='client_request'>Website Request</option>
+								</InlineSelect>
+							</InlineField>
+						</BottomSlot>
+
+						<div className='filter-spacer' />
+
+						<FreshClearBtn
+							type='button'
+							onClick={clearFilters}
+							disabled={activeFilterCount === 0}
+						>
+							<ClearRounded style={{ fontSize: 15 }} />
+							Clear
+						</FreshClearBtn>
+					</FreshFiltersWrap>
+				}
 			>
 				<DataTable
 					columns={columns}
@@ -561,6 +738,67 @@ const OwnerBadge = styled.span<{ $kind: 'lead' | 'client' | 'request' | 'unknown
 
 const Muted = styled.span`
 	font-size: 13.5px;
+	color: ${T.textSecondary};
+`
+
+/* Date + time cell — bold date in slate + muted monospace time.
+ * Mirrors the Projects / Leads / Clients / Reports lists. */
+const DateTimeCell = ({ iso }: { iso: string }) => {
+	const d = new Date(iso)
+	if (Number.isNaN(d.getTime())) return <Muted>—</Muted>
+	const timeStr = d.toLocaleTimeString('en-GB', {
+		hour: '2-digit',
+		minute: '2-digit',
+	})
+	return (
+		<DateTimeWrap title={formatDateTimeSec(iso)}>
+			<DatePart>{formatDate(iso, 'short')}</DatePart>
+			<TimePart>{timeStr}</TimePart>
+		</DateTimeWrap>
+	)
+}
+
+const DateTimeWrap = styled.span`
+	display: inline-flex;
+	align-items: baseline;
+	gap: 8px;
+	white-space: nowrap;
+`
+
+const DatePart = styled.span`
+	font-size: 13.5px;
+	font-weight: 600;
+	color: #0f172a;
+	letter-spacing: -0.1px;
+`
+
+const TimePart = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 11.5px;
+	font-weight: 400;
+	color: ${T.textMuted};
+	font-variant-numeric: tabular-nums;
+`
+
+/* Timezone cell: short-code pill (EST/PST/GMT+2) + city label parsed
+ * from the IANA zone ("America/New_York" → "New York"). */
+const tzCityLabel = (tz: string | null | undefined): string => {
+	if (!tz) return ''
+	const parts = tz.split('/')
+	if (parts.length < 2) return ''
+	return parts[parts.length - 1].replace(/_/g, ' ')
+}
+
+const TzLine = styled.span`
+	display: inline-flex;
+	align-items: baseline;
+	gap: 6px;
+	white-space: nowrap;
+	cursor: default;
+`
+
+const TzCity = styled.span`
+	font-size: 12.5px;
 	color: ${T.textSecondary};
 `
 
