@@ -65,6 +65,7 @@ const AuditLogSensitiveAccess = lazy(() => import('./audit-log/SensitiveAccess')
 const AuditLogEventPage = lazy(() => import('./audit-log/_shared/AuditEventPage'))
 const PhoneNumbersList = lazy(() => import('./phone-numbers/PhoneNumbersList.page'))
 const PhoneAssignments = lazy(() => import('./phone-numbers/PhoneAssignments.page'))
+const PhoneBoard = lazy(() => import('./phone-numbers/PhoneBoard.page'))
 const PhoneMaintenancePage = lazy(() => import('./phone-numbers/PhoneMaintenance.page'))
 const PhoneServicesPage = lazy(() => import('./phone-numbers/PhoneServices.page'))
 const PhoneServiceForm = lazy(() => import('./phone-numbers/PhoneServiceForm.page'))
@@ -579,6 +580,14 @@ const Home = () => {
 								element={
 									<ProtectedRoute permission='phone_numbers:view'>
 										<PhoneAssignments />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/phone-numbers/board'
+								element={
+									<ProtectedRoute permission='phone_numbers:view'>
+										<PhoneBoard />
 									</ProtectedRoute>
 								}
 							/>

@@ -28,6 +28,9 @@ export interface PhoneNumber {
 	lastNetworkRegistrationAt: string | null
 	nextMaintenanceAt: string | null
 	notes: string | null
+	// Position on the physical SIM-card board. `null` = not placed
+	// (shown in the Unassigned list on /phone-numbers/board).
+	boardSlot: number | null
 	createdAt: string
 	updatedAt: string
 	bindings: PhoneBindingSummary[]
@@ -135,6 +138,17 @@ export const phoneNumbersApi = baseApi.injectEndpoints({
 			query: (id) => ({ url: `/phone-numbers/${id}`, method: 'DELETE' }),
 			invalidatesTags: ['PhoneNumber'],
 		}),
+		movePhoneBoardSlot: builder.mutation<
+			void,
+			{ id: string; slot: number | null }
+		>({
+			query: ({ id, slot }) => ({
+				url: `/phone-numbers/${id}/board-slot`,
+				method: 'POST',
+				body: { slot },
+			}),
+			invalidatesTags: ['PhoneNumber', 'AuditEvent'],
+		}),
 
 		listBindings: builder.query<
 			Paginated<PhoneBinding>,
@@ -237,6 +251,7 @@ export const {
 	useCreatePhoneNumberMutation,
 	useUpdatePhoneNumberMutation,
 	useDisablePhoneNumberMutation,
+	useMovePhoneBoardSlotMutation,
 	useListBindingsQuery,
 	useCreateBindingMutation,
 	useUpdateBindingMutation,

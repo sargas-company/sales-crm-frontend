@@ -12,6 +12,7 @@ import {
 	WorkOutlineOutlined,
 	TuneOutlined,
 	PhoneOutlined,
+	GridViewOutlined,
 	AdminPanelSettingsOutlined,
 	BadgeOutlined,
 	GroupsOutlined,
@@ -183,6 +184,12 @@ const navList: NavOptions[] = [
 		permission: 'phone_numbers:view',
 		childrens: [
 			format('Numbers', '/phone-numbers', <PhoneAndroidOutlined />, 'phone_numbers:view'),
+			format(
+				'Board',
+				'/phone-numbers/board',
+				<GridViewOutlined />,
+				'phone_numbers:view'
+			),
 			format(
 				'Service Assignments',
 				'/phone-numbers/assignments',
