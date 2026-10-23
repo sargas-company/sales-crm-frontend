@@ -109,16 +109,19 @@ const compute = (input: {
 	payoneerFeePct: number
 }) => {
 	const base = input.rateType === 'HOURLY' ? input.rate * input.hours : input.rate
-	const tax = 42.5 + base * 0.06
+	/* Tax applies ONLY to base (hours × rate). Empty rows and
+	 * bonus-only rows carry zero tax. */
+	const tax = base > 0 ? 42.5 + base * 0.06 : 0
 	const swt = base + tax
-	const bonusAmt = (swt * input.bonusPercent) / 100 + input.fixedBonus
+	/* Bonus not taxed — percent on raw base, fixed on top. */
+	const bonusAmt = (base * input.bonusPercent) / 100 + input.fixedBonus
 	const total = swt + bonusAmt
-	const fee = total * (input.payoneerFeePct / 100)
+	/* Fee only on today's wire (total − advance). Fee on advance
+	 * was already paid when advance was wired, don't pay twice. */
+	const owed = Math.max(0, total - input.advance)
+	const fee = owed * (input.payoneerFeePct / 100)
+	const remain = owed + fee
 	const cost = total + fee
-	/* Remaining = what still leaves the company's account this run:
-	 * employee salary + Payoneer fee − already-paid advance. Depends
-	 * on the fee %, so toggling 1%↔3% visibly moves this number. */
-	const remain = Math.max(0, cost - input.advance)
 	return { base, tax, swt, bonusAmt, total, remain, fee, cost }
 }
 
@@ -424,6 +427,13 @@ const SalariesRun = () => {
 		for (const r of Object.values(rows)) {
 			if (r.status === 'PAID') paidCount++
 			if (r.status !== 'NEW') filledCount++
+			/* Only count rows that have real earnings in the month —
+			 * actual rate+hours work OR an explicit bonus. Pure
+			 * advance-only rows (service field) stay out of the roll-up. */
+			const base = r.rateType === 'HOURLY' ? num(r.rate) * num(r.hours) : num(r.rate)
+			const hasEarnings =
+				base > 0 || num(r.bonusPercent) > 0 || num(r.fixedBonus) > 0
+			if (!hasEarnings) continue
 			const c = compute({
 				rateType: r.rateType,
 				rate: num(r.rate),
