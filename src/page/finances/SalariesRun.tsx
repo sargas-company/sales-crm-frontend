@@ -112,7 +112,7 @@ const compute = (input: {
 	const base = input.rateType === 'HOURLY' ? input.rate * input.hours : input.rate
 	/* Tax applies ONLY to base (hours × rate). Empty rows and
 	 * bonus-only rows carry zero tax. */
-	const tax = base > 0 ? 42.5 + base * 0.06 : 0
+	const tax = base > 0 ? 43 + base * 0.06 : 0
 	const swt = base + tax
 	/* Bonus not taxed — percent on raw base, fixed on top. */
 	const bonusAmt = (base * input.bonusPercent) / 100 + input.fixedBonus
@@ -836,7 +836,7 @@ const SalariesRun = () => {
 										</LedgerVal>
 									</LedgerRow>
 									<LedgerRow>
-										<LedgerLbl>Tax (42.5 + 6%)</LedgerLbl>
+										<LedgerLbl>Tax (43 + 6%)</LedgerLbl>
 										<LedgerVal>
 											<CountMoney value={preview?.tax ?? 0} duration={500} />
 										</LedgerVal>
