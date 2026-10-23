@@ -12,7 +12,7 @@ export interface PaymentSource {
 
 export interface CreatePaymentSourceBody {
 	name: string
-	description?: string
+	description?: string | null
 	currency?: string
 	isActive?: boolean
 }

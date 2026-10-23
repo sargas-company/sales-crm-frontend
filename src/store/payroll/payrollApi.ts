@@ -42,6 +42,9 @@ export interface PayrollEntry {
 	totalAccrued: string
 	remainingToPay: string
 	payoneerFee: string
+	/** Per-run Payoneer % stored alongside the dollar amount, so the
+	 *  Monthly Run toggle restores to the exact value picked at save. */
+	payoneerFeePct: string
 	companyCost: string
 	note: string | null
 	status: PayrollStatus
@@ -85,6 +88,8 @@ export interface CreatePayrollBody {
 	bonusPercent?: number
 	fixedBonus?: number
 	advance?: number
+	/** Per-run Payoneer fee %. Omit to fall back to the global default. */
+	payoneerFeePct?: number
 	note?: string
 }
 

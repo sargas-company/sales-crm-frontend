@@ -1,23 +1,36 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import styled, { keyframes } from 'styled-components'
+import styled from 'styled-components'
 import {
 	ListAltOutlined,
-	FileDownloadOutlined,
-	ExpandMoreRounded,
 	OpenInNewRounded,
+	MoneyOffOutlined,
+	PaidOutlined,
+	SearchOutlined,
+	ClearRounded,
+	ReceiptLongOutlined,
+	TrendingUpOutlined,
 	DateRangeOutlined,
-	FilterAltOutlined,
+	PersonOffOutlined,
 } from '@mui/icons-material'
 
 import DatePickerPill from './DatePickerPill'
 
+import { T } from '../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../components/_shared/ListPageShell'
 import { DataTable, TableSkeleton, Actions, IconAction } from '../../components/_shared/DataTable'
 import type { DataTableColumn, SortState } from '../../components/_shared/DataTable'
-import { AnimatedSegmented } from '../../components/_shared/AnimatedSegmented'
-import { PrimaryGhostButton } from '../../components/_shared/formShell.styled'
-import { useToast } from '../../context/toast/ToastContext'
+import {
+	TapeIndicator,
+	TapePill,
+	TapePills,
+} from '../analytics/filters/filters.styled'
+import {
+	ClearBtn,
+	InlineField,
+	InlineSelect,
+	SearchPill,
+} from '../../components/_shared/filters/freshPaperFilters'
 import PermissionGate from '../../components/auth/PermissionGate'
 
 import {
@@ -176,7 +189,6 @@ const SCOPE_VALUES: ScopePreset[] = [
 
 const FinancialPaymentsListPage = () => {
 	const navigate = useNavigate()
-	const { showToast } = useToast()
 
 	const [searchParams, setSearchParams] = useSearchParams()
 
@@ -186,7 +198,6 @@ const FinancialPaymentsListPage = () => {
 	})
 	const [customFrom, setCustomFrom] = useState(() => searchParams.get('from') ?? '')
 	const [customTo, setCustomTo] = useState(() => searchParams.get('to') ?? '')
-	const [customReady, setCustomReady] = useState(false)
 	const [status, setStatus] = useState<PaymentStatus | ''>(
 		() => (searchParams.get('status') as PaymentStatus | null) ?? ''
 	)
@@ -201,13 +212,20 @@ const FinancialPaymentsListPage = () => {
 		direction: 'desc',
 	})
 
-	useEffect(() => {
-		if (scope === 'custom') {
-			const t = setTimeout(() => setCustomReady(true), 330)
-			return () => clearTimeout(t)
+	// Sliding tape indicator for the Status TapePills row.
+	const pillsRef = useRef<HTMLDivElement>(null)
+	const [ind, setInd] = useState<{ left: number; width: number; opacity: number }>({
+		left: 0,
+		width: 0,
+		opacity: 0,
+	})
+	useLayoutEffect(() => {
+		if (!pillsRef.current) return
+		const el = pillsRef.current.querySelector<HTMLButtonElement>('[data-active="true"]')
+		if (el) {
+			setInd({ left: el.offsetLeft, width: el.offsetWidth, opacity: 1 })
 		}
-		setCustomReady(false)
-	}, [scope])
+	}, [status])
 
 	useEffect(() => {
 		const next = new URLSearchParams()
@@ -227,6 +245,29 @@ const FinancialPaymentsListPage = () => {
 		() => computeRange(scope, customFrom, customTo),
 		[scope, customFrom, customTo]
 	)
+
+	const activeStatusLabel = status ? STATUS_META[status].label : 'ALL'
+
+	const activeFilterCount = useMemo(() => {
+		return [
+			search.trim() ? 1 : 0,
+			status ? 1 : 0,
+			projectId ? 1 : 0,
+			scope !== 'last3Months' ? 1 : 0,
+			scope === 'custom' && customFrom ? 1 : 0,
+			scope === 'custom' && customTo ? 1 : 0,
+		].reduce((a, b) => a + b, 0)
+	}, [search, status, projectId, scope, customFrom, customTo])
+
+	const clearAll = () => {
+		setSearch('')
+		setStatus('')
+		setProjectId('')
+		setScope('last3Months')
+		setCustomFrom('')
+		setCustomTo('')
+		setPage(1)
+	}
 
 	const { data, isLoading, isError, refetch, isFetching } = useGetPaymentsRegistryQuery({
 		from: range.from,
@@ -255,49 +296,6 @@ const FinancialPaymentsListPage = () => {
 		}
 	}, [rows])
 
-	const buildCsv = (): string => {
-		const lines: string[] = []
-		lines.push('month,week,project,client,status,amount,invoiceSentAt,receivedAt,note')
-		for (const r of rows) {
-			const escape = (v: string | null) =>
-				v && (v.includes(',') || v.includes('"')) ? `"${v.replace(/"/g, '""')}"` : (v ?? '')
-			lines.push(
-				[
-					escape(r.monthLabel),
-					escape(r.weekLabel),
-					escape(r.projectName),
-					escape(r.clientName),
-					r.status,
-					r.amount ?? '',
-					r.invoiceSentAt ?? '',
-					r.receivedAt ?? '',
-					escape(r.note),
-				].join(',')
-			)
-		}
-		return lines.join('\n')
-	}
-
-	const downloadCsv = () => {
-		if (!data) return
-		const csv = buildCsv()
-		const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
-		const url = URL.createObjectURL(blob)
-		const fname = `payments-${range.label
-			.toLowerCase()
-			.replace(/\s+/g, '-')
-			.replace(/[^a-z0-9-]/g, '')}-${new Date().toISOString().slice(0, 10)}.csv`
-		const a = document.createElement('a')
-		a.href = url
-		a.download = fname
-		document.body.appendChild(a)
-		a.click()
-		document.body.removeChild(a)
-		URL.revokeObjectURL(url)
-		const n = rows.length
-		showToast?.(`Downloaded ${fname} — ${n} ${n === 1 ? 'row' : 'rows'}`, 'success')
-	}
-
 	const columns: DataTableColumn<FinanceRegistryRow>[] = [
 		{
 			key: 'monthLabel',
@@ -305,7 +303,7 @@ const FinancialPaymentsListPage = () => {
 			sortable: true,
 			sortValue: (r) => r.weekStart,
 			render: (r) => <MonthBadge>{r.monthLabel}</MonthBadge>,
-			skeleton: () => <TableSkeleton $w='80px' $h='22px' style={{ borderRadius: 8 }} />,
+			skeleton: () => <TableSkeleton $w='80px' $h='22px' style={{ borderRadius: 999 }} />,
 		},
 		{
 			key: 'weekStart',
@@ -320,18 +318,24 @@ const FinancialPaymentsListPage = () => {
 			label: 'Project',
 			sortable: true,
 			sortValue: (r) => r.projectName,
-			render: (r) => (
-				<ProjectCellWrap>
-					<span className='name'>{r.projectName}</span>
-					{r.clientName && <span className='client'>{r.clientName}</span>}
-				</ProjectCellWrap>
-			),
-			skeleton: () => (
-				<div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-					<TableSkeleton $w='180px' $h='14px' />
-					<TableSkeleton $w='120px' $h='11px' />
-				</div>
-			),
+			render: (r) => <ProjectName>{r.projectName}</ProjectName>,
+			skeleton: () => <TableSkeleton $w='180px' $h='14px' />,
+		},
+		{
+			key: 'clientName',
+			label: 'Client',
+			sortable: true,
+			sortValue: (r) => r.clientName ?? '',
+			render: (r) =>
+				r.clientName ? (
+					<ClientName>{r.clientName}</ClientName>
+				) : (
+					<EmptyBadge title='No client linked to this project'>
+						<PersonOffOutlined />
+						No client
+					</EmptyBadge>
+				),
+			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
 		},
 		{
 			key: 'status',
@@ -342,7 +346,6 @@ const FinancialPaymentsListPage = () => {
 				const meta = STATUS_META[r.status]
 				return (
 					<StatusPill $bg={meta.bg} $fg={meta.fg} $accent={meta.color}>
-						<span className='dot' />
 						{meta.label}
 					</StatusPill>
 				)
@@ -355,6 +358,15 @@ const FinancialPaymentsListPage = () => {
 			sortable: true,
 			sortValue: (r) => (r.amount ? Number(r.amount) : 0),
 			render: (r) => {
+				const hasAmount = r.amount !== null && r.amount !== undefined && Number(r.amount) > 0
+				if (!hasAmount) {
+					return (
+						<EmptyBadge title='No amount recorded'>
+							<MoneyOffOutlined />
+							No amount
+						</EmptyBadge>
+					)
+				}
 				const invoice = formatShortDate(r.invoiceSentAt)
 				const received = formatShortDate(r.receivedAt)
 				return (
@@ -373,12 +385,6 @@ const FinancialPaymentsListPage = () => {
 				)
 			},
 			skeleton: () => <TableSkeleton $w='80px' $h='14px' />,
-		},
-		{
-			key: 'note',
-			label: 'Note',
-			render: (r) => <NoteCell title={r.note ?? undefined}>{r.note ?? '—'}</NoteCell>,
-			skeleton: () => <TableSkeleton $w='200px' $h='14px' />,
 		},
 		{
 			key: 'actions',
@@ -414,155 +420,213 @@ const FinancialPaymentsListPage = () => {
 			crumbs={[{ label: 'Finances' }, { label: 'Payments · Registry', current: true }]}
 			icon={<ListAltOutlined />}
 			title='Payments'
-			subtitle='Full registry of payment entries — search, filter and export across months. For editing, open the grid.'
+			subtitle='Full registry of payment entries — search and filter across months. For editing, open the grid.'
 			action={
-				<ActionRow>
-					<CopyGhostButton
-						type='button'
-						onClick={downloadCsv}
-						disabled={!data || rows.length === 0}
-						title='Download current page as a CSV file'
-					>
-						<FileDownloadOutlined />
-						Download CSV
-					</CopyGhostButton>
-				</ActionRow>
+				<HeaderHint aria-hidden='true'>
+					<HintMuted>every</HintMuted>
+					<HintAccentWrap>
+						<HintAccent>payment</HintAccent>
+						<svg
+							width='120'
+							height='12'
+							viewBox='0 0 120 12'
+							preserveAspectRatio='none'
+						>
+							<path
+								d='M2 8 Q 15 2, 30 8 T 60 8 T 90 8 T 118 8'
+								fill='none'
+								stroke='currentColor'
+								strokeWidth='2.2'
+								strokeLinecap='round'
+							/>
+						</svg>
+					</HintAccentWrap>
+					<HintMuted>accounted</HintMuted>
+				</HeaderHint>
 			}
-			searchPlaceholder='Search project, client or note'
-			search={search}
-			onSearchChange={(v) => {
-				setSearch(v)
-				setPage(1)
-			}}
 			filters={
 				<>
-					<ProjectPill>
-						<ProjectPillLbl>Project</ProjectPillLbl>
-						<ProjectPillText>
-							{projectId
-								? (projectsSummary?.find((p) => p.id === projectId)?.name ?? 'Selected')
-								: 'All projects'}
-						</ProjectPillText>
-						<ProjectPillChev>
-							<ExpandMoreRounded style={{ fontSize: 16 }} />
-						</ProjectPillChev>
-						<ProjectPillSelect
-							value={projectId}
-							onChange={(e) => {
-								setProjectId(e.target.value)
-								setPage(1)
-							}}
-						>
-							<option value=''>All projects</option>
-							{(projectsSummary ?? []).map((p) => (
-								<option key={p.id} value={p.id}>
-									{p.name}
-									{p.clientName ? ` — ${p.clientName}` : ''}
-								</option>
-							))}
-						</ProjectPillSelect>
-					</ProjectPill>
+					<FiltersBlock role='region' aria-label='Payments filters'>
+						<TopFilterRow>
+							<StatusGroup>
+								<div className='filter-lead'>
+									<span className='lead-icon'>
+										<PaidOutlined />
+									</span>
+									<div className='lead-text'>
+										<span className='top'>Status</span>
+										<span className='bot'>{activeStatusLabel}</span>
+									</div>
+								</div>
+
+								<TapePills ref={pillsRef} role='tablist' aria-label='Status'>
+									<TapeIndicator
+										style={{
+											transform: `translateX(${ind.left}px) rotate(-1.2deg)`,
+											width: `${ind.width}px`,
+											opacity: ind.opacity,
+										}}
+									/>
+									{[{ value: '', label: 'All' }, ...STATUS_ORDER.map((s) => ({ value: s, label: STATUS_META[s].label }))].map((opt) => (
+										<TapePill
+											key={opt.value || 'all'}
+											type='button'
+											role='tab'
+											data-active={status === opt.value || undefined}
+											aria-selected={status === opt.value}
+											$active={status === opt.value}
+											onClick={() => {
+												setStatus(opt.value as PaymentStatus | '')
+												setPage(1)
+											}}
+										>
+											{opt.label}
+										</TapePill>
+									))}
+								</TapePills>
+							</StatusGroup>
+
+							<SearchPill className='search'>
+								<SearchOutlined className='ico' />
+								<input
+									type='text'
+									name='search-payments'
+									placeholder='Search'
+									value={search}
+									onChange={(e) => {
+										setSearch(e.target.value)
+										setPage(1)
+									}}
+									aria-label='Search payments by project, client or note'
+								/>
+							</SearchPill>
+						</TopFilterRow>
+
+						<BottomFilterRow>
+							<InlineField>
+								<span className='l'>Project</span>
+								<InlineSelect
+									value={projectId}
+									onChange={(e) => {
+										setProjectId(e.target.value)
+										setPage(1)
+									}}
+								>
+									<option value=''>All projects</option>
+									{(projectsSummary ?? []).map((p) => (
+										<option key={p.id} value={p.id}>
+											{p.name}
+											{p.clientName ? ` — ${p.clientName}` : ''}
+										</option>
+									))}
+								</InlineSelect>
+							</InlineField>
+
+							<InlineField>
+								<span className='l'>Scope</span>
+								<InlineSelect
+									value={scope}
+									onChange={(e) => {
+										setScope(e.target.value as ScopePreset)
+										setPage(1)
+									}}
+								>
+									{scopeOptions.map((o) => (
+										<option key={o.value} value={o.value}>
+											{o.label}
+										</option>
+									))}
+								</InlineSelect>
+							</InlineField>
+
+							<RangeGroup aria-label='Date range'>
+								<DatePickerPill
+									label='From'
+									value={customFrom}
+									max={customTo || undefined}
+									placeholder='Any'
+									accent='orange'
+									size='lg'
+									onChange={(v) => {
+										setCustomFrom(v)
+										if (v) setScope('custom')
+										setPage(1)
+									}}
+								/>
+								<RangeDash aria-hidden='true'>—</RangeDash>
+								<DatePickerPill
+									label='To'
+									value={customTo}
+									min={customFrom || undefined}
+									placeholder='Any'
+									accent='orange'
+									size='lg'
+									onChange={(v) => {
+										setCustomTo(v)
+										if (v) setScope('custom')
+										setPage(1)
+									}}
+								/>
+							</RangeGroup>
+
+							<ClearBtn
+								className='clear'
+								type='button'
+								onClick={clearAll}
+								disabled={activeFilterCount === 0}
+							>
+								<ClearRounded style={{ fontSize: 15 }} />
+								Clear
+							</ClearBtn>
+						</BottomFilterRow>
+					</FiltersBlock>
+
 					{!isLoading && rows.length > 0 && (
-						<StatsBar>
-							<StatsItem>
-								<span className='lbl'>Total</span>
-								<span className='val'>
-									<CountInt value={total} />
-								</span>
-							</StatsItem>
-							<StatsDivider />
-							<StatsItem>
-								<span className='lbl'>Sum</span>
-								<span className='val strong'>
-									<CountMoney value={stats.total} cents />
-								</span>
-							</StatsItem>
-							<StatsDivider />
-							<StatsItem>
-								<span className='lbl'>Avg</span>
-								<span className='val'>
-									<CountMoney value={stats.avg} />
-								</span>
-							</StatsItem>
-							<StatsDivider />
-							<StatsItem className='scope'>
-								<span className='lbl'>Scope</span>
-								<span className='val'>{range.label}</span>
-							</StatsItem>
-						</StatsBar>
+						<KpiRow>
+							<KpiCard>
+								<KpiIcon>
+									<ReceiptLongOutlined />
+								</KpiIcon>
+								<KpiBody>
+									<KpiLabel>Total entries</KpiLabel>
+									<KpiNum>
+										<CountInt value={total} />
+									</KpiNum>
+								</KpiBody>
+							</KpiCard>
+							<KpiCard>
+								<KpiIcon>
+									<PaidOutlined />
+								</KpiIcon>
+								<KpiBody>
+									<KpiLabel>Sum</KpiLabel>
+									<KpiNum>
+										<CountMoney value={stats.total} cents />
+									</KpiNum>
+								</KpiBody>
+							</KpiCard>
+							<KpiCard>
+								<KpiIcon>
+									<TrendingUpOutlined />
+								</KpiIcon>
+								<KpiBody>
+									<KpiLabel>Average</KpiLabel>
+									<KpiNum>
+										<CountMoney value={stats.avg} />
+									</KpiNum>
+								</KpiBody>
+							</KpiCard>
+							<KpiCard>
+								<KpiIcon>
+									<DateRangeOutlined />
+								</KpiIcon>
+								<KpiBody>
+									<KpiLabel>Scope</KpiLabel>
+									<KpiNum className='text'>{range.label}</KpiNum>
+								</KpiBody>
+							</KpiCard>
+						</KpiRow>
 					)}
-					<FiltersRow>
-					<FilterInline>
-						<FilterGroup>
-							<GroupLabel>
-								<FilterAltOutlined style={{ fontSize: 15 }} /> Status
-							</GroupLabel>
-							<AnimatedSegmented
-								items={[
-									{ value: '', label: 'All' },
-									...STATUS_ORDER.map((s) => ({
-										value: s,
-										label: STATUS_META[s].label,
-										color: STATUS_META[s].color,
-									})),
-								]}
-								active={status}
-								onSelect={(v) => {
-									setStatus(v as PaymentStatus | '')
-									setPage(1)
-								}}
-							/>
-						</FilterGroup>
-
-						<FilterGroup className='align-right'>
-							<GroupLabel>
-								<DateRangeOutlined style={{ fontSize: 15 }} /> Scope
-							</GroupLabel>
-							<AnimatedSegmented
-								items={scopeOptions}
-								active={scope}
-								onSelect={(v) => {
-									setScope(v as ScopePreset)
-									setPage(1)
-								}}
-							/>
-						</FilterGroup>
-					</FilterInline>
-
-					<CustomRange
-						data-open={scope === 'custom' ? 'true' : 'false'}
-						data-ready={customReady ? 'true' : 'false'}
-						aria-hidden={scope !== 'custom'}
-					>
-						<DatePickerPill
-							label='From'
-							value={customFrom}
-							max={customTo || undefined}
-							placeholder='Start date'
-							tabIndex={scope === 'custom' ? 0 : -1}
-							onChange={(v) => {
-								setCustomFrom(v)
-								setPage(1)
-							}}
-						/>
-						<RangeSep aria-hidden='true'>
-							<svg width='16' height='12' viewBox='0 0 24 16' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
-								<path d='M2 8h20M16 2l6 6-6 6' />
-							</svg>
-						</RangeSep>
-						<DatePickerPill
-							label='To'
-							value={customTo}
-							min={customFrom || undefined}
-							placeholder='End date'
-							tabIndex={scope === 'custom' ? 0 : -1}
-							onChange={(v) => {
-								setCustomTo(v)
-								setPage(1)
-							}}
-						/>
-					</CustomRange>
-				</FiltersRow>
 				</>
 			}
 		>
@@ -596,223 +660,253 @@ export default FinancialPaymentsListPage
 
 /* ── Styled ─────────────────────────────────────────────────────── */
 
-const ActionRow = styled.div`
+/* Blue handwritten header callout — same visual family as the orange
+ * upwork-hint used on other list pages, but tinted sky-blue to match
+ * the Payments domain accent. */
+const BLUE_INK = '#0f172a'
+const BLUE_ACCENT = '#0369a1'
+
+const HeaderHint = styled.div`
 	display: inline-flex;
-	gap: 8px;
-	align-items: center;
-`
-
-const CopyGhostButton = styled(PrimaryGhostButton)`
-	svg {
-		transform-origin: 60% 40%;
-		transition:
-			scale 260ms cubic-bezier(0.22, 1.35, 0.36, 1),
-			rotate 300ms cubic-bezier(0.22, 1, 0.36, 1);
-	}
-
-	&:hover:not(:disabled) svg {
-		scale: 1.15;
-		rotate: -6deg;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		&:hover:not(:disabled) svg {
-			scale: 1;
-			rotate: 0deg;
-		}
-	}
-`
-
-const FiltersRow = styled.div`
-	flex: 1 1 100%;
-	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-	gap: 14px;
-	margin-top: 12px;
-`
-
-const FilterGroup = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 5px;
-	min-width: 0;
-
-	&.align-right {
-		margin-left: auto;
-		align-items: flex-end;
-	}
-`
-
-const FilterInline = styled.div`
-	width: 100%;
-	display: flex;
-	align-items: flex-end;
-	gap: 16px;
-	flex-wrap: wrap;
-`
-
-const GroupLabel = styled.span`
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	font-size: 10.5px;
-	font-weight: 700;
-	letter-spacing: 0.5px;
-	text-transform: uppercase;
-	color: #64748b;
-`
-
-const CustomRange = styled.div`
-	display: flex;
 	align-items: center;
 	gap: 10px;
-	flex-wrap: wrap;
-	overflow: hidden;
-	max-height: 0;
-	opacity: 0;
-	transform: translateY(-4px);
-	transition:
-		max-height 320ms cubic-bezier(0.22, 1, 0.36, 1),
-		opacity 220ms ease,
-		transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
-		margin-top 320ms cubic-bezier(0.22, 1, 0.36, 1);
-	margin-top: 0;
 	pointer-events: none;
+	color: ${BLUE_INK};
 
-	&[data-open='true'] {
-		max-height: 80px;
-		opacity: 1;
-		transform: translateY(0);
-		margin-top: 4px;
-		pointer-events: auto;
-	}
-
-	&[data-ready='true'] {
-		overflow: visible;
+	@media (max-width: 900px) {
+		display: none;
 	}
 `
 
-const arrowPulse = keyframes`
-	0%, 100% { transform: translateX(0); }
-	50%      { transform: translateX(2px); }
+const HintMuted = styled.span`
+	font-family: 'Caveat', 'Brush Script MT', cursive;
+	font-weight: 700;
+	font-size: 28px;
+	line-height: 1;
+	letter-spacing: 0.2px;
+	color: ${BLUE_INK};
 `
 
-const RangeSep = styled.span`
-	display: inline-flex;
-	align-items: center;
-	color: #94a3b8;
-	user-select: none;
-
-	svg {
-		animation: ${arrowPulse} 2200ms ease-in-out infinite;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		svg {
-			animation: none;
-		}
-	}
-`
-
-
-const ProjectPill = styled.label`
+const HintAccentWrap = styled.span`
 	position: relative;
 	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	padding: 6px 14px 6px 12px;
-	border-radius: 999px;
-	border: 1.5px solid rgba(15, 23, 42, 0.1);
-	background: #ffffff;
-	color: #252d3a;
-	font: inherit;
-	font-size: 12.5px;
-	font-weight: 600;
-	cursor: pointer;
-	transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
-
-	&:hover {
-		transform: translateY(-1px);
-	}
-`
-
-const ProjectPillLbl = styled.span`
-	font-size: 10.5px;
-	font-weight: 700;
-	letter-spacing: 0.5px;
-	text-transform: uppercase;
-	color: #94a3b8;
-`
-
-const ProjectPillText = styled.span`
-	max-width: 200px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-`
-
-const ProjectPillChev = styled.span`
-	display: inline-flex;
-	align-items: center;
-	color: #a5a1b0;
-`
-
-const ProjectPillSelect = styled.select`
-	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
-	opacity: 0;
-	cursor: pointer;
-	border: none;
-	outline: none;
-	appearance: none;
-	-webkit-appearance: none;
-	background: transparent;
-`
-
-const StatsBar = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 22px;
-	flex-wrap: wrap;
-	margin-left: auto;
-	padding: 10px 16px;
-	border-radius: 12px;
-	background: #ffffff;
-	border: 1px solid rgba(15, 23, 42, 0.08);
-	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
-`
-
-const StatsItem = styled.div`
-	display: inline-flex;
 	flex-direction: column;
-	gap: 3px;
+	align-items: center;
+	padding-bottom: 4px;
+`
+
+const HintAccent = styled.span`
+	font-family: 'Caveat', 'Brush Script MT', cursive;
+	font-weight: 700;
+	font-size: 32px;
 	line-height: 1;
+	letter-spacing: 0.3px;
+	color: ${BLUE_ACCENT};
+`
 
-	&.scope {
-		min-width: 110px;
-	}
+const FiltersBlock = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	margin-top: 12px;
+	width: 100%;
+`
 
-	.lbl {
-		font-size: 10.5px;
-		font-weight: 700;
-		letter-spacing: 0.6px;
-		text-transform: uppercase;
-		color: #64748b;
+const TopFilterRow = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px 16px;
+	min-height: 56px;
+	width: 100%;
+
+	.search {
+		flex: 0 1 260px;
+		min-width: 180px;
 	}
-	.val {
-		font-family: 'JetBrains Mono', ui-monospace, monospace;
-		font-variant-numeric: tabular-nums;
-		font-size: 14px;
+	.search input {
+		width: 100%;
+	}
+`
+
+/* Ported from JobPostList's DecisionGroup — dark lead chip + icon
+ * sitting next to the TapePills row. */
+const StatusGroup = styled.div`
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 14px;
+	flex: 0 1 auto;
+	min-width: 0;
+
+	.filter-lead {
+		display: inline-flex;
+		align-items: center;
+		gap: 12px;
+		padding-right: 22px;
+		border-right: 1px solid rgba(36, 30, 22, 0.08);
+	}
+	.filter-lead .lead-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		border-radius: 11px;
+		background: #241e16;
+		color: #fdfaf2;
+		transition:
+			transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+			background 220ms ease;
+	}
+	.filter-lead .lead-icon svg {
+		font-size: 20px;
+		transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+	.filter-lead:hover .lead-icon {
+		transform: rotate(-6deg) scale(1.08);
+		background: #e85d2f;
+	}
+	.filter-lead .lead-text {
+		display: flex;
+		flex-direction: column;
+		line-height: 1.15;
+		min-width: 78px;
+	}
+	.filter-lead .lead-text .top {
+		font-family: 'Fraunces', 'Georgia', serif;
+		font-variation-settings: 'opsz' 36;
+		font-size: 17px;
 		font-weight: 600;
-		color: #0f172a;
+		color: #241e16;
 		letter-spacing: -0.2px;
 	}
-	.val.strong {
+	.filter-lead .lead-text .bot {
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-variant-numeric: tabular-nums;
+		font-size: 10.5px;
+		color: #7d6e5d;
+		letter-spacing: 0.7px;
+		text-transform: uppercase;
+		margin-top: 3px;
+		white-space: nowrap;
+		transition: color 200ms ease;
+	}
+	.filter-lead:hover .lead-text .bot {
+		color: #e85d2f;
+	}
+`
+
+const BottomFilterRow = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 10px 12px;
+	width: 100%;
+
+	.clear {
+		margin-left: auto;
+	}
+`
+
+const RangeGroup = styled.div`
+	display: inline-flex;
+	align-items: flex-end;
+	gap: 10px;
+	align-self: flex-end;
+	padding: 4px 10px;
+	border: 1px dashed rgba(36, 30, 22, 0.14);
+	border-radius: 14px;
+`
+
+const RangeDash = styled.span`
+	align-self: flex-end;
+	display: inline-flex;
+	align-items: center;
+	min-height: 42px;
+	padding: 0 2px;
+	color: #7d6e5d;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1;
+	user-select: none;
+`
+
+const KpiRow = styled.div`
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 12px;
+	margin-top: 14px;
+	width: 100%;
+
+	@media (max-width: 900px) {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	@media (max-width: 520px) {
+		grid-template-columns: minmax(0, 1fr);
+	}
+`
+
+const KpiCard = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	width: 100%;
+	min-width: 0;
+	padding: 16px 18px;
+	border-radius: 14px;
+	background: #ffffff;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+`
+
+const KpiIcon = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 46px;
+	height: 46px;
+	border-radius: 12px;
+	background: ${T.primaryTint};
+	color: ${T.primary};
+	flex-shrink: 0;
+
+	svg {
+		font-size: 26px;
+	}
+`
+
+const KpiBody = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+`
+
+const KpiLabel = styled.div`
+	font-size: 12px;
+	font-weight: 700;
+	color: ${T.textSecondary};
+	text-transform: uppercase;
+	letter-spacing: 0.55px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+`
+
+const KpiNum = styled.div`
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-size: 30px;
+	font-weight: 700;
+	color: ${T.textStrong};
+	line-height: 1.05;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.7px;
+
+	&.text {
+		font-family: inherit;
 		font-size: 18px;
-		font-weight: 700;
+		letter-spacing: -0.3px;
 	}
 `
 
@@ -838,12 +932,6 @@ const NumSlot = styled.span`
 	}
 `
 
-const StatsDivider = styled.span`
-	width: 1px;
-	height: 30px;
-	background: rgba(15, 23, 42, 0.08);
-`
-
 const MonoCell = styled.span`
 	font-family: 'JetBrains Mono', ui-monospace, monospace;
 	font-size: 12.5px;
@@ -856,34 +944,52 @@ const MonthBadge = styled.span`
 	align-items: center;
 	justify-content: center;
 	padding: 4px 10px;
-	border-radius: 8px;
+	border-radius: 999px;
 	background: rgba(3, 105, 161, 0.08);
 	color: #0369a1;
-	font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
-	font-size: 11.5px;
+	font-size: 11px;
 	font-weight: 700;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+`
+
+const EmptyBadge = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	border: 1.5px dashed rgba(100, 116, 139, 0.4);
+	background: rgba(100, 116, 139, 0.06);
+	color: #64748b;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
+
+	svg {
+		font-size: 15px;
+		opacity: 0.7;
+	}
+`
+
+const ProjectName = styled.span`
+	display: inline-block;
+	font-weight: 600;
+	color: #0f172a;
+	font-size: 13.5px;
 	letter-spacing: -0.2px;
 	white-space: nowrap;
 `
 
-const ProjectCellWrap = styled.span`
-	display: inline-flex;
-	flex-direction: column;
-	gap: 2px;
-	line-height: 1.2;
-
-	.name {
-		font-weight: 600;
-		color: #0f172a;
-		font-size: 13.5px;
-		white-space: nowrap;
-		letter-spacing: -0.2px;
-	}
-	.client {
-		font-size: 11.5px;
-		color: #64748b;
-		white-space: nowrap;
-	}
+const ClientName = styled.span`
+	display: inline-block;
+	font-size: 13px;
+	color: #334155;
+	white-space: nowrap;
 `
 
 const NoteCell = styled.span`
@@ -933,7 +1039,6 @@ const AmountCellWrap = styled.span`
 const StatusPill = styled.span<{ $bg: string; $fg: string; $accent: string }>`
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
 	padding: 4px 10px;
 	border-radius: 999px;
 	background: ${(p) => p.$bg};
@@ -943,11 +1048,4 @@ const StatusPill = styled.span<{ $bg: string; $fg: string; $accent: string }>`
 	text-transform: uppercase;
 	letter-spacing: 0.4px;
 	white-space: nowrap;
-
-	.dot {
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		background: ${(p) => p.$accent};
-	}
 `

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
@@ -11,6 +11,9 @@ import {
 	EditOutlined,
 	LockOpenOutlined,
 	AddRounded,
+	SearchOutlined,
+	ClearRounded,
+	PaidOutlined,
 } from '@mui/icons-material'
 import { T } from '../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../components/_shared/ListPageShell'
@@ -20,6 +23,13 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../components/_shared/DataTable'
+import { TapeIndicator, TapePill, TapePills } from '../analytics/filters/filters.styled'
+import {
+	ClearBtn,
+	InlineField,
+	InlineSelect,
+} from '../../components/_shared/filters/freshPaperFilters'
+import { useGetEmployeesQuery } from '../../store/employees/employeesApi'
 import type { DataTableColumn, SortState } from '../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../components/_shared/formShell.styled'
 import PermissionGate from '../../components/auth/PermissionGate'
@@ -89,7 +99,6 @@ function useCountUp(target: number, duration = 900): number {
 const CountMoney = ({ value }: { value: string | number | null | undefined }) => {
 	const n = value == null ? 0 : typeof value === 'string' ? parseFloat(value) || 0 : value
 	const display = useCountUp(n)
-	if (value == null) return <>—</>
 	return <>${fmtMoney(display)}</>
 }
 
@@ -117,7 +126,34 @@ const Salaries = () => {
 
 	const [year, setYear] = useState<number>(initialYear)
 	const [month, setMonth] = useState<number>(initialMonth)
-	const [search, setSearch] = useState('')
+	const [employeeId, setEmployeeId] = useState('')
+	const [status, setStatus] = useState<'' | 'DRAFT' | 'PAID'>('')
+
+	const pillsRef = useRef<HTMLDivElement>(null)
+	const [ind, setInd] = useState<{ left: number; width: number; opacity: number }>({
+		left: 0,
+		width: 0,
+		opacity: 0,
+	})
+	useLayoutEffect(() => {
+		if (!pillsRef.current) return
+		const el = pillsRef.current.querySelector<HTMLButtonElement>('[data-active="true"]')
+		if (el) setInd({ left: el.offsetLeft, width: el.offsetWidth, opacity: 1 })
+	}, [status])
+
+	const activeStatusLabel = status || 'ALL'
+
+	const activeFilterCount =
+		(employeeId ? 1 : 0) +
+		(status ? 1 : 0) +
+		(year !== currentYear() || month !== currentMonth() ? 1 : 0)
+
+	const clearAll = () => {
+		setEmployeeId('')
+		setStatus('')
+		setYear(currentYear())
+		setMonth(currentMonth())
+	}
 	const [sort, setSort] = useState<SortState | null>(initialSort)
 	const [page, setPage] = useState(1)
 	const [toDelete, setToDelete] = useState<PayrollEntry | null>(null)
@@ -151,7 +187,7 @@ const Salaries = () => {
 		}
 	}, [pickerOpen])
 
-	useEffect(() => setPage(1), [year, month, search, sort])
+	useEffect(() => setPage(1), [year, month, employeeId, status, sort])
 	useEffect(() => {
 		if (!pickerOpen) return
 		setPickerYear(year)
@@ -180,16 +216,43 @@ const Salaries = () => {
 	const { data, isLoading, isError, refetch } = useGetPayrollQuery({
 		year,
 		month,
-		search: search.trim() || undefined,
+		status: status || undefined,
 		sortBy: (sort?.key as PayrollSortBy | undefined) ?? undefined,
 		sortDirection: sort?.direction,
 	})
-	const { data: summary } = useGetPayrollSummaryQuery({ year, month })
+	const { data: employeesPage } = useGetEmployeesQuery({ page: 1, limit: 500 })
+	const employees = employeesPage?.data ?? []
 	const [deletePayroll, { isLoading: deleting }] = useDeletePayrollMutation()
 	const [markPaid] = useMarkPayrollPaidMutation()
 	const [reopen] = useReopenPayrollMutation()
 
-	const rows = data?.data ?? []
+	const allRows = data?.data ?? []
+	const rows = employeeId ? allRows.filter((r) => r.employeeId === employeeId) : allRows
+
+	/* KPI stats are computed from the CURRENTLY VISIBLE rows so they
+	 * stay in sync with the active status/search filter. Empty filter
+	 * → all zeros (user wants cards to stay visible, not disappear). */
+	const summary = useMemo(() => {
+		const acc = {
+			baseSalaries: 0,
+			taxes: 0,
+			bonuses: 0,
+			totalAccrued: 0,
+			payoneerFees: 0,
+			companyCost: 0,
+			outstanding: 0,
+		}
+		for (const r of rows) {
+			acc.baseSalaries += parseFloat(r.baseSalary) || 0
+			acc.taxes += parseFloat(r.tax) || 0
+			acc.bonuses += parseFloat(r.bonusAmount) || 0
+			acc.totalAccrued += parseFloat(r.totalAccrued) || 0
+			acc.payoneerFees += parseFloat(r.payoneerFee) || 0
+			acc.companyCost += parseFloat(r.companyCost) || 0
+			if (r.status === 'DRAFT') acc.outstanding += parseFloat(r.remainingToPay) || 0
+		}
+		return acc
+	}, [rows])
 
 	const columns: DataTableColumn<PayrollEntry>[] = [
 		{
@@ -205,24 +268,20 @@ const Salaries = () => {
 			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
 		},
 		{
-			key: 'position',
-			label: 'Position',
-			render: (r) =>
-				r.employee.positions.length > 0 ? (
-					<PositionPill title={r.employee.positions[0].title}>
-						{r.employee.positions[0].title}
-					</PositionPill>
-				) : (
-					<SubText>—</SubText>
-				),
-			skeleton: () => <TableSkeleton $w='90px' $h='22px' style={{ borderRadius: 999 }} />,
+			key: 'status',
+			label: 'Status',
+			minWidth: 100,
+			sortable: true,
+			sortValue: (r) => r.status,
+			render: (r) => <StatusPill $paid={r.status === 'PAID'}>{r.status}</StatusPill>,
+			skeleton: () => <TableSkeleton $w='60px' $h='22px' style={{ borderRadius: 999 }} />,
 		},
 		{
 			key: 'rate',
 			label: 'Rate',
 			render: (r) => (
 				<RateCell>
-					<RateBadge>{r.rateType === 'HOURLY' ? 'H' : 'M'}</RateBadge>
+					<RateBadge $type={r.rateType}>{r.rateType === 'HOURLY' ? 'H' : 'M'}</RateBadge>
 					<Mono>${fmtMoney(r.rate)}</Mono>
 				</RateCell>
 			),
@@ -232,12 +291,17 @@ const Salaries = () => {
 			key: 'hours',
 			label: 'Hours',
 			minWidth: 90,
-			render: (r) => (r.rateType === 'HOURLY' ? <Mono>{fmtMoney(r.hours)}</Mono> : <SubText>—</SubText>),
+			render: (r) =>
+				r.rateType === 'HOURLY' ? (
+					<Mono>{fmtMoney(r.hours)}</Mono>
+				) : (
+					<EmptyBadge title='N/A for monthly employees'>N/A</EmptyBadge>
+				),
 			skeleton: () => <TableSkeleton $w='40px' $h='14px' />,
 		},
 		{
 			key: 'baseSalary',
-			label: 'Base',
+			label: 'Monthly base',
 			minWidth: 110,
 			sortable: true,
 			sortValue: (r) => parseFloat(r.baseSalary),
@@ -269,16 +333,16 @@ const Salaries = () => {
 		},
 		{
 			key: 'totalAccrued',
-			label: 'Total',
+			label: 'Gross',
 			minWidth: 110,
 			sortable: true,
 			sortValue: (r) => parseFloat(r.totalAccrued),
-			render: (r) => <MonoStrong>${fmtMoney(r.totalAccrued)}</MonoStrong>,
+			render: (r) => <Mono>${fmtMoney(r.totalAccrued)}</Mono>,
 			skeleton: () => <TableSkeleton $w='70px' $h='14px' />,
 		},
 		{
 			key: 'remainingToPay',
-			label: 'Remaining',
+			label: 'To pay now',
 			minWidth: 110,
 			sortable: true,
 			sortValue: (r) => parseFloat(r.remainingToPay),
@@ -294,81 +358,16 @@ const Salaries = () => {
 		},
 		{
 			key: 'companyCost',
-			label: 'Company',
+			label: 'Total',
 			minWidth: 110,
 			sortable: true,
 			sortValue: (r) => parseFloat(r.companyCost),
-			render: (r) => <MonoAccent>${fmtMoney(r.companyCost)}</MonoAccent>,
+			render: (r) => <TotalPill>${fmtMoney(r.companyCost)}</TotalPill>,
 			skeleton: () => <TableSkeleton $w='70px' $h='14px' />,
-		},
-		{
-			key: 'status',
-			label: 'Status',
-			minWidth: 100,
-			sortable: true,
-			sortValue: (r) => r.status,
-			render: (r) => <StatusPill $paid={r.status === 'PAID'}>{r.status}</StatusPill>,
-			skeleton: () => <TableSkeleton $w='60px' $h='22px' style={{ borderRadius: 999 }} />,
-		},
-		{
-			key: 'actions',
-			label: 'Actions',
-			render: (r) =>
-				r.status === 'DRAFT' ? (
-					<Actions>
-						<PermissionGate permission='salaries:update'>
-							<IconAction
-								type='button'
-								onClick={() => navigate(`/finances/salaries/edit/${r.id}`)}
-								aria-label='Edit payroll'
-							>
-								<EditOutlined />
-							</IconAction>
-						</PermissionGate>
-						<PermissionGate permission='salaries:update'>
-							<IconAction
-								type='button'
-								onClick={async () => {
-									try {
-										await markPaid(r.id).unwrap()
-										showToast('Marked as paid', 'success')
-									} catch {
-										showToast('Failed to mark paid', 'error')
-									}
-								}}
-								aria-label='Mark paid'
-							>
-								<CheckCircleOutline />
-							</IconAction>
-						</PermissionGate>
-						<PermissionGate permission='salaries:delete'>
-							<IconAction
-								type='button'
-								$danger
-								onClick={() => setToDelete(r)}
-								aria-label='Delete payroll entry'
-							>
-								<DeleteOutline />
-							</IconAction>
-						</PermissionGate>
-					</Actions>
-				) : (
-					<Actions>
-						<PermissionGate permission='salaries:update'>
-							<IconAction
-								type='button'
-								onClick={() => setToReopen(r)}
-								aria-label='Reopen paid payroll'
-							>
-								<LockOpenOutlined />
-							</IconAction>
-						</PermissionGate>
-					</Actions>
-				),
 		},
 	]
 
-	const monthFilter = (
+	const monthPicker = (
 		<>
 			<DatePickerButton
 				ref={monthBtnRef}
@@ -458,51 +457,119 @@ const Salaries = () => {
 				title='Salaries'
 				subtitle='Monthly payroll — hourly and monthly rates, taxes, bonuses, advances, Payoneer fee and company cost.'
 				action={
-					<PermissionGate permission='salaries:create'>
-						<PrimarySolidButton
-							type='button'
-							onClick={() => navigate(`/finances/salaries/add?year=${year}&month=${month}`)}
-						>
-							<AddRounded />
-							New entry
-						</PrimarySolidButton>
-					</PermissionGate>
+					<LedgerStamp aria-hidden='true'>
+						<LedgerStampInner>
+							<span className='top'>Ledger</span>
+							<span className='mid'>
+								{String(month).padStart(2, '0')}
+								<span className='slash'>/</span>
+								{String(year).slice(-2)}
+							</span>
+							<span className='bot'>pay cycle</span>
+						</LedgerStampInner>
+					</LedgerStamp>
 				}
-				searchPlaceholder='Search employee'
-				search={search}
-				onSearchChange={setSearch}
-				filters={monthFilter}
+				filters={
+					<FiltersBlock role='region' aria-label='Salaries filters'>
+						<TopFilterRow>
+							<StatusGroup>
+								<div className='filter-lead'>
+									<span className='lead-icon'>
+										<PaidOutlined />
+									</span>
+									<div className='lead-text'>
+										<span className='top'>Status</span>
+										<span className='bot'>{activeStatusLabel}</span>
+									</div>
+								</div>
+								<TapePills ref={pillsRef} role='tablist' aria-label='Status'>
+									<TapeIndicator
+										style={{
+											transform: `translateX(${ind.left}px) rotate(-1.2deg)`,
+											width: `${ind.width}px`,
+											opacity: ind.opacity,
+										}}
+									/>
+									{[
+										{ value: '', label: 'All' },
+										{ value: 'DRAFT', label: 'Draft' },
+										{ value: 'PAID', label: 'Paid' },
+									].map((opt) => (
+										<TapePill
+											key={opt.value || 'all'}
+											type='button'
+											role='tab'
+											data-active={status === opt.value || undefined}
+											aria-selected={status === opt.value}
+											$active={status === opt.value}
+											onClick={() => setStatus(opt.value as '' | 'DRAFT' | 'PAID')}
+										>
+											{opt.label}
+										</TapePill>
+									))}
+								</TapePills>
+							</StatusGroup>
+
+							<InlineField>
+								<span className='l'>Employee</span>
+								<InlineSelect
+									value={employeeId}
+									onChange={(e) => setEmployeeId(e.target.value)}
+								>
+									<option value=''>All employees</option>
+									{employees.map((emp) => (
+										<option key={emp.id} value={emp.id}>
+											{emp.firstName} {emp.lastName}
+										</option>
+									))}
+								</InlineSelect>
+							</InlineField>
+
+							{monthPicker}
+
+							<ClearBtn
+								className='clear'
+								type='button'
+								onClick={clearAll}
+								disabled={activeFilterCount === 0}
+							>
+								<ClearRounded style={{ fontSize: 15 }} />
+								Clear
+							</ClearBtn>
+						</TopFilterRow>
+					</FiltersBlock>
+				}
 			>
-				{!isLoading && !isError && rows.length > 0 && (
+				{!isError && (
 					<KpiRow>
 						<KpiCard>
 							<KpiLabel>Base payroll</KpiLabel>
 							<KpiVal>
-								<CountMoney value={summary?.baseSalaries} />
+								<CountMoney value={summary.baseSalaries} />
 							</KpiVal>
 						</KpiCard>
 						<KpiCard>
 							<KpiLabel>Taxes</KpiLabel>
 							<KpiVal>
-								<CountMoney value={summary?.taxes} />
+								<CountMoney value={summary.taxes} />
 							</KpiVal>
 						</KpiCard>
 						<KpiCard>
 							<KpiLabel>Bonuses</KpiLabel>
 							<KpiVal>
-								<CountMoney value={summary?.bonuses} />
+								<CountMoney value={summary.bonuses} />
 							</KpiVal>
 						</KpiCard>
 						<KpiCard>
-							<KpiLabel>Total accrued</KpiLabel>
+							<KpiLabel>Gross</KpiLabel>
 							<KpiVal>
-								<CountMoney value={summary?.totalAccrued} />
+								<CountMoney value={summary.totalAccrued} />
 							</KpiVal>
 						</KpiCard>
 						<KpiCard>
 							<KpiLabel>Payoneer fee</KpiLabel>
 							<KpiVal>
-								<CountMoney value={summary?.payoneerFees} />
+								<CountMoney value={summary.payoneerFees} />
 							</KpiVal>
 						</KpiCard>
 						<KpiV1>
@@ -511,35 +578,37 @@ const Salaries = () => {
 							</KpiSparkle>
 							<KpiLabelV1>Company cost</KpiLabelV1>
 							<KpiValV1>
-								<CountMoney value={summary?.companyCost} />
+								<CountMoney value={summary.companyCost} />
 							</KpiValV1>
 						</KpiV1>
 						<KpiCard>
-							<KpiLabel>Outstanding</KpiLabel>
+							<KpiLabel>Unpaid</KpiLabel>
 							<KpiVal>
-								<CountMoney value={summary?.outstanding} />
+								<CountMoney value={summary.outstanding} />
 							</KpiVal>
 						</KpiCard>
 					</KpiRow>
 				)}
 
-				<DataTable
-					columns={columns}
-					rows={rows}
-					rowKey={(r) => r.id}
-					isLoading={isLoading}
-					isError={isError}
-					onRetry={refetch}
-					searchActive={!!search}
-					sort={sort}
-					onSortChange={setSort}
-					pagination={{
-						page,
-						pageSize: rows.length || 20,
-						total: rows.length,
-						onPageChange: setPage,
-					}}
-				/>
+				<GroupedTableWrap>
+					<DataTable
+						columns={columns}
+						rows={rows}
+						rowKey={(r) => r.id}
+						isLoading={isLoading}
+						isError={isError}
+						onRetry={refetch}
+						searchActive={!!employeeId || !!status}
+						sort={sort}
+						onSortChange={setSort}
+						pagination={{
+							page,
+							pageSize: rows.length || 20,
+							total: rows.length,
+							onPageChange: setPage,
+						}}
+					/>
+				</GroupedTableWrap>
 			</ListPageShell>
 
 			{toDelete && (
@@ -644,13 +713,15 @@ const Mono = styled.span`
 	color: ${T.textStrong};
 `
 
-const MonoStrong = styled(Mono)`
-	font-weight: 700;
-`
-
-const MonoAccent = styled(Mono)`
-	font-weight: 700;
-	color: ${T.primary};
+const TotalPill = styled(Mono)`
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
+	border-radius: 999px;
+	background: rgba(3, 105, 161, 0.1);
+	color: #0369a1;
+	font-weight: 800;
+	letter-spacing: -0.2px;
 `
 
 const RateCell = styled.span`
@@ -660,20 +731,45 @@ const RateCell = styled.span`
 	white-space: nowrap;
 `
 
-const RateBadge = styled.span`
+const RateBadge = styled.span<{ $type: 'HOURLY' | 'MONTHLY' }>`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 20px;
-	height: 20px;
-	border-radius: 6px;
-	background: ${T.primaryTint};
-	color: ${T.primary};
+	width: 28px;
+	height: 28px;
+	border-radius: 8px;
+	background: ${({ $type }) =>
+		$type === 'HOURLY' ? 'rgba(234, 88, 12, 0.14)' : 'rgba(3, 105, 161, 0.12)'};
+	color: ${({ $type }) => ($type === 'HOURLY' ? '#c2410c' : '#0369a1')};
 	font-family: 'JetBrains Mono', monospace;
-	font-size: 10px;
-	font-weight: 700;
+	font-size: 13px;
+	font-weight: 800;
+	letter-spacing: 0.5px;
 `
 
+const EmptyBadge = styled.span`
+	display: inline-flex;
+	align-items: center;
+	padding: 3px 10px;
+	border-radius: 999px;
+	border: 1.5px dashed rgba(100, 116, 139, 0.4);
+	background: rgba(100, 116, 139, 0.06);
+	color: #64748b;
+	font-size: 10.5px;
+	font-weight: 700;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
+`
+
+/* ─── Grouped column backgrounds ──────────────────────────────────
+ * Visually buckets the money columns into 3 bands:
+ *   • "Rate" group     — Rate / Hours / Monthly base   → soft slate
+ *   • "Earnings" group — Tax / Bonus / Advance         → soft amber
+ *   • "Payout" group   — Gross / To pay now / Fee / Total → soft sky
+ * Each cell has a per-column className `col-<key>` emitted by
+ * DataTable; we tint the whole column in one shot. */
 const StatusPill = styled.span<{ $paid: boolean }>`
 	display: inline-block;
 	padding: 3px 10px;
@@ -684,6 +780,63 @@ const StatusPill = styled.span<{ $paid: boolean }>`
 	font-weight: 800;
 	letter-spacing: 0.5px;
 	text-transform: uppercase;
+	transition:
+		background 160ms ease,
+		color 160ms ease;
+`
+
+/* Column groups separated by thin vertical rules.
+ *
+ * Row hover — "Spotlight lift": the row raises 1px, scales very
+ * slightly (1.003), picks up a soft two-layer shadow, and animates
+ * in with a punchy overshoot (lifts to 2px before settling at 1px).
+ * Leave is smooth. */
+const GroupedTableWrap = styled.div`
+	th.col-rate,
+	td.col-rate,
+	th.col-tax,
+	td.col-tax,
+	th.col-totalAccrued,
+	td.col-totalAccrued {
+		border-left: 1px solid rgba(15, 23, 42, 0.1);
+	}
+
+	tbody tr {
+		transition:
+			background-color 220ms cubic-bezier(0.4, 0, 0.2, 1),
+			box-shadow 220ms cubic-bezier(0.4, 0, 0.2, 1),
+			transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+	}
+	tbody tr td {
+		transition: background 220ms cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	tbody tr:hover {
+		transform: translateY(-1px) scale(1.003);
+		box-shadow:
+			0 8px 20px -8px rgba(15, 23, 42, 0.18),
+			0 2px 6px -2px rgba(15, 23, 42, 0.1);
+		position: relative;
+		z-index: 2;
+		animation: rowLift 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+	tbody tr:hover td {
+		background: #ffffff !important;
+		border-left-color: rgba(15, 23, 42, 0.14) !important;
+	}
+
+	@keyframes rowLift {
+		0% {
+			transform: translateY(0) scale(1);
+			box-shadow: 0 0 0 rgba(15, 23, 42, 0);
+		}
+		60% {
+			transform: translateY(-2px) scale(1.006);
+		}
+		100% {
+			transform: translateY(-1px) scale(1.003);
+		}
+	}
 `
 
 const KpiRow = styled.div`
@@ -804,9 +957,9 @@ const DatePickerButton = styled.button<{ $active: boolean }>`
 	gap: 9px;
 	padding: 9px 16px;
 	border-radius: 999px;
-	border: 1.5px solid ${T.primary};
+	border: 1.5px solid #241e16;
 	background: #ffffff;
-	color: ${T.primary};
+	color: #241e16;
 	font-family: inherit;
 	font-size: 14px;
 	font-weight: 600;
@@ -818,7 +971,7 @@ const DatePickerButton = styled.button<{ $active: boolean }>`
 	transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
 
 	svg {
-		color: ${T.primary};
+		color: #241e16;
 		transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
@@ -855,8 +1008,8 @@ const DatePickerYear = styled.span`
 	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 	font-variant-numeric: tabular-nums;
 	font-size: 13px;
-	color: ${T.primary};
-	opacity: 0.75;
+	color: #241e16;
+	opacity: 0.6;
 	letter-spacing: -0.2px;
 `
 
@@ -1019,5 +1172,175 @@ const PickerTodayBtn = styled.button`
 	&:hover {
 		color: #0f4c81;
 		transform: translateY(-1px);
+	}
+`
+
+/* ─── Shared filter block (ported from Registry/FinancialList) ─── */
+
+const FiltersBlock = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	margin-top: 12px;
+	width: 100%;
+`
+
+const TopFilterRow = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 12px 16px;
+	min-height: 56px;
+	width: 100%;
+
+	.clear {
+		margin-left: auto;
+	}
+`
+
+const StatusGroup = styled.div`
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 14px;
+	flex: 0 1 auto;
+	min-width: 0;
+
+	.filter-lead {
+		display: inline-flex;
+		align-items: center;
+		gap: 12px;
+		padding-right: 22px;
+		border-right: 1px solid rgba(36, 30, 22, 0.08);
+	}
+	.filter-lead .lead-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		border-radius: 11px;
+		background: #241e16;
+		color: #fdfaf2;
+		transition:
+			transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+			background 220ms ease;
+	}
+	.filter-lead .lead-icon svg {
+		font-size: 20px;
+		transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+	.filter-lead:hover .lead-icon {
+		transform: rotate(-6deg) scale(1.08);
+		background: #e85d2f;
+	}
+	.filter-lead .lead-text {
+		display: flex;
+		flex-direction: column;
+		line-height: 1.15;
+		min-width: 78px;
+	}
+	.filter-lead .lead-text .top {
+		font-family: 'Fraunces', 'Georgia', serif;
+		font-variation-settings: 'opsz' 36;
+		font-size: 17px;
+		font-weight: 600;
+		color: #241e16;
+		letter-spacing: -0.2px;
+	}
+	.filter-lead .lead-text .bot {
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-variant-numeric: tabular-nums;
+		font-size: 10.5px;
+		color: #7d6e5d;
+		letter-spacing: 0.7px;
+		text-transform: uppercase;
+		margin-top: 3px;
+		white-space: nowrap;
+		transition: color 200ms ease;
+	}
+	.filter-lead:hover .lead-text .bot {
+		color: #e85d2f;
+	}
+`
+
+const BottomFilterRow = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 12px;
+	width: 100%;
+
+	.clear {
+		margin-left: auto;
+	}
+`
+
+/* Blue notary-stamp look: rotated slightly off-axis, double border,
+ * uppercase mono text, slightly faded like real ink. Original —
+ * doesn't repeat the handwritten orange callout used elsewhere. */
+const LEDGER_STAMP_BLUE = '#0369a1'
+
+const stampSlam = keyframes`
+	0%   { transform: rotate(-12deg) scale(1.35); opacity: 0; }
+	55%  { transform: rotate(-2deg)  scale(0.96); opacity: 1; }
+	80%  { transform: rotate(-5deg)  scale(1.02); }
+	100% { transform: rotate(-4deg)  scale(1); }
+`
+
+const LedgerStamp = styled.div`
+	display: inline-block;
+	transform: rotate(-4deg);
+	animation: ${stampSlam} 520ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	user-select: none;
+	pointer-events: none;
+	transition: transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+`
+
+const LedgerStampInner = styled.div`
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1px;
+	padding: 8px 20px 7px;
+	border: 2px solid ${LEDGER_STAMP_BLUE};
+	border-radius: 6px;
+	color: ${LEDGER_STAMP_BLUE};
+	background: transparent;
+	opacity: 0.85;
+	line-height: 1;
+
+	/* Inner double-border for the "notary" feel. */
+	&::before {
+		content: '';
+		position: absolute;
+		inset: 3px;
+		border: 1px solid ${LEDGER_STAMP_BLUE};
+		border-radius: 4px;
+		pointer-events: none;
+	}
+
+	.top,
+	.bot {
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-size: 9.5px;
+		font-weight: 700;
+		letter-spacing: 2.5px;
+		text-transform: uppercase;
+		opacity: 0.9;
+	}
+	.mid {
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-size: 22px;
+		font-weight: 800;
+		letter-spacing: -0.5px;
+		font-variant-numeric: tabular-nums;
+		line-height: 1;
+		margin: 2px 0;
+	}
+	.mid .slash {
+		opacity: 0.5;
+		margin: 0 2px;
 	}
 `

@@ -19,6 +19,7 @@ import PermissionGate from '../../components/auth/PermissionGate'
 import ConfirmModal from '../../components/_shared/ConfirmModal'
 import { useToast } from '../../context/toast/ToastContext'
 import { useGetEmployeesQuery } from '../../store/employees/employeesApi'
+import { TapeIndicator, TapePill, TapePills } from '../analytics/filters/filters.styled'
 import {
 	useGetPayrollQuery,
 	useCreatePayrollMutation,
@@ -105,15 +106,19 @@ const compute = (input: {
 	bonusPercent: number
 	fixedBonus: number
 	advance: number
+	payoneerFeePct: number
 }) => {
 	const base = input.rateType === 'HOURLY' ? input.rate * input.hours : input.rate
 	const tax = 42.5 + base * 0.06
 	const swt = base + tax
 	const bonusAmt = (swt * input.bonusPercent) / 100 + input.fixedBonus
 	const total = swt + bonusAmt
-	const remain = Math.max(0, total - input.advance)
-	const fee = total * 0.03
+	const fee = total * (input.payoneerFeePct / 100)
 	const cost = total + fee
+	/* Remaining = what still leaves the company's account this run:
+	 * employee salary + Payoneer fee − already-paid advance. Depends
+	 * on the fee %, so toggling 1%↔3% visibly moves this number. */
+	const remain = Math.max(0, cost - input.advance)
 	return { base, tax, swt, bonusAmt, total, remain, fee, cost }
 }
 
@@ -130,31 +135,38 @@ interface RowState {
 	bonusPercent: string
 	fixedBonus: string
 	advance: string
+	payoneerFeePct: 1 | 3
 	note: string
 }
 
-const emptyRow = (
-	e: {
-		id: string
-		firstName: string
-		lastName: string
-		positions: { id: string; title: string; slug: string }[]
-	},
-): RowState => ({
-	employeeId: e.id,
-	firstName: e.firstName,
-	lastName: e.lastName,
-	position: e.positions[0]?.title ?? '',
-	entryId: null,
-	status: 'NEW',
-	rateType: 'HOURLY',
-	rate: '',
-	hours: '',
-	bonusPercent: '0',
-	fixedBonus: '0',
-	advance: '0',
-	note: '',
-})
+const emptyRow = (e: {
+	id: string
+	firstName: string
+	lastName: string
+	positions: { id: string; title: string; slug: string }[]
+	compensationRates?: { rate: string; rateType: RateType; effectiveDate: string }[]
+}): RowState => {
+	const currentRate = e.compensationRates?.[0]
+	return {
+		employeeId: e.id,
+		firstName: e.firstName,
+		lastName: e.lastName,
+		position: e.positions[0]?.title ?? '',
+		entryId: null,
+		status: 'NEW',
+		rateType: currentRate?.rateType ?? 'HOURLY',
+		rate: currentRate?.rate ?? '',
+		hours:
+			currentRate && currentRate.rateType === 'HOURLY'
+				? '160'
+				: '',
+		bonusPercent: '0',
+		fixedBonus: '0',
+		advance: '0',
+		payoneerFeePct: 3,
+		note: '',
+	}
+}
 
 const fromEntry = (
 	e: {
@@ -177,6 +189,7 @@ const fromEntry = (
 	bonusPercent: p.bonusPercent,
 	fixedBonus: p.fixedBonus,
 	advance: p.advance,
+	payoneerFeePct: parseFloat(p.payoneerFeePct) === 1 ? 1 : 3,
 	note: p.note ?? '',
 })
 
@@ -186,6 +199,12 @@ const SalariesRun = () => {
 	const [year, setYear] = useState(currentYear())
 	const [month, setMonth] = useState(currentMonth())
 	const [selectedId, setSelectedId] = useState<string | null>(null)
+	const feePillsRef = useRef<HTMLDivElement>(null)
+	const [feeInd, setFeeInd] = useState<{ left: number; width: number; opacity: number }>({
+		left: 0,
+		width: 0,
+		opacity: 0,
+	})
 	const [toReopen, setToReopen] = useState<RowState | null>(null)
 	const [toMarkPaid, setToMarkPaid] = useState<RowState | null>(null)
 	const [markingPaid, setMarkingPaid] = useState(false)
@@ -259,9 +278,11 @@ const SalariesRun = () => {
 		}
 	}, [pickerOpen, year])
 
+	const activeInMonth = `${year}-${String(month).padStart(2, '0')}`
 	const { data: employeesPage, isLoading: empLoading } = useGetEmployeesQuery({
 		page: 1,
 		limit: 500,
+		activeInMonth,
 	})
 	const { data: entriesData, isLoading: entryLoading } = useGetPayrollQuery({ year, month })
 	const [createPayroll] = useCreatePayrollMutation()
@@ -270,6 +291,16 @@ const SalariesRun = () => {
 	const [reopen] = useReopenPayrollMutation()
 
 	const [rows, setRows] = useState<Record<string, RowState>>({})
+
+	/* Re-measure the orange tape position when the currently-selected
+	 * employee's own fee % changes OR when we switch employees (and
+	 * their stored fee may differ). */
+	const selectedFeePct = selectedId ? rows[selectedId]?.payoneerFeePct : null
+	useLayoutEffect(() => {
+		if (!feePillsRef.current) return
+		const el = feePillsRef.current.querySelector<HTMLButtonElement>('[data-active="true"]')
+		if (el) setFeeInd({ left: el.offsetLeft, width: el.offsetWidth, opacity: 1 })
+	}, [selectedFeePct, selectedId])
 
 	useEffect(() => {
 		if (!employeesPage) return
@@ -310,6 +341,7 @@ const SalariesRun = () => {
 			bonusPercent: num(row.bonusPercent),
 			fixedBonus: num(row.fixedBonus),
 			advance: num(row.advance),
+			payoneerFeePct: row.payoneerFeePct,
 			note: row.note.trim() || undefined,
 		}
 		try {
@@ -399,6 +431,7 @@ const SalariesRun = () => {
 				bonusPercent: num(r.bonusPercent),
 				fixedBonus: num(r.fixedBonus),
 				advance: num(r.advance),
+				payoneerFeePct: r.payoneerFeePct,
 			})
 			cost += c.cost
 			feesSum += c.fee
@@ -427,6 +460,7 @@ const SalariesRun = () => {
 				bonusPercent: num(selected.bonusPercent),
 				fixedBonus: num(selected.fixedBonus),
 				advance: num(selected.advance),
+				payoneerFeePct: selected.payoneerFeePct,
 			})
 		: null
 
@@ -560,6 +594,7 @@ const SalariesRun = () => {
 										bonusPercent: num(r.bonusPercent),
 										fixedBonus: num(r.fixedBonus),
 										advance: num(r.advance),
+										payoneerFeePct: r.payoneerFeePct,
 									})
 									return (
 										<RosterItem
@@ -679,11 +714,9 @@ const SalariesRun = () => {
 											min='0'
 											value={selected.rate}
 											placeholder='0.00'
-											disabled={selected.status === 'PAID'}
-											onChange={(e) =>
-												setRowField(selected.employeeId, 'rate', e.target.value)
-											}
-											onBlur={() => persistRow(rows[selected.employeeId])}
+											readOnly
+											disabled
+											title='Rate is pulled from the latest Salary Review and cannot be edited here'
 										/>
 									</Field>
 
@@ -770,6 +803,46 @@ const SalariesRun = () => {
 										<LedgerLbl>Bonus</LedgerLbl>
 										<LedgerVal>
 											<CountMoney value={preview?.bonusAmt ?? 0} duration={500} />
+										</LedgerVal>
+									</LedgerRow>
+									<LedgerRow>
+										<LedgerLbl>
+											Payoneer fee
+											<FeeTapeWrap>
+												<TapePills ref={feePillsRef} role='group' aria-label='Payoneer fee percent'>
+													<TapeIndicator
+														style={{
+															transform: `translateX(${feeInd.left}px) rotate(-1.2deg)`,
+															width: `${feeInd.width}px`,
+															opacity: feeInd.opacity,
+														}}
+													/>
+													{([1, 3] as const).map((pct) => (
+														<TapePill
+															key={pct}
+															type='button'
+															data-active={selected.payoneerFeePct === pct || undefined}
+															aria-pressed={selected.payoneerFeePct === pct}
+															$active={selected.payoneerFeePct === pct}
+															disabled={selected.status === 'PAID'}
+															onClick={() => {
+																setRowField(selected.employeeId, 'payoneerFeePct', pct)
+																if (selected.status !== 'PAID') {
+																	persistRow({
+																		...rows[selected.employeeId],
+																		payoneerFeePct: pct,
+																	})
+																}
+															}}
+														>
+															{pct}%
+														</TapePill>
+													))}
+												</TapePills>
+											</FeeTapeWrap>
+										</LedgerLbl>
+										<LedgerVal>
+											<CountMoney value={preview?.fee ?? 0} duration={500} />
 										</LedgerVal>
 									</LedgerRow>
 									<LedgerSum>
@@ -2144,3 +2217,32 @@ const LedgerValSum = styled.span`
 	letter-spacing: -0.3px;
 `
 
+
+/* Payoneer fee inline toggle — the shared TapePills tape-pill
+ * component (same as our page-level filters), just scaled down. The
+ * descendant override tightens TapePill's native 7px/16px padding so
+ * the two cells sit snug in a ledger row while keeping the text
+ * legible: tabular-nums for digit alignment, slightly tight tracking,
+ * and the top of a sans weight scale (700) so "1%"/"3%" read bold
+ * without being heavy. */
+const FeeTapeWrap = styled.span`
+	display: inline-flex;
+	align-items: center;
+	margin-left: 10px;
+
+	& > div {
+		padding: 3px;
+	}
+	& button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 44px;
+		padding: 5px 14px;
+		font-size: 13px;
+		font-weight: 700;
+		letter-spacing: -0.1px;
+		font-variant-numeric: tabular-nums;
+		text-align: center;
+	}
+`

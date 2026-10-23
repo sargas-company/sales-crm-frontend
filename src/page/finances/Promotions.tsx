@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import {
 	LocalOfferOutlined,
-	TrendingUpOutlined,
-	TrendingFlatOutlined,
-	ScheduleOutlined,
 	DeleteOutline,
 	EditOutlined,
 	AddRounded,
+	SearchOutlined,
+	ClearRounded,
+	HourglassEmptyOutlined,
+	TrendingUpOutlined,
+	TrendingFlatOutlined,
+	ScheduleOutlined,
+	VisibilityOutlined,
 } from '@mui/icons-material'
 import { T } from '../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../components/_shared/ListPageShell'
@@ -18,10 +22,18 @@ import {
 	IconAction,
 	TableSkeleton,
 } from '../../components/_shared/DataTable'
+import { TapeIndicator, TapePill, TapePills } from '../analytics/filters/filters.styled'
+import {
+	ClearBtn,
+	InlineField,
+	InlineSelect,
+	SearchPill,
+} from '../../components/_shared/filters/freshPaperFilters'
 import type { DataTableColumn, SortState } from '../../components/_shared/DataTable'
 import { PrimarySolidButton } from '../../components/_shared/formShell.styled'
 import PermissionGate from '../../components/auth/PermissionGate'
 import ConfirmModal from '../../components/_shared/ConfirmModal'
+import BulkActionBar from '../../components/_shared/BulkActionBar'
 import { useToast } from '../../context/toast/ToastContext'
 import useDebouncedValue from '../../hooks/useDebouncedValue'
 import {
@@ -94,8 +106,98 @@ const Promotions = () => {
 	})
 	const [page, setPage] = useState(1)
 	const [toDelete, setToDelete] = useState<SalaryReview | null>(null)
+	const [selected, setSelected] = useState<Set<string>>(() => new Set())
+	const [bulkOpen, setBulkOpen] = useState(false)
+	const [bulkDeleting, setBulkDeleting] = useState(false)
 
 	useEffect(() => setPage(1), [search, status, resultFilter])
+
+	const pillsRef = useRef<HTMLDivElement>(null)
+	const [ind, setInd] = useState<{ left: number; width: number; opacity: number }>({
+		left: 0,
+		width: 0,
+		opacity: 0,
+	})
+	useLayoutEffect(() => {
+		if (!pillsRef.current) return
+		const el = pillsRef.current.querySelector<HTMLButtonElement>('[data-active="true"]')
+		if (el) setInd({ left: el.offsetLeft, width: el.offsetWidth, opacity: 1 })
+	}, [resultFilter])
+
+	const activeResultLabel =
+		resultFilter === 'INCREASED' ? 'INCREASED'
+			: resultFilter === 'NO_CHANGE' ? 'NO CHANGE'
+			: resultFilter === 'POSTPONED' ? 'POSTPONED'
+			: 'ALL'
+
+	const activeFilterCount =
+		(search ? 1 : 0) + (status ? 1 : 0) + (resultFilter ? 1 : 0)
+
+	const clearAll = () => {
+		setSearchInput('')
+		setStatus('')
+		setResultFilter('')
+	}
+
+	const selectionCtx = {
+		selected,
+		onToggleRow: (id: string, next: boolean) => {
+			setSelected((prev) => {
+				const nextSet = new Set(prev)
+				if (next) nextSet.add(id)
+				else nextSet.delete(id)
+				return nextSet
+			})
+		},
+		onToggleAllOnPage: (pageRows: SalaryReview[], next: boolean) => {
+			setSelected((prev) => {
+				const nextSet = new Set(prev)
+				for (const r of pageRows) {
+					if (next) nextSet.add(r.id)
+					else nextSet.delete(r.id)
+				}
+				return nextSet
+			})
+		},
+		headerLabel: 'Select all reviews on this page',
+		rowLabel: (r: SalaryReview) =>
+			`Select review for ${r.employee.firstName} ${r.employee.lastName}`,
+	}
+
+	const runBulkDelete = async () => {
+		if (selected.size === 0) return
+		setBulkDeleting(true)
+		const ids = [...selected]
+		const results = await Promise.allSettled(
+			ids.map((id) => deleteReview(id).unwrap()),
+		)
+		const succeeded = new Set<string>()
+		let failedCount = 0
+		results.forEach((r, i) => {
+			if (r.status === 'fulfilled') succeeded.add(ids[i])
+			else failedCount++
+		})
+		/* Prune succeeded ids from the selection so a re-confirm never
+		 * retries ones that are already gone (would 404). Failed ids
+		 * stay selected so the user can see and retry them. */
+		setSelected((prev) => {
+			const next = new Set(prev)
+			for (const id of succeeded) next.delete(id)
+			return next
+		})
+		if (failedCount === 0) {
+			showToast(`Deleted ${ids.length} reviews`, 'success')
+		} else if (succeeded.size === 0) {
+			showToast(`Failed to delete ${failedCount} reviews`, 'error')
+		} else {
+			showToast(
+				`Deleted ${succeeded.size} of ${ids.length} · ${failedCount} failed`,
+				'error',
+			)
+		}
+		setBulkOpen(false)
+		setBulkDeleting(false)
+	}
 
 	const { data, isLoading, isError, refetch } = useGetSalaryReviewsQuery({
 		page,
@@ -111,6 +213,36 @@ const Promotions = () => {
 	const rows = data?.data ?? []
 	const total = data?.total ?? 0
 
+	const stats = useMemo(() => {
+		let pending = 0
+		let increased = 0
+		let noChange = 0
+		let postponed = 0
+		let raiseSum = 0
+		let raiseCount = 0
+		for (const r of rows) {
+			if (r.result === null || r.result === undefined) pending++
+			else if (r.result === 'INCREASED') {
+				increased++
+				const p = parseFloat(r.previousRate ?? '0')
+				const n = parseFloat(r.newRate ?? '0')
+				if (p > 0 && n > 0) {
+					raiseSum += ((n - p) / p) * 100
+					raiseCount++
+				}
+			} else if (r.result === 'NO_CHANGE') noChange++
+			else if (r.result === 'POSTPONED') postponed++
+		}
+		return {
+			pending,
+			increased,
+			noChange,
+			postponed,
+			avgRaise: raiseCount > 0 ? raiseSum / raiseCount : 0,
+			raiseCount,
+		}
+	}, [rows])
+
 	const columns: DataTableColumn<SalaryReview>[] = [
 		{
 			key: 'employee',
@@ -123,20 +255,6 @@ const Promotions = () => {
 				</NameText>
 			),
 			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
-		},
-		{
-			key: 'position',
-			label: 'Position',
-			minWidth: 160,
-			render: (r) =>
-				r.employee.positions.length > 0 ? (
-					<PositionPill title={r.employee.positions[0].title}>
-						{r.employee.positions[0].title}
-					</PositionPill>
-				) : (
-					<SubText>—</SubText>
-				),
-			skeleton: () => <TableSkeleton $w='90px' $h='22px' style={{ borderRadius: 999 }} />,
 		},
 		{
 			key: 'scheduledDate',
@@ -155,12 +273,12 @@ const Promotions = () => {
 			sortValue: (r) => r.result ?? 'zzz-pending',
 			render: (r) =>
 				r.result ? (
-					<ResultPill $tone={r.result}>
-						{RESULT_META[r.result].icon}
-						{RESULT_META[r.result].label}
-					</ResultPill>
+					<ResultPill $tone={r.result}>{RESULT_META[r.result].label}</ResultPill>
 				) : (
-					<PendingPill>Pending</PendingPill>
+					<PendingPill>
+						<HourglassEmptyOutlined />
+						Pending
+					</PendingPill>
 				),
 			skeleton: () => <TableSkeleton $w='90px' $h='22px' style={{ borderRadius: 999 }} />,
 		},
@@ -178,7 +296,7 @@ const Promotions = () => {
 									<RateTag>{r.previousRateType === 'HOURLY' ? '/h' : '/mo'}</RateTag>
 								</>
 							) : (
-								<SubText>—</SubText>
+								<EmptyBadge>N/A</EmptyBadge>
 							)}
 						</RateNode>
 						<Arrow>→</Arrow>
@@ -189,12 +307,12 @@ const Promotions = () => {
 									<RateTag>{r.newRateType === 'HOURLY' ? '/h' : '/mo'}</RateTag>
 								</>
 							) : (
-								<SubText>—</SubText>
+								<EmptyBadge>N/A</EmptyBadge>
 							)}
 						</RateNode>
 					</RateFlow>
 				) : (
-					<SubText>—</SubText>
+					<EmptyBadge title='No rates recorded'>Not set</EmptyBadge>
 				),
 			skeleton: () => <TableSkeleton $w='140px' $h='14px' />,
 		},
@@ -211,10 +329,10 @@ const Promotions = () => {
 				return ((n - p) / p) * 100
 			},
 			render: (r) => {
-				if (!r.previousRate || !r.newRate) return <SubText>—</SubText>
+				if (!r.previousRate || !r.newRate) return <EmptyBadge>—</EmptyBadge>
 				const p = parseFloat(r.previousRate)
 				const n = parseFloat(r.newRate)
-				if (!p) return <SubText>—</SubText>
+				if (!p) return <EmptyBadge>—</EmptyBadge>
 				const pct = ((n - p) / p) * 100
 				return (
 					<DiffPct $pos={n > p}>
@@ -232,7 +350,11 @@ const Promotions = () => {
 			sortable: true,
 			sortValue: (r) => (r.effectiveDate ? new Date(r.effectiveDate) : new Date(0)),
 			render: (r) =>
-				r.effectiveDate ? <Mono>{fmtDay(r.effectiveDate)}</Mono> : <SubText>—</SubText>,
+				r.effectiveDate ? (
+					<Mono>{fmtDay(r.effectiveDate)}</Mono>
+				) : (
+					<EmptyBadge title='Not yet effective'>Not set</EmptyBadge>
+				),
 			skeleton: () => <TableSkeleton $w='110px' $h='14px' />,
 		},
 		{
@@ -240,6 +362,15 @@ const Promotions = () => {
 			label: 'Actions',
 			render: (r) => (
 				<Actions>
+					<PermissionGate permission='compensation_reviews:view'>
+						<IconAction
+							type='button'
+							onClick={() => navigate(`/finances/promotions/view/${r.id}`)}
+							aria-label='View salary review'
+						>
+							<VisibilityOutlined />
+						</IconAction>
+					</PermissionGate>
 					<PermissionGate permission='compensation_reviews:update'>
 						<IconAction
 							type='button'
@@ -264,27 +395,97 @@ const Promotions = () => {
 		},
 	]
 
+	const RESULT_OPTIONS: Array<{ value: '' | SalaryReviewResult; label: string }> = [
+		{ value: '', label: 'All' },
+		{ value: 'INCREASED', label: 'Increased' },
+		{ value: 'NO_CHANGE', label: 'No change' },
+		{ value: 'POSTPONED', label: 'Postponed' },
+	]
+
 	const filters = (
-		<>
-			<FilterSelect
-				value={status}
-				onChange={(e) => setStatus(e.target.value as SalaryReviewStatus | '')}
-			>
-				<option value=''>All statuses</option>
-				<option value='upcoming'>Upcoming</option>
-				<option value='completed'>Completed</option>
-				<option value='postponed'>Postponed</option>
-			</FilterSelect>
-			<FilterSelect
-				value={resultFilter}
-				onChange={(e) => setResultFilter(e.target.value as SalaryReviewResult | '')}
-			>
-				<option value=''>All results</option>
-				<option value='INCREASED'>Increased</option>
-				<option value='NO_CHANGE'>No change</option>
-				<option value='POSTPONED'>Postponed</option>
-			</FilterSelect>
-		</>
+		<FiltersBlock role='region' aria-label='Salary reviews filters'>
+			<TopFilterRow>
+				<ResultGroup>
+					<div className='filter-lead'>
+						<span className='lead-icon'>
+							<LocalOfferOutlined />
+						</span>
+						<div className='lead-text'>
+							<span className='top'>Result</span>
+							<span className='bot'>{activeResultLabel}</span>
+						</div>
+					</div>
+					<TapePills ref={pillsRef} role='tablist' aria-label='Result'>
+						<TapeIndicator
+							style={{
+								transform: `translateX(${ind.left}px) rotate(-1.2deg)`,
+								width: `${ind.width}px`,
+								opacity: ind.opacity,
+							}}
+						/>
+						{RESULT_OPTIONS.map((opt) => (
+							<TapePill
+								key={opt.value || 'all'}
+								type='button'
+								role='tab'
+								data-active={resultFilter === opt.value || undefined}
+								aria-selected={resultFilter === opt.value}
+								$active={resultFilter === opt.value}
+								onClick={() => setResultFilter(opt.value as SalaryReviewResult | '')}
+							>
+								{opt.label}
+							</TapePill>
+						))}
+					</TapePills>
+				</ResultGroup>
+
+				<InlineField>
+					<span className='l'>Status</span>
+					<InlineSelect
+						value={status}
+						onChange={(e) => setStatus(e.target.value as SalaryReviewStatus | '')}
+					>
+						<option value=''>Any</option>
+						<option value='upcoming'>Upcoming</option>
+						<option value='completed'>Completed</option>
+						<option value='postponed'>Postponed</option>
+					</InlineSelect>
+				</InlineField>
+
+				<SearchPill className='search'>
+					<SearchOutlined className='ico' />
+					<input
+						type='text'
+						name='search-reviews'
+						placeholder='Search employee or note'
+						value={searchInput}
+						onChange={(e) => setSearchInput(e.target.value)}
+						aria-label='Search by employee or note'
+					/>
+				</SearchPill>
+
+				<BulkBarSlot aria-live='polite'>
+					<BulkActionBar
+						persistent
+						count={selected.size}
+						onClear={() => setSelected(new Set())}
+						onConfirm={() => setBulkOpen(true)}
+						isLoading={bulkDeleting}
+					/>
+				</BulkBarSlot>
+			</TopFilterRow>
+
+			<BottomFilterRow>
+				<ClearBtn
+					type='button'
+					onClick={clearAll}
+					disabled={activeFilterCount === 0}
+				>
+					<ClearRounded style={{ fontSize: 15 }} />
+					Clear
+				</ClearBtn>
+			</BottomFilterRow>
+		</FiltersBlock>
 	)
 
 	return (
@@ -305,11 +506,51 @@ const Promotions = () => {
 						</PrimarySolidButton>
 					</PermissionGate>
 				}
-				searchPlaceholder='Search by employee or note'
-				search={searchInput}
-				onSearchChange={setSearchInput}
 				filters={filters}
 			>
+				{!isError && (
+					<KpiRow>
+						<KpiCard>
+							<KpiIcon>
+								<LocalOfferOutlined />
+							</KpiIcon>
+							<KpiBody>
+								<KpiLabel>Total reviews</KpiLabel>
+								<KpiNum>{total}</KpiNum>
+							</KpiBody>
+						</KpiCard>
+						<KpiCard>
+							<KpiIcon>
+								<HourglassEmptyOutlined />
+							</KpiIcon>
+							<KpiBody>
+								<KpiLabel>Pending</KpiLabel>
+								<KpiNum>{stats.pending}</KpiNum>
+							</KpiBody>
+						</KpiCard>
+						<KpiCard>
+							<KpiIcon>
+								<TrendingUpOutlined />
+							</KpiIcon>
+							<KpiBody>
+								<KpiLabel>Increased</KpiLabel>
+								<KpiNum>{stats.increased}</KpiNum>
+							</KpiBody>
+						</KpiCard>
+						<KpiCard>
+							<KpiIcon>
+								<TrendingFlatOutlined />
+							</KpiIcon>
+							<KpiBody>
+								<KpiLabel>Avg raise</KpiLabel>
+								<KpiNum>
+									{stats.raiseCount > 0 ? `+${stats.avgRaise.toFixed(1)}%` : '—'}
+								</KpiNum>
+							</KpiBody>
+						</KpiCard>
+					</KpiRow>
+				)}
+
 				<DataTable
 					columns={columns}
 					rows={rows}
@@ -320,6 +561,7 @@ const Promotions = () => {
 					searchActive={!!search || !!status || !!resultFilter}
 					sort={sort}
 					onSortChange={setSort}
+					selection={selectionCtx}
 					pagination={{
 						page,
 						pageSize: PAGE_SIZE,
@@ -328,6 +570,27 @@ const Promotions = () => {
 					}}
 				/>
 			</ListPageShell>
+
+			{bulkOpen && (
+				<ConfirmModal
+					icon={<DeleteOutline />}
+					iconTone='danger'
+					title={`Delete ${selected.size} salary review${selected.size === 1 ? '' : 's'}?`}
+					description={
+						<>
+							You are about to delete <strong>{selected.size}</strong> salary review
+							{selected.size === 1 ? '' : 's'}. If any were INCREASED, their derived
+							compensation rate rows are also removed. This cannot be undone.
+						</>
+					}
+					confirmLabel={`Delete ${selected.size}`}
+					confirmLoadingLabel='Deleting…'
+					confirmColor='error'
+					isLoading={bulkDeleting}
+					onConfirm={runBulkDelete}
+					onClose={() => setBulkOpen(false)}
+				/>
+			)}
 
 			{toDelete && (
 				<ConfirmModal
@@ -374,29 +637,6 @@ const NameText = styled.span`
 	white-space: nowrap;
 `
 
-const PositionPill = styled.span`
-	display: inline-block;
-	padding: 3px 10px;
-	border-radius: 999px;
-	background: ${T.subtleBg};
-	color: ${T.textSecondary};
-	font-size: 11px;
-	font-weight: 700;
-	letter-spacing: 0.4px;
-	text-transform: uppercase;
-	border: 1px solid ${T.border};
-	white-space: nowrap;
-	max-width: 100%;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	vertical-align: middle;
-`
-
-const SubText = styled.span`
-	font-size: 12px;
-	color: ${T.textSecondary};
-`
-
 const Mono = styled.span`
 	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 	font-variant-numeric: tabular-nums;
@@ -404,30 +644,64 @@ const Mono = styled.span`
 	font-size: 13px;
 `
 
+/* Canonical pill — mirrors ClientList.StatusPill geometry
+ * (padding 4px 10px / font 11px / weight 700 / letter-spacing 0.3px /
+ * border-radius 999px / nowrap / uppercase). */
 const ResultPill = styled.span<{ $tone: SalaryReviewResult }>`
 	display: inline-flex;
 	align-items: center;
-	gap: 4px;
-	padding: 3px 10px;
+	padding: 4px 10px;
 	border-radius: 999px;
-	font-size: 10.5px;
-	font-weight: 800;
-	letter-spacing: 0.5px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
 	background: ${({ $tone }) => RESULT_META[$tone].bg};
 	color: ${({ $tone }) => RESULT_META[$tone].color};
 	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
 `
 
 const PendingPill = styled.span`
-	display: inline-block;
-	padding: 3px 10px;
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 4px 10px;
 	border-radius: 999px;
-	font-size: 10.5px;
-	font-weight: 800;
-	letter-spacing: 0.5px;
-	background: ${T.primaryTint};
-	color: ${T.primary};
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
+	background: rgba(100, 116, 139, 0.14);
+	color: #475569;
 	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
+
+	svg {
+		font-size: 14px;
+	}
+`
+
+const EmptyBadge = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 9px;
+	border-radius: 999px;
+	border: 1.5px dashed rgba(100, 116, 139, 0.4);
+	background: rgba(100, 116, 139, 0.06);
+	color: #64748b;
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
+
+	svg {
+		font-size: 13px;
+		opacity: 0.7;
+	}
 `
 
 const RateFlow = styled.span`
@@ -470,22 +744,187 @@ const DiffPct = styled.span<{ $pos: boolean }>`
 	color: ${({ $pos }) => ($pos ? '#15803d' : '#c94b4b')};
 `
 
-const FilterSelect = styled.select`
-	appearance: none;
-	padding: 8px 30px 8px 14px;
-	border-radius: 999px;
-	border: 1.5px solid #cec9d8;
-	background: #ffffff;
-	font: inherit;
-	font-size: 13px;
-	color: ${T.textStrong};
-	cursor: pointer;
-	outline: none;
-	background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3e%3cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23475569' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
-	background-repeat: no-repeat;
-	background-position: right 10px center;
-	&:focus {
-		border-color: ${T.primary};
-		box-shadow: 0 0 0 3px ${T.primaryTint};
+/* Shared filter block (ported from Registry/Salaries). */
+const FiltersBlock = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	margin-top: 12px;
+	width: 100%;
+`
+
+const TopFilterRow = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 12px 16px;
+	min-height: 56px;
+	width: 100%;
+
+	/* Compact search: just enough to type a name, so the row holds
+	 * Result pills + Status + Search + BulkBar on one line. */
+	.search {
+		flex: 0 0 auto;
 	}
+	.search input {
+		width: 160px;
+	}
+`
+
+const BottomFilterRow = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 12px;
+	width: 100%;
+	justify-content: flex-end;
+`
+
+const ResultGroup = styled.div`
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 14px;
+	flex: 0 1 auto;
+	min-width: 0;
+
+	.filter-lead {
+		display: inline-flex;
+		align-items: center;
+		gap: 12px;
+		padding-right: 22px;
+		border-right: 1px solid rgba(36, 30, 22, 0.08);
+	}
+	.filter-lead .lead-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		border-radius: 11px;
+		background: #241e16;
+		color: #fdfaf2;
+		transition:
+			transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+			background 220ms ease;
+	}
+	.filter-lead .lead-icon svg {
+		font-size: 20px;
+		transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+	.filter-lead:hover .lead-icon {
+		transform: rotate(-6deg) scale(1.08);
+		background: #e85d2f;
+	}
+	.filter-lead .lead-text {
+		display: flex;
+		flex-direction: column;
+		line-height: 1.15;
+		min-width: 78px;
+	}
+	.filter-lead .lead-text .top {
+		font-family: 'Fraunces', 'Georgia', serif;
+		font-variation-settings: 'opsz' 36;
+		font-size: 17px;
+		font-weight: 600;
+		color: #241e16;
+		letter-spacing: -0.2px;
+	}
+	.filter-lead .lead-text .bot {
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-variant-numeric: tabular-nums;
+		font-size: 10.5px;
+		color: #7d6e5d;
+		letter-spacing: 0.7px;
+		text-transform: uppercase;
+		margin-top: 3px;
+		white-space: nowrap;
+		transition: color 200ms ease;
+	}
+	.filter-lead:hover .lead-text .bot {
+		color: #e85d2f;
+	}
+`
+
+/* ─── KPI cards (Time Off pattern) ─────────────────────────────── */
+
+const KpiRow = styled.div`
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 12px;
+	margin: 14px 0;
+	width: 100%;
+
+	@media (max-width: 900px) {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	@media (max-width: 520px) {
+		grid-template-columns: minmax(0, 1fr);
+	}
+`
+
+const KpiCard = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	width: 100%;
+	min-width: 0;
+	padding: 16px 18px;
+	border-radius: 14px;
+	background: #ffffff;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+`
+
+const KpiIcon = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 46px;
+	height: 46px;
+	border-radius: 12px;
+	background: ${T.primaryTint};
+	color: ${T.primary};
+	flex-shrink: 0;
+
+	svg {
+		font-size: 26px;
+	}
+`
+
+const KpiBody = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+`
+
+const KpiLabel = styled.div`
+	font-size: 12px;
+	font-weight: 700;
+	color: ${T.textSecondary};
+	text-transform: uppercase;
+	letter-spacing: 0.55px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+`
+
+const KpiNum = styled.div`
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-size: 30px;
+	font-weight: 700;
+	color: ${T.textStrong};
+	line-height: 1.05;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.7px;
+`
+
+/* Reserved spot for the BulkActionBar — persistent so toggling
+ * selection never jumps the surrounding filter row. Anchored to the
+ * right end of the top filter line. */
+const BulkBarSlot = styled.div`
+	display: inline-flex;
+	align-items: center;
+	min-height: 48px;
+	margin-left: auto;
 `

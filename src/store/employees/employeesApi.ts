@@ -86,6 +86,10 @@ export interface EmployeeListParams {
 	/** 1..12 calendar month; matches employees whose dateOfBirth
 	 *  falls in this month (year-agnostic). */
 	birthdayMonth?: number
+	/** YYYY-MM — filters to employees who were active at any point
+	 *  during that calendar month. Used by Monthly Run to form the
+	 *  payable list (includes mid-month terminations and rehires). */
+	activeInMonth?: string
 }
 
 export interface CreateEmployeeBody {

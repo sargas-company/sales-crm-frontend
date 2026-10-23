@@ -73,9 +73,13 @@ const PaymentSourceFormInner = ({ id, initial }: { id?: string; initial: FormFie
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
 		if (!validate()) return
+		const trimmedDesc = fields.description.trim()
 		const body = {
 			name: fields.name.trim(),
-			description: fields.description.trim() || undefined,
+			/* `null` clears a previously-set description; `undefined`
+			 * would be dropped from the JSON body entirely, which the
+			 * backend reads as "leave untouched". */
+			description: isEdit ? (trimmedDesc || null) : (trimmedDesc || undefined),
 			currency: fields.currency.toUpperCase(),
 			isActive: fields.isActive === 'active',
 		}

@@ -46,6 +46,7 @@ const FinancesPaymentSourceEdit = lazy(() => import('./finances/PaymentSourceEdi
 const FinancesPromotions = lazy(() => import('./finances/Promotions'))
 const FinancesPromotionsAdd = lazy(() => import('./finances/PromotionsAdd'))
 const FinancesPromotionsEdit = lazy(() => import('./finances/PromotionsEdit'))
+const FinancesPromotionsView = lazy(() => import('./finances/PromotionsView'))
 const LinkedInIdeas = lazy(() => import('./linkedin/Ideas'))
 const LinkedInIdeasAdd = lazy(() => import('./linkedin/IdeasAdd'))
 const LinkedInIdeasEdit = lazy(() => import('./linkedin/IdeasEdit'))
@@ -403,6 +404,14 @@ const Home = () => {
 								element={
 									<ProtectedRoute permission='compensation_reviews:update'>
 										<FinancesPromotionsEdit />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/finances/promotions/view/:id'
+								element={
+									<ProtectedRoute permission='compensation_reviews:view'>
+										<FinancesPromotionsView />
 									</ProtectedRoute>
 								}
 							/>

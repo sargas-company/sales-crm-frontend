@@ -145,19 +145,19 @@ const navList: NavOptions[] = [
 		childrens: [
 			format('Payments', '/finances/payments', <PaymentOutlined />, 'finances_weekly:view'),
 			format(
-				'Payments List',
+				'Registry',
 				'/finances/payments-list',
 				<ListAltOutlinedFw />,
 				'finances_weekly:view'
 			),
 			format('Salaries', '/finances/salaries', <AttachMoneyOutlined />, 'salaries:view'),
-			format('Monthly run', '/finances/salaries/run', <ChecklistRtlOutlined />, 'salaries:view'),
 			format(
 				'Salary Reviews',
 				'/finances/promotions',
 				<LocalOfferOutlined />,
 				'compensation_reviews:view'
 			),
+			format('Monthly run', '/finances/salaries/run', <ChecklistRtlOutlined />, 'salaries:view'),
 			format(
 				'Payment Sources',
 				'/finances/payment-source',

@@ -6,6 +6,7 @@ import {
 	DeleteOutline,
 	EditOutlined,
 	AddRounded,
+	NotesOutlined,
 } from '@mui/icons-material'
 import { T } from '../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../components/_shared/ListPageShell'
@@ -73,7 +74,10 @@ const PaymentSource = () => {
 				r.description ? (
 					<DescText title={r.description}>{r.description}</DescText>
 				) : (
-					<SubText>—</SubText>
+					<EmptyBadge title='No description on file'>
+						<NotesOutlined />
+						No description
+					</EmptyBadge>
 				),
 			skeleton: () => <TableSkeleton $w='200px' $h='14px' />,
 		},
@@ -203,31 +207,58 @@ const DescText = styled.span`
 	color: ${T.textSecondary};
 `
 
-const SubText = styled.span`
-	font-size: 12px;
+const EmptyBadge = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	border: 1.5px dashed rgba(100, 116, 139, 0.4);
+	background: rgba(100, 116, 139, 0.06);
 	color: ${T.textSecondary};
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
+
+	svg {
+		font-size: 15px;
+		opacity: 0.7;
+	}
 `
 
+/* Canonical pill geometry — mirrors ClientList.StatusPill
+ * (padding 4px 10px / font 11px / weight 700 / letter-spacing 0.3px /
+ * border-radius 999px / nowrap / uppercase). */
 const CurrencyChip = styled.span`
-	display: inline-block;
-	padding: 3px 10px;
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
 	border-radius: 999px;
-	background: ${T.primaryTint};
-	color: ${T.primary};
-	font-family: 'JetBrains Mono', monospace;
+	background: rgba(59, 130, 246, 0.12);
+	color: #1d4ed8;
 	font-size: 11px;
-	font-weight: 800;
-	letter-spacing: 0.5px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	white-space: nowrap;
+	cursor: default;
 `
 
 const StatusPill = styled.span<{ $active: boolean }>`
-	display: inline-block;
-	padding: 3px 10px;
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
 	border-radius: 999px;
-	background: ${({ $active }) => ($active ? 'rgba(16, 185, 129, 0.15)' : '#f0edf9')};
-	color: ${({ $active }) => ($active ? '#059669' : '#5a5476')};
-	font-size: 10.5px;
-	font-weight: 800;
-	letter-spacing: 0.5px;
+	background: ${({ $active }) =>
+		$active ? 'rgba(34, 197, 94, 0.14)' : 'rgba(100, 116, 139, 0.16)'};
+	color: ${({ $active }) => ($active ? '#15803d' : '#334155')};
+	font-size: 11px;
+	font-weight: 700;
 	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	white-space: nowrap;
+	cursor: default;
 `
