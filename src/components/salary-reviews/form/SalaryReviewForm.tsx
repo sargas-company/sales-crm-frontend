@@ -156,7 +156,7 @@ const SalaryReviewFormInner = ({ id, initial }: { id?: string; initial: FormFiel
 										<SelectItem
 											key={e.id}
 											label={`${e.firstName} ${e.lastName}${
-												e.positions.length > 0 ? ` — ${e.positions[0]}` : ''
+												e.positions.length > 0 ? ` — ${e.positions[0].title}` : ''
 											}`}
 											value={e.id}
 										/>
