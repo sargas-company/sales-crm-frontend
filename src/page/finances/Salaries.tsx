@@ -105,7 +105,7 @@ const CountMoney = ({ value }: { value: string | number | null | undefined }) =>
 const Salaries = () => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
-	const [urlParams] = useSearchParams()
+	const [urlParams, setUrlParams] = useSearchParams()
 
 	// Deep-link support: /finances/salaries?year=..&month=..&sortBy=..&sortDirection=..
 	// lets other pages (e.g. Compensation Analytics) jump straight to
@@ -156,6 +156,20 @@ const Salaries = () => {
 	}
 	const [sort, setSort] = useState<SortState | null>(initialSort)
 	const [page, setPage] = useState(1)
+
+	/* Keep year/month in the URL so refresh/back/forward preserve the
+	 * month the user is looking at. Mirrors the SalariesRun picker. */
+	useEffect(() => {
+		setUrlParams(
+			(prev) => {
+				const next = new URLSearchParams(prev)
+				next.set('year', String(year))
+				next.set('month', String(month))
+				return next
+			},
+			{ replace: true },
+		)
+	}, [year, month, setUrlParams])
 	const [toDelete, setToDelete] = useState<PayrollEntry | null>(null)
 	const [toReopen, setToReopen] = useState<PayrollEntry | null>(null)
 	const [pickerOpen, setPickerOpen] = useState(false)

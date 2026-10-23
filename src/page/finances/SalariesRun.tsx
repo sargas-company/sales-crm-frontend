@@ -6,6 +6,7 @@ import {
 	useState,
 } from 'react'
 import { createPortal } from 'react-dom'
+import { useSearchParams } from 'react-router-dom'
 import styled, { css, keyframes } from 'styled-components'
 import {
 	CalendarMonthOutlined,
@@ -199,8 +200,31 @@ const fromEntry = (
 const SalariesRun = () => {
 	const { showToast } = useToast()
 
-	const [year, setYear] = useState(currentYear())
-	const [month, setMonth] = useState(currentMonth())
+	/* Persist the picker in the URL so refresh/back/forward preserve
+	 * the month the user is working in. Fallback to today when the
+	 * params are missing or malformed. */
+	const [searchParams, setSearchParams] = useSearchParams()
+	const parsedYear = Number(searchParams.get('year'))
+	const parsedMonth = Number(searchParams.get('month'))
+	const year =
+		Number.isInteger(parsedYear) && parsedYear >= 2000 && parsedYear <= 2100
+			? parsedYear
+			: currentYear()
+	const month =
+		Number.isInteger(parsedMonth) && parsedMonth >= 1 && parsedMonth <= 12
+			? parsedMonth
+			: currentMonth()
+	const setYearMonth = (nextYear: number, nextMonth: number) => {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev)
+				next.set('year', String(nextYear))
+				next.set('month', String(nextMonth))
+				return next
+			},
+			{ replace: true },
+		)
+	}
 	const [selectedId, setSelectedId] = useState<string | null>(null)
 	const feePillsRef = useRef<HTMLDivElement>(null)
 	const [feeInd, setFeeInd] = useState<{ left: number; width: number; opacity: number }>({
@@ -516,8 +540,7 @@ const SalariesRun = () => {
 									type='button'
 									$active={isCur}
 									onClick={() => {
-										setYear(pickerYear)
-										setMonth(monthIdx)
+										setYearMonth(pickerYear, monthIdx)
 										closePicker()
 									}}
 								>
