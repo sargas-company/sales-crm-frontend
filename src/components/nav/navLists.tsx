@@ -150,6 +150,7 @@ const navList: NavOptions[] = [
 				<ListAltOutlinedFw />,
 				'finances_weekly:view'
 			),
+			format('Monthly run', '/finances/salaries/run', <ChecklistRtlOutlined />, 'salaries:view'),
 			format('Salaries', '/finances/salaries', <AttachMoneyOutlined />, 'salaries:view'),
 			format(
 				'Salary Reviews',
@@ -157,7 +158,6 @@ const navList: NavOptions[] = [
 				<LocalOfferOutlined />,
 				'compensation_reviews:view'
 			),
-			format('Monthly run', '/finances/salaries/run', <ChecklistRtlOutlined />, 'salaries:view'),
 			format(
 				'Payment Sources',
 				'/finances/payment-source',
