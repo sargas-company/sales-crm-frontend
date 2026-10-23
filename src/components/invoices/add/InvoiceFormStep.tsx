@@ -52,8 +52,8 @@ type Party = {
 type InvoiceItem = {
 	id: string
 	name: string
-	quantity: number
-	unitCost: number
+	quantity: number | string
+	unitCost: number | string
 }
 
 type EditableLabelProps = {
@@ -143,8 +143,11 @@ const normalizeOptionalDate = (value: string) => {
 	return normalizeOptionalString(value)?.slice(0, 10)
 }
 
-const toNonNegativeNumber = (value: number) => {
-	const numberValue = Number(value)
+const toNonNegativeNumber = (value: number | string) => {
+	/* Accept both comma and dot as the decimal separator — European
+	 * locales type "44,3" and expect it to work. */
+	const normalized = typeof value === 'string' ? value.replace(',', '.') : value
+	const numberValue = Number(normalized)
 
 	if (!Number.isFinite(numberValue) || numberValue < 0) return 0
 
@@ -267,11 +270,11 @@ const buildInitialForm = (party: Party, selectedType: PartyType, invoice?: ApiIn
 				'70582800001644814\n' +
 				'Beneficiary name:\n' +
 				'Sargas Agency OU',
-		amountPaid: invoice?.amountPaid ?? 0,
+		amountPaid: invoice?.amountPaid != null ? String(invoice.amountPaid) : '',
 		taxMode: 'percent' as 'percent' | 'fixed',
-		tax: invoice?.tax ?? 0,
-		discounts: invoice?.discounts ?? 0,
-		shipping: invoice?.shipping ?? 0,
+		tax: invoice?.tax != null ? String(invoice.tax) : '',
+		discounts: invoice?.discounts != null ? String(invoice.discounts) : '',
+		shipping: invoice?.shipping != null ? String(invoice.shipping) : '',
 		showTax: invoice?.showTax ?? false,
 		showDiscounts: invoice?.showDiscounts ?? false,
 		showShipping: invoice?.showShipping ?? false,
@@ -1018,7 +1021,7 @@ const InvoiceFormStep: FC<Props> = ({
 											<TextField
 												value={item.quantity}
 												onChange={(e) =>
-													updateItem(item.id, 'quantity', Number(e.target.value))
+													updateItem(item.id, 'quantity', e.target.value)
 												}
 												sx={outlinedSx}
 											/>
@@ -1046,7 +1049,7 @@ const InvoiceFormStep: FC<Props> = ({
 												<TextField
 													value={item.unitCost}
 													onChange={(e) =>
-														updateItem(item.id, 'unitCost', Number(e.target.value))
+														updateItem(item.id, 'unitCost', e.target.value)
 													}
 													sx={{
 														...outlinedSx,
@@ -1225,7 +1228,7 @@ const InvoiceFormStep: FC<Props> = ({
 														setForm((current) => ({
 															...current,
 															showTax: false,
-															tax: 0,
+															tax: '',
 														}))
 													}
 													sx={{ color: '#98a2b3', p: 0.25, flexShrink: 0 }}
@@ -1247,7 +1250,7 @@ const InvoiceFormStep: FC<Props> = ({
 													onChange={(e) =>
 														setForm((current) => ({
 															...current,
-															tax: Number(e.target.value),
+															tax: e.target.value,
 														}))
 													}
 													sx={{
@@ -1314,7 +1317,7 @@ const InvoiceFormStep: FC<Props> = ({
 														setForm((current) => ({
 															...current,
 															showDiscounts: false,
-															discounts: 0,
+															discounts: '',
 														}))
 													}
 													sx={{ color: '#98a2b3', p: 0.25, flexShrink: 0 }}
@@ -1346,7 +1349,7 @@ const InvoiceFormStep: FC<Props> = ({
 														onChange={(e) =>
 															setForm((current) => ({
 																...current,
-																discounts: Number(e.target.value),
+																discounts: e.target.value,
 															}))
 														}
 														sx={{
@@ -1383,7 +1386,7 @@ const InvoiceFormStep: FC<Props> = ({
 														setForm((current) => ({
 															...current,
 															showShipping: false,
-															shipping: 0,
+															shipping: '',
 														}))
 													}
 													sx={{ color: '#98a2b3', p: 0.25, flexShrink: 0 }}
@@ -1415,7 +1418,7 @@ const InvoiceFormStep: FC<Props> = ({
 														onChange={(e) =>
 															setForm((current) => ({
 																...current,
-																shipping: Number(e.target.value),
+																shipping: e.target.value,
 															}))
 														}
 														sx={{
@@ -1559,7 +1562,7 @@ const InvoiceFormStep: FC<Props> = ({
 												onChange={(e) =>
 													setForm((current) => ({
 														...current,
-														amountPaid: Number(e.target.value),
+														amountPaid: e.target.value,
 													}))
 												}
 												sx={{

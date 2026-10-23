@@ -119,6 +119,7 @@ export const employeesApi = baseApi.injectEndpoints({
 				status,
 				position,
 				birthdayMonth,
+				activeInMonth,
 			}) => ({
 				url: '/employees',
 				params: {
@@ -130,6 +131,7 @@ export const employeesApi = baseApi.injectEndpoints({
 					status: status || undefined,
 					position: position || undefined,
 					birthdayMonth: birthdayMonth ?? undefined,
+					activeInMonth: activeInMonth || undefined,
 				},
 			}),
 			providesTags: ['Employee'],

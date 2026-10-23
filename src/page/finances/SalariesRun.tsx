@@ -309,16 +309,22 @@ const SalariesRun = () => {
 		if (!employeesPage) return
 		const byEmployee = new Map<string, PayrollEntry>()
 		for (const e of entriesData?.data ?? []) byEmployee.set(e.employeeId, e)
+		/* Advisors are shareholders — they appear in the directory but
+		 * don't receive payroll. Hide any employee whose position
+		 * catalogue includes an "Advisor" entry. */
+		const payable = employeesPage.data.filter(
+			(e) => !e.positions.some((p) => p.title.toLowerCase() === 'advisor'),
+		)
 		const next: Record<string, RowState> = {}
-		for (const emp of employeesPage.data) {
+		for (const emp of payable) {
 			const entry = byEmployee.get(emp.id)
 			next[emp.id] = entry ? fromEntry(emp, entry) : emptyRow(emp)
 		}
 		setRows(next)
 		// Pick the first employee as selected on month change.
-		if (employeesPage.data.length > 0) {
+		if (payable.length > 0) {
 			setSelectedId((prev) =>
-				prev && next[prev] ? prev : employeesPage.data[0].id,
+				prev && next[prev] ? prev : payable[0].id,
 			)
 		} else {
 			setSelectedId(null)
@@ -724,9 +730,12 @@ const SalariesRun = () => {
 											min='0'
 											value={selected.rate}
 											placeholder='0.00'
-											readOnly
-											disabled
-											title='Rate is pulled from the latest Salary Review and cannot be edited here'
+											disabled={selected.status === 'PAID'}
+											title='Pre-filled from the latest Salary Review — override for mid-month terminations or partial periods.'
+											onChange={(e) =>
+												setRowField(selected.employeeId, 'rate', e.target.value)
+											}
+											onBlur={() => persistRow(rows[selected.employeeId])}
 										/>
 									</Field>
 
