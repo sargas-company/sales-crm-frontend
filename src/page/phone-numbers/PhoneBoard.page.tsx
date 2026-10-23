@@ -263,10 +263,11 @@ const PhoneBoard = () => {
 
 export default PhoneBoard
 
-/* Pretty-print E.164: "+14155550123" → "+1 415 555 0123". No parsing,
- * just visual grouping; the raw string stays in the title attr. */
+/* Pretty-print Ukrainian E.164: "+380501234567" → "+38 050 123 4567".
+ * Groups: "+38" country, 3 operator (with leading 0 — e.g. 050 / 067),
+ * 3 subscriber, 4 subscriber. Non-matching strings pass through. */
 const prettyPhone = (raw: string): string =>
-	raw.replace(/^(\+\d{1,3})(\d{3})(\d{3})(\d+)$/, '$1 $2 $3 $4')
+	raw.replace(/^(\+38)(\d{3})(\d{3})(\d{4})$/, '$1 $2 $3 $4')
 
 /* ─── PhoneCard — ticket style ──────────────────────────────────── */
 
