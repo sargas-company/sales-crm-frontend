@@ -43,6 +43,11 @@ export interface AiSpendSummary {
 
 export type HeatmapMetric = 'all' | 'qualified' | 'hot' | 'qualifiedRate' | 'averageScore'
 
+export interface HeatmapCountry {
+	name: string
+	count: number
+}
+
 export interface HeatmapCell {
 	weekdayIndex: number
 	hour: number
@@ -51,6 +56,7 @@ export interface HeatmapCell {
 	hot: number
 	averageScore: number
 	qualifiedRate: number
+	countries: HeatmapCountry[]
 }
 
 export interface HeatmapDailyCell {
@@ -62,6 +68,7 @@ export interface HeatmapDailyCell {
 	hot: number
 	averageScore: number
 	qualifiedRate: number
+	countries: HeatmapCountry[]
 }
 
 export interface HeatmapData {

@@ -194,6 +194,64 @@ export const HeatmapTooltip = styled('div')`
 		color: ${T.textPrimary};
 		font-variant-numeric: tabular-nums;
 	}
+
+	.ht-countries {
+		margin-top: 12px;
+		padding-top: 10px;
+		border-top: 1px dashed rgba(15, 23, 42, 0.1);
+	}
+	.ht-countries-head {
+		font-size: 10.5px;
+		font-weight: 700;
+		letter-spacing: 0.5px;
+		text-transform: uppercase;
+		color: ${T.textMuted};
+		margin-bottom: 6px;
+	}
+	.ht-countries-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+		max-height: 180px;
+		overflow-y: auto;
+	}
+	.ht-countries-list li {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 10px;
+		font-size: 12px;
+	}
+	.ht-country-name {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		color: ${T.textPrimary};
+		font-weight: 500;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.ht-country-flag {
+		font-size: 24px;
+		line-height: 1;
+	}
+	.ht-country-count {
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-size: 11.5px;
+		font-weight: 700;
+		color: ${T.textPrimary};
+		font-variant-numeric: tabular-nums;
+	}
+	.ht-country-more {
+		justify-content: center !important;
+		font-size: 11px;
+		color: ${T.textMuted};
+		font-style: italic;
+	}
 `
 
 export const HeatmapLegend = styled('div')`
@@ -279,6 +337,7 @@ export const Recommendations = styled('div')`
 		display: flex;
 		flex-direction: column;
 		gap: 6px;
+		background: #ffffff;
 	}
 	.rec-term-line {
 		display: inline-flex;

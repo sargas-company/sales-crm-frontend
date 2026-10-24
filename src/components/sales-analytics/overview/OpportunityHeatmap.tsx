@@ -75,6 +75,39 @@ const heatColor = (v: number, max: number): string => {
 	return `rgb(${r}, ${g}, ${b})`
 }
 
+interface HeatCountry {
+	name: string
+	count: number
+}
+
+/* ISO-2 → flag + full name. Falls back to the raw name when the
+ * server stores free text that isn't a recognisable code (country
+ * flags are the one approved emoji-as-data use per frontend-design
+ * § Icons). "UK" is accepted as an alias for the ISO "GB". */
+const REGION_NAMES =
+	typeof Intl !== 'undefined' && 'DisplayNames' in Intl
+		? new Intl.DisplayNames(['en'], { type: 'region' })
+		: null
+
+const normalizeCountryCode = (raw: string): string | null => {
+	const t = raw.trim().toUpperCase()
+	if (t === 'UK') return 'GB'
+	if (/^[A-Z]{2}$/.test(t)) return t
+	return null
+}
+
+const flagEmoji = (code: string): string =>
+	String.fromCodePoint(
+		...[...code].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65),
+	)
+
+const prettyCountry = (name: string): { flag: string; label: string } => {
+	const code = normalizeCountryCode(name)
+	if (!code) return { flag: '', label: name }
+	const full = REGION_NAMES?.of(code) ?? code
+	return { flag: flagEmoji(code), label: full }
+}
+
 interface HeatCell {
 	weekdayIndex: number
 	hour: number
@@ -83,6 +116,7 @@ interface HeatCell {
 	hot: number
 	qualifiedRate: number
 	averageScore: number
+	countries: HeatCountry[]
 }
 
 const cellValue = (cell: HeatCell, metric: HeatmapMetric): number => {
@@ -615,6 +649,30 @@ const OpportunityHeatmap = () => {
 								<span className='ht-item-value'>{hover.cell.averageScore}</span>
 							</div>
 						</div>
+						{hover.cell.countries && hover.cell.countries.length > 0 && (
+							<div className='ht-countries'>
+								<div className='ht-countries-head'>By country</div>
+								<ul className='ht-countries-list'>
+									{hover.cell.countries.slice(0, 10).map((c) => {
+										const { flag, label } = prettyCountry(c.name)
+										return (
+											<li key={c.name}>
+												<span className='ht-country-name'>
+													{flag && <span className='ht-country-flag'>{flag}</span>}
+													{label}
+												</span>
+												<span className='ht-country-count'>{c.count}</span>
+											</li>
+										)
+									})}
+									{hover.cell.countries.length > 10 && (
+										<li className='ht-country-more'>
+											+{hover.cell.countries.length - 10} more
+										</li>
+									)}
+								</ul>
+							</div>
+						)}
 					</HeatmapTooltip>,
 					document.body
 				)}
