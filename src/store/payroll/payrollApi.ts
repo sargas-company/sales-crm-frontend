@@ -21,6 +21,8 @@ export interface PayrollEmployeeRef {
 	firstName: string
 	lastName: string
 	status: 'ACTIVE' | 'BENCH' | 'TERMINATED'
+	hiredAt: string | null
+	terminatedAt: string | null
 	positions: { id: string; title: string; slug: string }[]
 }
 
@@ -55,8 +57,15 @@ export interface PayrollEntry {
 }
 
 export interface PayrollListParams {
-	year: number
-	month: number
+	year?: number
+	month?: number
+	/* Range filter — inclusive both ends. If supplied the backend
+	 * ignores year/month and treats the request as spanning
+	 * (fromYear/fromMonth) → (toYear/toMonth). */
+	fromYear?: number
+	fromMonth?: number
+	toYear?: number
+	toMonth?: number
 	sortBy?: PayrollSortBy
 	sortDirection?: PayrollSortDirection
 	search?: string
@@ -100,11 +109,26 @@ export type UpdatePayrollBody = Partial<
 export const payrollApi = baseApi.injectEndpoints({
 	endpoints: (builder) => ({
 		getPayroll: builder.query<{ data: PayrollEntry[] }, PayrollListParams>({
-			query: ({ year, month, sortBy, sortDirection, search, status }) => ({
+			query: ({
+				year,
+				month,
+				fromYear,
+				fromMonth,
+				toYear,
+				toMonth,
+				sortBy,
+				sortDirection,
+				search,
+				status,
+			}) => ({
 				url: '/payroll',
 				params: {
 					year,
 					month,
+					fromYear,
+					fromMonth,
+					toYear,
+					toMonth,
 					sortBy,
 					sortDirection,
 					search: search || undefined,

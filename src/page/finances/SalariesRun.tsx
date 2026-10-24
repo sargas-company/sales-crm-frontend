@@ -13,6 +13,7 @@ import {
 	CheckCircleOutline,
 	LockOpenOutlined,
 	ChecklistRtlOutlined,
+	CalculateOutlined,
 } from '@mui/icons-material'
 import { T } from '../../components/sales-analytics/_shared/tokens'
 import { ListPageShell } from '../../components/_shared/ListPageShell'
@@ -21,6 +22,9 @@ import ConfirmModal from '../../components/_shared/ConfirmModal'
 import { useToast } from '../../context/toast/ToastContext'
 import { useGetEmployeesQuery } from '../../store/employees/employeesApi'
 import { TapeIndicator, TapePill, TapePills } from '../analytics/filters/filters.styled'
+import { CalcToggleBtn, CalcBtnLabel } from '../finance-weekly/financeWeekly.styled'
+import { Tooltip } from '../../components/_shared/Tooltip'
+import { HelpOutlineRounded } from '@mui/icons-material'
 import {
 	useGetPayrollQuery,
 	useCreatePayrollMutation,
@@ -246,6 +250,26 @@ const SalariesRun = () => {
 	const [pickerYear, setPickerYear] = useState(currentYear())
 	const closeTimerRef = useRef<number | null>(null)
 
+	/* "What if…" mode: click rows to toggle them out of the roll-up
+	 * and watch the Monthly Summary recompute live. Nothing is saved;
+	 * leaving the mode clears every exclusion. */
+	const [simulationMode, setSimulationMode] = useState(false)
+	const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set())
+	const toggleSimulationMode = () => {
+		setSimulationMode((on) => {
+			if (on) setExcludedIds(new Set())
+			return !on
+		})
+	}
+	const toggleExcluded = (employeeId: string) => {
+		setExcludedIds((prev) => {
+			const next = new Set(prev)
+			if (next.has(employeeId)) next.delete(employeeId)
+			else next.add(employeeId)
+			return next
+		})
+	}
+
 	const closePicker = () => {
 		if (!pickerOpen || pickerClosing) return
 		setPickerClosing(true)
@@ -325,13 +349,26 @@ const SalariesRun = () => {
 
 	/* Re-measure the orange tape position when the currently-selected
 	 * employee's own fee % changes OR when we switch employees (and
-	 * their stored fee may differ). */
+	 * their stored fee may differ). `rows` is in deps too — on first
+	 * page load the roster populates in a tick that may land after
+	 * selectedId is set, so without this the measure runs against an
+	 * empty TapePills container and the indicator stays invisible.
+	 * Wrapped in rAF so layout has settled before we read offsets. */
 	const selectedFeePct = selectedId ? rows[selectedId]?.payoneerFeePct : null
 	useLayoutEffect(() => {
 		if (!feePillsRef.current) return
-		const el = feePillsRef.current.querySelector<HTMLButtonElement>('[data-active="true"]')
-		if (el) setFeeInd({ left: el.offsetLeft, width: el.offsetWidth, opacity: 1 })
-	}, [selectedFeePct, selectedId])
+		const measure = () => {
+			if (!feePillsRef.current) return
+			const el = feePillsRef.current.querySelector<HTMLButtonElement>(
+				'[data-active="true"]',
+			)
+			if (el && el.offsetWidth > 0) {
+				setFeeInd({ left: el.offsetLeft, width: el.offsetWidth, opacity: 1 })
+			}
+		}
+		const raf = requestAnimationFrame(measure)
+		return () => cancelAnimationFrame(raf)
+	}, [selectedFeePct, selectedId, rows])
 
 	useEffect(() => {
 		if (!employeesPage) return
@@ -520,6 +557,8 @@ const SalariesRun = () => {
 		for (const r of Object.values(rows)) {
 			if (r.status === 'PAID') paidCount++
 			if (r.status !== 'NEW') filledCount++
+			/* "What if…" exclusion: skip rows the user has muted. */
+			if (excludedIds.has(r.employeeId)) continue
 			/* Only count rows that have real earnings in the month —
 			 * actual rate+hours work OR an explicit bonus. Pure
 			 * advance-only rows (service field) stay out of the roll-up. */
@@ -559,8 +598,9 @@ const SalariesRun = () => {
 			taxesSum,
 			bonusesSum,
 			baseSum,
+			excludedCount: excludedIds.size,
 		}
-	}, [rows])
+	}, [rows, excludedIds])
 
 	const selected = selectedId ? rows[selectedId] : null
 	const preview = selected
@@ -577,6 +617,33 @@ const SalariesRun = () => {
 
 	const monthFilter = (
 		<>
+			<WhatIfBtn
+				type='button'
+				$active={simulationMode}
+				$hasSelection={excludedIds.size > 0}
+				onClick={toggleSimulationMode}
+				title={
+					simulationMode
+						? 'Exit what-if mode'
+						: 'What if? Click people to exclude them from the roll-up — nothing is saved.'
+				}
+				aria-label={simulationMode ? 'Done — exit what-if mode' : 'What if — start excluding people'}
+			>
+				<CalculateOutlined />
+				<CalcBtnLabel>
+					<span className='sizer' aria-hidden='true'>
+						What if
+					</span>
+					<span key={simulationMode ? 'on' : 'off'} className='text'>
+						{simulationMode ? 'Done' : 'What if'}
+					</span>
+				</CalcBtnLabel>
+				{excludedIds.size > 0 && (
+					<span className='count-badge' key={excludedIds.size}>
+						{excludedIds.size}
+					</span>
+				)}
+			</WhatIfBtn>
 			<MonthBtn
 				ref={monthBtnRef}
 				type='button'
@@ -661,7 +728,37 @@ const SalariesRun = () => {
 							</InsciAccent>
 							<InsciDot>.</InsciDot>
 						</Inscription>
-						<HeaderFilterRow>{monthFilter}</HeaderFilterRow>
+						<HeaderFilterRow>
+							<Tooltip
+								title='What if - simulate exclusions'
+								preview={<WhatIfExplainer />}
+								description={
+									<TourList>
+										<li>
+											Click <b>What if</b> to enter simulation mode (button
+											turns orange).
+										</li>
+										<li>
+											Click any person in the roster to exclude or re-include
+											them.
+										</li>
+										<li>
+											The <b>Monthly Summary</b> below recomputes live without
+											the muted rows.
+										</li>
+										<li>
+											Nothing is saved - exit the mode and every exclusion is
+											cleared.
+										</li>
+									</TourList>
+								}
+							>
+								<DemoHelp type='button' aria-label='Help'>
+									<HelpOutlineRounded />
+								</DemoHelp>
+							</Tooltip>
+							{monthFilter}
+						</HeaderFilterRow>
 					</HeaderRight>
 				}
 			>
@@ -697,6 +794,7 @@ const SalariesRun = () => {
 							) : (
 								rowList.map((r, idx) => {
 									const isSelected = r.employeeId === selectedId
+									const isExcluded = excludedIds.has(r.employeeId)
 									const c = compute({
 										rateType: r.rateType,
 										rate: num(r.rate),
@@ -710,21 +808,29 @@ const SalariesRun = () => {
 										<RosterItem
 											key={r.employeeId}
 											type='button'
-											$selected={isSelected}
+											$selected={isSelected && !simulationMode}
+											$excluded={isExcluded}
 											$index={idx}
-											onClick={() => setSelectedId(r.employeeId)}
+											onClick={() =>
+												simulationMode
+													? toggleExcluded(r.employeeId)
+													: setSelectedId(r.employeeId)
+											}
 										>
 											<RosterMain>
-												<RosterName $selected={isSelected}>
+												<RosterName $selected={isSelected && !simulationMode}>
 													{r.firstName} {r.lastName}
 												</RosterName>
 											</RosterMain>
 											<RosterRight>
-												<StatusDot $status={r.status} $selected={isSelected} />
+												<StatusDot
+													$status={r.status}
+													$selected={isSelected && !simulationMode}
+												/>
 												{r.status !== 'NEW' && (
 													<RosterCost
 														$paid={r.status === 'PAID'}
-														$selected={isSelected}
+														$selected={isSelected && !simulationMode}
 													>
 														<CountMoney value={c.total} />
 													</RosterCost>
@@ -1348,7 +1454,14 @@ const rosterIn = keyframes`
 	}
 `
 
-const RosterItem = styled.button<{ $selected: boolean; $index: number }>`
+
+
+
+const RosterItem = styled.button<{
+	$selected: boolean
+	$excluded?: boolean
+	$index: number
+}>`
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
 	gap: 10px;
@@ -1370,17 +1483,358 @@ const RosterItem = styled.button<{ $selected: boolean; $index: number }>`
 	animation-delay: ${({ $index }) => Math.min($index, 24) * 35}ms;
 	transition:
 		background 160ms ease,
-		box-shadow 160ms ease;
+		box-shadow 160ms ease,
+		color 320ms ease;
+	color: ${({ $excluded }) =>
+		$excluded ? T.textSecondary : 'inherit'};
 
 	@media (prefers-reduced-motion: reduce) {
 		animation: none;
 	}
 
+	> * {
+		transition: filter 320ms ease, opacity 320ms ease;
+		filter: ${({ $excluded }) => ($excluded ? 'grayscale(1)' : 'grayscale(0)')};
+		opacity: ${({ $excluded }) => ($excluded ? 0.55 : 1)};
+	}
+
+	/* Strike-through line — always mounted so it can animate both
+	 * ways (scaleX 0 ⇄ 1). Direction stays left-to-right on exclude,
+	 * right-to-left on un-exclude. */
+	&::after {
+		content: '';
+		position: absolute;
+		left: 10px;
+		right: 10px;
+		top: 50%;
+		height: 1.5px;
+		background: ${T.textSecondary};
+		transform-origin: left center;
+		transform: scaleX(${({ $excluded }) => ($excluded ? 1 : 0)});
+		transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+		pointer-events: none;
+		border-radius: 2px;
+	}
+
 	&:hover {
-		background: ${({ $selected }) =>
+		background: ${({ $selected, $excluded }) =>
 			$selected
 				? `linear-gradient(135deg, ${T.primary}, #075985)`
-				: 'rgba(3, 105, 161, 0.04)'};
+				: $excluded
+					? 'transparent'
+					: 'rgba(3, 105, 161, 0.04)'};
+
+		> * {
+			opacity: ${({ $excluded }) => ($excluded ? 0.75 : 1)};
+		}
+	}
+`
+
+const countTick = keyframes`
+	0%   { opacity: 0; transform: translateY(-6px) scale(0.55); }
+	55%  { opacity: 1; transform: translateY(1px) scale(1.18); }
+	78%  { transform: translateY(-0.5px) scale(0.96); }
+	100% { opacity: 1; transform: translateY(0) scale(1); }
+`
+
+const WhatIfBtn = styled(CalcToggleBtn)`
+	border: none;
+
+	.count-badge {
+		display: inline-flex;
+		animation: ${countTick} 340ms cubic-bezier(0.22, 1.4, 0.36, 1);
+	}
+`
+
+/* === "What if" explainer mockup — static mini-roster showing one
+ *   row struck through and the summary adjusted to match. === */
+
+const WhatIfExplainer = () => (
+	<ReplicaSplit>
+		<ReplicaRoster>
+			<ReplicaPerson>
+				<ReplicaDot $c='#22c55e' />
+				<span className='nm'>Anna</span>
+				<span className='amt'>$2,920</span>
+			</ReplicaPerson>
+			<ReplicaPerson>
+				<ReplicaDot $c='#f59e0b' />
+				<span className='nm'>Boris</span>
+				<span className='amt'>$1,850</span>
+			</ReplicaPerson>
+			<ReplicaPerson $muted>
+				<ReplicaDot $c='#64748b' />
+				<span className='nm'>Carl</span>
+				<span className='amt'>$1,200</span>
+				<span className='strike' />
+			</ReplicaPerson>
+			<ReplicaPerson>
+				<ReplicaDot $c='#22c55e' />
+				<span className='nm'>Dana</span>
+				<span className='amt'>$500</span>
+			</ReplicaPerson>
+		</ReplicaRoster>
+		<ReplicaSummary>
+			<ReplicaSummaryHead>
+				<ReplicaSummaryEyebrow>Monthly summary</ReplicaSummaryEyebrow>
+				<ReplicaSummaryCount>
+					3 <small>of 4 people</small>
+				</ReplicaSummaryCount>
+			</ReplicaSummaryHead>
+			<ReplicaSummaryBar>
+				<span style={{ width: '58%', background: '#0369a1' }} />
+				<span style={{ width: '18%', background: '#94a3b8' }} />
+				<span style={{ width: '14%', background: '#d97706' }} />
+				<span style={{ width: '10%', background: '#64748b' }} />
+			</ReplicaSummaryBar>
+			<ReplicaSummaryStats>
+				<ReplicaStat>
+					<span className='dot' style={{ background: '#0369a1' }} />
+					<span className='l'>Base</span>
+					<span className='v'>$3,850</span>
+				</ReplicaStat>
+				<ReplicaStat>
+					<span className='dot' style={{ background: '#94a3b8' }} />
+					<span className='l'>Taxes</span>
+					<span className='v'>$320</span>
+				</ReplicaStat>
+				<ReplicaStat>
+					<span className='dot' style={{ background: '#d97706' }} />
+					<span className='l'>Bonuses</span>
+					<span className='v'>$950</span>
+				</ReplicaStat>
+				<ReplicaStat>
+					<span className='dot' style={{ background: '#64748b' }} />
+					<span className='l'>Fee</span>
+					<span className='v'>$160</span>
+				</ReplicaStat>
+			</ReplicaSummaryStats>
+			<ReplicaSummaryHero>
+				<span className='l'>Company cost</span>
+				<span className='v'>$5,280</span>
+			</ReplicaSummaryHero>
+		</ReplicaSummary>
+	</ReplicaSplit>
+)
+
+const ReplicaSplit = styled.div`
+	display: grid;
+	grid-template-columns: 150px minmax(0, 1fr);
+	gap: 10px;
+	align-items: start;
+`
+
+const ReplicaRoster = styled.div`
+	background: #ffffff;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	border-radius: 10px;
+	padding: 6px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+`
+
+const ReplicaPerson = styled.div<{ $muted?: boolean }>`
+	position: relative;
+	display: grid;
+	grid-template-columns: 8px minmax(0, 1fr) auto;
+	gap: 6px;
+	align-items: center;
+	padding: 6px 8px;
+	border-radius: 7px;
+	background: transparent;
+	color: ${({ $muted }) => ($muted ? '#94a3b8' : '#1e293b')};
+	font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+	font-size: 10.5px;
+	font-weight: 600;
+
+	.nm {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.amt {
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-weight: 700;
+		font-size: 10px;
+		opacity: ${({ $muted }) => ($muted ? 0.55 : 0.75)};
+	}
+	.strike {
+		position: absolute;
+		left: 6px;
+		right: 6px;
+		top: 50%;
+		height: 1.2px;
+		background: #94a3b8;
+		border-radius: 2px;
+		pointer-events: none;
+	}
+
+	${({ $muted }) =>
+		$muted &&
+		css`
+			> *:not(.strike) {
+				filter: grayscale(1);
+				opacity: 0.55;
+			}
+		`}
+`
+
+const ReplicaDot = styled.span<{ $c: string }>`
+	width: 7px;
+	height: 7px;
+	border-radius: 999px;
+	background: ${({ $c }) => $c};
+`
+
+const ReplicaSummary = styled.div`
+	background: #ffffff;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	border-radius: 10px;
+	padding: 10px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+`
+
+const ReplicaSummaryHead = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-end;
+`
+
+const ReplicaSummaryEyebrow = styled.div`
+	font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+	font-size: 8.5px;
+	font-weight: 700;
+	letter-spacing: 0.5px;
+	text-transform: uppercase;
+	color: #64748b;
+`
+
+const ReplicaSummaryCount = styled.div`
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 13px;
+	font-weight: 800;
+	color: #0f172a;
+	small {
+		font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+		font-size: 9.5px;
+		font-weight: 600;
+		color: #94a3b8;
+		margin-left: 3px;
+	}
+`
+
+const ReplicaSummaryBar = styled.div`
+	display: flex;
+	height: 7px;
+	border-radius: 999px;
+	overflow: hidden;
+	background: #e2e8f0;
+	> span {
+		display: block;
+		height: 100%;
+	}
+`
+
+const ReplicaSummaryStats = styled.div`
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 6px;
+`
+
+const ReplicaStat = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+
+	.dot {
+		display: block;
+		width: 6px;
+		height: 6px;
+		border-radius: 999px;
+		margin-bottom: 1px;
+	}
+	.l {
+		font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+		font-size: 8.5px;
+		font-weight: 600;
+		color: #64748b;
+		letter-spacing: 0.2px;
+	}
+	.v {
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-size: 10.5px;
+		font-weight: 700;
+		color: #0f172a;
+	}
+`
+
+const ReplicaSummaryHero = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding-top: 6px;
+	margin-top: 2px;
+	border-top: 1px solid rgba(15, 23, 42, 0.1);
+
+	.l {
+		font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+		font-size: 10px;
+		font-weight: 700;
+		color: #0f172a;
+	}
+	.v {
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-size: 14px;
+		font-weight: 800;
+		color: #0369a1;
+	}
+`
+
+const TourList = styled.ol`
+	margin: 0;
+	padding: 0 0 0 18px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	color: #cbd5e1;
+	font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+	font-size: 12px;
+	line-height: 1.5;
+
+	li::marker {
+		color: #94a3b8;
+		font-weight: 700;
+	}
+	b {
+		color: #ffffff;
+		font-weight: 700;
+	}
+`
+
+const DemoHelp = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: none;
+	background: transparent;
+	color: ${T.textSecondary};
+	cursor: pointer;
+	border-radius: 999px;
+	transition: color 160ms ease, background 160ms ease;
+
+	svg {
+		font-size: 18px;
+	}
+
+	&:hover {
+		color: ${T.textStrong};
+		background: rgba(15, 23, 42, 0.05);
 	}
 `
 

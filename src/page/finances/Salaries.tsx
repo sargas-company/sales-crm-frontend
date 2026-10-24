@@ -24,6 +24,7 @@ import {
 	TableSkeleton,
 } from '../../components/_shared/DataTable'
 import { TapeIndicator, TapePill, TapePills } from '../analytics/filters/filters.styled'
+import DatePickerPill from '../finance-weekly/DatePickerPill'
 import {
 	ClearBtn,
 	InlineField,
@@ -102,6 +103,81 @@ const CountMoney = ({ value }: { value: string | number | null | undefined }) =>
 	return <>${fmtMoney(display)}</>
 }
 
+/* ---------- Scope presets for the date-range filter ---------- */
+
+type ScopePreset =
+	| 'thisMonth'
+	| 'last3Months'
+	| 'thisYear'
+	| 'allTime'
+	| 'custom'
+
+const SCOPE_VALUES: ScopePreset[] = [
+	'thisMonth',
+	'last3Months',
+	'thisYear',
+	'allTime',
+	'custom',
+]
+
+const SCOPE_LABEL: Record<ScopePreset, string> = {
+	thisMonth: 'This month',
+	last3Months: 'Last 3 months',
+	thisYear: 'This year',
+	allTime: 'All time',
+	custom: 'Custom',
+}
+
+type PeriodParams = {
+	year?: number
+	month?: number
+	fromYear?: number
+	fromMonth?: number
+	toYear?: number
+	toMonth?: number
+}
+
+function parseYm(ym: string): { y: number; m: number } | null {
+	const [y, m] = ym.split('-').map(Number)
+	if (!y || !m || m < 1 || m > 12 || y < 2000 || y > 2100) return null
+	return { y, m }
+}
+
+function computePeriod(
+	scope: ScopePreset,
+	year: number,
+	month: number,
+	customFrom: string,
+	customTo: string,
+): PeriodParams {
+	if (scope === 'thisMonth') return { year, month }
+	if (scope === 'allTime') return {}
+	const now = new Date()
+	const curY = now.getUTCFullYear()
+	const curM = now.getUTCMonth() + 1
+	if (scope === 'last3Months') {
+		const fromDate = new Date(Date.UTC(curY, curM - 1 - 2, 1))
+		return {
+			fromYear: fromDate.getUTCFullYear(),
+			fromMonth: fromDate.getUTCMonth() + 1,
+			toYear: curY,
+			toMonth: curM,
+		}
+	}
+	if (scope === 'thisYear') {
+		return { fromYear: curY, fromMonth: 1, toYear: curY, toMonth: 12 }
+	}
+	// custom
+	const f = parseYm(customFrom)
+	const t = parseYm(customTo)
+	return {
+		fromYear: f?.y,
+		fromMonth: f?.m,
+		toYear: t?.y,
+		toMonth: t?.m,
+	}
+}
+
 const Salaries = () => {
 	const navigate = useNavigate()
 	const { showToast } = useToast()
@@ -123,9 +199,18 @@ const Salaries = () => {
 		const dir = urlParams.get('sortDirection') === 'asc' ? 'asc' : 'desc'
 		return key ? { key, direction: dir } : { key: 'employee', direction: 'asc' }
 	})()
+	const initialScope = ((): ScopePreset => {
+		const s = urlParams.get('scope')
+		return SCOPE_VALUES.includes(s as ScopePreset) ? (s as ScopePreset) : 'thisMonth'
+	})()
+	const initialFrom = urlParams.get('from') ?? ''
+	const initialTo = urlParams.get('to') ?? ''
 
 	const [year, setYear] = useState<number>(initialYear)
 	const [month, setMonth] = useState<number>(initialMonth)
+	const [scope, setScope] = useState<ScopePreset>(initialScope)
+	const [customFrom, setCustomFrom] = useState(initialFrom)
+	const [customTo, setCustomTo] = useState(initialTo)
 	const [employeeId, setEmployeeId] = useState('')
 	const [status, setStatus] = useState<'' | 'DRAFT' | 'PAID'>('')
 
@@ -141,35 +226,67 @@ const Salaries = () => {
 		if (el) setInd({ left: el.offsetLeft, width: el.offsetWidth, opacity: 1 })
 	}, [status])
 
+	const scopePillsRef = useRef<HTMLDivElement>(null)
+	const [scopeInd, setScopeInd] = useState<{
+		left: number
+		width: number
+		opacity: number
+	}>({ left: 0, width: 0, opacity: 0 })
+	useLayoutEffect(() => {
+		if (!scopePillsRef.current) return
+		const el = scopePillsRef.current.querySelector<HTMLButtonElement>(
+			'[data-active="true"]',
+		)
+		if (el)
+			setScopeInd({
+				left: el.offsetLeft,
+				width: el.offsetWidth,
+				opacity: 1,
+			})
+	}, [scope])
+
 	const activeStatusLabel = status || 'ALL'
 
 	const activeFilterCount =
 		(employeeId ? 1 : 0) +
 		(status ? 1 : 0) +
-		(year !== currentYear() || month !== currentMonth() ? 1 : 0)
+		(scope !== 'thisMonth' ? 1 : 0) +
+		(scope === 'thisMonth' &&
+		(year !== currentYear() || month !== currentMonth())
+			? 1
+			: 0)
 
 	const clearAll = () => {
 		setEmployeeId('')
 		setStatus('')
 		setYear(currentYear())
 		setMonth(currentMonth())
+		setScope('thisMonth')
+		setCustomFrom('')
+		setCustomTo('')
 	}
 	const [sort, setSort] = useState<SortState | null>(initialSort)
 	const [page, setPage] = useState(1)
 
-	/* Keep year/month in the URL so refresh/back/forward preserve the
-	 * month the user is looking at. Mirrors the SalariesRun picker. */
+	/* Keep year/month, scope and custom range in the URL so refresh,
+	 * back/forward and shared links all restore the exact view. */
 	useEffect(() => {
 		setUrlParams(
 			(prev) => {
 				const next = new URLSearchParams(prev)
 				next.set('year', String(year))
 				next.set('month', String(month))
+				if (scope !== 'thisMonth') next.set('scope', scope)
+				else next.delete('scope')
+				if (scope === 'custom' && customFrom) next.set('from', customFrom)
+				else next.delete('from')
+				if (scope === 'custom' && customTo) next.set('to', customTo)
+				else next.delete('to')
 				return next
 			},
 			{ replace: true },
 		)
-	}, [year, month, setUrlParams])
+	}, [year, month, scope, customFrom, customTo, setUrlParams])
 	const [toDelete, setToDelete] = useState<PayrollEntry | null>(null)
 	const [toReopen, setToReopen] = useState<PayrollEntry | null>(null)
 	const [pickerOpen, setPickerOpen] = useState(false)
@@ -227,9 +344,12 @@ const Salaries = () => {
 		}
 	}, [pickerOpen, year])
 
+	const period = useMemo(
+		() => computePeriod(scope, year, month, customFrom, customTo),
+		[scope, year, month, customFrom, customTo],
+	)
 	const { data, isLoading, isError, refetch } = useGetPayrollQuery({
-		year,
-		month,
+		...period,
 		status: status || undefined,
 		sortBy: (sort?.key as PayrollSortBy | undefined) ?? undefined,
 		sortDirection: sort?.direction,
@@ -241,29 +361,64 @@ const Salaries = () => {
 	const [reopen] = useReopenPayrollMutation()
 
 	const allRows = data?.data ?? []
-	const rows = employeeId ? allRows.filter((r) => r.employeeId === employeeId) : allRows
+	/* Match Monthly Run's visible roster: skip advisor payrolls (they
+	 * don't receive salary — this role is for shareholders) and skip
+	 * employees who weren't on staff during that row's own period
+	 * (terminated before periodStart or hired after periodEnd). The
+	 * check runs per row because range filters can span months and
+	 * each entry has its own (year, month). */
+	const normalizedRows = useMemo(() => {
+		return allRows.filter((r) => {
+			if (
+				r.employee.positions.some(
+					(p) => p.title.toLowerCase() === 'advisor',
+				)
+			) {
+				return false
+			}
+			const periodStart = Date.UTC(r.year, r.month - 1, 1)
+			const periodEnd = Date.UTC(r.year, r.month, 0, 23, 59, 59, 999)
+			const hired = r.employee.hiredAt
+				? Date.parse(r.employee.hiredAt)
+				: null
+			const terminated = r.employee.terminatedAt
+				? Date.parse(r.employee.terminatedAt)
+				: null
+			if (hired != null && hired > periodEnd) return false
+			if (terminated != null && terminated < periodStart) return false
+			return true
+		})
+	}, [allRows])
+	const rows = employeeId
+		? normalizedRows.filter((r) => r.employeeId === employeeId)
+		: normalizedRows
 
 	/* KPI stats are computed from the CURRENTLY VISIBLE rows so they
-	 * stay in sync with the active status/search filter. Empty filter
-	 * → all zeros (user wants cards to stay visible, not disappear). */
+	 * stay in sync with the active status/search/period filter. Empty
+	 * filter → all zeros (user wants cards to stay visible, not
+	 * disappear). Passthrough rule mirrors the Monthly Run summary:
+	 * a row with base=0 + fixedBonus>0 is a pure Payoneer payout, so
+	 * its bonus amount is folded into Base (not Bonuses). */
 	const summary = useMemo(() => {
 		const acc = {
 			baseSalaries: 0,
 			taxes: 0,
 			bonuses: 0,
-			totalAccrued: 0,
 			payoneerFees: 0,
 			companyCost: 0,
-			outstanding: 0,
 		}
 		for (const r of rows) {
-			acc.baseSalaries += parseFloat(r.baseSalary) || 0
+			const base = parseFloat(r.baseSalary) || 0
+			const bonus = parseFloat(r.bonusAmount) || 0
+			if (base > 0) {
+				acc.baseSalaries += base
+				acc.bonuses += bonus
+			} else {
+				acc.baseSalaries += bonus
+			}
 			acc.taxes += parseFloat(r.tax) || 0
-			acc.bonuses += parseFloat(r.bonusAmount) || 0
-			acc.totalAccrued += parseFloat(r.totalAccrued) || 0
 			acc.payoneerFees += parseFloat(r.payoneerFee) || 0
 			acc.companyCost += parseFloat(r.companyCost) || 0
-			if (r.status === 'DRAFT') acc.outstanding += parseFloat(r.remainingToPay) || 0
 		}
 		return acc
 	}, [rows])
@@ -539,7 +694,65 @@ const Salaries = () => {
 								</InlineSelect>
 							</InlineField>
 
-							{monthPicker}
+						</TopFilterRow>
+
+						<MiddleFilterRow>
+							<ScopeGroup>
+								<span className='l'>Period</span>
+								<TapePills ref={scopePillsRef} role='tablist'>
+									<TapeIndicator
+										style={{
+											transform: `translateX(${scopeInd.left}px) rotate(-1.2deg)`,
+											width: `${scopeInd.width}px`,
+											opacity: scopeInd.opacity,
+										}}
+									/>
+									{SCOPE_VALUES.map((v) => (
+										<TapePill
+											key={v}
+											type='button'
+											role='tab'
+											data-active={scope === v || undefined}
+											aria-selected={scope === v}
+											$active={scope === v}
+											onClick={() => setScope(v)}
+										>
+											{SCOPE_LABEL[v]}
+										</TapePill>
+									))}
+								</TapePills>
+							</ScopeGroup>
+
+							<ScopeExtra $show={scope === 'thisMonth'}>{monthPicker}</ScopeExtra>
+							<ScopeExtra $show={scope === 'custom'}>
+								<RangeGroup aria-label='Date range'>
+									<DatePickerPill
+										label='From'
+										value={customFrom}
+										max={customTo || undefined}
+										placeholder='Any'
+										accent='orange'
+										size='lg'
+										onChange={(v) => {
+											setCustomFrom(v)
+											if (v) setScope('custom')
+										}}
+									/>
+									<RangeDash aria-hidden='true'>-</RangeDash>
+									<DatePickerPill
+										label='To'
+										value={customTo}
+										min={customFrom || undefined}
+										placeholder='Any'
+										accent='orange'
+										size='lg'
+										onChange={(v) => {
+											setCustomTo(v)
+											if (v) setScope('custom')
+										}}
+									/>
+								</RangeGroup>
+							</ScopeExtra>
 
 							<ClearBtn
 								className='clear'
@@ -550,14 +763,14 @@ const Salaries = () => {
 								<ClearRounded style={{ fontSize: 15 }} />
 								Clear
 							</ClearBtn>
-						</TopFilterRow>
+						</MiddleFilterRow>
 					</FiltersBlock>
 				}
 			>
 				{!isError && (
 					<KpiRow>
 						<KpiCard>
-							<KpiLabel>Base payroll</KpiLabel>
+							<KpiLabel>Base</KpiLabel>
 							<KpiVal>
 								<CountMoney value={summary.baseSalaries} />
 							</KpiVal>
@@ -575,15 +788,17 @@ const Salaries = () => {
 							</KpiVal>
 						</KpiCard>
 						<KpiCard>
-							<KpiLabel>Gross</KpiLabel>
-							<KpiVal>
-								<CountMoney value={summary.totalAccrued} />
-							</KpiVal>
-						</KpiCard>
-						<KpiCard>
 							<KpiLabel>Payoneer fee</KpiLabel>
 							<KpiVal>
 								<CountMoney value={summary.payoneerFees} />
+							</KpiVal>
+						</KpiCard>
+						<KpiCard>
+							<KpiLabel>Base + Taxes</KpiLabel>
+							<KpiVal>
+								<CountMoney
+									value={summary.baseSalaries + summary.taxes}
+								/>
 							</KpiVal>
 						</KpiCard>
 						<KpiV1>
@@ -595,12 +810,6 @@ const Salaries = () => {
 								<CountMoney value={summary.companyCost} />
 							</KpiValV1>
 						</KpiV1>
-						<KpiCard>
-							<KpiLabel>Unpaid</KpiLabel>
-							<KpiVal>
-								<CountMoney value={summary.outstanding} />
-							</KpiVal>
-						</KpiCard>
 					</KpiRow>
 				)}
 
@@ -1212,6 +1421,81 @@ const TopFilterRow = styled.div`
 	}
 `
 
+const ScopeGroup = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	flex: 0 1 auto;
+	min-width: 0;
+
+	.l {
+		font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.4px;
+		text-transform: uppercase;
+		color: #64748b;
+	}
+`
+
+const MiddleFilterRow = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 14px;
+	width: 100%;
+	margin-top: 10px;
+
+	.clear {
+		margin-left: auto;
+	}
+`
+
+/* Smooth expand/collapse slot for the scope-dependent extras (month
+ * picker, custom range). Max-width collapse keeps the layout stable
+ * on toggle; opacity + translateY add a tiny fade/slide. */
+const ScopeExtra = styled.div<{ $show: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	overflow: hidden;
+	/* Vertical padding + negative margin keeps the hover lift of
+	 * inner buttons (translateY(-1px) etc.) inside the clip box so
+	 * the top edge of the picker never gets cropped. */
+	padding: 6px 0;
+	margin: -6px 0;
+	opacity: ${({ $show }) => ($show ? 1 : 0)};
+	max-width: ${({ $show }) => ($show ? '680px' : '0')};
+	transform: translateY(${({ $show }) => ($show ? '0' : '-4px')});
+	pointer-events: ${({ $show }) => ($show ? 'auto' : 'none')};
+	transition:
+		opacity 240ms ease,
+		max-width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+		transform 240ms ease;
+`
+
+const RangeGroup = styled.div`
+	display: inline-flex;
+	align-items: flex-end;
+	gap: 10px;
+	padding: 4px 10px;
+	border: 1px dashed rgba(36, 30, 22, 0.14);
+	border-radius: 14px;
+`
+
+const RangeDash = styled.span`
+	align-self: flex-end;
+	display: inline-flex;
+	align-items: center;
+	min-height: 42px;
+	padding: 0 2px;
+	color: #7d6e5d;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1;
+	user-select: none;
+`
+
 const StatusGroup = styled.div`
 	display: inline-flex;
 	flex-wrap: wrap;
@@ -1275,18 +1559,6 @@ const StatusGroup = styled.div`
 	}
 	.filter-lead:hover .lead-text .bot {
 		color: #e85d2f;
-	}
-`
-
-const BottomFilterRow = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 10px 12px;
-	width: 100%;
-
-	.clear {
-		margin-left: auto;
 	}
 `
 
