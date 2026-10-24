@@ -539,8 +539,16 @@ const SalariesRun = () => {
 			cost += c.cost
 			feesSum += c.fee
 			taxesSum += c.tax
-			bonusesSum += c.bonusAmt
-			baseSum += c.base
+			/* Passthrough (base=0 + fixedBonus>0) is a payout, not a
+			 * bonus — fold its amount into Base so stats group it with
+			 * the other salary payouts. Real bonuses still ride on top
+			 * of a non-zero base. */
+			if (c.base > 0) {
+				baseSum += c.base
+				bonusesSum += c.bonusAmt
+			} else {
+				baseSum += c.bonusAmt
+			}
 		}
 		return {
 			cost,
