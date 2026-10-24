@@ -221,7 +221,7 @@ export const HeatmapTooltip = styled('div')`
 	.ht-countries-list li {
 		display: flex;
 		justify-content: space-between;
-		align-items: baseline;
+		align-items: center;
 		gap: 10px;
 		font-size: 12px;
 	}
@@ -239,12 +239,19 @@ export const HeatmapTooltip = styled('div')`
 		font-size: 24px;
 		line-height: 1;
 	}
+
 	.ht-country-count {
+		display: inline-flex;
+		align-items: center;
+		justify-content: flex-end;
+		min-width: 28px;
+		line-height: 1;
 		font-family: 'JetBrains Mono', ui-monospace, monospace;
-		font-size: 11.5px;
-		font-weight: 700;
-		color: ${T.textPrimary};
+		font-size: 13px;
+		font-weight: 600;
+		color: #0f172a;
 		font-variant-numeric: tabular-nums;
+		letter-spacing: -0.5px;
 	}
 	.ht-country-more {
 		justify-content: center !important;
