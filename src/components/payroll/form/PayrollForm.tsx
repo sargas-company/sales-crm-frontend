@@ -113,8 +113,13 @@ const PayrollFormInner = ({
 		const swt = base + tax
 		const bonusAmt = (swt * bp) / 100 + fb
 		const total = swt + bonusAmt
-		const remain = Math.max(0, total - adv)
-		const fee = total * 0.03
+		const owed = Math.max(0, total - adv)
+		/* Payoneer charges on gross, not net: fee = owed × rate / (1 - rate).
+		 * Default 3% here — this legacy edit form doesn't expose the
+		 * 1%/3% toggle; the Monthly Run editor does. */
+		const payoneerRate = 0.03
+		const fee = owed === 0 ? 0 : (owed * payoneerRate) / (1 - payoneerRate)
+		const remain = owed + fee
 		const cost = total + fee
 		return { base, tax, swt, bonusAmt, total, remain, fee, cost }
 	}, [fields])

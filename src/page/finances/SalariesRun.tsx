@@ -120,7 +120,11 @@ const compute = (input: {
 	/* Fee only on today's wire (total − advance). Fee on advance
 	 * was already paid when advance was wired, don't pay twice. */
 	const owed = Math.max(0, total - input.advance)
-	const fee = owed * (input.payoneerFeePct / 100)
+	/* Payoneer charges on gross, not on net. To deliver `owed` to the
+	 * recipient at rate r, the gross = owed / (1 - r), so fee is
+	 * owed * r / (1 - r). Mirrors backend computeAll(). */
+	const r = input.payoneerFeePct / 100
+	const fee = owed === 0 ? 0 : (owed * r) / (1 - r)
 	const remain = owed + fee
 	const cost = total + fee
 	return { base, tax, swt, bonusAmt, total, remain, fee, cost }
