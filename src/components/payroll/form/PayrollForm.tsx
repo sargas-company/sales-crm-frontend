@@ -109,7 +109,7 @@ const PayrollFormInner = ({
 		const fb = parseFloat(fields.fixedBonus) || 0
 		const adv = parseFloat(fields.advance) || 0
 		const base = fields.rateType === 'HOURLY' ? r * h : r
-		const tax = 43 + base * 0.06
+		const tax = 42.5 + base * 0.06
 		const swt = base + tax
 		const bonusAmt = (swt * bp) / 100 + fb
 		const total = swt + bonusAmt
@@ -372,7 +372,7 @@ const PayrollFormInner = ({
 								<Mono>${fmt(preview.base)}</Mono>
 							</PreviewRow>
 							<PreviewRow>
-								<span>Tax (43 + 6%)</span>
+								<span>Tax (42.5 + 6%)</span>
 								<Mono>${fmt(preview.tax)}</Mono>
 							</PreviewRow>
 							<PreviewRow>
