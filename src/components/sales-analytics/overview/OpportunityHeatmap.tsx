@@ -89,11 +89,44 @@ const REGION_NAMES =
 		? new Intl.DisplayNames(['en'], { type: 'region' })
 		: null
 
+/* Build a reverse lookup "united states" → "US" once at module load.
+ * Walks every 2-letter permutation through Intl.DisplayNames; invalid
+ * codes bounce out via the try/catch. Costs a one-shot ~676 calls at
+ * startup; the Map lookup afterwards is O(1). */
+const NAME_TO_CODE: Map<string, string> = (() => {
+	const map = new Map<string, string>()
+	if (!REGION_NAMES) return map
+	const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+	for (let i = 0; i < A.length; i++) {
+		for (let j = 0; j < A.length; j++) {
+			const code = A[i] + A[j]
+			try {
+				const name = REGION_NAMES.of(code)
+				if (name && name !== code) {
+					map.set(name.toLowerCase(), code)
+				}
+			} catch {
+				/* invalid region code — skip */
+			}
+		}
+	}
+	/* Common aliases free-text often uses. */
+	map.set('uk', 'GB')
+	map.set('usa', 'US')
+	map.set('u.s.', 'US')
+	map.set('u.s.a.', 'US')
+	map.set('america', 'US')
+	map.set('united states of america', 'US')
+	map.set('great britain', 'GB')
+	return map
+})()
+
 const normalizeCountryCode = (raw: string): string | null => {
-	const t = raw.trim().toUpperCase()
-	if (t === 'UK') return 'GB'
-	if (/^[A-Z]{2}$/.test(t)) return t
-	return null
+	const t = raw.trim()
+	if (!t) return null
+	const upper = t.toUpperCase()
+	if (/^[A-Z]{2}$/.test(upper)) return upper === 'UK' ? 'GB' : upper
+	return NAME_TO_CODE.get(t.toLowerCase()) ?? null
 }
 
 const flagEmoji = (code: string): string =>
