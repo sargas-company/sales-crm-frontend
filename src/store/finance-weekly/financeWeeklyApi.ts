@@ -181,6 +181,7 @@ export interface FinanceRegistryQuery {
 export interface FinanceProjectSummary {
 	id: string
 	name: string
+	status: 'planned' | 'active' | 'paused' | 'completed' | 'archived'
 	clientName: string | null
 }
 

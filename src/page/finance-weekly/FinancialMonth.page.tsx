@@ -645,6 +645,9 @@ const FinancialMonthPage = () => {
 														{p.clientName && (
 															<span className='client'> · {p.clientName}</span>
 														)}
+														{p.status === 'archived' && (
+															<span className='archived-tag'>archived</span>
+														)}
 													</span>
 												</button>
 											))

@@ -1854,6 +1854,19 @@ export const AddProjectMenu = styled.div`
 	.row:hover svg {
 		color: ${T.primary};
 	}
+	.archived-tag {
+		display: inline-flex;
+		align-items: center;
+		margin-left: 8px;
+		padding: 1px 7px;
+		border-radius: 999px;
+		background: rgba(100, 116, 139, 0.12);
+		color: ${T.textSecondary};
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.4px;
+		text-transform: uppercase;
+	}
 	.row .name {
 		flex: 1;
 		min-width: 0;
