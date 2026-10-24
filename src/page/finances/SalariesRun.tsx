@@ -355,18 +355,49 @@ const SalariesRun = () => {
 		}
 	}, [employeesPage, entriesData, year, month])
 
+	/* Rate "disabled" means the row is a pure Payoneer passthrough —
+	 * no base salary, so bonus%, advance and hours are irrelevant and
+	 * get forced to zero. The only live levers in that mode are rate
+	 * itself, fixed bonus and the Payoneer fee TapePill. */
+	const isPassthrough = (row: RowState) =>
+		!row.rate || parseFloat(row.rate) <= 0
+
 	const setRowField = <K extends keyof RowState>(
 		employeeId: string,
 		key: K,
 		value: RowState[K],
 	) => {
-		setRows((prev) => ({ ...prev, [employeeId]: { ...prev[employeeId], [key]: value } }))
+		setRows((prev) => {
+			const current = prev[employeeId]
+			if (!current) return prev
+			const next: RowState = { ...current, [key]: value }
+			/* Flipping rate to 0/empty wipes the fields that only make
+			 * sense when there IS a base salary. */
+			if (key === 'rate' && isPassthrough(next)) {
+				next.bonusPercent = '0'
+				next.advance = '0'
+				next.hours = ''
+			}
+			return { ...prev, [employeeId]: next }
+		})
 	}
 
 	const persistRow = async (row: RowState) => {
 		if (row.status === 'PAID') return
-		if (!row.rate || parseFloat(row.rate) < 0) return
-		if (row.rateType === 'HOURLY' && (!row.hours || parseFloat(row.hours) < 0)) return
+		const rateNum = parseFloat(row.rate)
+		const fixedNum = parseFloat(row.fixedBonus)
+		/* Allow a pure Payoneer passthrough: rate=0 + fixedBonus>0.
+		 * Reject only if there's genuinely nothing to pay. */
+		const nothingToPay =
+			(!row.rate || rateNum <= 0) && (!row.fixedBonus || fixedNum <= 0)
+		if (nothingToPay) return
+		if (row.rate && rateNum < 0) return
+		if (
+			rateNum > 0 &&
+			row.rateType === 'HOURLY' &&
+			(!row.hours || parseFloat(row.hours) < 0)
+		)
+			return
 		const body = {
 			rateType: row.rateType,
 			rate: num(row.rate),
@@ -400,11 +431,39 @@ const SalariesRun = () => {
 		}
 	}
 
+	/* Save the row that lives for `employeeId` in state RIGHT NOW,
+	 * optionally merging a last-moment override (used by the Payoneer-fee
+	 * TapePill which needs to persist the just-clicked value even if the
+	 * event handler reads a stale closure). The functional updater's
+	 * `prev` is guaranteed to contain every queued state update, so
+	 * blur-handlers no longer lose the last keystroke. */
+	const persistCurrent = (
+		employeeId: string,
+		override?: Partial<RowState>,
+	): Promise<void> => {
+		return new Promise((resolve) => {
+			setRows((prev) => {
+				const latest = prev[employeeId]
+				if (!latest) {
+					resolve()
+					return prev
+				}
+				const row = override ? { ...latest, ...override } : latest
+				persistRow(row).finally(resolve)
+				return prev
+			})
+		})
+	}
+
 	const handleMarkPaid = async () => {
 		const row = toMarkPaid
 		if (!row?.entryId || row.status === 'PAID') return
 		setMarkingPaid(true)
 		try {
+			/* Flush any in-flight blur save first — backend locks PAID
+			 * rows, so a mark-paid that races past a pending update
+			 * would silently discard the user's latest edits. */
+			await persistCurrent(row.employeeId)
 			await markPaid(row.entryId).unwrap()
 			setRows((prev) => ({
 				...prev,
@@ -715,10 +774,7 @@ const SalariesRun = () => {
 										disabled={selected.status === 'PAID'}
 										onClick={() => {
 											setRowField(selected.employeeId, 'rateType', 'HOURLY')
-											setTimeout(
-												() => persistRow({ ...rows[selected.employeeId], rateType: 'HOURLY' }),
-												0,
-											)
+											void persistCurrent(selected.employeeId, { rateType: 'HOURLY' })
 										}}
 									>
 										Hourly
@@ -729,10 +785,7 @@ const SalariesRun = () => {
 										disabled={selected.status === 'PAID'}
 										onClick={() => {
 											setRowField(selected.employeeId, 'rateType', 'MONTHLY')
-											setTimeout(
-												() => persistRow({ ...rows[selected.employeeId], rateType: 'MONTHLY' }),
-												0,
-											)
+											void persistCurrent(selected.employeeId, { rateType: 'MONTHLY' })
 										}}
 									>
 										Monthly
@@ -758,7 +811,7 @@ const SalariesRun = () => {
 											onChange={(e) =>
 												setRowField(selected.employeeId, 'rate', e.target.value)
 											}
-											onBlur={() => persistRow(rows[selected.employeeId])}
+											onBlur={() => persistCurrent(selected.employeeId)}
 										/>
 									</Field>
 
@@ -771,12 +824,14 @@ const SalariesRun = () => {
 												min='0'
 												value={selected.hours}
 												placeholder='0'
-												disabled={selected.status === 'PAID'}
+												disabled={
+													selected.status === 'PAID' || isPassthrough(selected)
+												}
 												tabIndex={selected.rateType === 'HOURLY' ? 0 : -1}
 												onChange={(e) =>
 													setRowField(selected.employeeId, 'hours', e.target.value)
 												}
-												onBlur={() => persistRow(rows[selected.employeeId])}
+												onBlur={() => persistCurrent(selected.employeeId)}
 											/>
 										</Field>
 									</HoursSlot>
@@ -789,11 +844,13 @@ const SalariesRun = () => {
 											min='0'
 											max='100'
 											value={selected.bonusPercent}
-											disabled={selected.status === 'PAID'}
+											disabled={
+												selected.status === 'PAID' || isPassthrough(selected)
+											}
 											onChange={(e) =>
 												setRowField(selected.employeeId, 'bonusPercent', e.target.value)
 											}
-											onBlur={() => persistRow(rows[selected.employeeId])}
+											onBlur={() => persistCurrent(selected.employeeId)}
 										/>
 									</Field>
 
@@ -808,7 +865,7 @@ const SalariesRun = () => {
 											onChange={(e) =>
 												setRowField(selected.employeeId, 'fixedBonus', e.target.value)
 											}
-											onBlur={() => persistRow(rows[selected.employeeId])}
+											onBlur={() => persistCurrent(selected.employeeId)}
 										/>
 									</Field>
 
@@ -819,11 +876,13 @@ const SalariesRun = () => {
 											step='0.01'
 											min='0'
 											value={selected.advance}
-											disabled={selected.status === 'PAID'}
+											disabled={
+												selected.status === 'PAID' || isPassthrough(selected)
+											}
 											onChange={(e) =>
 												setRowField(selected.employeeId, 'advance', e.target.value)
 											}
-											onBlur={() => persistRow(rows[selected.employeeId])}
+											onBlur={() => persistCurrent(selected.employeeId)}
 										/>
 									</Field>
 								</Fields>
@@ -870,8 +929,7 @@ const SalariesRun = () => {
 															onClick={() => {
 																setRowField(selected.employeeId, 'payoneerFeePct', pct)
 																if (selected.status !== 'PAID') {
-																	persistRow({
-																		...rows[selected.employeeId],
+																	void persistCurrent(selected.employeeId, {
 																		payoneerFeePct: pct,
 																	})
 																}
