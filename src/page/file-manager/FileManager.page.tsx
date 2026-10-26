@@ -1065,7 +1065,7 @@ const FileManagerPage = () => {
 									<TreeTwist $open={true}>
 										<KeyboardArrowDownRounded style={{ fontSize: 16 }} />
 									</TreeTwist>
-									<FolderOutlined style={{ fontSize: 16, color: '#64748b' }} />
+									<FolderRounded style={{ fontSize: 16, color: '#64748b', flexShrink: 0 }} />
 									<TreeName>Root</TreeName>
 									<TreeCount>{treeData?.rootFileCount ?? 0}</TreeCount>
 								</TreeRow>
@@ -1671,7 +1671,7 @@ const MoveModal = ({
 					$current={currentFolderId === null}
 					$disabled={forbidden.has('__root__' as never)}
 				>
-					<HomeOutlined style={{ fontSize: 16, color: '#64748b' }} />
+					<FolderRounded style={{ fontSize: 16, color: '#64748b', flexShrink: 0 }} />
 					<MoveName>Root</MoveName>
 					<MoveHereBtn
 						type='button'
@@ -1720,7 +1720,7 @@ const MoveTree = ({
 							$disabled={disabled}
 							style={{ paddingLeft: `${12 + depth * 16}px` }}
 						>
-							<FolderOutlined style={{ fontSize: 16, color: '#64748b' }} />
+							<FolderRounded style={{ fontSize: 16, color: '#64748b', flexShrink: 0 }} />
 							<MoveName>{n.name}</MoveName>
 							<MoveHereBtn
 								type='button'
@@ -2436,10 +2436,24 @@ const FolderCard = styled.div<{
 	${({ $deleting }) =>
 		$deleting &&
 		css`
+			/* Fade + scale out AND physically collapse to zero so grid
+			 *  neighbours smoothly slide into the gap instead of
+			 *  snapping when React finally unmounts the row. */
 			opacity: 0;
-			transform: scale(0.9);
+			transform: scale(0.85) translateX(20px);
+			max-width: 0;
+			max-height: 0;
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
 			pointer-events: none;
-			transition: opacity 280ms ease, transform 280ms cubic-bezier(0.4, 0, 1, 1);
+			transition:
+				opacity 220ms ease,
+				transform 300ms cubic-bezier(0.4, 0, 1, 1),
+				max-width 320ms cubic-bezier(0.4, 0, 0.2, 1),
+				max-height 320ms cubic-bezier(0.4, 0, 0.2, 1),
+				margin 320ms cubic-bezier(0.4, 0, 0.2, 1),
+				padding 320ms cubic-bezier(0.4, 0, 0.2, 1);
 		`}
 
 	${({ $opening }) =>
@@ -2618,9 +2632,18 @@ const AttachCard = styled.li<{
 		$deleting &&
 		css`
 			opacity: 0;
-			transform: translateX(16px) scale(0.98);
+			transform: translateX(24px) scale(0.98);
+			max-height: 0;
+			margin: 0;
+			padding: 0 16px;
+			overflow: hidden;
 			pointer-events: none;
-			transition: opacity 280ms ease, transform 280ms cubic-bezier(0.4, 0, 1, 1);
+			transition:
+				opacity 220ms ease,
+				transform 280ms cubic-bezier(0.4, 0, 1, 1),
+				max-height 320ms cubic-bezier(0.4, 0, 0.2, 1),
+				margin 320ms cubic-bezier(0.4, 0, 0.2, 1),
+				padding 320ms cubic-bezier(0.4, 0, 0.2, 1);
 		`}
 `
 
