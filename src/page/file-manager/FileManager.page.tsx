@@ -578,6 +578,16 @@ const FileManagerPage = () => {
 	>(null)
 	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
 	const [moveModalOpen, setMoveModalOpen] = useState(false)
+	const [moveModalClosing, setMoveModalClosing] = useState(false)
+	const closeMoveModal = () => {
+		/* Trigger ConfirmModal's exit animation first, then unmount
+		 *  after the 240 ms close transition settles. */
+		setMoveModalClosing(true)
+		window.setTimeout(() => {
+			setMoveModalOpen(false)
+			setMoveModalClosing(false)
+		}, 260)
+	}
 	const [newFolderName, setNewFolderName] = useState('')
 	const [toDeleteFolder, setToDeleteFolder] = useState<FileManagerFolder | null>(null)
 	const [toDeleteFile, setToDeleteFile] = useState<FileManagerFile | null>(null)
@@ -1107,31 +1117,30 @@ const FileManagerPage = () => {
 							</BackBtn>
 						)}
 					</Breadcrumbs>
-					{selectionCount > 0 && (
-						<BulkBar>
-							<BulkCount>
-								{selectionCount} selected
-							</BulkCount>
-							<BulkBtn
-								type='button'
-								onClick={() => setMoveModalOpen(true)}
-							>
-								<DriveFileMoveOutlined style={{ fontSize: 14 }} />
-								Move
-							</BulkBtn>
-							<BulkBtn
-								type='button'
-								$danger
-								onClick={() => setBulkDeleteOpen(true)}
-							>
-								<DeleteOutlineRounded style={{ fontSize: 14 }} />
-								Delete
-							</BulkBtn>
-							<BulkClear type='button' onClick={clearSelection} aria-label='Clear selection'>
-								<CloseRounded style={{ fontSize: 14 }} />
-							</BulkClear>
-						</BulkBar>
-					)}
+					{/* BulkBar always mounted — visibility controlled via
+					 *  $visible so it fades + width-collapses in place
+					 *  without pushing surrounding elements around. */}
+					<BulkBar $visible={selectionCount > 0}>
+						<BulkCount>{selectionCount} selected</BulkCount>
+						<BulkBtn
+							type='button'
+							onClick={() => setMoveModalOpen(true)}
+						>
+							<DriveFileMoveOutlined style={{ fontSize: 14 }} />
+							Move
+						</BulkBtn>
+						<BulkBtn
+							type='button'
+							$danger
+							onClick={() => setBulkDeleteOpen(true)}
+						>
+							<DeleteOutlineRounded style={{ fontSize: 14 }} />
+							Delete
+						</BulkBtn>
+						<BulkClear type='button' onClick={clearSelection} aria-label='Clear selection'>
+							<CloseRounded style={{ fontSize: 14 }} />
+						</BulkClear>
+					</BulkBar>
 					<FilterRow ref={filtersRef}>
 						<FilterIndicator
 							style={{
@@ -1482,7 +1491,8 @@ const FileManagerPage = () => {
 					currentFolderId={folderId ?? null}
 					tree={treeData?.roots ?? []}
 					isLoading={isBulkMoving}
-					onCancel={() => setMoveModalOpen(false)}
+					closing={moveModalClosing}
+					onCancel={closeMoveModal}
 					onMove={async (dest) => {
 						try {
 							const res = await bulkMove({
@@ -1497,7 +1507,7 @@ const FileManagerPage = () => {
 								res.failed.length ? 'warning' : 'success',
 							)
 							clearSelection()
-							setMoveModalOpen(false)
+							closeMoveModal()
 						} catch (e) {
 							const msg =
 								(e as { data?: { message?: string } })?.data?.message ??
@@ -1586,6 +1596,7 @@ const MoveModal = ({
 	currentFolderId,
 	tree,
 	isLoading,
+	closing,
 	onCancel,
 	onMove,
 }: {
@@ -1594,6 +1605,7 @@ const MoveModal = ({
 	currentFolderId: string | null
 	tree: FileManagerTreeNode[]
 	isLoading: boolean
+	closing: boolean
 	onCancel: () => void
 	onMove: (destinationFolderId: string | null) => void
 }) => {
@@ -1618,11 +1630,12 @@ const MoveModal = ({
 			iconTone='ink'
 			title={`Move ${count} ${count === 1 ? 'item' : 'items'} to…`}
 			description='Pick a destination folder. The source items will keep their names.'
-			confirmLabel='Cancel'
-			confirmColor='ink'
+			cancelLabel='Cancel'
+			confirmLabel=''
+			hideConfirm
 			onConfirm={onCancel}
 			onClose={onCancel}
-			cancelLabel=''
+			forceClose={closing}
 			isLoading={isLoading}
 		>
 			<MoveList>
@@ -1721,11 +1734,18 @@ const MoveRow = styled.div<{ $current?: boolean; $disabled?: boolean }>`
 	grid-template-columns: auto 1fr auto;
 	align-items: center;
 	gap: 10px;
-	padding: 8px 12px;
-	border-radius: 8px;
+	padding: 10px 12px;
+	border-radius: 10px;
 	color: ${({ $disabled }) => ($disabled ? '#94a3b8' : '#0f172a')};
-	background: ${({ $current }) => ($current ? 'rgba(99, 102, 241, 0.08)' : 'transparent')};
-	&:hover { background: ${({ $disabled }) => ($disabled ? 'transparent' : 'rgba(15, 23, 42, 0.03)')}; }
+	background: ${({ $current }) => ($current ? 'rgba(15, 23, 42, 0.04)' : 'transparent')};
+	transition: background 160ms ease;
+	&:hover {
+		background: ${({ $disabled }) => ($disabled ? 'transparent' : 'rgba(15, 23, 42, 0.04)')};
+	}
+	&:hover > button {
+		opacity: 1;
+		visibility: visible;
+	}
 `
 const MoveName = styled.span`
 	font-size: 13.5px;
@@ -1735,23 +1755,37 @@ const MoveName = styled.span`
 	white-space: nowrap;
 `
 const MoveHereBtn = styled.button`
-	padding: 5px 11px;
-	border-radius: 8px;
-	border: 1px solid rgba(15, 23, 42, 0.1);
-	background: #ffffff;
-	color: #0f172a;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	padding: 7px 14px;
+	border-radius: 999px;
+	border: none;
+	background: linear-gradient(135deg, #0f172a, #1e293b);
+	color: #ffffff;
 	font-family: inherit;
 	font-size: 11.5px;
 	font-weight: 700;
+	letter-spacing: 0.2px;
 	cursor: pointer;
-	transition: background 160ms ease, border-color 160ms ease;
+	box-shadow: 0 4px 10px -4px rgba(15, 23, 42, 0.4);
+	transition: transform 220ms cubic-bezier(0.22, 1.4, 0.36, 1),
+		box-shadow 220ms ease, filter 220ms ease;
+	opacity: 0;
+	visibility: hidden;
+	&::before {
+		content: '↳';
+		font-size: 13px;
+		line-height: 1;
+	}
 	&:hover:not(:disabled) {
-		background: #0f172a;
-		color: #ffffff;
-		border-color: transparent;
+		transform: translateY(-1px);
+		box-shadow: 0 8px 16px -4px rgba(15, 23, 42, 0.5);
+		filter: brightness(1.08);
 	}
 	&:disabled {
-		opacity: 0.4;
+		opacity: 0.3;
 		cursor: not-allowed;
 	}
 `
@@ -1995,20 +2029,36 @@ const NewFolderBtn = styled(SolidBtn)`
 `
 
 /* ─── Bulk toolbar ─────────────────────────────────────────────── */
-const BulkBar = styled.div`
+const BulkBar = styled.div<{ $visible: boolean }>`
 	display: inline-flex;
 	align-items: center;
 	gap: 10px;
-	/* Breathe — bigger up/down + wider inside edges. */
 	padding: 12px 14px 12px 18px;
 	border-radius: 999px;
 	background: linear-gradient(135deg, #0f172a, #1e293b);
 	color: #ffffff;
 	box-shadow: 0 10px 24px -10px rgba(15, 23, 42, 0.4);
-	animation: ${keyframes`
-		from { opacity: 0; transform: translateY(-6px); }
-		to { opacity: 1; transform: translateY(0); }
-	`} 220ms cubic-bezier(0.22, 1, 0.36, 1);
+	overflow: hidden;
+	white-space: nowrap;
+	/* Collapse into zero footprint when hidden so sibling elements
+	 *  (filter row) don't jump: max-width → 0, padding → 0, opacity
+	 *  → 0. Transition on all three for a smooth slide-away. */
+	opacity: ${({ $visible }) => ($visible ? 1 : 0)};
+	max-width: ${({ $visible }) => ($visible ? '600px' : '0')};
+	padding-left: ${({ $visible }) => ($visible ? '18px' : '0')};
+	padding-right: ${({ $visible }) => ($visible ? '14px' : '0')};
+	padding-top: ${({ $visible }) => ($visible ? '12px' : '0')};
+	padding-bottom: ${({ $visible }) => ($visible ? '12px' : '0')};
+	margin-right: ${({ $visible }) => ($visible ? '0' : '-10px')};
+	transform: ${({ $visible }) =>
+		$visible ? 'translateY(0)' : 'translateY(-4px)'};
+	pointer-events: ${({ $visible }) => ($visible ? 'auto' : 'none')};
+	transition:
+		opacity 240ms ease,
+		max-width 340ms cubic-bezier(0.4, 0, 0.2, 1),
+		padding 300ms cubic-bezier(0.4, 0, 0.2, 1),
+		transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+		margin 300ms cubic-bezier(0.4, 0, 0.2, 1);
 `
 const BulkCount = styled.span`
 	font-size: 12px;
@@ -2335,9 +2385,21 @@ const FolderCard = styled.div<{
 	${({ $selected }) =>
 		$selected &&
 		css`
-			border-color: rgba(59, 130, 246, 0.5);
-			background: rgba(59, 130, 246, 0.08);
-			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+			border-color: #0f172a;
+			background: rgba(15, 23, 42, 0.04);
+			box-shadow: 0 0 0 2px #0f172a;
+			&::after {
+				content: '';
+				position: absolute;
+				top: 8px;
+				right: 8px;
+				width: 20px;
+				height: 20px;
+				border-radius: 50%;
+				background: #0f172a
+					url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>")
+					center / 14px no-repeat;
+			}
 		`}
 
 	${({ $dimmed }) =>
@@ -2497,8 +2559,20 @@ const AttachCard = styled.li<{ $kind: MimeKind; $selected?: boolean }>`
 	${({ $selected }) =>
 		$selected &&
 		css`
-			background: rgba(59, 130, 246, 0.08);
-			box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4) inset;
+			background: rgba(15, 23, 42, 0.04);
+			box-shadow: 0 0 0 2px #0f172a inset;
+			&::after {
+				content: '';
+				position: absolute;
+				top: 10px;
+				right: 10px;
+				width: 20px;
+				height: 20px;
+				border-radius: 50%;
+				background: #0f172a
+					url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>")
+					center / 14px no-repeat;
+			}
 		`}
 `
 

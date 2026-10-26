@@ -29,6 +29,10 @@ interface Props {
 	confirmLoadingLabel?: string
 	confirmColor?: ConfirmColor
 	cancelLabel?: string
+	/** Hide the primary confirm button and stretch cancel to the full
+	 *  row. Useful for modals that are purely informational / use
+	 *  inline per-row actions and only need a dismiss affordance. */
+	hideConfirm?: boolean
 	onClose: () => void
 	onConfirm: () => void
 	isLoading?: boolean
@@ -157,6 +161,7 @@ const ConfirmModal = ({
 	confirmLoadingLabel,
 	confirmColor = 'error',
 	cancelLabel = 'Cancel',
+	hideConfirm = false,
 	onClose,
 	onConfirm,
 	isLoading,
@@ -228,7 +233,7 @@ const ConfirmModal = ({
 						) : null}
 					</BodyFrame>
 
-					<Actions $closing={closing}>
+					<Actions $closing={closing} $single={hideConfirm}>
 						<CancelButton
 							type='button'
 							onClick={requestClose}
@@ -237,23 +242,25 @@ const ConfirmModal = ({
 						>
 							{cancelLabel}
 						</CancelButton>
-						<ConfirmButton
-							type='button'
-							onClick={requestConfirm}
-							disabled={isLoading || closing || !!confirmDisabled}
-							$solid={confirmTone.solid}
-							$solidHover={confirmTone.solidHover}
-							$shadow={confirmTone.solidShadow}
-						>
-							{isLoading ? (
-								<>
-									<Spinner />
-									<span>{confirmLoadingLabel ?? 'Working…'}</span>
-								</>
-							) : (
-								confirmLabel
-							)}
-						</ConfirmButton>
+						{!hideConfirm && (
+							<ConfirmButton
+								type='button'
+								onClick={requestConfirm}
+								disabled={isLoading || closing || !!confirmDisabled}
+								$solid={confirmTone.solid}
+								$solidHover={confirmTone.solidHover}
+								$shadow={confirmTone.solidShadow}
+							>
+								{isLoading ? (
+									<>
+										<Spinner />
+										<span>{confirmLoadingLabel ?? 'Working…'}</span>
+									</>
+								) : (
+									confirmLabel
+								)}
+							</ConfirmButton>
+						)}
 					</Actions>
 				</Content>
 			</Surface>
@@ -469,7 +476,7 @@ const ExtrasSlot = styled.div<{ $closing: boolean }>`
 		cubic-bezier(0.22, 1, 0.36, 1) ${({ $closing }) => ($closing ? '0ms' : '220ms')} both;
 `
 
-const Actions = styled.div<{ $closing: boolean }>`
+const Actions = styled.div<{ $closing: boolean; $single?: boolean }>`
 	display: flex;
 	gap: 10px;
 	justify-content: stretch;
