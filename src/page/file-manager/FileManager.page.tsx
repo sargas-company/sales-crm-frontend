@@ -2083,8 +2083,9 @@ const CrumbBtn = styled.button<{ $current?: boolean }>`
 	gap: 6px;
 	/* Hug the content as tight as possible — a single-char label
 	 * ("3") should look like a chip of its own size, not a padded
-	 * placeholder. Horizontal padding ~ letter-spacing room, no
-	 * min-width anywhere. */
+	 * placeholder. MUI's global button {min-width:64px} was blowing
+	 * tiny crumbs out — explicitly reset. */
+	min-width: 0;
 	padding: 2px 6px;
 	border-radius: 7px;
 	border: none;
@@ -2113,6 +2114,7 @@ const BackBtn = styled.button`
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
+	min-width: 0;
 	padding: 5px 10px;
 	border-radius: 999px;
 	border: 1px dashed rgba(15, 23, 42, 0.18);
