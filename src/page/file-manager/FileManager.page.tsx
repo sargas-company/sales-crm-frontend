@@ -1655,9 +1655,12 @@ const MoveModal = ({
 			iconTone='ink'
 			title={`Move ${count} ${count === 1 ? 'item' : 'items'} to…`}
 			description='Pick a destination folder. The source items will keep their names.'
-			cancelLabel='Cancel'
-			confirmLabel=''
-			hideConfirm
+			/* Only one footer button — a solid ink Cancel that fills
+			 *  the row. Done via hideCancel so the confirm slot plays
+			 *  the role of a dismiss. */
+			confirmLabel='Cancel'
+			confirmColor='ink'
+			hideCancel
 			onConfirm={onCancel}
 			onClose={onCancel}
 			forceClose={closing}
@@ -1717,7 +1720,7 @@ const MoveTree = ({
 							$disabled={disabled}
 							style={{ paddingLeft: `${12 + depth * 16}px` }}
 						>
-							<FolderOutlined style={{ fontSize: 16, color: '#94a3b8' }} />
+							<FolderOutlined style={{ fontSize: 16, color: '#64748b' }} />
 							<MoveName>{n.name}</MoveName>
 							<MoveHereBtn
 								type='button'

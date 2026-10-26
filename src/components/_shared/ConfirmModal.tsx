@@ -33,6 +33,10 @@ interface Props {
 	 *  row. Useful for modals that are purely informational / use
 	 *  inline per-row actions and only need a dismiss affordance. */
 	hideConfirm?: boolean
+	/** Mirror of hideConfirm — hide the ghost cancel button and let
+	 *  the solid confirm fill the row (e.g. a "Done" dismiss styled
+	 *  as the primary action). */
+	hideCancel?: boolean
 	onClose: () => void
 	onConfirm: () => void
 	isLoading?: boolean
@@ -162,6 +166,7 @@ const ConfirmModal = ({
 	confirmColor = 'error',
 	cancelLabel = 'Cancel',
 	hideConfirm = false,
+	hideCancel = false,
 	onClose,
 	onConfirm,
 	isLoading,
@@ -233,15 +238,17 @@ const ConfirmModal = ({
 						) : null}
 					</BodyFrame>
 
-					<Actions $closing={closing} $single={hideConfirm}>
-						<CancelButton
-							type='button'
-							onClick={requestClose}
-							disabled={isLoading || closing}
-							$dark={isDark}
-						>
-							{cancelLabel}
-						</CancelButton>
+					<Actions $closing={closing} $single={hideConfirm || hideCancel}>
+						{!hideCancel && (
+							<CancelButton
+								type='button'
+								onClick={requestClose}
+								disabled={isLoading || closing}
+								$dark={isDark}
+							>
+								{cancelLabel}
+							</CancelButton>
+						)}
 						{!hideConfirm && (
 							<ConfirmButton
 								type='button'
