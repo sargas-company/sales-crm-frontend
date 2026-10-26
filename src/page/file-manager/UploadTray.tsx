@@ -159,7 +159,15 @@ export const TrayCardView = ({
 		),
 		Completed: items.filter((i) => i.status === 'done'),
 		Failed: items.filter((i) => i.status === 'error'),
-		Cancelled: items.filter((i) => i.status === 'cancelled'),
+		/* Cancelled items are deliberately NOT grouped — handleCancelRow
+		 *  removes them from the store ~320 ms after the cancel API
+		 *  resolves, so routing them through a visible "Cancelled"
+		 *  section just caused the tray height to grow by one group
+		 *  header + row, then collapse back when the row was removed.
+		 *  Instead, status flipping to 'cancelled' leaves the item
+		 *  unrendered — the browser's View Transitions fallback for a
+		 *  disappeared view-transition-name is a smooth fade-out at
+		 *  the row's old position, which is exactly what we want. */
 	}
 	const summary = {
 		active: items.filter((i) => i.status === 'uploading').length,
