@@ -10,7 +10,7 @@ import {
 	type ReactElement,
 	type ReactNode,
 } from 'react'
-import { createPortal } from 'react-dom'
+import { createPortal, flushSync } from 'react-dom'
 import { useNavigate, useParams } from 'react-router-dom'
 import styled, { css, keyframes } from 'styled-components'
 import {
@@ -585,25 +585,65 @@ const FileManagerPage = () => {
 	 *  tag invalidation — so the list collapses smoothly instead of
 	 *  pop-dropping rows. */
 	const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set())
+	/* Items optimistically removed from the rendered listing after
+	 *  the 320 ms exit animation finished — set inside a View
+	 *  Transition so the browser smoothly animates sibling cells
+	 *  reflowing into the freed slot (grid-template-columns with
+	 *  minmax(160px, 1fr) can't shrink a slot via max-width, so
+	 *  without this the neighbours still snapped). Cleaned up when
+	 *  the refetched data arrives without the id, same as
+	 *  pendingDeleteIds. */
+	const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
 	/* Garbage-collect ids that no longer exist in the listing — they
-	 *  belong to rows the refetch already unmounted. Keeps the set
-	 *  from growing unboundedly across a long session without racing
-	 *  the delete-exit animation (which the data update itself
-	 *  concludes by removing the row). */
+	 *  belong to rows the refetch already unmounted. Keeps both sets
+	 *  from growing unboundedly across a long session. */
 	useEffect(() => {
-		if (pendingDeleteIds.size === 0 || !data) return
+		if ((pendingDeleteIds.size === 0 && hiddenIds.size === 0) || !data) return
 		const live = new Set<string>([
 			...data.folders.map((x) => x.id),
 			...data.files.map((x) => x.id),
 		])
-		const stale = Array.from(pendingDeleteIds).filter((id) => !live.has(id))
-		if (!stale.length) return
-		setPendingDeleteIds((prev) => {
-			const next = new Set(prev)
-			for (const id of stale) next.delete(id)
-			return next
+		const stalePending = Array.from(pendingDeleteIds).filter((id) => !live.has(id))
+		const staleHidden = Array.from(hiddenIds).filter((id) => !live.has(id))
+		if (stalePending.length) {
+			setPendingDeleteIds((prev) => {
+				const next = new Set(prev)
+				for (const id of stalePending) next.delete(id)
+				return next
+			})
+		}
+		if (staleHidden.length) {
+			setHiddenIds((prev) => {
+				const next = new Set(prev)
+				for (const id of staleHidden) next.delete(id)
+				return next
+			})
+		}
+	}, [data, pendingDeleteIds, hiddenIds])
+
+	/* Helper: optimistically hide an id inside a View Transition so
+	 *  the browser interpolates sibling positions (grid auto-fill
+	 *  flow reshuffles smoothly instead of snapping). Each FolderCard
+	 *  / AttachCard carries a stable view-transition-name = fm-<id>,
+	 *  which gives the browser the identity it needs to animate
+	 *  everyone's new position. */
+	const hideWithTransition = (id: string) => {
+		const canVT =
+			typeof document !== 'undefined' &&
+			typeof (document as unknown as { startViewTransition?: unknown })
+				.startViewTransition === 'function'
+		if (!canVT) {
+			setHiddenIds((s) => new Set([...s, id]))
+			return
+		}
+		;(
+			document as unknown as {
+				startViewTransition: (cb: () => void) => unknown
+			}
+		).startViewTransition(() => {
+			flushSync(() => setHiddenIds((s) => new Set([...s, id])))
 		})
-	}, [data, pendingDeleteIds])
+	}
 	const closeMoveModal = () => {
 		/* Trigger ConfirmModal's exit animation first, then unmount
 		 *  after the 240 ms close transition settles. */
@@ -640,10 +680,14 @@ const FileManagerPage = () => {
 	const fileInputRef = useRef<HTMLInputElement | null>(null)
 
 	const filteredFiles = useMemo(() => {
-		const files = data?.files ?? []
+		const files = (data?.files ?? []).filter((f) => !hiddenIds.has(f.id))
 		if (filter === 'all') return files
 		return files.filter((f) => kindOf(f.mimeType, f.originalName) === filter)
-	}, [data?.files, filter])
+	}, [data?.files, filter, hiddenIds])
+	const visibleFolders = useMemo(
+		() => (data?.folders ?? []).filter((f) => !hiddenIds.has(f.id)),
+		[data?.folders, hiddenIds],
+	)
 
 	/* ── Selection helpers ─────────────────────────────────────── */
 	const selectionCount = selectedFolderIds.size + selectedFileIds.size
@@ -837,6 +881,19 @@ const FileManagerPage = () => {
 						},
 					},
 					{
+						label: 'Move',
+						icon: <DriveFileMoveOutlined style={{ fontSize: 16 }} />,
+						onClick: () => {
+							/* Preseed the bulk selection with just this one
+							 *  folder, then reuse the existing MoveModal flow
+							 *  so there's one code path for both single-item
+							 *  (context menu) and multi-item (toolbar) moves. */
+							setSelectedFolderIds(new Set([f.id]))
+							setSelectedFileIds(new Set())
+							setMoveModalOpen(true)
+						},
+					},
+					{
 						label: 'Delete',
 						icon: <DeleteOutlineRounded style={{ fontSize: 16 }} />,
 						danger: true,
@@ -876,6 +933,15 @@ const FileManagerPage = () => {
 						onClick: () => {
 							setRenameTarget({ kind: 'file', file: f })
 							setRenameValue(f.originalName)
+						},
+					},
+					{
+						label: 'Move',
+						icon: <DriveFileMoveOutlined style={{ fontSize: 16 }} />,
+						onClick: () => {
+							setSelectedFolderIds(new Set())
+							setSelectedFileIds(new Set([f.id]))
+							setMoveModalOpen(true)
 						},
 					},
 					{
@@ -931,6 +997,10 @@ const FileManagerPage = () => {
 		setPendingDeleteIds((s) => new Set([...s, target.id]))
 		setToDeleteFolder(null)
 		await new Promise((r) => window.setTimeout(r, 320))
+		/* Fade finished — now hand off to the browser's View
+		 *  Transition so the grid cell is removed from layout smoothly
+		 *  (siblings slide into the gap, not snap). */
+		hideWithTransition(target.id)
 		try {
 			await deleteFolder({
 				id: target.id,
@@ -962,6 +1032,7 @@ const FileManagerPage = () => {
 		setPendingDeleteIds((s) => new Set([...s, target.id]))
 		setToDeleteFile(null)
 		await new Promise((r) => window.setTimeout(r, 320))
+		hideWithTransition(target.id)
 		try {
 			await deleteFile({
 				id: target.id,
@@ -1231,7 +1302,7 @@ const FileManagerPage = () => {
 								<small>{folderCount}</small>
 							</SectionHead>
 							<FolderGrid>
-								{data!.folders.map((f, i) => {
+								{visibleFolders.map((f, i) => {
 									const isOpening = openingFolderId === f.id
 									const isDimmed =
 										openingFolderId !== null && openingFolderId !== f.id
@@ -1252,6 +1323,14 @@ const FileManagerPage = () => {
 													e.preventDefault()
 													openFolder(f.id)
 												}
+											}}
+											style={{
+												/* Identity for View Transitions — when
+												 *  hideWithTransition filters this id out,
+												 *  the browser uses this name to match
+												 *  siblings between snapshots and
+												 *  smoothly animate the grid reflow. */
+												viewTransitionName: `fm-folder-${f.id.replace(/[^a-zA-Z0-9_-]/g, '_')}`,
 											}}
 											$index={i}
 											$opening={isOpening}
@@ -1328,6 +1407,7 @@ const FileManagerPage = () => {
 												}}
 												style={{
 													animationDelay: `${Math.min(i, 20) * 35}ms`,
+													viewTransitionName: `fm-file-${f.id.replace(/[^a-zA-Z0-9_-]/g, '_')}`,
 												}}
 											>
 												<AttachTypeIcon $kind={kind}>
@@ -1514,6 +1594,23 @@ const FileManagerPage = () => {
 						 *  settle, then fire the real delete. Tag invalidation
 						 *  will then re-render without the rows. */
 						await new Promise((r) => window.setTimeout(r, 320))
+						/* Hand off to View Transitions for the actual grid
+						 *  reflow — same pattern as single-item delete. */
+						const canVT =
+							typeof document !== 'undefined' &&
+							typeof (document as unknown as { startViewTransition?: unknown })
+								.startViewTransition === 'function'
+						if (canVT) {
+							;(
+								document as unknown as {
+									startViewTransition: (cb: () => void) => unknown
+								}
+							).startViewTransition(() => {
+								flushSync(() => setHiddenIds((s) => new Set([...s, ...ids])))
+							})
+						} else {
+							setHiddenIds((s) => new Set([...s, ...ids]))
+						}
 						try {
 							const res = await bulkDelete({
 								folderIds: Array.from(selectedFolderIds),
