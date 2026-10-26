@@ -1645,7 +1645,7 @@ const Toolbar = styled.div`
 const Breadcrumbs = styled.div`
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
+	gap: 4px;
 	flex-wrap: wrap;
 `
 
@@ -1653,9 +1653,11 @@ const CrumbBtn = styled.button<{ $current?: boolean }>`
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	/* Tight padding so the pill hugs its content — short labels
-	 * like "Q4" no longer look like oversized chips. */
-	padding: 4px 8px;
+	/* Hug the content as tight as possible — a single-char label
+	 * ("3") should look like a chip of its own size, not a padded
+	 * placeholder. Horizontal padding ~ letter-spacing room, no
+	 * min-width anywhere. */
+	padding: 2px 6px;
 	border-radius: 7px;
 	border: none;
 	background: ${({ $current }) => ($current ? 'rgba(15, 23, 42, 0.08)' : 'transparent')};
