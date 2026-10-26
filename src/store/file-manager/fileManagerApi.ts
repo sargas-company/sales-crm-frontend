@@ -231,6 +231,52 @@ export const fileManagerApi = baseApi.injectEndpoints({
 		getFilePreviewUrl: builder.query<SignedUrl, string>({
 			query: (id) => ({ url: `/file-manager/files/${id}/preview-url` }),
 		}),
+
+		bulkDelete: builder.mutation<
+			{
+				deletedFolders: number
+				deletedFiles: number
+				failed: { id: string; kind: 'folder' | 'file'; reason: string }[]
+			},
+			{ folderIds: string[]; fileIds: string[]; folderId: string | null }
+		>({
+			query: ({ folderIds, fileIds }) => ({
+				url: '/file-manager/bulk-delete',
+				method: 'POST',
+				data: { folderIds, fileIds },
+			}),
+			invalidatesTags: (_r, _e, { folderId }) => [
+				{ type: 'FileManager', id: folderId ?? 'root' },
+				{ type: 'FileManager', id: 'TREE' },
+				{ type: 'FileManager', id: 'STATS' },
+			],
+		}),
+
+		bulkMove: builder.mutation<
+			{
+				movedFolders: number
+				movedFiles: number
+				failed: { id: string; kind: 'folder' | 'file'; reason: string }[]
+			},
+			{
+				folderIds: string[]
+				fileIds: string[]
+				destinationFolderId: string | null
+				sourceFolderId: string | null
+			}
+		>({
+			query: ({ folderIds, fileIds, destinationFolderId }) => ({
+				url: '/file-manager/bulk-move',
+				method: 'POST',
+				data: { folderIds, fileIds, destinationFolderId },
+			}),
+			invalidatesTags: (_r, _e, { destinationFolderId, sourceFolderId }) => [
+				{ type: 'FileManager', id: sourceFolderId ?? 'root' },
+				{ type: 'FileManager', id: destinationFolderId ?? 'root' },
+				{ type: 'FileManager', id: 'TREE' },
+				{ type: 'FileManager', id: 'STATS' },
+			],
+		}),
 	}),
 })
 
@@ -248,4 +294,6 @@ export const {
 	useDeleteFileMutation,
 	useLazyGetFileDownloadUrlQuery,
 	useLazyGetFilePreviewUrlQuery,
+	useBulkDeleteMutation,
+	useBulkMoveMutation,
 } = fileManagerApi

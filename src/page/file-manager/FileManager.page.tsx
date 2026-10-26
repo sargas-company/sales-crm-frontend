@@ -26,6 +26,8 @@ import {
 	HomeOutlined,
 	ChevronRightRounded,
 	KeyboardArrowDownRounded,
+	CloseRounded,
+	DriveFileMoveOutlined,
 } from '@mui/icons-material'
 
 import { ListPageShell } from '../../components/_shared/ListPageShell'
@@ -43,6 +45,8 @@ import {
 	useCreateFolderMutation,
 	useDeleteFileMutation,
 	useDeleteFolderMutation,
+	useBulkDeleteMutation,
+	useBulkMoveMutation,
 	useGetStatsQuery,
 	useGetTreeQuery,
 	useLazyGetFileDownloadUrlQuery,
@@ -484,6 +488,8 @@ const FileManagerPage = () => {
 	 * for ad-hoc callers, but FileManager page now routes every upload
 	 * through the resumable chunked path (enqueueUploads below). */
 	const [deleteFolder] = useDeleteFolderMutation()
+	const [bulkDelete, { isLoading: isBulkDeleting }] = useBulkDeleteMutation()
+	const [bulkMove, { isLoading: isBulkMoving }] = useBulkMoveMutation()
 	const [deleteFile] = useDeleteFileMutation()
 	const [renameFolder] = useRenameFolderMutation()
 	const [renameFile] = useRenameFileMutation()
@@ -562,6 +568,16 @@ const FileManagerPage = () => {
 	}, [])
 	const [openingFolderId, setOpeningFolderId] = useState<string | null>(null)
 	const [newFolderOpen, setNewFolderOpen] = useState(false)
+	/* Multi-select — bulk delete / move. Set holds ids regardless of
+	 *  type (uuid is unique across folders+files). lastClickType +
+	 *  lastClickId are the shift-click anchor. */
+	const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set())
+	const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set())
+	const [lastClick, setLastClick] = useState<
+		{ kind: 'folder' | 'file'; id: string } | null
+	>(null)
+	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+	const [moveModalOpen, setMoveModalOpen] = useState(false)
 	const [newFolderName, setNewFolderName] = useState('')
 	const [toDeleteFolder, setToDeleteFolder] = useState<FileManagerFolder | null>(null)
 	const [toDeleteFile, setToDeleteFile] = useState<FileManagerFile | null>(null)
@@ -593,6 +609,64 @@ const FileManagerPage = () => {
 		if (filter === 'all') return files
 		return files.filter((f) => kindOf(f.mimeType, f.originalName) === filter)
 	}, [data?.files, filter])
+
+	/* ── Selection helpers ─────────────────────────────────────── */
+	const selectionCount = selectedFolderIds.size + selectedFileIds.size
+	const clearSelection = () => {
+		setSelectedFolderIds(new Set())
+		setSelectedFileIds(new Set())
+		setLastClick(null)
+	}
+	const toggleId = (set: Set<string>, id: string): Set<string> => {
+		const next = new Set(set)
+		if (next.has(id)) next.delete(id)
+		else next.add(id)
+		return next
+	}
+	const handleItemClick = (
+		kind: 'folder' | 'file',
+		id: string,
+		e: React.MouseEvent,
+	) => {
+		if (e.metaKey || e.ctrlKey) {
+			if (kind === 'folder') setSelectedFolderIds((s) => toggleId(s, id))
+			else setSelectedFileIds((s) => toggleId(s, id))
+			setLastClick({ kind, id })
+			return 'selected'
+		}
+		if (e.shiftKey && lastClick) {
+			/* Range select — collect ids between anchor and current in
+			 * the visible [folders..., files...] sequence. */
+			const folderIds = (data?.folders ?? []).map((f) => f.id)
+			const fileIds = filteredFiles.map((f) => f.id)
+			const flat = [
+				...folderIds.map((fid) => ({ kind: 'folder' as const, id: fid })),
+				...fileIds.map((fid) => ({ kind: 'file' as const, id: fid })),
+			]
+			const a = flat.findIndex(
+				(x) => x.kind === lastClick.kind && x.id === lastClick.id,
+			)
+			const b = flat.findIndex((x) => x.kind === kind && x.id === id)
+			if (a >= 0 && b >= 0) {
+				const [lo, hi] = a < b ? [a, b] : [b, a]
+				const nextFolders = new Set(selectedFolderIds)
+				const nextFiles = new Set(selectedFileIds)
+				for (let i = lo; i <= hi; i++) {
+					if (flat[i].kind === 'folder') nextFolders.add(flat[i].id)
+					else nextFiles.add(flat[i].id)
+				}
+				setSelectedFolderIds(nextFolders)
+				setSelectedFileIds(nextFiles)
+				return 'selected'
+			}
+		}
+		if (selectionCount > 0) {
+			/* Plain click with an active selection = clear selection
+			 * AND treat the click as the open action. */
+			clearSelection()
+		}
+		return 'passthrough'
+	}
 
 	const openFolder = (id: string) => {
 		/* Snap-pulse the clicked folder (scale + glow ring via the
@@ -1033,6 +1107,31 @@ const FileManagerPage = () => {
 							</BackBtn>
 						)}
 					</Breadcrumbs>
+					{selectionCount > 0 && (
+						<BulkBar>
+							<BulkCount>
+								{selectionCount} selected
+							</BulkCount>
+							<BulkBtn
+								type='button'
+								onClick={() => setMoveModalOpen(true)}
+							>
+								<ArrowBackIosNewRounded style={{ fontSize: 13, transform: 'rotate(-90deg)' }} />
+								Move
+							</BulkBtn>
+							<BulkBtn
+								type='button'
+								$danger
+								onClick={() => setBulkDeleteOpen(true)}
+							>
+								<DeleteOutlineRounded style={{ fontSize: 16 }} />
+								Delete
+							</BulkBtn>
+							<BulkClear type='button' onClick={clearSelection} aria-label='Clear selection'>
+								<CloseRounded style={{ fontSize: 16 }} />
+							</BulkClear>
+						</BulkBar>
+					)}
 					<FilterRow ref={filtersRef}>
 						<FilterIndicator
 							style={{
@@ -1090,10 +1189,14 @@ const FileManagerPage = () => {
 									const isOpening = openingFolderId === f.id
 									const isDimmed =
 										openingFolderId !== null && openingFolderId !== f.id
+									const isSelected = selectedFolderIds.has(f.id)
 									return (
 										<FolderCard
 											key={f.id}
-											onClick={() => openFolder(f.id)}
+											onClick={(e) => {
+												const res = handleItemClick('folder', f.id, e)
+												if (res === 'passthrough') openFolder(f.id)
+											}}
 											onContextMenu={(e) => openFolderCtx(e, f)}
 											role='button'
 											tabIndex={0}
@@ -1106,6 +1209,7 @@ const FileManagerPage = () => {
 											$index={i}
 											$opening={isOpening}
 											$dimmed={isDimmed}
+											$selected={isSelected}
 										>
 											<Folder3D
 												size={110}
@@ -1161,12 +1265,17 @@ const FileManagerPage = () => {
 								<AttachList>
 									{filteredFiles.map((f, i) => {
 										const kind = mimeKind(f.mimeType)
+										const isSelected = selectedFileIds.has(f.id)
 										return (
 											<AttachCard
 												key={f.id}
 												$kind={kind}
+												$selected={isSelected}
 												onContextMenu={(e) => openFileCtx(e, f)}
-												onClick={() => openPreview(f)}
+												onClick={(e) => {
+													const res = handleItemClick('file', f.id, e)
+													if (res === 'passthrough') openPreview(f)
+												}}
 												style={{
 													animationDelay: `${Math.min(i, 20) * 35}ms`,
 												}}
@@ -1316,6 +1425,89 @@ const FileManagerPage = () => {
 				</ConfirmModal>
 			)}
 
+			{bulkDeleteOpen && (
+				<ConfirmModal
+					icon={<DeleteOutlineRounded />}
+					iconTone='danger'
+					title={`Delete ${selectionCount} ${selectionCount === 1 ? 'item' : 'items'}?`}
+					description={
+						<>
+							{selectedFolderIds.size > 0 && (
+								<>
+									{selectedFolderIds.size} folder{selectedFolderIds.size === 1 ? '' : 's'}
+									{selectedFileIds.size > 0 && ' and '}
+								</>
+							)}
+							{selectedFileIds.size > 0 && (
+								<>
+									{selectedFileIds.size} file{selectedFileIds.size === 1 ? '' : 's'}
+								</>
+							)}
+							{' '}will be permanently removed. This cannot be undone.
+						</>
+					}
+					confirmLabel='Delete'
+					confirmLoadingLabel='Deleting…'
+					confirmColor='error'
+					isLoading={isBulkDeleting}
+					onConfirm={async () => {
+						try {
+							const res = await bulkDelete({
+								folderIds: Array.from(selectedFolderIds),
+								fileIds: Array.from(selectedFileIds),
+								folderId: folderId ?? null,
+							}).unwrap()
+							showToast(
+								`Deleted ${res.deletedFolders} folder(s), ${res.deletedFiles} file(s)` +
+									(res.failed.length ? ` · ${res.failed.length} failed` : ''),
+								res.failed.length ? 'warning' : 'success',
+							)
+							clearSelection()
+							setBulkDeleteOpen(false)
+						} catch (e) {
+							const msg =
+								(e as { data?: { message?: string } })?.data?.message ??
+								'Delete failed'
+							showToast(msg, 'error')
+						}
+					}}
+					onClose={() => setBulkDeleteOpen(false)}
+				/>
+			)}
+
+			{moveModalOpen && (
+				<MoveModal
+					count={selectionCount}
+					sourceFolderIds={Array.from(selectedFolderIds)}
+					currentFolderId={folderId ?? null}
+					tree={treeData?.roots ?? []}
+					isLoading={isBulkMoving}
+					onCancel={() => setMoveModalOpen(false)}
+					onMove={async (dest) => {
+						try {
+							const res = await bulkMove({
+								folderIds: Array.from(selectedFolderIds),
+								fileIds: Array.from(selectedFileIds),
+								destinationFolderId: dest,
+								sourceFolderId: folderId ?? null,
+							}).unwrap()
+							showToast(
+								`Moved ${res.movedFolders + res.movedFiles} item(s)` +
+									(res.failed.length ? ` · ${res.failed.length} failed` : ''),
+								res.failed.length ? 'warning' : 'success',
+							)
+							clearSelection()
+							setMoveModalOpen(false)
+						} catch (e) {
+							const msg =
+								(e as { data?: { message?: string } })?.data?.message ??
+								'Move failed'
+							showToast(msg, 'error')
+						}
+					}}
+				/>
+			)}
+
 			{preview && (
 				<PreviewBackdrop onClick={closePreview} $closing={previewClosing}>
 					<PreviewFrame
@@ -1386,6 +1578,183 @@ const FileManagerPage = () => {
 		</>
 	)
 }
+
+/* ─── Move modal ───────────────────────────────────────────────── */
+const MoveModal = ({
+	count,
+	sourceFolderIds,
+	currentFolderId,
+	tree,
+	isLoading,
+	onCancel,
+	onMove,
+}: {
+	count: number
+	sourceFolderIds: string[]
+	currentFolderId: string | null
+	tree: FileManagerTreeNode[]
+	isLoading: boolean
+	onCancel: () => void
+	onMove: (destinationFolderId: string | null) => void
+}) => {
+	/* Disable the entire subtree of any folder being moved — can't
+	 *  move a folder into itself or its own descendant. */
+	const forbidden = useMemo(() => {
+		const banned = new Set<string>(sourceFolderIds)
+		const walk = (nodes: FileManagerTreeNode[], inBanned: boolean) => {
+			for (const n of nodes) {
+				const self = inBanned || banned.has(n.id)
+				if (self) banned.add(n.id)
+				if (n.children?.length) walk(n.children, self)
+			}
+		}
+		walk(tree, false)
+		return banned
+	}, [sourceFolderIds, tree])
+
+	return (
+		<ConfirmModal
+			icon={<DriveFileMoveOutlined />}
+			iconTone='ink'
+			title={`Move ${count} ${count === 1 ? 'item' : 'items'} to…`}
+			description='Pick a destination folder. The source items will keep their names.'
+			confirmLabel='Cancel'
+			confirmColor='ink'
+			onConfirm={onCancel}
+			onClose={onCancel}
+			cancelLabel=''
+			isLoading={isLoading}
+		>
+			<MoveList>
+				<MoveRow
+					$current={currentFolderId === null}
+					$disabled={forbidden.has('__root__' as never)}
+				>
+					<HomeOutlined style={{ fontSize: 18 }} />
+					<MoveName>Root</MoveName>
+					<MoveHereBtn
+						type='button'
+						onClick={() => onMove(null)}
+						disabled={isLoading}
+					>
+						Move here
+					</MoveHereBtn>
+				</MoveRow>
+				<MoveTree
+					nodes={tree}
+					forbidden={forbidden}
+					depth={1}
+					currentFolderId={currentFolderId}
+					isLoading={isLoading}
+					onMove={onMove}
+				/>
+			</MoveList>
+		</ConfirmModal>
+	)
+}
+
+const MoveTree = ({
+	nodes,
+	forbidden,
+	depth,
+	currentFolderId,
+	isLoading,
+	onMove,
+}: {
+	nodes: FileManagerTreeNode[]
+	forbidden: Set<string>
+	depth: number
+	currentFolderId: string | null
+	isLoading: boolean
+	onMove: (id: string) => void
+}) => {
+	return (
+		<>
+			{nodes.map((n) => {
+				const disabled = forbidden.has(n.id)
+				return (
+					<Fragment key={n.id}>
+						<MoveRow
+							$current={currentFolderId === n.id}
+							$disabled={disabled}
+							style={{ paddingLeft: `${12 + depth * 16}px` }}
+						>
+							<FolderOutlined style={{ fontSize: 18 }} />
+							<MoveName>{n.name}</MoveName>
+							<MoveHereBtn
+								type='button'
+								onClick={() => onMove(n.id)}
+								disabled={disabled || isLoading}
+							>
+								{disabled ? '—' : 'Move here'}
+							</MoveHereBtn>
+						</MoveRow>
+						{n.children?.length ? (
+							<MoveTree
+								nodes={n.children}
+								forbidden={forbidden}
+								depth={depth + 1}
+								currentFolderId={currentFolderId}
+								isLoading={isLoading}
+								onMove={onMove}
+							/>
+						) : null}
+					</Fragment>
+				)
+			})}
+		</>
+	)
+}
+
+const MoveList = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	max-height: 360px;
+	overflow-y: auto;
+	padding: 4px 2px;
+	background: rgba(15, 23, 42, 0.02);
+	border-radius: 10px;
+`
+const MoveRow = styled.div<{ $current?: boolean; $disabled?: boolean }>`
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 12px;
+	border-radius: 8px;
+	color: ${({ $disabled }) => ($disabled ? '#94a3b8' : '#0f172a')};
+	background: ${({ $current }) => ($current ? 'rgba(99, 102, 241, 0.08)' : 'transparent')};
+	&:hover { background: ${({ $disabled }) => ($disabled ? 'transparent' : 'rgba(15, 23, 42, 0.03)')}; }
+`
+const MoveName = styled.span`
+	font-size: 13.5px;
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+`
+const MoveHereBtn = styled.button`
+	padding: 5px 11px;
+	border-radius: 8px;
+	border: 1px solid rgba(15, 23, 42, 0.1);
+	background: #ffffff;
+	color: #0f172a;
+	font-family: inherit;
+	font-size: 11.5px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background 160ms ease, border-color 160ms ease;
+	&:hover:not(:disabled) {
+		background: #0f172a;
+		color: #ffffff;
+		border-color: transparent;
+	}
+	&:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+`
 
 export default FileManagerPage
 
@@ -1625,6 +1994,63 @@ const NewFolderBtn = styled(SolidBtn)`
 	}
 `
 
+/* ─── Bulk toolbar ─────────────────────────────────────────────── */
+const BulkBar = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 10px 8px 14px;
+	border-radius: 999px;
+	background: linear-gradient(135deg, #0f172a, #1e293b);
+	color: #ffffff;
+	box-shadow: 0 10px 24px -10px rgba(15, 23, 42, 0.4);
+	animation: ${keyframes`
+		from { opacity: 0; transform: translateY(-6px); }
+		to { opacity: 1; transform: translateY(0); }
+	`} 220ms cubic-bezier(0.22, 1, 0.36, 1);
+`
+const BulkCount = styled.span`
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.1px;
+	padding-right: 4px;
+`
+const BulkBtn = styled.button<{ $danger?: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 12px;
+	border-radius: 999px;
+	border: none;
+	background: ${({ $danger }) =>
+		$danger ? 'rgba(220, 38, 38, 0.9)' : 'rgba(255, 255, 255, 0.12)'};
+	color: #ffffff;
+	font-family: inherit;
+	font-size: 12.5px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background 160ms ease, transform 160ms ease;
+	&:hover {
+		background: ${({ $danger }) =>
+			$danger ? '#dc2626' : 'rgba(255, 255, 255, 0.2)'};
+		transform: translateY(-1px);
+	}
+`
+const BulkClear = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	border: none;
+	background: rgba(255, 255, 255, 0.08);
+	color: #ffffff;
+	cursor: pointer;
+	transition: background 160ms ease;
+	&:hover { background: rgba(255, 255, 255, 0.18); }
+`
+
 const Toolbar = styled.div`
 	display: flex;
 	justify-content: space-between;
@@ -1852,6 +2278,7 @@ const folderPulseOut = keyframes`
 `
 
 const FolderCard = styled.div<{
+	$selected?: boolean
 	$index: number
 	$opening: boolean
 	$dimmed: boolean
@@ -1882,6 +2309,14 @@ const FolderCard = styled.div<{
 	&:hover {
 		border-color: rgba(15, 23, 42, 0.14);
 	}
+
+	${({ $selected }) =>
+		$selected &&
+		css`
+			border-color: rgba(99, 102, 241, 0.5);
+			background: rgba(99, 102, 241, 0.08);
+			box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+		`}
 
 	${({ $dimmed }) =>
 		$dimmed &&
@@ -2005,7 +2440,7 @@ const AttachList = styled.ul`
 /* Row card: zero hover shadow / border shift. The interest lives on
  * the file-type icon — it lifts, tilts, and casts a mime-color
  * shadow when the row is hovered. Staggered in with a slide-in. */
-const AttachCard = styled.li<{ $kind: MimeKind }>`
+const AttachCard = styled.li<{ $kind: MimeKind; $selected?: boolean }>`
 	position: relative;
 	display: grid;
 	grid-template-columns: auto 1fr auto;
@@ -2037,6 +2472,12 @@ const AttachCard = styled.li<{ $kind: MimeKind }>`
 			${(p) => ATTACH_COLORS[p.$kind].solid}66;
 	}
 
+	${({ $selected }) =>
+		$selected &&
+		css`
+			background: rgba(99, 102, 241, 0.08);
+			box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4) inset;
+		`}
 `
 
 const AttachTypeIcon = styled.div<{ $kind: MimeKind }>`
