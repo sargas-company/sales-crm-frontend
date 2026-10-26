@@ -2390,9 +2390,7 @@ const FolderCard = styled.div<{
 	${({ $selected }) =>
 		$selected &&
 		css`
-			border-color: #0f172a;
 			background: rgba(15, 23, 42, 0.04);
-			box-shadow: 0 0 0 2px #0f172a;
 			&::after {
 				content: '';
 				position: absolute;
@@ -2578,7 +2576,6 @@ const AttachCard = styled.li<{
 		$selected &&
 		css`
 			background: rgba(15, 23, 42, 0.04);
-			box-shadow: 0 0 0 2px #0f172a inset;
 			&::after {
 				content: '';
 				position: absolute;
