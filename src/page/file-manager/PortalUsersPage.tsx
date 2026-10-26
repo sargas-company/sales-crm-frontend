@@ -41,6 +41,8 @@ import {
 import { useToast } from '../../context/toast/ToastContext'
 import useDebouncedValue from '../../hooks/useDebouncedValue'
 import {
+	useGetPortalUserQuery,
+	useListPortalUsersQuery,
 	useReactivatePortalUserMutation,
 	useRevokeShareMutation,
 	useTerminatePortalUserMutation,
@@ -241,7 +243,7 @@ const STATUS_PRESETS: { value: StatusPreset; label: string }[] = [
 const PAGE_SIZE = 20
 
 export const PortalUsersPage = () => {
-	const users = DEMO_USERS
+	const { data: users = [] } = useListPortalUsersQuery()
 	const { showToast } = useToast()
 
 	const [statusPreset, setStatusPreset] = useState<StatusPreset>('')
@@ -682,7 +684,7 @@ const PortalUserDetailModal = ({
 	userId: string
 	onClose: () => void
 }) => {
-	const user = DEMO_DETAILS[userId]
+	const { data: user } = useGetPortalUserQuery(userId)
 	const [revokeShare] = useRevokeShareMutation()
 	const { showToast } = useToast()
 	/* Done/Confirm should play the same scrim+scale exit animation as
