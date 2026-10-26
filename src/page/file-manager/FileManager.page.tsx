@@ -905,28 +905,49 @@ const FileManagerPage = () => {
 
 	const confirmDeleteFolder = async () => {
 		if (!toDeleteFolder) return
+		const target = toDeleteFolder
+		/* Mark the card for exit animation + close the confirm modal
+		 *  immediately so the row visibly collapses rather than
+		 *  flashing in place until the API returns. */
+		setPendingDeleteIds((s) => new Set([...s, target.id]))
+		setToDeleteFolder(null)
+		await new Promise((r) => window.setTimeout(r, 320))
 		try {
 			await deleteFolder({
-				id: toDeleteFolder.id,
-				parentId: toDeleteFolder.parentId,
+				id: target.id,
+				parentId: target.parentId,
 			}).unwrap()
-			showToast(`Folder "${toDeleteFolder.name}" deleted`, 'success')
-			setToDeleteFolder(null)
+			showToast(`Folder "${target.name}" deleted`, 'success')
 		} catch {
 			showToast('Failed to delete folder', 'error')
+		} finally {
+			setPendingDeleteIds((s) => {
+				const next = new Set(s)
+				next.delete(target.id)
+				return next
+			})
 		}
 	}
 	const confirmDeleteFile = async () => {
 		if (!toDeleteFile) return
+		const target = toDeleteFile
+		setPendingDeleteIds((s) => new Set([...s, target.id]))
+		setToDeleteFile(null)
+		await new Promise((r) => window.setTimeout(r, 320))
 		try {
 			await deleteFile({
-				id: toDeleteFile.id,
-				folderId: toDeleteFile.folderId,
+				id: target.id,
+				folderId: target.folderId,
 			}).unwrap()
-			showToast(`"${toDeleteFile.originalName}" deleted`, 'success')
-			setToDeleteFile(null)
+			showToast(`"${target.originalName}" deleted`, 'success')
 		} catch {
 			showToast('Failed to delete file', 'error')
+		} finally {
+			setPendingDeleteIds((s) => {
+				const next = new Set(s)
+				next.delete(target.id)
+				return next
+			})
 		}
 	}
 
