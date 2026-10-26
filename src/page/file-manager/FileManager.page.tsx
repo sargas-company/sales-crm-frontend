@@ -1116,7 +1116,7 @@ const FileManagerPage = () => {
 								type='button'
 								onClick={() => setMoveModalOpen(true)}
 							>
-								<ArrowBackIosNewRounded style={{ fontSize: 13, transform: 'rotate(-90deg)' }} />
+								<DriveFileMoveOutlined style={{ fontSize: 14 }} />
 								Move
 							</BulkBtn>
 							<BulkBtn
@@ -1124,11 +1124,11 @@ const FileManagerPage = () => {
 								$danger
 								onClick={() => setBulkDeleteOpen(true)}
 							>
-								<DeleteOutlineRounded style={{ fontSize: 16 }} />
+								<DeleteOutlineRounded style={{ fontSize: 14 }} />
 								Delete
 							</BulkBtn>
 							<BulkClear type='button' onClick={clearSelection} aria-label='Clear selection'>
-								<CloseRounded style={{ fontSize: 16 }} />
+								<CloseRounded style={{ fontSize: 14 }} />
 							</BulkClear>
 						</BulkBar>
 					)}
@@ -1999,7 +1999,8 @@ const BulkBar = styled.div`
 	display: inline-flex;
 	align-items: center;
 	gap: 10px;
-	padding: 8px 10px 8px 14px;
+	/* Breathe — bigger up/down + wider inside edges. */
+	padding: 12px 14px 12px 18px;
 	border-radius: 999px;
 	background: linear-gradient(135deg, #0f172a, #1e293b);
 	color: #ffffff;
@@ -2010,7 +2011,7 @@ const BulkBar = styled.div`
 	`} 220ms cubic-bezier(0.22, 1, 0.36, 1);
 `
 const BulkCount = styled.span`
-	font-size: 13px;
+	font-size: 12px;
 	font-weight: 700;
 	letter-spacing: 0.1px;
 	padding-right: 4px;
@@ -2019,6 +2020,7 @@ const BulkBtn = styled.button<{ $danger?: boolean }>`
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
+	min-width: 0;
 	padding: 6px 12px;
 	border-radius: 999px;
 	border: none;
@@ -2026,14 +2028,20 @@ const BulkBtn = styled.button<{ $danger?: boolean }>`
 		$danger ? 'rgba(220, 38, 38, 0.9)' : 'rgba(255, 255, 255, 0.12)'};
 	color: #ffffff;
 	font-family: inherit;
-	font-size: 12.5px;
+	font-size: 11.5px;
 	font-weight: 700;
 	cursor: pointer;
 	transition: background 160ms ease, transform 160ms ease;
+	& > svg {
+		transition: transform 220ms cubic-bezier(0.22, 1.4, 0.36, 1);
+	}
 	&:hover {
 		background: ${({ $danger }) =>
 			$danger ? '#dc2626' : 'rgba(255, 255, 255, 0.2)'};
 		transform: translateY(-1px);
+	}
+	&:hover > svg {
+		transform: scale(1.2) rotate(-6deg);
 	}
 `
 const BulkClear = styled.button`
@@ -2042,13 +2050,25 @@ const BulkClear = styled.button`
 	justify-content: center;
 	width: 28px;
 	height: 28px;
+	min-width: 0;
+	padding: 0;
 	border-radius: 50%;
+	aspect-ratio: 1 / 1;
 	border: none;
 	background: rgba(255, 255, 255, 0.08);
 	color: #ffffff;
 	cursor: pointer;
-	transition: background 160ms ease;
-	&:hover { background: rgba(255, 255, 255, 0.18); }
+	transition: background 160ms ease, transform 160ms ease;
+	& > svg {
+		transition: transform 220ms cubic-bezier(0.22, 1.4, 0.36, 1);
+	}
+	&:hover {
+		background: rgba(255, 255, 255, 0.18);
+		transform: scale(1.08);
+	}
+	&:hover > svg {
+		transform: rotate(90deg);
+	}
 `
 
 const Toolbar = styled.div`
@@ -2315,9 +2335,9 @@ const FolderCard = styled.div<{
 	${({ $selected }) =>
 		$selected &&
 		css`
-			border-color: rgba(99, 102, 241, 0.5);
-			background: rgba(99, 102, 241, 0.08);
-			box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+			border-color: rgba(59, 130, 246, 0.5);
+			background: rgba(59, 130, 246, 0.08);
+			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
 		`}
 
 	${({ $dimmed }) =>
@@ -2477,8 +2497,8 @@ const AttachCard = styled.li<{ $kind: MimeKind; $selected?: boolean }>`
 	${({ $selected }) =>
 		$selected &&
 		css`
-			background: rgba(99, 102, 241, 0.08);
-			box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4) inset;
+			background: rgba(59, 130, 246, 0.08);
+			box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4) inset;
 		`}
 `
 
