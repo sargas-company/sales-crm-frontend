@@ -585,6 +585,25 @@ const FileManagerPage = () => {
 	 *  tag invalidation — so the list collapses smoothly instead of
 	 *  pop-dropping rows. */
 	const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set())
+	/* Garbage-collect ids that no longer exist in the listing — they
+	 *  belong to rows the refetch already unmounted. Keeps the set
+	 *  from growing unboundedly across a long session without racing
+	 *  the delete-exit animation (which the data update itself
+	 *  concludes by removing the row). */
+	useEffect(() => {
+		if (pendingDeleteIds.size === 0 || !data) return
+		const live = new Set<string>([
+			...data.folders.map((x) => x.id),
+			...data.files.map((x) => x.id),
+		])
+		const stale = Array.from(pendingDeleteIds).filter((id) => !live.has(id))
+		if (!stale.length) return
+		setPendingDeleteIds((prev) => {
+			const next = new Set(prev)
+			for (const id of stale) next.delete(id)
+			return next
+		})
+	}, [data, pendingDeleteIds])
 	const closeMoveModal = () => {
 		/* Trigger ConfirmModal's exit animation first, then unmount
 		 *  after the 240 ms close transition settles. */
@@ -918,9 +937,18 @@ const FileManagerPage = () => {
 				parentId: target.parentId,
 			}).unwrap()
 			showToast(`Folder "${target.name}" deleted`, 'success')
+			/* DO NOT clear pendingDeleteIds here — the card is still
+			 *  in the DOM (fade-out already finished at this point)
+			 *  but the tag-invalidation refetch hasn't landed yet.
+			 *  Clearing now would reset $deleting styles and the row
+			 *  would snap back to visible for a flash before refetch
+			 *  unmounts it. Let the item vanish naturally when the
+			 *  fresh data arrives; the stale id in the set is
+			 *  harmless because nothing renders it anymore. */
 		} catch {
 			showToast('Failed to delete folder', 'error')
-		} finally {
+			/* On failure, do clean up so the card can be re-interacted
+			 *  with. Fade is already stuck at 0 — reset it. */
 			setPendingDeleteIds((s) => {
 				const next = new Set(s)
 				next.delete(target.id)
@@ -940,9 +968,11 @@ const FileManagerPage = () => {
 				folderId: target.folderId,
 			}).unwrap()
 			showToast(`"${target.originalName}" deleted`, 'success')
+			/* Do not clear pendingDeleteIds here — see note in
+			 *  confirmDeleteFolder; the stale id is harmless once the
+			 *  refetched data no longer contains the item. */
 		} catch {
 			showToast('Failed to delete file', 'error')
-		} finally {
 			setPendingDeleteIds((s) => {
 				const next = new Set(s)
 				next.delete(target.id)
@@ -1496,12 +1526,18 @@ const FileManagerPage = () => {
 								res.failed.length ? 'warning' : 'success',
 							)
 							clearSelection()
+							/* No pendingDeleteIds reset on success — the
+							 *  cards are mid-collapse and the refetch is
+							 *  about to arrive. Clearing here would reset
+							 *  $deleting styles and the rows would snap
+							 *  back visible for a flash before unmount. */
 						} catch (e) {
 							const msg =
 								(e as { data?: { message?: string } })?.data?.message ??
 								'Delete failed'
 							showToast(msg, 'error')
-						} finally {
+							/* On failure though, we must reset so the user
+							 *  can interact with the still-present rows. */
 							setPendingDeleteIds(new Set())
 						}
 					}}
