@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { flushSync } from 'react-dom'
 
 import { fileManagerApi } from '../../store/file-manager/fileManagerApi'
 import { store } from '../../store/store'
@@ -129,11 +130,42 @@ export const useUploadQueue = (): State =>
 const genId = () => `up_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
 const patch = (id: string, p: Partial<UploadItem>) => {
-	state = {
-		...state,
-		items: state.items.map((i) => (i.id === id ? { ...i, ...p } : i)),
+	const prev = state.items.find((i) => i.id === id)
+	const statusChanged = !!p.status && !!prev && p.status !== prev.status
+	const mutate = () => {
+		state = {
+			...state,
+			items: state.items.map((i) => (i.id === id ? { ...i, ...p } : i)),
+		}
+		emit()
 	}
-	emit()
+	/* When a status flip would move the row between groups in the
+	 *  tray (uploading → done, done → cancelled, etc.) we drive the
+	 *  mutation through the View Transitions API. The browser
+	 *  snapshots the DOM, runs flushSync to commit React's re-render
+	 *  synchronously, snapshots again, then cross-fades + slides any
+	 *  element carrying a matching `view-transition-name` between
+	 *  the two positions. The tray's RowWrap tags itself with
+	 *  `upload-<id>` so the browser knows to animate the row's own
+	 *  motion between the old and new group. No framer-motion, no
+	 *  manual ghost tracking, no chaos. Non-chromium browsers skip
+	 *  the wrap and get the plain instant update. */
+	const canViewTransition =
+		statusChanged &&
+		typeof document !== 'undefined' &&
+		typeof (document as unknown as { startViewTransition?: unknown })
+			.startViewTransition === 'function'
+	if (canViewTransition) {
+		;(
+			document as unknown as {
+				startViewTransition: (cb: () => void) => unknown
+			}
+		).startViewTransition(() => {
+			flushSync(mutate)
+		})
+	} else {
+		mutate()
+	}
 }
 
 const findItem = (id: string): UploadItem | undefined =>

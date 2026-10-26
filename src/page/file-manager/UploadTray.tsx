@@ -361,7 +361,19 @@ const Row = ({ item, isLastInTray }: { item: UploadItem; isLastInTray: boolean }
 	}
 
 	return (
-		<RowWrap $status={item.status} $exiting={exiting}>
+		<RowWrap
+			$status={item.status}
+			$exiting={exiting}
+			/* Tag the row with a stable per-upload view-transition-name
+			 *  — the browser uses this to animate the row between its
+			 *  old and new DOM positions when its status flips and it
+			 *  moves between the Active / Completed / Failed /
+			 *  Cancelled groups (coordinated from
+			 *  uploadQueueStore.patch via document.startViewTransition
+			 *  + flushSync). Replace `:` with `-` in id to stay inside
+			 *  the CSS identifier grammar. */
+			style={{ viewTransitionName: `upload-${item.id.replace(/[^a-zA-Z0-9_-]/g, '_')}` }}
+		>
 			<FileIcon $kind={kind}>
 				<FileFold />
 				<FileExt>{getExt(item.fileName)}</FileExt>
