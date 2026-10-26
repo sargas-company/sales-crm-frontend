@@ -2472,14 +2472,18 @@ const FolderCard = styled.div<{
 	${({ $deleting }) =>
 		$deleting &&
 		css`
-			/* Fade + scale out AND physically collapse to zero so grid
-			 *  neighbours smoothly slide into the gap instead of
-			 *  snapping when React finally unmounts the row. */
+			/* Fade + scale out, AND physically collapse to zero size
+			 *  WITH a negative margin equal to the grid gap (12 px) —
+			 *  this absorbs the parent's row/column gap-slot so when
+			 *  the row is finally unmounted after refetch, grid
+			 *  neighbours are already in their final position and
+			 *  don't visibly shift by one gap. No end-of-animation
+			 *  jerk. */
 			opacity: 0;
 			transform: scale(0.85) translateX(20px);
 			max-width: 0;
 			max-height: 0;
-			margin: 0;
+			margin: -6px;
 			padding: 0;
 			overflow: hidden;
 			pointer-events: none;
@@ -2667,10 +2671,14 @@ const AttachCard = styled.li<{
 	${({ $deleting }) =>
 		$deleting &&
 		css`
+			/* Same trick as FolderCard: negative margin equal to the
+			 *  AttachList gap (8 px) absorbs the parent flex-gap for
+			 *  this row, so the final unmount after refetch doesn't
+			 *  cause neighbours to jump up by one gap. */
 			opacity: 0;
 			transform: translateX(24px) scale(0.98);
 			max-height: 0;
-			margin: 0;
+			margin: -4px 0;
 			padding: 0 16px;
 			overflow: hidden;
 			pointer-events: none;
