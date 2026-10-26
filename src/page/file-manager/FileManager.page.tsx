@@ -1594,28 +1594,41 @@ const FileManagerPage = () => {
 							</PreviewTitle>
 							<PreviewHeadActions>
 								{previewFile && (
-									<GhostBtn
+									<PreviewAction
 										type='button'
+										$tone='download'
 										onClick={() => void handleDownload(previewFile)}
+										aria-label='Download'
+										title='Download'
 									>
-										Download
-									</GhostBtn>
+										<DownloadRounded style={{ fontSize: 18 }} />
+										<PreviewActionLabel>Download</PreviewActionLabel>
+									</PreviewAction>
 								)}
 								{previewFile && (
-									<GhostBtn
+									<PreviewAction
 										type='button'
+										$tone='delete'
 										onClick={() => {
 											const f = previewFile
 											closePreview()
 											window.setTimeout(() => setToDeleteFile(f), 720)
 										}}
+										aria-label='Delete'
+										title='Delete'
 									>
-										Delete
-									</GhostBtn>
+										<DeleteOutlineRounded style={{ fontSize: 18 }} />
+									</PreviewAction>
 								)}
-								<GhostBtn type='button' onClick={closePreview}>
-									Close
-								</GhostBtn>
+								<PreviewAction
+									type='button'
+									$tone='close'
+									onClick={closePreview}
+									aria-label='Close'
+									title='Close'
+								>
+									<CloseRounded style={{ fontSize: 18 }} />
+								</PreviewAction>
 							</PreviewHeadActions>
 						</PreviewHead>
 						<PreviewCollapse $closing={previewClosing}>
@@ -3148,7 +3161,82 @@ const PreviewBody = styled.div`
 	flex: 1;
 	min-height: 0;
 	overflow: auto;
+	/* Off-white stage so centred media (images, PDFs, video posters)
+	 *  reads as "framed" rather than wall-to-wall. Padding gives
+	 *  breathing room on all four sides. */
+	background: #f7f8fa;
+	padding: 28px 32px;
+	display: flex;
+	flex-direction: column;
+`
+
+const PreviewAction = styled.button<{ $tone: 'download' | 'delete' | 'close' }>`
+	appearance: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	height: 38px;
+	padding: 0 ${({ $tone }) => ($tone === 'download' ? '14px' : '10px')};
+	border-radius: 11px;
+	border: 1px solid rgba(15, 23, 42, 0.1);
 	background: #ffffff;
+	color: #0f172a;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: -0.1px;
+	cursor: pointer;
+	transition:
+		background 180ms ease,
+		border-color 180ms ease,
+		color 180ms ease,
+		transform 160ms ease;
+
+	&:active {
+		transform: translateY(1px);
+	}
+	&:focus-visible {
+		outline: 2px solid #0f172a;
+		outline-offset: 2px;
+	}
+
+	${({ $tone }) =>
+		$tone === 'download' &&
+		css`
+			&:hover {
+				background: #0f172a;
+				border-color: #0f172a;
+				color: #ffffff;
+			}
+		`}
+	${({ $tone }) =>
+		$tone === 'delete' &&
+		css`
+			color: #94a3b8;
+			&:hover {
+				background: #fef2f2;
+				border-color: #fecaca;
+				color: #dc2626;
+			}
+		`}
+	${({ $tone }) =>
+		$tone === 'close' &&
+		css`
+			color: #64748b;
+			&:hover {
+				background: #f1f5f9;
+				border-color: rgba(15, 23, 42, 0.18);
+				color: #0f172a;
+			}
+		`}
+`
+
+const PreviewActionLabel = styled.span`
+	display: inline-block;
+	@media (max-width: 640px) {
+		display: none;
+	}
 `
 
 /* ─── Sidebar + Storage card ─────────────────────────────────────── */
