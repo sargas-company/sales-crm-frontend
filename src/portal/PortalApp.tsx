@@ -58,7 +58,17 @@ export const PortalApp = () => {
 						}
 					/>
 					<Route
-						path='/file-manager/*'
+						path='/file-manager'
+						element={
+							<PortalRequireAuth>
+								<PortalShell>
+									<FileManagerPage />
+								</PortalShell>
+							</PortalRequireAuth>
+						}
+					/>
+					<Route
+						path='/file-manager/folder/:folderId'
 						element={
 							<PortalRequireAuth>
 								<PortalShell>
