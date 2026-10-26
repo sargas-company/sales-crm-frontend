@@ -298,10 +298,35 @@ const Row = ({ item }: { item: UploadItem }) => {
 	const inputRef = useRef<HTMLInputElement | null>(null)
 	const [sizeMismatch, setSizeMismatch] = useState<File | null>(null)
 	const [hashMismatch, setHashMismatch] = useState(false)
+	/* Two-stage cancel UX:
+	 *  - cancelling: await backend/B2 cancel while showing a spinner
+	 *    inside the X slot (prevents double-clicks, gives feedback).
+	 *  - exiting: swap to a smooth collapse+fade transition on the
+	 *    row (opacity 1→0, max-height to 0) before removing it from
+	 *    state, so the list doesn't jerk. */
+	const [cancelling, setCancelling] = useState(false)
+	const [exiting, setExiting] = useState(false)
 
 	const needsFilePick = item.status === 'interrupted' || item.status === 'error'
 
 	const handlePick = () => inputRef.current?.click()
+
+	const handleCancelRow = async () => {
+		if (cancelling || exiting) return
+		setCancelling(true)
+		try {
+			await cancelUpload(item.id)
+		} catch {
+			/* ignore — exit anyway so a broken session doesn't trap
+			 * the row in the tray forever. */
+		}
+		setCancelling(false)
+		setExiting(true)
+		/* Removal fires after the collapse transition finishes
+		 * (320ms); use setTimeout rather than onTransitionEnd so a
+		 * fast consecutive click doesn't lose the event. */
+		window.setTimeout(() => removeUpload(item.id), 320)
+	}
 
 	const consumeFile = async (f: File) => {
 		if (!needsFilePick) {
@@ -317,7 +342,7 @@ const Row = ({ item }: { item: UploadItem }) => {
 	}
 
 	return (
-		<RowWrap $status={item.status}>
+		<RowWrap $status={item.status} $exiting={exiting}>
 			<FileIcon $kind={kind}>
 				<FileFold />
 				<FileExt>{getExt(item.fileName)}</FileExt>
@@ -365,7 +390,12 @@ const Row = ({ item }: { item: UploadItem }) => {
 					</Progress>
 				)}
 			</RowBody>
-			<RowActions item={item} onPickFile={handlePick} />
+			<RowActions
+				item={item}
+				onPickFile={handlePick}
+				cancelling={cancelling}
+				onCancel={handleCancelRow}
+			/>
 			<input
 				ref={inputRef}
 				type='file'
@@ -427,9 +457,13 @@ const Row = ({ item }: { item: UploadItem }) => {
 const RowActions = ({
 	item,
 	onPickFile,
+	cancelling,
+	onCancel,
 }: {
 	item: UploadItem
 	onPickFile: () => void
+	cancelling: boolean
+	onCancel: () => void
 }) => {
 	const canPause = item.status === 'uploading' || item.status === 'queued'
 	const canResumeInMemory = item.status === 'paused' && !!item.file
@@ -438,50 +472,43 @@ const RowActions = ({
 		(item.status === 'error' && !item.file) ||
 		(item.status === 'paused' && !item.file)
 	const canRetryInMemory = item.status === 'error' && !!item.file
-	/* Cancel is offered on everything that is NOT already finished —
-	 *  mid-flight (uploading/queued), paused, errored, interrupted.
-	 *  Cancel aborts in-flight XHRs, best-effort DELETEs the server
-	 *  session, and removes the row entirely. Pause keeps the row;
-	 *  this gets rid of it. */
 	const canCancel =
 		item.status === 'uploading' ||
 		item.status === 'queued' ||
 		item.status === 'paused' ||
 		item.status === 'error' ||
 		item.status === 'interrupted'
-	const handleCancel = async () => {
-		try {
-			await cancelUpload(item.id)
-		} catch {
-			/* ignore — removeUpload below cleans up state regardless */
-		}
-		removeUpload(item.id)
-	}
 	return (
 		<RowActionsWrap>
-			{canRetryInMemory && (
+			{canRetryInMemory && !cancelling && (
 				<SquareBtn type='button' onClick={() => retryUpload(item.id)} aria-label='Retry'>
 					<RefreshRounded style={{ fontSize: 20 }} />
 				</SquareBtn>
 			)}
-			{canPause && (
+			{canPause && !cancelling && (
 				<SquareBtn type='button' onClick={() => pauseUpload(item.id)} aria-label='Pause'>
 					<PauseRounded style={{ fontSize: 20 }} />
 				</SquareBtn>
 			)}
-			{canResumeInMemory && (
+			{canResumeInMemory && !cancelling && (
 				<SquareBtn type='button' onClick={() => resumeUpload(item.id)} aria-label='Resume'>
 					<PlayArrowRounded style={{ fontSize: 20 }} />
 				</SquareBtn>
 			)}
-			{needsPick && (
+			{needsPick && !cancelling && (
 				<SquareBtn type='button' onClick={onPickFile} aria-label='Resume (re-select file)'>
 					<PlayArrowRounded style={{ fontSize: 20 }} />
 				</SquareBtn>
 			)}
 			{canCancel && (
-				<DangerSquareBtn type='button' onClick={handleCancel} aria-label='Cancel upload'>
-					<CloseRounded style={{ fontSize: 18 }} />
+				<DangerSquareBtn
+					type='button'
+					onClick={onCancel}
+					disabled={cancelling}
+					aria-label='Cancel upload'
+					aria-busy={cancelling}
+				>
+					{cancelling ? <Spinner /> : <CloseRounded style={{ fontSize: 18 }} />}
 				</DangerSquareBtn>
 			)}
 		</RowActionsWrap>
@@ -770,16 +797,50 @@ const GroupCount = styled.span`
 	font-weight: 700;
 	font-variant-numeric: tabular-nums;
 `
-const RowWrap = styled.div<{ $status: UploadItem['status'] }>`
+const RowWrap = styled.div<{ $status: UploadItem['status']; $exiting?: boolean }>`
 	display: grid;
 	grid-template-columns: auto 1fr auto;
 	gap: 14px;
 	align-items: flex-start;
 	padding: 12px 8px;
 	border-radius: 12px;
-	opacity: ${({ $status }) => ($status === 'cancelled' ? 0.6 : 1)};
-	transition: background 160ms ease;
+	/* Static state: dim cancelled, otherwise opaque.
+	 * Exit transition: collapse height + fade + slight slide out of
+	 * list. max-height is large enough to cover any row content;
+	 * going to 0 produces a smooth height collapse because of the
+	 * transition on it. Overflow hidden prevents inner content from
+	 * flashing outside the shrinking box. */
+	opacity: ${({ $status, $exiting }) =>
+		$exiting ? 0 : $status === 'cancelled' ? 0.6 : 1};
+	max-height: ${({ $exiting }) => ($exiting ? '0' : '220px')};
+	margin-top: ${({ $exiting }) => ($exiting ? '0' : 'inherit')};
+	margin-bottom: ${({ $exiting }) => ($exiting ? '0' : 'inherit')};
+	padding-top: ${({ $exiting }) => ($exiting ? '0' : '12px')};
+	padding-bottom: ${({ $exiting }) => ($exiting ? '0' : '12px')};
+	transform: ${({ $exiting }) => ($exiting ? 'translateX(12px)' : 'none')};
+	overflow: hidden;
+	pointer-events: ${({ $exiting }) => ($exiting ? 'none' : 'auto')};
+	transition:
+		background 160ms ease,
+		opacity 240ms ease,
+		max-height 300ms cubic-bezier(0.4, 0, 0.2, 1),
+		padding 300ms cubic-bezier(0.4, 0, 0.2, 1),
+		transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
 	&:hover { background: rgba(15, 23, 42, 0.03); }
+`
+
+/* 16×16 CSS spinner that occupies the same slot as the close icon. */
+const spin = keyframes`
+	to { transform: rotate(360deg); }
+`
+const Spinner = styled.span`
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	border: 2px solid currentColor;
+	border-top-color: transparent;
+	border-radius: 50%;
+	animation: ${spin} 600ms linear infinite;
 `
 const RowBody = styled.div`
 	display: flex;
