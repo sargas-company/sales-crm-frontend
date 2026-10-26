@@ -243,7 +243,7 @@ export const fileManagerApi = baseApi.injectEndpoints({
 			query: ({ folderIds, fileIds }) => ({
 				url: '/file-manager/bulk-delete',
 				method: 'POST',
-				data: { folderIds, fileIds },
+				body: { folderIds, fileIds },
 			}),
 			invalidatesTags: (_r, _e, { folderId }) => [
 				{ type: 'FileManager', id: folderId ?? 'root' },
@@ -268,7 +268,7 @@ export const fileManagerApi = baseApi.injectEndpoints({
 			query: ({ folderIds, fileIds, destinationFolderId }) => ({
 				url: '/file-manager/bulk-move',
 				method: 'POST',
-				data: { folderIds, fileIds, destinationFolderId },
+				body: { folderIds, fileIds, destinationFolderId },
 			}),
 			invalidatesTags: (_r, _e, { destinationFolderId, sourceFolderId }) => [
 				{ type: 'FileManager', id: sourceFolderId ?? 'root' },

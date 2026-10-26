@@ -579,6 +579,12 @@ const FileManagerPage = () => {
 	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
 	const [moveModalOpen, setMoveModalOpen] = useState(false)
 	const [moveModalClosing, setMoveModalClosing] = useState(false)
+	/* Ids currently playing their exit animation. The card renders
+	 *  with $deleting styles (opacity 0 + scale 0.9) and only after
+	 *  the 280 ms transition we fire the actual bulkDelete API +
+	 *  tag invalidation — so the list collapses smoothly instead of
+	 *  pop-dropping rows. */
+	const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set())
 	const closeMoveModal = () => {
 		/* Trigger ConfirmModal's exit animation first, then unmount
 		 *  after the 240 ms close transition settles. */
@@ -1199,6 +1205,7 @@ const FileManagerPage = () => {
 									const isDimmed =
 										openingFolderId !== null && openingFolderId !== f.id
 									const isSelected = selectedFolderIds.has(f.id)
+									const isDeleting = pendingDeleteIds.has(f.id)
 									return (
 										<FolderCard
 											key={f.id}
@@ -1219,6 +1226,7 @@ const FileManagerPage = () => {
 											$opening={isOpening}
 											$dimmed={isDimmed}
 											$selected={isSelected}
+											$deleting={isDeleting}
 										>
 											<Folder3D
 												size={110}
@@ -1275,11 +1283,13 @@ const FileManagerPage = () => {
 									{filteredFiles.map((f, i) => {
 										const kind = mimeKind(f.mimeType)
 										const isSelected = selectedFileIds.has(f.id)
+										const isDeleting = pendingDeleteIds.has(f.id)
 										return (
 											<AttachCard
 												key={f.id}
 												$kind={kind}
 												$selected={isSelected}
+												$deleting={isDeleting}
 												onContextMenu={(e) => openFileCtx(e, f)}
 												onClick={(e) => {
 													const res = handleItemClick('file', f.id, e)
@@ -1460,6 +1470,19 @@ const FileManagerPage = () => {
 					confirmColor='error'
 					isLoading={isBulkDeleting}
 					onConfirm={async () => {
+						/* Phase 1 — mark cards for exit animation; close the
+						 *  confirmation modal immediately so the user sees
+						 *  the list collapse, not a hanging dialog. */
+						const ids = new Set<string>([
+							...Array.from(selectedFolderIds),
+							...Array.from(selectedFileIds),
+						])
+						setPendingDeleteIds(ids)
+						setBulkDeleteOpen(false)
+						/* Phase 2 — wait for the fade+collapse (320 ms) to
+						 *  settle, then fire the real delete. Tag invalidation
+						 *  will then re-render without the rows. */
+						await new Promise((r) => window.setTimeout(r, 320))
 						try {
 							const res = await bulkDelete({
 								folderIds: Array.from(selectedFolderIds),
@@ -1472,12 +1495,13 @@ const FileManagerPage = () => {
 								res.failed.length ? 'warning' : 'success',
 							)
 							clearSelection()
-							setBulkDeleteOpen(false)
 						} catch (e) {
 							const msg =
 								(e as { data?: { message?: string } })?.data?.message ??
 								'Delete failed'
 							showToast(msg, 'error')
+						} finally {
+							setPendingDeleteIds(new Set())
 						}
 					}}
 					onClose={() => setBulkDeleteOpen(false)}
@@ -2351,6 +2375,7 @@ const folderPulseOut = keyframes`
 
 const FolderCard = styled.div<{
 	$selected?: boolean
+	$deleting?: boolean
 	$index: number
 	$opening: boolean
 	$dimmed: boolean
@@ -2405,6 +2430,15 @@ const FolderCard = styled.div<{
 	${({ $dimmed }) =>
 		$dimmed &&
 		`opacity: 0.3; filter: blur(1px) saturate(0.6);`}
+
+	${({ $deleting }) =>
+		$deleting &&
+		css`
+			opacity: 0;
+			transform: scale(0.9);
+			pointer-events: none;
+			transition: opacity 280ms ease, transform 280ms cubic-bezier(0.4, 0, 1, 1);
+		`}
 
 	${({ $opening }) =>
 		$opening &&
@@ -2524,7 +2558,11 @@ const AttachList = styled.ul`
 /* Row card: zero hover shadow / border shift. The interest lives on
  * the file-type icon — it lifts, tilts, and casts a mime-color
  * shadow when the row is hovered. Staggered in with a slide-in. */
-const AttachCard = styled.li<{ $kind: MimeKind; $selected?: boolean }>`
+const AttachCard = styled.li<{
+	$kind: MimeKind
+	$selected?: boolean
+	$deleting?: boolean
+}>`
 	position: relative;
 	display: grid;
 	grid-template-columns: auto 1fr auto;
@@ -2573,6 +2611,15 @@ const AttachCard = styled.li<{ $kind: MimeKind; $selected?: boolean }>`
 					url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>")
 					center / 14px no-repeat;
 			}
+		`}
+
+	${({ $deleting }) =>
+		$deleting &&
+		css`
+			opacity: 0;
+			transform: translateX(16px) scale(0.98);
+			pointer-events: none;
+			transition: opacity 280ms ease, transform 280ms cubic-bezier(0.4, 0, 1, 1);
 		`}
 `
 

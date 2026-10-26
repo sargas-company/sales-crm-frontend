@@ -206,7 +206,13 @@ export const TrayCardView = ({
 								</GroupHead>
 								{arr.map((i) => (
 									<Row
-										key={i.id}
+										/* Key includes status so React re-mounts the row
+										 *  when it jumps between groups (uploading →
+										 *  done → cancelled). The remount replays the
+										 *  slide-in entry animation, giving a smooth
+										 *  arrival instead of a hard pop in the new
+										 *  group. */
+										key={`${i.id}:${i.status}`}
 										item={i}
 										isLastInTray={items.length === 1}
 									/>
@@ -817,6 +823,14 @@ const RowWrap = styled.div<{ $status: UploadItem['status']; $exiting?: boolean }
 	align-items: flex-start;
 	padding: 12px 8px;
 	border-radius: 12px;
+	/* Fresh-mount entry — plays on first mount AND on every remount
+	 *  triggered by the id:status key change in the Group map, so a
+	 *  row jumping from "Active" to "Completed" visually glides in
+	 *  rather than popping. */
+	animation: ${keyframes`
+		from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+		to { opacity: 1; transform: translateY(0) scale(1); }
+	`} 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 	/* Static state: dim cancelled, otherwise opaque.
 	 * Exit transition: collapse height + fade + slight slide out of
 	 * list. max-height is large enough to cover any row content;
