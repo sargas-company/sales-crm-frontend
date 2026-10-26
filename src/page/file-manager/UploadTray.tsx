@@ -13,10 +13,12 @@ import {
 } from '@mui/icons-material'
 
 import {
+	cancelUpload,
 	clearFinished,
 	dismissTray,
 	hydrateFromIdb,
 	pauseUpload,
+	removeUpload,
 	resumeInterruptedWithFile,
 	resumeUpload,
 	retryUpload,
@@ -436,6 +438,25 @@ const RowActions = ({
 		(item.status === 'error' && !item.file) ||
 		(item.status === 'paused' && !item.file)
 	const canRetryInMemory = item.status === 'error' && !!item.file
+	/* Cancel is offered on everything that is NOT already finished —
+	 *  mid-flight (uploading/queued), paused, errored, interrupted.
+	 *  Cancel aborts in-flight XHRs, best-effort DELETEs the server
+	 *  session, and removes the row entirely. Pause keeps the row;
+	 *  this gets rid of it. */
+	const canCancel =
+		item.status === 'uploading' ||
+		item.status === 'queued' ||
+		item.status === 'paused' ||
+		item.status === 'error' ||
+		item.status === 'interrupted'
+	const handleCancel = async () => {
+		try {
+			await cancelUpload(item.id)
+		} catch {
+			/* ignore — removeUpload below cleans up state regardless */
+		}
+		removeUpload(item.id)
+	}
 	return (
 		<RowActionsWrap>
 			{canRetryInMemory && (
@@ -457,6 +478,11 @@ const RowActions = ({
 				<SquareBtn type='button' onClick={onPickFile} aria-label='Resume (re-select file)'>
 					<PlayArrowRounded style={{ fontSize: 20 }} />
 				</SquareBtn>
+			)}
+			{canCancel && (
+				<DangerSquareBtn type='button' onClick={handleCancel} aria-label='Cancel upload'>
+					<CloseRounded style={{ fontSize: 18 }} />
+				</DangerSquareBtn>
 			)}
 		</RowActionsWrap>
 	)
@@ -495,6 +521,29 @@ const SquareBtn = styled.button`
 	svg { font-size: 16px; }
 	&:hover {
 		background: #0f172a;
+		color: #ffffff;
+		border-color: transparent;
+		transform: translateY(-1px);
+	}
+	&:active { transform: translateY(0); }
+`
+
+/* Red-tinted variant for destructive row actions (cancel upload). */
+const DangerSquareBtn = styled.button`
+	width: 29px;
+	height: 29px;
+	border-radius: 8px;
+	border: 1px solid rgba(15, 23, 42, 0.1);
+	background: #ffffff;
+	color: #64748b;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: background 160ms ease, color 160ms ease,
+		border-color 160ms ease, transform 160ms ease;
+	&:hover {
+		background: #dc2626;
 		color: #ffffff;
 		border-color: transparent;
 		transform: translateY(-1px);
