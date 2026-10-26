@@ -132,6 +132,23 @@ const genId = () => `up_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 const patch = (id: string, p: Partial<UploadItem>) => {
 	const prev = state.items.find((i) => i.id === id)
 	const statusChanged = !!p.status && !!prev && p.status !== prev.status
+	/* Which tray group the row belongs to — must stay in sync with
+	 *  the filter in TrayCardView. We only trigger a View Transition
+	 *  when the mutation actually crosses a group boundary; pause ↔
+	 *  resume ↔ queued ↔ interrupted all stay in Active and must
+	 *  NOT animate, otherwise the browser snapshots the row at its
+	 *  viewport position and renders the ::view-transition-old/new
+	 *  pseudo-elements at the document root (outside the tray's
+	 *  overflow:auto clip). A row scrolled below the visible fold
+	 *  then briefly flashes BELOW the tray card during the swap. */
+	const groupOf = (s: UploadItem['status']): string => {
+		if (s === 'done') return 'completed'
+		if (s === 'error') return 'failed'
+		if (s === 'cancelled') return 'cancelled'
+		return 'active'
+	}
+	const groupChanged =
+		statusChanged && !!prev && groupOf(p.status!) !== groupOf(prev.status)
 	const mutate = () => {
 		state = {
 			...state,
@@ -139,19 +156,12 @@ const patch = (id: string, p: Partial<UploadItem>) => {
 		}
 		emit()
 	}
-	/* When a status flip would move the row between groups in the
-	 *  tray (uploading → done, done → cancelled, etc.) we drive the
-	 *  mutation through the View Transitions API. The browser
-	 *  snapshots the DOM, runs flushSync to commit React's re-render
-	 *  synchronously, snapshots again, then cross-fades + slides any
-	 *  element carrying a matching `view-transition-name` between
-	 *  the two positions. The tray's RowWrap tags itself with
-	 *  `upload-<id>` so the browser knows to animate the row's own
-	 *  motion between the old and new group. No framer-motion, no
-	 *  manual ghost tracking, no chaos. Non-chromium browsers skip
-	 *  the wrap and get the plain instant update. */
+	/* View Transitions only for cross-group moves (uploading → done,
+	 *  → cancelled, → error). flushSync forces React to commit
+	 *  synchronously so the browser's second snapshot sees the new
+	 *  DOM. Non-chromium browsers fall through to the plain update. */
 	const canViewTransition =
-		statusChanged &&
+		groupChanged &&
 		typeof document !== 'undefined' &&
 		typeof (document as unknown as { startViewTransition?: unknown })
 			.startViewTransition === 'function'
