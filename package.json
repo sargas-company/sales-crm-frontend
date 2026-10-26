@@ -44,6 +44,7 @@
 		"redux-thunk": "^2.4.1",
 		"remark-gfm": "^4.0.1",
 		"reselect": "^4.1.6",
+		"rusha": "^0.8.14",
 		"styled-components": "^5.3.5",
 		"xlsx": "^0.18.5"
 	},

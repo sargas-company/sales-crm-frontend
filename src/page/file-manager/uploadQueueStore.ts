@@ -19,7 +19,7 @@ import { idbDelete, idbList, idbPut, type PersistedUpload } from './uploadIdb'
  * Lifecycle of a single upload:
  *   enqueueUploads(files, folderId)
  *     -> queued → verifying (SHA-1 in Web Worker) → initializing
- *     -> uploading (8 MiB chunks, 2 parallel) → done
+ *     -> uploading (16 MiB chunks, 2 parallel) → done
  *
  *   pauseUpload(id)              — aborts in-flight chunks → paused
  *   resumeUpload(id)             — paused: continue, or interrupted/

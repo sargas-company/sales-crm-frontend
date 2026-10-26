@@ -1,9 +1,10 @@
-/* SHA-1 worker — computes the hex digest of a File by streaming it
- * in 2 MiB slices through SubtleCrypto. SubtleCrypto.digest cannot
- * accept chunks (it's one-shot), so we buffer each slice into a
- * Uint8Array, concat into one big ArrayBuffer, then digest. For
- * files up to ~1 GiB this is acceptable; progress events fire while
- * the slicing happens.
+/* SHA-1 worker — streaming hash of a File via `rusha` (pure-JS
+ * incremental SHA-1 implementation). Reads the file in 16 MiB slices
+ * and feeds each slice directly into the hasher, so the worker's
+ * memory peak stays at one slice (~16 MB) instead of growing to the
+ * full file size. Lets us hash multi-GB files without the
+ * SubtleCrypto / ArrayBuffer "size exceeds the supported range"
+ * failure that killed earlier large-file uploads.
  *
  * Message protocol:
  *   -> { kind: 'start', id: string, file: File }
@@ -12,7 +13,7 @@
  *   <- { kind: 'error', id: string, message: string }
  */
 
-export {} // make this a module under --isolatedModules
+import Rusha from 'rusha'
 
 type Inbound = { kind: 'start'; id: string; file: File }
 
@@ -21,32 +22,26 @@ type Outbound =
 	| { kind: 'done'; id: string; sha1: string }
 	| { kind: 'error'; id: string; message: string }
 
-const READ_SLICE = 2 * 1024 * 1024 // 2 MiB
+/* Slice size — same 16 MiB we use for upload chunking; keeps I/O
+ * patterns coherent and bounds the per-slice allocation. */
+const READ_SLICE = 16 * 1024 * 1024
 
 const post = (msg: Outbound) => {
 	;(self as unknown as { postMessage: (m: Outbound) => void }).postMessage(msg)
 }
 
-const toHex = (buf: ArrayBuffer): string => {
-	const bytes = new Uint8Array(buf)
-	let out = ''
-	for (let i = 0; i < bytes.length; i++) {
-		const h = bytes[i].toString(16)
-		out += h.length === 1 ? '0' + h : h
-	}
-	return out
-}
-
 const compute = async (id: string, file: File) => {
 	const total = file.size
-	const chunks: Uint8Array[] = []
+	const hasher = Rusha.createHash()
 	let offset = 0
 	let lastPostedPct = 0
 	while (offset < total) {
 		const end = Math.min(offset + READ_SLICE, total)
 		const slice = file.slice(offset, end)
 		const buf = await slice.arrayBuffer()
-		chunks.push(new Uint8Array(buf))
+		/* Rusha accepts ArrayBuffer / Uint8Array / string. Pass the
+		 * raw buffer so no extra copy is made. */
+		hasher.update(buf)
 		offset = end
 		const pct = Math.round((offset / total) * 100)
 		if (pct !== lastPostedPct) {
@@ -54,14 +49,8 @@ const compute = async (id: string, file: File) => {
 			post({ kind: 'progress', id, pct })
 		}
 	}
-	const combined = new Uint8Array(total)
-	let cursor = 0
-	for (const c of chunks) {
-		combined.set(c, cursor)
-		cursor += c.length
-	}
-	const digest = await crypto.subtle.digest('SHA-1', combined.buffer)
-	post({ kind: 'done', id, sha1: toHex(digest) })
+	const sha1 = hasher.digest('hex')
+	post({ kind: 'done', id, sha1 })
 }
 
 self.addEventListener('message', (ev: MessageEvent<Inbound>) => {
