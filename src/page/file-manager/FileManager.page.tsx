@@ -1647,7 +1647,7 @@ const MoveModal = ({
 					$current={currentFolderId === null}
 					$disabled={forbidden.has('__root__' as never)}
 				>
-					<HomeOutlined style={{ fontSize: 18 }} />
+					<HomeOutlined style={{ fontSize: 16, color: '#64748b' }} />
 					<MoveName>Root</MoveName>
 					<MoveHereBtn
 						type='button'
@@ -1696,7 +1696,7 @@ const MoveTree = ({
 							$disabled={disabled}
 							style={{ paddingLeft: `${12 + depth * 16}px` }}
 						>
-							<FolderOutlined style={{ fontSize: 18 }} />
+							<FolderOutlined style={{ fontSize: 16, color: '#94a3b8' }} />
 							<MoveName>{n.name}</MoveName>
 							<MoveHereBtn
 								type='button'
