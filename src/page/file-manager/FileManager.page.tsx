@@ -918,12 +918,14 @@ const FileManagerPage = () => {
 								<span>Upload</span>
 							</UploadBtn>
 						</UploadBtnWrap>
-						<NewFolderBtn type='button' onClick={() => setNewFolderOpen(true)}>
-							<span className='new-folder-icon'>
-								<AddRounded style={{ fontSize: 18 }} />
-							</span>
-							New folder
-						</NewFolderBtn>
+						{!isPortalHost && (
+							<NewFolderBtn type='button' onClick={() => setNewFolderOpen(true)}>
+								<span className='new-folder-icon'>
+									<AddRounded style={{ fontSize: 18 }} />
+								</span>
+								New folder
+							</NewFolderBtn>
+						)}
 						<input
 							ref={fileInputRef}
 							type='file'
