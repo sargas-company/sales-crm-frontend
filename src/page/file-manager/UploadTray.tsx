@@ -205,7 +205,11 @@ export const TrayCardView = ({
 									<GroupCount>{arr.length}</GroupCount>
 								</GroupHead>
 								{arr.map((i) => (
-									<Row key={i.id} item={i} />
+									<Row
+										key={i.id}
+										item={i}
+										isLastInTray={items.length === 1}
+									/>
 								))}
 							</Group>
 						),
@@ -292,7 +296,7 @@ export const MinimizedBarView = ({
 	)
 }
 
-const Row = ({ item }: { item: UploadItem }) => {
+const Row = ({ item, isLastInTray }: { item: UploadItem; isLastInTray: boolean }) => {
 	const kind = mimeKind(item.mimeType || item.file?.type || '')
 	const uploaded = (item.size * item.progress) / 100
 	const inputRef = useRef<HTMLInputElement | null>(null)
@@ -322,10 +326,19 @@ const Row = ({ item }: { item: UploadItem }) => {
 		}
 		setCancelling(false)
 		setExiting(true)
-		/* Removal fires after the collapse transition finishes
-		 * (320ms); use setTimeout rather than onTransitionEnd so a
-		 * fast consecutive click doesn't lose the event. */
-		window.setTimeout(() => removeUpload(item.id), 320)
+		/* Orchestrated close:
+		 *   t+0        row-exit transition (opacity + max-height) starts
+		 *   t+320 ms   transition finishes
+		 *   + beat     "осознание" pause so the tray doesn't jerk the
+		 *              shutter closed the instant the row disappears
+		 *              (only for the last row — otherwise the gap is
+		 *              imperceptible)
+		 *   = call removeUpload; items→0; tray's own close effect runs
+		 *     its 260 ms slide-out keyframe
+		 * For non-last rows there's no extra pause — adjacent rows
+		 * just slide up into the freed space naturally. */
+		const extraPause = isLastInTray ? 220 : 0
+		window.setTimeout(() => removeUpload(item.id), 320 + extraPause)
 	}
 
 	const consumeFile = async (f: File) => {

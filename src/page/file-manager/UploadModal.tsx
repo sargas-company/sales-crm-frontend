@@ -120,7 +120,7 @@ export const UploadModal = ({ folderId, onClose }: Props) => {
 				<>
 					Drop files below or choose them from your device.
 					<br />
-					Max 100 MB per file · PDF, images, docs, video, audio, text.
+					Up to 5 GB per file · 2 files upload at once · the rest wait in queue.
 				</>
 			}
 			confirmLabel='Choose files'
