@@ -214,13 +214,12 @@ export const TrayCardView = ({
 								</GroupHead>
 								{arr.map((i) => (
 									<Row
-										/* Key includes status so React re-mounts the row
-										 *  when it jumps between groups (uploading →
-										 *  done → cancelled). The remount replays the
-										 *  slide-in entry animation, giving a smooth
-										 *  arrival instead of a hard pop in the new
-										 *  group. */
-										key={`${i.id}:${i.status}`}
+										/* Key by id alone — the view-transition path
+										 *  owns cross-group motion now, so forcing
+										 *  React to remount on every status flip only
+										 *  double-played the slide-in entry anim on
+										 *  top of the browser's VT crossfade. */
+										key={i.id}
 										item={i}
 										isLastInTray={items.length === 1}
 									/>
@@ -372,15 +371,16 @@ const Row = ({ item, isLastInTray }: { item: UploadItem; isLastInTray: boolean }
 		<RowWrap
 			$status={item.status}
 			$exiting={exiting}
-			/* Tag the row with a stable per-upload view-transition-name
-			 *  — the browser uses this to animate the row between its
-			 *  old and new DOM positions when its status flips and it
-			 *  moves between the Active / Completed / Failed /
-			 *  Cancelled groups (coordinated from
-			 *  uploadQueueStore.patch via document.startViewTransition
-			 *  + flushSync). Replace `:` with `-` in id to stay inside
-			 *  the CSS identifier grammar. */
-			style={{ viewTransitionName: `upload-${item.id.replace(/[^a-zA-Z0-9_-]/g, '_')}` }}
+			/* `data-upload-row` lets uploadQueueStore.patch find the
+			 *  specific row that's about to transition and assign
+			 *  view-transition-name to IT ONLY — not every row. A
+			 *  statically-set name on every row made the browser
+			 *  cross-fade every row (its default animation for a
+			 *  named element whose before/after position matches)
+			 *  the moment any ONE row crossed groups, producing a
+			 *  cascade of flashes on all previously-completed rows
+			 *  with each new finish. */
+			data-upload-row={item.id}
 		>
 			<FileIcon $kind={kind}>
 				<FileFold />

@@ -166,13 +166,42 @@ const patch = (id: string, p: Partial<UploadItem>) => {
 		typeof (document as unknown as { startViewTransition?: unknown })
 			.startViewTransition === 'function'
 	if (canViewTransition) {
+		const vtName = `upload-${id.replace(/[^a-zA-Z0-9_-]/g, '_')}`
+		/* Snapshot phase: find the row in its OLD group and tag only
+		 *  it with the view-transition-name, so the browser doesn't
+		 *  cross-fade every other row that happens to share a stable
+		 *  name across the snapshot. */
+		const before = document.querySelector<HTMLElement>(
+			`[data-upload-row="${CSS.escape(id)}"]`,
+		)
+		if (before) before.style.setProperty('view-transition-name', vtName)
 		;(
 			document as unknown as {
-				startViewTransition: (cb: () => void) => unknown
+				startViewTransition: (cb: () => void | Promise<void>) => {
+					finished: Promise<void>
+				}
 			}
-		).startViewTransition(() => {
-			flushSync(mutate)
-		})
+		)
+			.startViewTransition(() => {
+				flushSync(mutate)
+				/* After the React commit, the NEW DOM has a fresh
+				 *  element in the destination group. Give it the same
+				 *  view-transition-name so the browser matches it to
+				 *  the old one and animates the travel. */
+				const after = document.querySelector<HTMLElement>(
+					`[data-upload-row="${CSS.escape(id)}"]`,
+				)
+				if (after) after.style.setProperty('view-transition-name', vtName)
+			})
+			.finished.finally(() => {
+				/* Clean up — leaving the name set would make the next
+				 *  unrelated VT snapshot still consider this row
+				 *  "named" and default-cross-fade it. */
+				const cleanup = document.querySelector<HTMLElement>(
+					`[data-upload-row="${CSS.escape(id)}"]`,
+				)
+				if (cleanup) cleanup.style.removeProperty('view-transition-name')
+			})
 	} else {
 		mutate()
 	}
