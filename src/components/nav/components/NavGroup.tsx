@@ -1,10 +1,11 @@
 import { createRef, FC, useEffect, useMemo, useState } from 'react'
-import { matchPath, useLocation } from 'react-router-dom'
+import { matchPath, useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import NavOptions, { Childrens } from '../type'
 import { navSectionRoot } from '../navMatch'
 import NavGroupButton from './NavGroupButton'
 import NavItem from './NavItem'
+import useTheme from '../../../theme/useTheme'
 
 // Collect the match-roots contributed by a subtree: each leaf child
 // contributes its section root (list/add/edit/view all fold into the
@@ -23,10 +24,54 @@ const collectSectionRoots = (items?: Childrens[]): string[] => {
 const matchesUnder = (pathname: string, root: string): boolean =>
 	matchPath({ path: root, end: false }, pathname) !== null
 
+/* Walk the subtree depth-first and return the path of the first
+ * leaf (an entry with a `path` and no `childrens`). Used when the
+ * user taps a group icon in collapsed mode — we jump straight to
+ * its first navigable child instead of just opening the group. */
+const findFirstLeafPath = (items?: Childrens[]): string | undefined => {
+	if (!items) return undefined
+	for (const item of items) {
+		if (item.path && !item.childrens) return item.path
+		if (item.childrens) {
+			const nested = findFirstLeafPath(item.childrens)
+			if (nested) return nested
+		}
+	}
+	return undefined
+}
+
 const NavGroup: FC<Props> = ({ navData: { childrens, parent }, onChildClick }) => {
 	const { pathname } = useLocation()
-	const [isActive, setIsActive] = useState(false)
+	const navigate = useNavigate()
+	/* Two independent states:
+	 * - `isPathActive` — URL matches this group's section (readonly,
+	 *   derived from pathname). Drives the blue "you are here" pill
+	 *   in collapsed mode.
+	 * - `isOpen` — user has expanded the sub-list (via click, or
+	 *   because they navigated into it). Drives the arrow rotation
+	 *   and sub-item visibility. Overloading one flag for both roles
+	 *   caused stale "manually opened" state to show as active after
+	 *   collapsing the sidebar. */
+	const [isPathActive, setIsPathActive] = useState(false)
+	const [isOpen, setIsOpen] = useState(false)
 	const navItemContainer = createRef<HTMLDivElement>()
+	const {
+		theme: {
+			menuStyle: { collapse },
+		},
+		dispatch,
+	} = useTheme()
+
+	const handleGroupClick = () => {
+		if (collapse) {
+			dispatch?.handleChangeMenuCollapse?.()
+			setIsOpen(true)
+			const firstPath = findFirstLeafPath(childrens)
+			if (firstPath) navigate(firstPath)
+			return
+		}
+		setIsOpen((prev) => !prev)
+	}
 
 	// Pick the single leaf child whose section root is the longest
 	// prefix of the current pathname. Siblings that also match by
@@ -51,9 +96,14 @@ const NavGroup: FC<Props> = ({ navData: { childrens, parent }, onChildClick }) =
 		const childMatch = collectSectionRoots(childrens).some((root) =>
 			matchesUnder(pathname, root),
 		)
+		const match = rootMatch || childMatch
 
 		if (parent?.rootPath || childrens) {
-			setIsActive(rootMatch || childMatch)
+			setIsPathActive(match)
+			/* Auto-open on route-match; auto-close when we navigate
+			 * out of this group — prevents a stale manually-opened
+			 * group from staying expanded after moving elsewhere. */
+			setIsOpen(match)
 		}
 	}, [pathname])
 
@@ -63,7 +113,7 @@ const NavGroup: FC<Props> = ({ navData: { childrens, parent }, onChildClick }) =
 
 		const targetHeight = el.scrollHeight
 
-		if (isActive) {
+		if (isOpen) {
 			el.style.height = '0px'
 			requestAnimationFrame(() => {
 				el.style.height = `${targetHeight}px`
@@ -81,21 +131,24 @@ const NavGroup: FC<Props> = ({ navData: { childrens, parent }, onChildClick }) =
 		requestAnimationFrame(() => {
 			el.style.height = '0px'
 		})
-	}, [isActive])
+	}, [isOpen])
 
 	return (
 		<StyledNavGroup>
 			{parent && (
 				<NavGroupButton
-					isActive={isActive}
+					/* Blue "you are here" pill lit only by pathname
+					 * match; arrow rotation driven by open state. */
+					isActive={isPathActive}
+					isOpen={isOpen}
 					label={parent!.title}
 					icon={parent.icon}
 					soon={parent.soon}
-					onHandleClick={() => setIsActive((prevState) => !prevState)}
+					onHandleClick={handleGroupClick}
 				/>
 			)}
 			<div
-				className={`nav-item-container ${isActive ? 'show-nav-item' : ''}`}
+				className={`nav-item-container ${isOpen ? 'show-nav-item' : ''}`}
 				ref={navItemContainer}
 			>
 				<ul className='nav-item-inner'>

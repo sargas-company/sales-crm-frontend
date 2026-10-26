@@ -228,25 +228,31 @@ const AttachmentsSection = ({
 									</FileStatus>
 								</FileBody>
 								<CardActions>
-									<DownloadBtn
+									<ActBig
 										type='button'
 										onClick={() => handleDownload(att)}
 										disabled={downloadingId === att.id}
-										aria-label='Download'
-										title='Download'
 									>
-										<DownloadRounded style={{ fontSize: 17 }} />
-									</DownloadBtn>
+										<span className='num'>01</span>
+										<span className='lbl-track' aria-hidden='true'>
+											<span className='lbl-row'>Download</span>
+											<span className='lbl-row'>Download</span>
+										</span>
+										<span className='sr-only'>Download</span>
+									</ActBig>
 									{!hideDelete && (
-										<CloseBtn
+										<ActBig
 											type='button'
 											$danger
 											onClick={() => setPendingDelete(att)}
-											aria-label='Delete'
-											title='Delete'
 										>
-											<DeleteOutlineRounded style={{ fontSize: 17 }} />
-										</CloseBtn>
+											<span className='num'>02</span>
+											<span className='lbl-track' aria-hidden='true'>
+												<span className='lbl-row'>Delete</span>
+												<span className='lbl-row'>Delete</span>
+											</span>
+											<span className='sr-only'>Delete</span>
+										</ActBig>
 									)}
 								</CardActions>
 							</FileCard>
@@ -507,7 +513,7 @@ const FileCard = styled.li<{ $kind?: MimeKind }>`
 	padding: 14px 16px;
 	border-radius: 14px;
 	background: #ffffff;
-	border: 1px solid rgba(15, 23, 42, 0.08);
+	border: none;
 	overflow: hidden;
 	transition: transform 220ms cubic-bezier(0.22, 1.35, 0.36, 1);
 	&:hover {
@@ -519,7 +525,7 @@ const FileCard = styled.li<{ $kind?: MimeKind }>`
 			box-shadow 240ms ease;
 	}
 	&:hover > :first-child {
-		transform: scale(1.06) rotate(-2deg);
+		transform: scale(1.14) rotate(-6deg) translateY(-2px);
 		box-shadow:
 			0 6px 14px -4px
 				${(p) =>
@@ -635,7 +641,80 @@ const ProgressTrackBar = styled.span`
 `
 const CardActions = styled.div`
 	display: inline-flex;
-	gap: 4px;
+	gap: 18px;
+	padding: 0 8px;
+`
+
+/* Numbered big-text action button with vertical label swap on hover.
+ * Mirrors the FileManager page style. "01 Download" / "02 Delete";
+ * on hover each label slides up and is replaced by its own copy
+ * (pre-coloured to the hover tint) in a slot-machine beat. */
+const ActBig = styled.button<{ $danger?: boolean }>`
+	border: none;
+	background: transparent;
+	padding: 0;
+	cursor: pointer;
+	display: inline-flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	transition: transform 200ms cubic-bezier(0.22, 1.35, 0.36, 1);
+
+	&:disabled { cursor: not-allowed; opacity: 0.5; }
+
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+
+	.num {
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-size: 9.5px;
+		font-weight: 700;
+		letter-spacing: 1.6px;
+		color: ${({ $danger }) => ($danger ? '#dc2626' : '#94a3b8')};
+		transition: color 180ms ease, letter-spacing 320ms ease;
+	}
+
+	.lbl-track {
+		display: block;
+		height: 1em;
+		line-height: 1;
+		overflow: hidden;
+		font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+		font-size: 15px;
+		font-weight: 700;
+		letter-spacing: -0.2px;
+	}
+
+	.lbl-row {
+		display: block;
+		line-height: 1;
+		transform: translateY(0);
+		transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+		color: ${({ $danger }) => ($danger ? '#b91c1c' : '#334155')};
+	}
+	.lbl-row + .lbl-row {
+		color: ${({ $danger }) => ($danger ? '#dc2626' : '#0f172a')};
+	}
+
+	&:hover:not(:disabled) {
+		transform: translateX(2px);
+	}
+	&:hover:not(:disabled) .lbl-row {
+		transform: translateY(-1em);
+	}
+	&:hover:not(:disabled) .num {
+		color: ${({ $danger }) => ($danger ? '#991b1b' : '#64748b')};
+		letter-spacing: 2.2px;
+	}
 `
 const DownloadBtn = styled.button`
 	display: inline-flex;

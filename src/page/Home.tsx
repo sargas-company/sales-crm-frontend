@@ -73,6 +73,12 @@ const PhoneServiceForm = lazy(() => import('./phone-numbers/PhoneServiceForm.pag
 const PhoneNumberForm = lazy(() => import('./phone-numbers/PhoneNumberForm.page'))
 const Backups = lazy(() => import('./backups'))
 const Notifications = lazy(() => import('./notifications'))
+const FileManager = lazy(() => import('./file-manager/FileManager.page'))
+const PortalUsersPage = lazy(() =>
+	import('./file-manager/PortalUsersPage').then((m) => ({
+		default: m.PortalUsersPage,
+	})),
+)
 const PortfolioList = lazy(() => import('./portfolio/PortfolioList.page'))
 const PortfolioView = lazy(() => import('./portfolio/PortfolioView.page'))
 const PortfolioForm = lazy(() => import('./portfolio/PortfolioForm.page'))
@@ -637,6 +643,31 @@ const Home = () => {
 								element={
 									<ProtectedRoute permission='phone_numbers:update'>
 										<PhoneServiceForm mode='edit' />
+									</ProtectedRoute>
+								}
+							/>
+							{/* File Manager */}
+							<Route
+								path='/file-manager'
+								element={
+									<ProtectedRoute permission='file_manager:view'>
+										<FileManager />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/file-manager/folder/:folderId'
+								element={
+									<ProtectedRoute permission='file_manager:view'>
+										<FileManager />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/file-manager/portal-users'
+								element={
+									<ProtectedRoute permission='file_manager:manage'>
+										<PortalUsersPage />
 									</ProtectedRoute>
 								}
 							/>

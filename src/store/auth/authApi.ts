@@ -19,6 +19,13 @@ export interface MeResponse {
 	avatarUrl: string | null
 	role: AuthRole | null
 	permissions: string[]
+	/* Portal-user fields (nullable for admin accounts). Set when
+	 * `isPortalUser = true` on the User row — see auth-service `/me`
+	 * endpoint. */
+	displayName?: string | null
+	discordId?: string | null
+	isPortalUser?: boolean
+	active?: boolean
 }
 
 export const authApi = baseApi.injectEndpoints({
@@ -52,7 +59,7 @@ export const authApi = baseApi.injectEndpoints({
 		/** Edit own first/last name. Email + role stay immutable. */
 		updateMe: builder.mutation<
 			MeResponse,
-			{ firstName?: string; lastName?: string }
+			{ firstName?: string; lastName?: string; displayName?: string | null }
 		>({
 			query: (body) => ({ url: '/auth/me', method: 'PATCH', body }),
 			async onQueryStarted(_arg, { dispatch, queryFulfilled }) {

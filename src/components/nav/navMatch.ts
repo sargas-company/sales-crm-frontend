@@ -18,8 +18,15 @@
 
 const stripTrailingSlashes = (p: string): string => p.replace(/\/+$/, '')
 
+/* Strip query string + hash — nav entries sometimes carry defaults
+ * like `/job-posts/list/?status=any` so a click lands on a filtered
+ * view, but matchPath only looks at pathname, so leaving `?...` in
+ * the pattern makes the match fail silently. */
+const stripSearchAndHash = (p: string): string => p.replace(/[?#].*$/, '')
+
 export const navSectionRoot = (rawPath: string): string => {
-	const noTrail = stripTrailingSlashes(rawPath)
+	const clean = stripSearchAndHash(rawPath)
+	const noTrail = stripTrailingSlashes(clean)
 	const withoutList = noTrail.replace(/\/list$/, '')
 	return withoutList || '/'
 }

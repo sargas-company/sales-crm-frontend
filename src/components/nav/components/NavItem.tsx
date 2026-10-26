@@ -24,8 +24,17 @@ const NavItem: FC<Props> = (props) => {
 			primaryColor,
 			menuStyle: { collapse },
 		},
+		dispatch,
 	} = useTheme()
 	const location = useLocation()
+
+	/* Clicking any leaf item while collapsed also expands the
+	 * sidebar — the user wants the menu to open on any icon tap,
+	 * not only on group icons. */
+	const handleClick = () => {
+		if (collapse) dispatch?.handleChangeMenuCollapse?.()
+		onClick?.()
+	}
 	// Match every list/view/add/edit/preview sub-route of the section
 	// this nav item represents (e.g. /leads/list, /leads/add, /leads/:id
 	// all light up the "Leads" item). navSectionRoot strips a trailing
@@ -47,7 +56,7 @@ const NavItem: FC<Props> = (props) => {
 			mode={mode.name}
 			varient={varient || 'filled'}
 			compact={compact}
-			onClick={onClick}
+			onClick={handleClick}
 			onMouseOver={onHover}
 		>
 			<NavLink to={path} className={isActiveSection ? 'nav-item-active nav-item' : 'nav-item'}>

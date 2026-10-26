@@ -13,9 +13,17 @@ export interface Crumb {
 interface Props {
 	crumbs: Crumb[]
 	icon: ReactNode
+	/** Icon badge tone. 'primary' = blue theme tint (default admin
+	 *  look); 'ink' = dark ink-gradient with white glyph (portal). */
+	iconTone?: 'primary' | 'ink'
 	title: string
 	subtitle?: string
 	action?: ReactNode
+	/** Optional decorative/informational element rendered between
+	 *  the title block and the action buttons. Only takes space when
+	 *  provided — pages that don't pass it keep the existing
+	 *  title-left / action-right layout untouched. */
+	middle?: ReactNode
 	searchPlaceholder?: string
 	search?: string
 	onSearchChange?: (v: string) => void
@@ -26,9 +34,11 @@ interface Props {
 const ListPageShell = ({
 	crumbs,
 	icon,
+	iconTone = 'primary',
 	title,
 	subtitle,
 	action,
+	middle,
 	searchPlaceholder,
 	search,
 	onSearchChange,
@@ -61,12 +71,13 @@ const ListPageShell = ({
 
 				<PageHead>
 					<div className='title'>
-						<HeadIcon>{icon}</HeadIcon>
+						<HeadIcon $tone={iconTone}>{icon}</HeadIcon>
 						<div className='title-text'>
 							<h1>{title}</h1>
 							{subtitle && <p>{subtitle}</p>}
 						</div>
 					</div>
+					{middle && <div className='head-middle'>{middle}</div>}
 					{action}
 				</PageHead>
 
@@ -198,6 +209,18 @@ const PageHead = styled.header`
 		max-width: 62ch;
 	}
 
+	.head-middle {
+		flex: 1;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 0;
+	}
+
+	@media (max-width: 900px) {
+		.head-middle { display: none; }
+	}
+
 	@media (max-width: 720px) {
 		.title-text h1 {
 			font-size: 28px;
@@ -206,15 +229,16 @@ const PageHead = styled.header`
 	}
 `
 
-const HeadIcon = styled.span`
+const HeadIcon = styled.span<{ $tone?: 'primary' | 'ink' }>`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	width: 52px;
 	height: 52px;
 	border-radius: 14px;
-	background: ${T.primaryTint};
-	color: ${T.primary};
+	background: ${({ $tone }) =>
+		$tone === 'ink' ? 'rgba(15, 23, 42, 0.08)' : T.primaryTint};
+	color: ${({ $tone }) => ($tone === 'ink' ? '#0f172a' : T.primary)};
 	flex-shrink: 0;
 
 	svg {

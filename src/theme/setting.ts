@@ -25,7 +25,7 @@ const themeSettings: SettingType = {
 		color: setting?.primaryColor?.color ? setting?.primaryColor.color : BLUE_COLOR,
 	},
 	menuStyle: {
-		collapse: false, // hardcoded: navbar always expanded (toggle button hidden in NavHeading)
+		collapse: setting?.menuCollapse ?? false,
 		layout: setting?.menuLayout ? setting.menuLayout : 'vertical',
 		openStyle: setting?.menuOpenStyle ? setting.menuOpenStyle : 'accordion',
 		visible: setting?.menuVisible ? setting.menuVisible : false,

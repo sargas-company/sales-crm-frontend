@@ -232,6 +232,18 @@ export const secondaryNavList: NavOptions[] = [
 		],
 	},
 	{
+		parent: formatGroupButton('File Manager', <FolderOutlined />, '/file-manager'),
+		permission: 'file_manager:view',
+		childrens: [
+			format('Finder', '/file-manager', <FolderOutlined />),
+			format(
+				'Portal Users',
+				'/file-manager/portal-users',
+				<PeopleOutlined />,
+			),
+		],
+	},
+	{
 		label: 'Backup & Recovery',
 		path: '/backups/list',
 		icon: <BackupOutlined />,

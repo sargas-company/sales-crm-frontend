@@ -6,14 +6,16 @@ import { Text } from '../../../ui'
 import Box from '../../box/Box'
 
 const NavGroupButton: FC<Props> = (props) => {
-	const { label, icon, isActive, onHandleClick, soon } = props
+	const { label, icon, isActive, isOpen, onHandleClick, soon } = props
 	const {
 		theme: { mode },
 	} = useTheme()
 	return (
 		<StyledNavGroupButton
+			className={`nav-group-btn${isActive ? ' is-active' : ''}`}
 			onClick={onHandleClick}
 			isActive={isActive}
+			isOpen={isOpen ?? isActive}
 			mode={mode.name}
 			soon={soon}
 		>
@@ -36,7 +38,7 @@ const NavGroupButton: FC<Props> = (props) => {
 					</span>
 				)}
 			</Box>
-			<span className={`navgrp-arrow flex ${isActive ? 'rotate-down' : ''}`}>
+			<span className={`navgrp-arrow flex ${(isOpen ?? isActive) ? 'rotate-down' : ''}`}>
 				{<KeyboardArrowRight />}
 			</span>
 		</StyledNavGroupButton>
@@ -47,6 +49,10 @@ interface Props {
 	label: string
 	icon?: ReactNode
 	isActive: boolean
+	/** Visual-expanded state (arrow rotation + sub-list visibility).
+	 *  Separate from isActive so manual-expand doesn't light up the
+	 *  "you are here" blue pill in collapsed mode. */
+	isOpen?: boolean
 	soon?: boolean
 	onHandleClick: () => void
 }
@@ -58,10 +64,12 @@ const soonPulse = keyframes`
 
 const StyledNavGroupButton = styled('div')<{
 	isActive: boolean
+	isOpen: boolean
 	mode: 'dark' | 'light'
 	soon?: boolean
 }>`
 	display: flex;
+	align-items: center;
 	flex: 1;
 	padding: 0.6rem 0;
 	padding-right: 0.6rem;
@@ -101,12 +109,24 @@ const StyledNavGroupButton = styled('div')<{
 		transform: scale(1.08);
 	}
 
+	/* Arrow lives in normal flex flow; parent align-items center
+	 * plus the arrow's own align-items center double-guarantee
+	 * vertical centering without pulling the pill out of shape. */
 	& > .navgrp-arrow {
-		display: flex;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		line-height: 0;
 		opacity: 0.6;
 		transition:
 			transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
 			opacity 220ms ease;
+	}
+
+	& > .navgrp-arrow svg {
+		display: block;
 	}
 
 	&:hover > .navgrp-arrow {

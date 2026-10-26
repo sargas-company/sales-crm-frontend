@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import styled, { keyframes } from 'styled-components'
 import Modal from '../modal/Modal'
 import useTheme from '../../theme/useTheme'
@@ -10,6 +10,7 @@ export type ConfirmTone =
 	| 'warning'
 	| 'primary'
 	| 'orange'
+	| 'ink'
 export type ConfirmColor =
 	| 'error'
 	| 'success'
@@ -17,6 +18,7 @@ export type ConfirmColor =
 	| 'warning'
 	| 'info'
 	| 'orange'
+	| 'ink'
 
 interface Props {
 	icon: ReactNode
@@ -41,6 +43,23 @@ interface Props {
 	 * the action buttons — e.g. a radio-group of strategies for the
 	 * Resume AI modal. Picks up the same softIn/softOut animation. */
 	children?: ReactNode
+	/** When set, wraps the icon + title + description + children block
+	 *  in a bordered box (currently only `'dashed'` is used, for the
+	 *  upload-modal drop-zone framing). Actions always stay outside. */
+	bodyBorder?: 'dashed'
+	/** When combined with `bodyBorder='dashed'`, lights the border up
+	 *  and tints the background — e.g. drop-target active state. */
+	bodyBorderActive?: boolean
+	/** Imperative close trigger — flip this to true from the parent
+	 *  to play the regular close animation and then call onClose,
+	 *  as if the user had clicked Cancel. Used by multi-stage flows
+	 *  (upload modal → success panel) that need the first modal to
+	 *  gracefully exit before the next one appears. */
+	forceClose?: boolean
+	/** Override the close animation duration (default 220ms). Only
+	 *  the exit speed is affected — opening stays snappy. Both the
+	 *  surface scale/fade and the onClose timeout honour this. */
+	closeDurationMs?: number
 }
 
 interface TonePalette {
@@ -108,6 +127,15 @@ const toneMap: Record<ConfirmTone, TonePalette> = {
 		solidHover: '#ea580c',
 		solidShadow: 'rgba(249, 115, 22, 0.32)',
 	},
+	ink: {
+		bgLight: 'rgba(15, 23, 42, 0.08)',
+		bgDark: 'rgba(248, 250, 252, 0.08)',
+		fg: '#0f172a',
+		ring: 'rgba(15, 23, 42, 0.18)',
+		solid: '#0f172a',
+		solidHover: '#1e293b',
+		solidShadow: 'rgba(15, 23, 42, 0.4)',
+	},
 }
 
 const colorToTone: Record<ConfirmColor, ConfirmTone> = {
@@ -117,6 +145,7 @@ const colorToTone: Record<ConfirmColor, ConfirmTone> = {
 	warning: 'warning',
 	info: 'info',
 	orange: 'orange',
+	ink: 'ink',
 }
 
 const ConfirmModal = ({
@@ -134,6 +163,10 @@ const ConfirmModal = ({
 	confirmDisabled,
 	maxWidth = 460,
 	children,
+	bodyBorder,
+	bodyBorderActive,
+	forceClose,
+	closeDurationMs = 220,
 }: Props) => {
 	const { theme } = useTheme()
 	const isDark = theme.mode.name === 'dark'
@@ -147,7 +180,7 @@ const ConfirmModal = ({
 	const requestClose = () => {
 		if (closing || isLoading) return
 		setClosing(true)
-		window.setTimeout(onClose, 220)
+		window.setTimeout(onClose, closeDurationMs)
 	}
 
 	const requestConfirm = () => {
@@ -155,25 +188,45 @@ const ConfirmModal = ({
 		onConfirm()
 	}
 
+	/* Parent-triggered close — flipped on by `forceClose` so a multi-
+	 * stage flow can play the exit animation before swapping us for
+	 * the next modal. */
+	useEffect(() => {
+		if (forceClose && !closing) {
+			setClosing(true)
+			window.setTimeout(onClose, closeDurationMs)
+		}
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [forceClose])
+
 	return (
 		<Modal handleOutClick={requestClose}>
-			<Surface $dark={isDark} $maxWidth={maxWidth} $closing={closing}>
+			<Surface
+				$dark={isDark}
+				$maxWidth={maxWidth}
+				$closing={closing}
+				$exitMs={closeDurationMs}
+			>
 				<Accent $solid={tone.solid} $closing={closing} />
 
 				<Content>
-					<IconWrap $closing={closing}>
-						<IconRingOuter $ring={tone.ring} />
-						<IconRingInner $bg={isDark ? tone.bgDark : tone.bgLight} $fg={tone.fg}>
-							{icon}
-						</IconRingInner>
-					</IconWrap>
+					<BodyFrame $border={bodyBorder} $active={bodyBorderActive}>
+						<IconWrap $closing={closing}>
+							<IconRingOuter $ring={tone.ring} />
+							<IconRingInner $bg={isDark ? tone.bgDark : tone.bgLight} $fg={tone.fg}>
+								{icon}
+							</IconRingInner>
+						</IconWrap>
 
-					<TextBlock $closing={closing}>
-						<TitleText $dark={isDark}>{title}</TitleText>
-						<DescText $dark={isDark}>{description}</DescText>
-					</TextBlock>
+						<TextBlock $closing={closing}>
+							<TitleText $dark={isDark}>{title}</TitleText>
+							<DescText $dark={isDark}>{description}</DescText>
+						</TextBlock>
 
-					{children ? <ExtrasSlot $closing={closing}>{children}</ExtrasSlot> : null}
+						{children ? (
+							<ExtrasSlot $closing={closing}>{children}</ExtrasSlot>
+						) : null}
+					</BodyFrame>
 
 					<Actions $closing={closing}>
 						<CancelButton
@@ -259,7 +312,12 @@ const spinnerSpin = keyframes`
 	to { transform: rotate(360deg); }
 `
 
-const Surface = styled.div<{ $dark: boolean; $maxWidth: number; $closing: boolean }>`
+const Surface = styled.div<{
+	$dark: boolean
+	$maxWidth: number
+	$closing: boolean
+	$exitMs: number
+}>`
 	position: relative;
 	max-width: ${({ $maxWidth }) => $maxWidth}px;
 	width: 100%;
@@ -273,7 +331,7 @@ const Surface = styled.div<{ $dark: boolean; $maxWidth: number; $closing: boolea
 			: '0 40px 80px -30px rgba(15, 23, 42, 0.30), 0 4px 10px rgba(15, 23, 42, 0.06)'};
 	overflow: hidden;
 	animation: ${({ $closing }) => ($closing ? surfaceOut : surfaceIn)}
-		${({ $closing }) => ($closing ? '220ms' : '360ms')}
+		${({ $closing, $exitMs }) => ($closing ? `${$exitMs}ms` : '360ms')}
 		cubic-bezier(0.22, 1, 0.36, 1) both;
 `
 
@@ -296,6 +354,28 @@ const Content = styled.div`
 	flex-direction: column;
 	align-items: center;
 	gap: 22px;
+`
+
+/* Optional bordered wrapper around the icon + text + extras block.
+ * Actions always stay outside of it. Used by the Upload modal to
+ * frame the whole upper half as a drop target. */
+const BodyFrame = styled.div<{ $border?: 'dashed'; $active?: boolean }>`
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 22px;
+	width: 100%;
+	${({ $border, $active }) =>
+		$border === 'dashed' &&
+		`
+		padding: 28px 24px;
+		border-radius: 14px;
+		border: 2px dashed ${
+			$active ? 'rgba(15, 23, 42, 0.55)' : 'rgba(15, 23, 42, 0.14)'
+		};
+		background: ${$active ? 'rgba(15, 23, 42, 0.05)' : 'transparent'};
+		transition: border-color 220ms ease, background 220ms ease;
+	`}
 `
 
 const IconWrap = styled.div<{ $closing: boolean }>`

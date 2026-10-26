@@ -12,7 +12,10 @@ const NavContent: FC<{ children: ReactNode }> = ({ children }) => {
 		<StyledNavContent
 			height='100%'
 			position='fixed'
-			width={collapse ? '90px' : '260px'}
+			/* Keep in sync with StyledNavContainer in NavContainer.tsx —
+			 * mismatched widths make the fixed sidebar overlay or
+			 * under-reserve space from the main content column. */
+			width={collapse ? '72px' : '260px'}
 			isCollapsed={collapse}
 		>
 			<NavInner>{children}</NavInner>
@@ -31,55 +34,18 @@ const StyledNavContent = styled(Card)<{ isCollapsed: boolean }>`
   position: fixed;
   left: 0;
   top: 0;
-  transition: width 300ms ease;
-  padding-right: 20px;
+  transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  padding-right: ${({ isCollapsed }) => (isCollapsed ? '0' : '20px')};
   border-radius: 0;
   overflow: hidden;
   ${({ isCollapsed }) =>
 		!isCollapsed &&
 		`box-shadow: unset;
-  background: transparent !important;`}}
-  & .nav-label {
-    ${({ isCollapsed }) =>
-			isCollapsed &&
-			`opacity: 0;
-      transition: 200ms;
-    `}
-  }
+  background: transparent !important;`}
 
-  & .nav-item-container {
-    ${({ isCollapsed }) =>
-			isCollapsed &&
-			`
-      margin-top: 30px;
-      transition: 200ms;
-      position: absolute;
-      visibility: hidden;
-      z-index: -1;
-      opacity: 0;
-    `}
-  }
-
-  &:hover .nav-item-container {
-    ${({ isCollapsed }) =>
-			isCollapsed &&
-			`
-      margin-top: 0;
-      z-index: 1;
-      visibility: visible;
-      transition: 300ms;
-      opacity: 1;
-      position: relative;
-    `}
-  }
-
-  &:hover {
-    width: ${({ isCollapsed }) => (isCollapsed ? '260px' : '')};
-  }
-  &:hover .nav-label {
-    opacity: 1;
-    transition: 400ms;
-  }
+  /* Label hiding + sub-group visibility are now driven by the
+   * NavContainer wrapper's collapse CSS; keeping the hover-expand
+   * behaviour here would fight the explicit toggle. */
 
   @media screen and (max-width: 1200px) {
     & {

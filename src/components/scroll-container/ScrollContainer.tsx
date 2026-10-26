@@ -78,6 +78,12 @@ const StyledScrollContainer = styled('div')<{
 		max-height: ${({ maxHeight }) => maxHeight};
 		${({ height }) => height && `height: ${height};`}
 		overflow-y: auto;
+		/* Reserve a stable gutter for the scrollbar so the content
+		 * area doesn't resize when the scrollbar appears/disappears.
+		 * Fixes the pill-width "jump" (and chevron shift) in the
+		 * nav sidebar when a group is expanded and new rows push
+		 * the content past the viewport. */
+		scrollbar-gutter: stable;
 	}
 
 	& ::-webkit-scrollbar {

@@ -54,7 +54,17 @@ const axiosInstance = axios.create({
 
 // ─── Request interceptor ─────────────────────────────────────────────────────
 axiosInstance.interceptors.request.use((config) => {
-	const token = store?.getState().auth.accessToken
+	/* Portal (files.sargas.io) stores its JWT in localStorage, not
+	 * Redux — the Discord callback runs before any slice init. Fall
+	 * back to it so portal API calls carry the Bearer header. */
+	let token = store?.getState().auth.accessToken
+	if (!token) {
+		try {
+			token = localStorage.getItem('access_token') ?? undefined
+		} catch {
+			/* ignore storage access errors */
+		}
+	}
 	if (token) {
 		config.headers.Authorization = `Bearer ${token}`
 	}

@@ -66,6 +66,7 @@ export const baseApi = createApi({
 		'Attachment',
 		'EmployeeAttachment',
 		'ProjectAttachment',
+		'FileManager',
 		'AiSpend',
 	],
 	endpoints: () => ({}),
