@@ -122,12 +122,22 @@ export const ShareModal = ({ initial, onClose }: Props) => {
 				const envPortal = (
 					import.meta as unknown as { env?: Record<string, string | undefined> }
 				).env?.VITE_PORTAL_URL
-				const portalBase =
-					envPortal ??
-					window.location.origin.replace(
-						/^(https?:\/\/)(.*)/,
-						(_m, proto, rest) => `${proto}files.${rest}`,
-					)
+				/* Build portal origin by swapping the leftmost subdomain
+				 *  with "files": admin.sargas.io → files.sargas.io, and
+				 *  bare localhost → files.localhost. Port and protocol
+				 *  carry over via the URL object. */
+				const toPortalOrigin = (href: string): string => {
+					const u = new URL(href)
+					const parts = u.hostname.split('.')
+					if (parts.length === 1) {
+						u.hostname = `files.${parts[0]}`
+					} else {
+						parts[0] = 'files'
+						u.hostname = parts.join('.')
+					}
+					return u.origin
+				}
+				const portalBase = envPortal ?? toPortalOrigin(window.location.origin)
 				setGeneratedUrl(`${portalBase}/invite/${res.token}`)
 				showToast('Invite created', 'success')
 			} catch (e) {
