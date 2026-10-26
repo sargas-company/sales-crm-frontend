@@ -604,7 +604,18 @@ export const clearFinished = () => {
 }
 
 export const toggleMinimize = () => {
-	state = { ...state, minimized: !state.minimized, dismissed: false }
+	/* The tray renders as a bar whenever EITHER minimized or
+	 *  dismissed is true. Previously this toggled only `minimized`
+	 *  and cleared `dismissed` — so the state (minimized:false,
+	 *  dismissed:true) needed two clicks on the floating pill to
+	 *  expand: first click flipped minimized false→true (still a
+	 *  bar), second click flipped it back. Decide from the effective
+	 *  mode instead: if we're in a bar in any form, expand fully;
+	 *  otherwise minimize. */
+	const inBar = state.minimized || state.dismissed
+	state = inBar
+		? { ...state, minimized: false, dismissed: false }
+		: { ...state, minimized: true, dismissed: false }
 	emit()
 }
 export const dismissTray = () => {
