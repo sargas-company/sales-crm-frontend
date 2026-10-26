@@ -1147,26 +1147,6 @@ const FileManagerPage = () => {
 							<CloseRounded style={{ fontSize: 14 }} />
 						</BulkClear>
 					</BulkBar>
-					<FilterRow ref={filtersRef}>
-						<FilterIndicator
-							style={{
-								transform: `translateX(${filterIndicator.left}px)`,
-								width: `${filterIndicator.width}px`,
-								opacity: filterIndicator.opacity,
-							}}
-						/>
-						{FILTERS.map((f) => (
-							<FilterPill
-								key={f.v}
-								type='button'
-								data-active={filter === f.v || undefined}
-								$active={filter === f.v}
-								onClick={() => setFilter(f.v)}
-							>
-								{f.label}
-							</FilterPill>
-						))}
-					</FilterRow>
 				</Toolbar>
 
 				<DropZone
