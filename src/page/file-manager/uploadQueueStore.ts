@@ -166,15 +166,33 @@ const patch = (id: string, p: Partial<UploadItem>) => {
 		typeof (document as unknown as { startViewTransition?: unknown })
 			.startViewTransition === 'function'
 	if (canViewTransition) {
-		const vtName = `upload-${id.replace(/[^a-zA-Z0-9_-]/g, '_')}`
-		/* Snapshot phase: find the row in its OLD group and tag only
-		 *  it with the view-transition-name, so the browser doesn't
-		 *  cross-fade every other row that happens to share a stable
-		 *  name across the snapshot. */
-		const before = document.querySelector<HTMLElement>(
-			`[data-upload-row="${CSS.escape(id)}"]`,
-		)
-		if (before) before.style.setProperty('view-transition-name', vtName)
+		/* Name EVERY tray row before the VT fires, not just the one
+		 *  that's crossing groups. Reason: with only one named row,
+		 *  all other rows are packed into ::view-transition-group(root)
+		 *  which either cross-fades two overlapping snapshots (jitter)
+		 *  or (with the index.css override that disables root
+		 *  animations) jumps straight to the new layout — the owner
+		 *  wants the sibling rows to *glide* into their new positions,
+		 *  not shimmer and not snap. Each named row gets its own
+		 *  ::view-transition-group with a smooth position morph. */
+		const tagAll = () => {
+			document
+				.querySelectorAll<HTMLElement>('[data-upload-row]')
+				.forEach((el) => {
+					const rid = el.getAttribute('data-upload-row')
+					if (!rid) return
+					el.style.setProperty(
+						'view-transition-name',
+						`upload-${rid.replace(/[^a-zA-Z0-9_-]/g, '_')}`,
+					)
+				})
+		}
+		const cleanAll = () => {
+			document
+				.querySelectorAll<HTMLElement>('[data-upload-row]')
+				.forEach((el) => el.style.removeProperty('view-transition-name'))
+		}
+		tagAll()
 		;(
 			document as unknown as {
 				startViewTransition: (cb: () => void | Promise<void>) => {
@@ -184,24 +202,13 @@ const patch = (id: string, p: Partial<UploadItem>) => {
 		)
 			.startViewTransition(() => {
 				flushSync(mutate)
-				/* After the React commit, the NEW DOM has a fresh
-				 *  element in the destination group. Give it the same
-				 *  view-transition-name so the browser matches it to
-				 *  the old one and animates the travel. */
-				const after = document.querySelector<HTMLElement>(
-					`[data-upload-row="${CSS.escape(id)}"]`,
-				)
-				if (after) after.style.setProperty('view-transition-name', vtName)
+				/* React may have unmounted + remounted some rows (e.g.
+				 *  the one that crossed groups is a fresh DOM node
+				 *  under a different parent). Re-tag before the second
+				 *  snapshot so the new nodes have the same names. */
+				tagAll()
 			})
-			.finished.finally(() => {
-				/* Clean up — leaving the name set would make the next
-				 *  unrelated VT snapshot still consider this row
-				 *  "named" and default-cross-fade it. */
-				const cleanup = document.querySelector<HTMLElement>(
-					`[data-upload-row="${CSS.escape(id)}"]`,
-				)
-				if (cleanup) cleanup.style.removeProperty('view-transition-name')
-			})
+			.finished.finally(cleanAll)
 	} else {
 		mutate()
 	}

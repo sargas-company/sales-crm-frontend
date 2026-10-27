@@ -640,16 +640,15 @@ const FileManagerPage = () => {
 		}
 	}, [data, pendingDeleteIds, hiddenIds])
 
-	/* Helper: optimistically hide an id inside a View Transition so
-	 *  the deleting card fades out smoothly. The view-transition-name
-	 *  is assigned IMPERATIVELY to the single leaving node — a
-	 *  stable name on every card made every unrelated transition
-	 *  (e.g. an upload tray cross-group move) snapshot every card
-	 *  as its own ::view-transition-group, flashing them
-	 *  visibility:hidden mid-flight. Here we tag just the one that's
-	 *  about to disappear, let the browser do the fade, then clean
-	 *  the name off in .finished.finally so the next transition
-	 *  doesn't see a stale named element. */
+	/* Helper: optimistically hide an id inside a View Transition.
+	 *  Tags EVERY grid card (folders + files) with its own
+	 *  view-transition-name right before the VT fires, so the browser
+	 *  gives each one its own position-morph animation. Siblings
+	 *  thus glide smoothly into the freed slot instead of either
+	 *  shimmering (default root crossfade) or snapping (with the
+	 *  index.css root-anim override). Names are stripped in
+	 *  `.finished.finally` so the next unrelated VT doesn't see
+	 *  stale participants. */
 	const hideWithTransition = (id: string) => {
 		const canVT =
 			typeof document !== 'undefined' &&
@@ -659,12 +658,27 @@ const FileManagerPage = () => {
 			setHiddenIds((s) => new Set([...s, id]))
 			return
 		}
-		const esc = CSS.escape(id)
-		const target = document.querySelector<HTMLElement>(
-			`[data-fm-folder="${esc}"], [data-fm-file="${esc}"]`,
-		)
-		const vtName = `fm-leaving-${id.replace(/[^a-zA-Z0-9_-]/g, '_')}`
-		if (target) target.style.setProperty('view-transition-name', vtName)
+		const tagAll = () => {
+			document
+				.querySelectorAll<HTMLElement>('[data-fm-folder], [data-fm-file]')
+				.forEach((el) => {
+					const folderId = el.getAttribute('data-fm-folder')
+					const fileId = el.getAttribute('data-fm-file')
+					const kind = folderId ? 'folder' : 'file'
+					const raw = folderId ?? fileId ?? ''
+					if (!raw) return
+					el.style.setProperty(
+						'view-transition-name',
+						`fm-${kind}-${raw.replace(/[^a-zA-Z0-9_-]/g, '_')}`,
+					)
+				})
+		}
+		const cleanAll = () => {
+			document
+				.querySelectorAll<HTMLElement>('[data-fm-folder], [data-fm-file]')
+				.forEach((el) => el.style.removeProperty('view-transition-name'))
+		}
+		tagAll()
 		;(
 			document as unknown as {
 				startViewTransition: (cb: () => void) => {
@@ -674,11 +688,15 @@ const FileManagerPage = () => {
 		)
 			.startViewTransition(() => {
 				flushSync(() => setHiddenIds((s) => new Set([...s, id])))
+				/* Re-tag because the hiddenIds filter removed the
+				 *  leaving card from the render pass — the remaining
+				 *  cards may have new DOM nodes (grid reflow is
+				 *  layout-only, same nodes typically, but tag anyway
+				 *  so new neighbours in the destination position are
+				 *  covered). */
+				tagAll()
 			})
-			.finished.finally(() => {
-				/* The node is gone from DOM by now (filtered out via
-				 *  hiddenIds), so nothing to clean on it. */
-			})
+			.finished.finally(cleanAll)
 	}
 	const closeMoveModal = () => {
 		/* Trigger ConfirmModal's exit animation first, then unmount
