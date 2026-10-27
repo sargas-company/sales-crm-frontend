@@ -438,6 +438,34 @@ const FileActions = ({
 
 /* ─── File-row (attachment-style) helpers ────────────────────────── */
 
+/** True when the FilePreview component would use a JS fetch() to
+ *  parse the file bytes (docx-preview, xlsx, marked, highlight.js).
+ *  Those fail against B2 presigned URLs due to CORS, so the preview
+ *  flow routes them through the backend `/content` proxy and wraps
+ *  the result as a same-origin blob URL. Everything else — image,
+ *  pdf, text (iframe), video, audio — uses the signed URL directly
+ *  via native tags where CORS does not apply. */
+const PROXY_CODE_EXTS = new Set([
+	'json', 'xml', 'yaml', 'yml', 'js', 'ts', 'tsx', 'jsx', 'css', 'scss',
+	'less', 'html', 'py', 'rb', 'go', 'rs', 'java', 'kt', 'sh', 'bash',
+	'sql', 'php', 'swift', 'c', 'cpp', 'cs',
+])
+const previewNeedsBackendProxy = (mime: string, name: string): boolean => {
+	const dot = name.lastIndexOf('.')
+	const ext = dot >= 0 ? name.slice(dot + 1).toLowerCase() : ''
+	if (
+		ext === 'docx' || ext === 'doc' ||
+		mime.includes('wordprocessingml') || mime === 'application/msword'
+	) return true
+	if (
+		ext === 'xlsx' || ext === 'xls' ||
+		mime.includes('spreadsheetml') || mime === 'application/vnd.ms-excel'
+	) return true
+	if (ext === 'md' || ext === 'markdown' || mime === 'text/markdown') return true
+	if (PROXY_CODE_EXTS.has(ext)) return true
+	return false
+}
+
 type MimeKind = 'pdf' | 'image' | 'doc' | 'other'
 
 const mimeKind = (mime: string): MimeKind => {
@@ -930,22 +958,13 @@ const FileManagerPage = () => {
 	}
 	const openPreview = async (file: FileManagerFile) => {
 		try {
-			/* Videos stream from B2 directly via a native <video> element
-			 *  — ranged requests + no CORS needed, and proxying through
-			 *  the backend would mean buffering the whole file in Node
-			 *  memory. For everything else (text, md, code, docx, xlsx,
-			 *  images, PDFs) go through the backend `/content` proxy and
-			 *  wrap the bytes in a blob URL. Keeps all fetch-based
-			 *  previewers (marked, highlight.js, docx-preview, xlsx)
-			 *  same-origin so B2 CORS doesn't matter. */
-			if (file.mimeType.startsWith('video/')) {
-				const { url, mimeType } = await getPreviewUrl(file.id).unwrap()
-				setPreview({
-					url,
-					name: file.originalName,
-					mime: mimeType ?? file.mimeType,
-				})
-			} else {
+			/* Proxy only the renderers that actually do a cross-origin
+			 *  JS fetch of the file bytes — docx-preview, xlsx-library,
+			 *  marked, highlight.js. Native tags (<img>, <iframe> for
+			 *  PDF, <video>, <audio>) load B2 URLs fine, no CORS, so
+			 *  leave those alone. Plain text uses an iframe too (see
+			 *  FilePreview `kind === 'text'`). */
+			if (previewNeedsBackendProxy(file.mimeType, file.originalName)) {
 				const res = await axiosInstance.get(
 					`/file-manager/files/${file.id}/content`,
 					{ responseType: 'blob' },
@@ -956,6 +975,13 @@ const FileManagerPage = () => {
 					name: file.originalName,
 					mime: file.mimeType,
 					revoke: true,
+				})
+			} else {
+				const { url, mimeType } = await getPreviewUrl(file.id).unwrap()
+				setPreview({
+					url,
+					name: file.originalName,
+					mime: mimeType ?? file.mimeType,
 				})
 			}
 			setPreviewFile(file)

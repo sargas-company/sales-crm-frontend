@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from 'react'
-import { flushSync } from 'react-dom'
 
 import { fileManagerApi } from '../../store/file-manager/fileManagerApi'
 import { store } from '../../store/store'
@@ -130,123 +129,16 @@ export const useUploadQueue = (): State =>
 const genId = () => `up_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
 const patch = (id: string, p: Partial<UploadItem>) => {
-	const prev = state.items.find((i) => i.id === id)
-	const statusChanged = !!p.status && !!prev && p.status !== prev.status
-	/* Which tray group the row belongs to — must stay in sync with
-	 *  the filter in TrayCardView. We only trigger a View Transition
-	 *  when the mutation actually crosses a group boundary; pause ↔
-	 *  resume ↔ queued ↔ interrupted all stay in Active and must
-	 *  NOT animate, otherwise the browser snapshots the row at its
-	 *  viewport position and renders the ::view-transition-old/new
-	 *  pseudo-elements at the document root (outside the tray's
-	 *  overflow:auto clip). A row scrolled below the visible fold
-	 *  then briefly flashes BELOW the tray card during the swap. */
-	const groupOf = (s: UploadItem['status']): string => {
-		if (s === 'done') return 'completed'
-		if (s === 'error') return 'failed'
-		if (s === 'cancelled') return 'cancelled'
-		return 'active'
+	/* Simple in-place mutation. The tray now renders items as a
+	 *  single ordered list (owner's call: Google-Drive-style, no
+	 *  Active/Completed/Failed groups), so there's no cross-group
+	 *  motion to animate — a status flip updates the row's icon /
+	 *  progress bar / inline action buttons in place. */
+	state = {
+		...state,
+		items: state.items.map((i) => (i.id === id ? { ...i, ...p } : i)),
 	}
-	const groupChanged =
-		statusChanged && !!prev && groupOf(p.status!) !== groupOf(prev.status)
-	const mutate = () => {
-		state = {
-			...state,
-			items: state.items.map((i) => (i.id === id ? { ...i, ...p } : i)),
-		}
-		emit()
-	}
-	/* View Transitions only for cross-group moves (uploading → done,
-	 *  → cancelled, → error). flushSync forces React to commit
-	 *  synchronously so the browser's second snapshot sees the new
-	 *  DOM. Non-chromium browsers fall through to the plain update. */
-	const canViewTransition =
-		groupChanged &&
-		typeof document !== 'undefined' &&
-		typeof (document as unknown as { startViewTransition?: unknown })
-			.startViewTransition === 'function'
-	if (canViewTransition) {
-		/* Name every tray row that is FULLY inside the tray body's
-		 *  visible rect — so each gets its own position morph and
-		 *  siblings glide into reflow positions. Rows outside the
-		 *  visible slice (scrolled off, clipped by overflow:auto)
-		 *  are intentionally left unnamed: VT pseudos live at :root
-		 *  and ignore ancestor overflow, so naming a scrolled-off
-		 *  row would render its pseudo OUTSIDE the tray card. We
-		 *  tolerate those rows snap-updating under the overlay —
-		 *  user can't see them anyway. The one row currently
-		 *  crossing groups is always tagged even if partially out
-		 *  of view, otherwise it visually teleports instead of
-		 *  gliding. */
-		const trayBody = document.querySelector<HTMLElement>(
-			'[data-upload-tray-body]',
-		)
-		const trayRect = trayBody?.getBoundingClientRect() ?? null
-		const insideTray = (el: HTMLElement): boolean => {
-			if (!trayRect) return true
-			const r = el.getBoundingClientRect()
-			return r.top >= trayRect.top && r.bottom <= trayRect.bottom
-		}
-		const tagAll = () => {
-			document
-				.querySelectorAll<HTMLElement>('[data-upload-row]')
-				.forEach((el) => {
-					const rid = el.getAttribute('data-upload-row')
-					if (!rid) return
-					const isMover = rid === id
-					if (!isMover && !insideTray(el)) {
-						el.style.removeProperty('view-transition-name')
-						return
-					}
-					el.style.setProperty(
-						'view-transition-name',
-						`upload-${rid.replace(/[^a-zA-Z0-9_-]/g, '_')}`,
-					)
-				})
-		}
-		const cleanAll = () => {
-			document
-				.querySelectorAll<HTMLElement>('[data-upload-row]')
-				.forEach((el) => el.style.removeProperty('view-transition-name'))
-		}
-		tagAll()
-		;(
-			document as unknown as {
-				startViewTransition: (cb: () => void | Promise<void>) => {
-					finished: Promise<void>
-				}
-			}
-		)
-			.startViewTransition(() => {
-				flushSync(mutate)
-				/* React may have unmounted + remounted some rows (e.g.
-				 *  the one that crossed groups is a fresh DOM node
-				 *  under a different parent). Re-tag before the second
-				 *  snapshot so the new nodes have the same names. */
-				tagAll()
-				/* If the mover's AFTER position lies outside the tray
-				 *  body's visible rect (destination group is scrolled
-				 *  off), un-name it. The browser then only sees the
-				 *  name in the OLD snapshot — it runs a default
-				 *  fade-out on the before-position pseudo. The row
-				 *  gently disappears from its old slot in Active
-				 *  instead of gliding over / past the tray edge. */
-				if (trayRect) {
-					const mover = document.querySelector<HTMLElement>(
-						`[data-upload-row="${CSS.escape(id)}"]`,
-					)
-					if (mover) {
-						const r = mover.getBoundingClientRect()
-						if (r.bottom > trayRect.bottom || r.top < trayRect.top) {
-							mover.style.removeProperty('view-transition-name')
-						}
-					}
-				}
-			})
-			.finished.finally(cleanAll)
-	} else {
-		mutate()
-	}
+	emit()
 }
 
 const findItem = (id: string): UploadItem | undefined =>

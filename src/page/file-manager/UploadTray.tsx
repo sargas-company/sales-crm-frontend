@@ -147,28 +147,15 @@ export const TrayCardView = ({
 	onMinimize,
 	onClose,
 }: TrayCardViewProps) => {
-	const groups = {
-		Active: items.filter(
-			(i) =>
-				i.status === 'uploading' ||
-				i.status === 'queued' ||
-				i.status === 'verifying' ||
-				i.status === 'initializing' ||
-				i.status === 'paused' ||
-				i.status === 'interrupted',
-		),
-		Completed: items.filter((i) => i.status === 'done'),
-		Failed: items.filter((i) => i.status === 'error'),
-		/* Cancelled items are deliberately NOT grouped — handleCancelRow
-		 *  removes them from the store ~320 ms after the cancel API
-		 *  resolves, so routing them through a visible "Cancelled"
-		 *  section just caused the tray height to grow by one group
-		 *  header + row, then collapse back when the row was removed.
-		 *  Instead, status flipping to 'cancelled' leaves the item
-		 *  unrendered — the browser's View Transitions fallback for a
-		 *  disappeared view-transition-name is a smooth fade-out at
-		 *  the row's old position, which is exactly what we want. */
-	}
+	/* Flat list — owner wants Google-Drive-style behaviour: items
+	 *  stay in insertion order and update in place as they progress
+	 *  through uploading → done / error / paused. No Active /
+	 *  Completed / Failed groups, no cross-group animation. Cancelled
+	 *  items are still removed from state ~320 ms after the cancel
+	 *  API resolves, so they just disappear from the row list.
+	 *  Status is read per-row via the icon / progress bar / inline
+	 *  action buttons the Row component already renders. */
+	const visibleItems = items.filter((i) => i.status !== 'cancelled')
 	const summary = {
 		active: items.filter((i) => i.status === 'uploading').length,
 		queued: items.filter((i) => i.status === 'queued').length,
@@ -203,30 +190,10 @@ export const TrayCardView = ({
 					)}
 				</HeadRight>
 			</Head>
-			<Body data-upload-tray-body>
-				{(Object.entries(groups) as [keyof typeof groups, UploadItem[]][]).map(
-					([label, arr]) =>
-						arr.length > 0 && (
-							<Group key={label}>
-								<GroupHead>
-									<GroupLabel>{label}</GroupLabel>
-									<GroupCount>{arr.length}</GroupCount>
-								</GroupHead>
-								{arr.map((i) => (
-									<Row
-										/* Key by id alone — the view-transition path
-										 *  owns cross-group motion now, so forcing
-										 *  React to remount on every status flip only
-										 *  double-played the slide-in entry anim on
-										 *  top of the browser's VT crossfade. */
-										key={i.id}
-										item={i}
-										isLastInTray={items.length === 1}
-									/>
-								))}
-							</Group>
-						),
-				)}
+			<Body>
+				{visibleItems.map((i) => (
+					<Row key={i.id} item={i} isLastInTray={visibleItems.length === 1} />
+				))}
 			</Body>
 		</Card>
 	)
@@ -368,20 +335,7 @@ const Row = ({ item, isLastInTray }: { item: UploadItem; isLastInTray: boolean }
 	}
 
 	return (
-		<RowWrap
-			$status={item.status}
-			$exiting={exiting}
-			/* `data-upload-row` lets uploadQueueStore.patch find the
-			 *  specific row that's about to transition and assign
-			 *  view-transition-name to IT ONLY — not every row. A
-			 *  statically-set name on every row made the browser
-			 *  cross-fade every row (its default animation for a
-			 *  named element whose before/after position matches)
-			 *  the moment any ONE row crossed groups, producing a
-			 *  cascade of flashes on all previously-completed rows
-			 *  with each new finish. */
-			data-upload-row={item.id}
-		>
+		<RowWrap $status={item.status} $exiting={exiting}>
 			<FileIcon $kind={kind}>
 				<FileFold />
 				<FileExt>{getExt(item.fileName)}</FileExt>
@@ -804,38 +758,6 @@ const Body = styled.div`
 	flex-direction: column;
 	gap: 12px;
 `
-const Group = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-`
-const GroupHead = styled.div`
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	padding: 10px 6px 6px;
-`
-const GroupLabel = styled.span`
-	font-family: 'Inter', system-ui, sans-serif;
-	font-size: 11.5px;
-	font-weight: 800;
-	color: #94a3b8;
-	letter-spacing: 0.6px;
-	text-transform: uppercase;
-`
-const GroupCount = styled.span`
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-width: 20px;
-	padding: 2px 7px;
-	border-radius: 999px;
-	background: rgba(15, 23, 42, 0.06);
-	color: #475569;
-	font-size: 11px;
-	font-weight: 700;
-	font-variant-numeric: tabular-nums;
-`
 const RowWrap = styled.div<{ $status: UploadItem['status']; $exiting?: boolean }>`
 	display: grid;
 	grid-template-columns: auto 1fr auto;
@@ -843,15 +765,11 @@ const RowWrap = styled.div<{ $status: UploadItem['status']; $exiting?: boolean }
 	align-items: flex-start;
 	padding: 12px 8px;
 	border-radius: 12px;
-	/* Fresh-mount entry — plays on first mount AND on every remount
-	 *  triggered by the id:status key change in the Group map, so a
-	 *  row jumping from "Active" to "Completed" visually glides in
-	 *  rather than popping. */
-	animation: ${keyframes`
-		from { opacity: 0; transform: translateY(-6px) scale(0.98); }
-		to { opacity: 1; transform: translateY(0) scale(1); }
-	`} 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
-	/* Static state: dim cancelled, otherwise opaque.
+	/* No entry animation — owner wants rows to appear/update in
+	 *  place, Google-Drive-style. The in-row progress bar + icon do
+	 *  all the status signalling.
+	 *
+	 * Static state: dim cancelled, otherwise opaque.
 	 * Exit transition: collapse height + fade + slight slide out of
 	 * list. max-height is large enough to cover any row content;
 	 * going to 0 produces a smooth height collapse because of the
