@@ -403,9 +403,15 @@ const TreeBranch = ({
 const FileActions = ({
 	onDownload,
 	onDelete,
+	showDelete = true,
 }: {
 	onDownload: () => void
 	onDelete: () => void
+	/** Hide the inline Delete pill. Portal workers pass false for
+	 *  any row that isn't their own upload — the context-menu
+	 *  Delete already honours the same rule, and the inline button
+	 *  was slipping past both checks until now. */
+	showDelete?: boolean
 }) => (
 	<ActBigWrap>
 		<ActBig type='button' onClick={onDownload}>
@@ -416,14 +422,16 @@ const FileActions = ({
 			</span>
 			<span className='sr-only'>Download</span>
 		</ActBig>
-		<ActBig type='button' $danger onClick={onDelete}>
-			<span className='num'>02</span>
-			<span className='lbl-track' aria-hidden='true'>
-				<span className='lbl-row'>Delete</span>
-				<span className='lbl-row'>Delete</span>
-			</span>
-			<span className='sr-only'>Delete</span>
-		</ActBig>
+		{showDelete && (
+			<ActBig type='button' $danger onClick={onDelete}>
+				<span className='num'>02</span>
+				<span className='lbl-track' aria-hidden='true'>
+					<span className='lbl-row'>Delete</span>
+					<span className='lbl-row'>Delete</span>
+				</span>
+				<span className='sr-only'>Delete</span>
+			</ActBig>
+		)}
 	</ActBigWrap>
 )
 
@@ -1074,9 +1082,18 @@ const FileManagerPage = () => {
 			 *  harmless because nothing renders it anymore. */
 		} catch {
 			showToast('Failed to delete folder', 'error')
-			/* On failure, do clean up so the card can be re-interacted
-			 *  with. Fade is already stuck at 0 — reset it. */
+			/* On failure, roll back BOTH the fade state and the
+			 *  optimistic hide — otherwise the row stays invisible
+			 *  until a page refresh (hideWithTransition filtered it
+			 *  out of the rendered list via hiddenIds, which the
+			 *  success path left to be garbage-collected by the
+			 *  refetch; on error there is no refetch). */
 			setPendingDeleteIds((s) => {
+				const next = new Set(s)
+				next.delete(target.id)
+				return next
+			})
+			setHiddenIds((s) => {
 				const next = new Set(s)
 				next.delete(target.id)
 				return next
@@ -1102,6 +1119,11 @@ const FileManagerPage = () => {
 		} catch {
 			showToast('Failed to delete file', 'error')
 			setPendingDeleteIds((s) => {
+				const next = new Set(s)
+				next.delete(target.id)
+				return next
+			})
+			setHiddenIds((s) => {
 				const next = new Set(s)
 				next.delete(target.id)
 				return next
@@ -1513,6 +1535,7 @@ const FileManagerPage = () => {
 													<FileActions
 														onDownload={() => handleDownload(f)}
 														onDelete={() => setToDeleteFile(f)}
+														showDelete={!isPortalHost || canPortalDeleteFile(f)}
 													/>
 												</AttachActions>
 											</AttachCard>
@@ -1710,9 +1733,16 @@ const FileManagerPage = () => {
 								(e as { data?: { message?: string } })?.data?.message ??
 								'Delete failed'
 							showToast(msg, 'error')
-							/* On failure though, we must reset so the user
-							 *  can interact with the still-present rows. */
+							/* Roll back both sets: pending-delete so the
+							 *  cards unfreeze visually, and hidden so the
+							 *  optimistically-removed rows reappear
+							 *  instead of staying ghosts until refresh. */
 							setPendingDeleteIds(new Set())
+							setHiddenIds((s) => {
+								const next = new Set(s)
+								for (const id of ids) next.delete(id)
+								return next
+							})
 						}
 					}}
 					onClose={() => setBulkDeleteOpen(false)}
