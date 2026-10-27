@@ -224,6 +224,24 @@ const patch = (id: string, p: Partial<UploadItem>) => {
 				 *  under a different parent). Re-tag before the second
 				 *  snapshot so the new nodes have the same names. */
 				tagAll()
+				/* If the mover's AFTER position lies outside the tray
+				 *  body's visible rect (destination group is scrolled
+				 *  off), un-name it. The browser then only sees the
+				 *  name in the OLD snapshot — it runs a default
+				 *  fade-out on the before-position pseudo. The row
+				 *  gently disappears from its old slot in Active
+				 *  instead of gliding over / past the tray edge. */
+				if (trayRect) {
+					const mover = document.querySelector<HTMLElement>(
+						`[data-upload-row="${CSS.escape(id)}"]`,
+					)
+					if (mover) {
+						const r = mover.getBoundingClientRect()
+						if (r.bottom > trayRect.bottom || r.top < trayRect.top) {
+							mover.style.removeProperty('view-transition-name')
+						}
+					}
+				}
 			})
 			.finished.finally(cleanAll)
 	} else {
