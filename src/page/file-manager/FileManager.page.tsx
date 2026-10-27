@@ -31,6 +31,7 @@ import {
 } from '@mui/icons-material'
 
 import { useGetMeQuery } from '../../store/auth/authApi'
+import axiosInstance from '../../api/axiosInstance'
 import { ListPageShell } from '../../components/_shared/ListPageShell'
 import ConfirmModal from '../../components/_shared/ConfirmModal'
 import { useToast } from '../../context/toast/ToastContext'
@@ -715,7 +716,14 @@ const FileManagerPage = () => {
 		resourceId: string
 		resourceName: string
 	} | null>(null)
-	const [preview, setPreview] = useState<{ url: string; name: string; mime: string } | null>(null)
+	const [preview, setPreview] = useState<{
+		url: string
+		name: string
+		mime: string
+		/** Set when `url` is a blob URL built from a backend-proxied
+		 *  fetch — must be URL.revokeObjectURL'd on close/replace. */
+		revoke?: boolean
+	} | null>(null)
 	const [ctxMenu, setCtxMenu] = useState<
 		{ x: number; y: number; items: CtxMenuItem[] } | null
 	>(null)
@@ -914,6 +922,7 @@ const FileManagerPage = () => {
 		 * first (320ms), panel scales out with a 320ms delay, scrim
 		 * fades last. 720ms total before unmount. */
 		window.setTimeout(() => {
+			if (preview?.revoke) URL.revokeObjectURL(preview.url)
 			setPreview(null)
 			setPreviewFile(null)
 			setPreviewClosing(false)
@@ -921,8 +930,34 @@ const FileManagerPage = () => {
 	}
 	const openPreview = async (file: FileManagerFile) => {
 		try {
-			const { url, mimeType } = await getPreviewUrl(file.id).unwrap()
-			setPreview({ url, name: file.originalName, mime: mimeType ?? file.mimeType })
+			/* Videos stream from B2 directly via a native <video> element
+			 *  — ranged requests + no CORS needed, and proxying through
+			 *  the backend would mean buffering the whole file in Node
+			 *  memory. For everything else (text, md, code, docx, xlsx,
+			 *  images, PDFs) go through the backend `/content` proxy and
+			 *  wrap the bytes in a blob URL. Keeps all fetch-based
+			 *  previewers (marked, highlight.js, docx-preview, xlsx)
+			 *  same-origin so B2 CORS doesn't matter. */
+			if (file.mimeType.startsWith('video/')) {
+				const { url, mimeType } = await getPreviewUrl(file.id).unwrap()
+				setPreview({
+					url,
+					name: file.originalName,
+					mime: mimeType ?? file.mimeType,
+				})
+			} else {
+				const res = await axiosInstance.get(
+					`/file-manager/files/${file.id}/content`,
+					{ responseType: 'blob' },
+				)
+				const blobUrl = URL.createObjectURL(res.data as Blob)
+				setPreview({
+					url: blobUrl,
+					name: file.originalName,
+					mime: file.mimeType,
+					revoke: true,
+				})
+			}
 			setPreviewFile(file)
 		} catch {
 			showToast('Could not open preview', 'error')
