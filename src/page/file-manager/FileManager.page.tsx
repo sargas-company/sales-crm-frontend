@@ -483,21 +483,15 @@ const FileManagerPage = () => {
 
 	const { data, isLoading, isError, refetch } = useListFolderQuery(folderId)
 	/* Portal workers need their own user id to decide which rows get
-	 *  a Delete affordance (ownership check mirrors the backend 24 h
-	 *  window). Admins don't need this. */
+	 *  a Delete affordance. Ownership only — no time window; the UI
+	 *  check mirrors the backend check 1-to-1 so a visible Delete
+	 *  button is a Delete button that works. */
 	const { data: me } = useGetMeQuery()
 	const myId = me?.id ?? null
-	const DELETE_WINDOW_MS = 24 * 60 * 60 * 1000
 	const canPortalDeleteFolder = (f: FileManagerFolder) =>
-		isPortalHost &&
-		!!myId &&
-		f.createdById === myId &&
-		Date.now() - new Date(f.createdAt).getTime() <= DELETE_WINDOW_MS
+		isPortalHost && !!myId && f.createdById === myId
 	const canPortalDeleteFile = (f: FileManagerFile) =>
-		isPortalHost &&
-		!!myId &&
-		f.uploadedBy?.id === myId &&
-		Date.now() - new Date(f.createdAt).getTime() <= DELETE_WINDOW_MS
+		isPortalHost && !!myId && f.uploadedBy?.id === myId
 	const { data: treeData } = useGetTreeQuery()
 	const { data: stats } = useGetStatsQuery()
 	const [createFolder, { isLoading: creatingFolder }] = useCreateFolderMutation()
