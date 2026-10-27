@@ -105,7 +105,20 @@ export const FilePreview = ({ url, name, mime }: Props) => {
 	if (kind === 'xlsx') return <XlsxView url={url} name={name} />
 	if (kind === 'md') return <TextView url={url} as='md' />
 	if (kind === 'code') return <TextView url={url} as='code' ext={extOf(name)} />
-	if (kind === 'text') return <TextView url={url} as='text' />
+	/* Plain text: render via iframe so the browser handles it as a
+	 *  native text/plain document — no fetch, no CORS. Previously
+	 *  we fetched the URL and dumped the body into <pre>, but B2
+	 *  signed URLs don't carry CORS headers so the fetch failed
+	 *  with "Failed to fetch". Iframe doesn't go through CORS. */
+	if (kind === 'text')
+		return (
+			<iframe
+				src={url}
+				style={iframeStyle}
+				title={name}
+				sandbox=''
+			/>
+		)
 
 	return (
 		<FallbackWrap>
