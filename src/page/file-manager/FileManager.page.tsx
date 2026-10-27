@@ -2744,18 +2744,16 @@ const FolderCard = styled.div<{
 	text-align: center;
 	opacity: 1;
 	/* No entry animation. Earlier folderCardIn staggered the cards
-	 * in with translateY + scale over up to 1.4 s (duration + per-
-	 * index delay). If the user clicked a card before its entry
-	 * animation finished, the `$opening` rule replaced the
-	 * `animation` property with folderPulseOut — but the two
-	 * keyframe lists have different transform structures (entry
-	 * uses translateY + scale, pulse uses only scale), so the
+	 * in with translateY + scale over up to 1.4 s. If the user
+	 * clicked a card before its entry anim finished, the $opening
+	 * rule replaced the animation with folderPulseOut — but the
+	 * two keyframe lists had different transform structures
+	 * (entry: translateY + scale; pulse: scale only), so the
 	 * browser swapped between them discretely instead of
-	 * interpolating. The user saw a snap FROM the mid-entry state
-	 * TO the pulse's start, then the pulse itself — "double blink"
-	 * on the first click after page reload. Cards now mount at
-	 * their final position so the pulse always starts from a clean
-	 * identity transform. */
+	 * interpolating. User saw a snap from mid-entry to pulse-start,
+	 * then the pulse itself: double blink on first click after
+	 * page reload. Cards now mount at identity so the pulse always
+	 * starts from a clean baseline. */
 	transition: border-color 180ms ease, opacity 220ms ease, filter 220ms ease,
 		box-shadow 220ms ease;
 
