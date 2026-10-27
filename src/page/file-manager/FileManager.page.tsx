@@ -985,8 +985,22 @@ const FileManagerPage = () => {
 				})
 			}
 			setPreviewFile(file)
-		} catch {
-			showToast('Could not open preview', 'error')
+		} catch (e) {
+			/* Surface what actually failed so a 404 (backend not
+			 *  deployed), 403 (portal access denied) and a 500
+			 *  (storage error) each read differently in the toast. */
+			const err = e as {
+				response?: { status?: number; data?: { message?: string } }
+				message?: string
+			}
+			const status = err?.response?.status
+			const serverMsg = err?.response?.data?.message
+			const msg =
+				serverMsg ??
+				(status
+					? `Preview failed (${status})`
+					: (err?.message ?? 'Could not open preview'))
+			showToast(msg, 'error')
 		}
 	}
 
