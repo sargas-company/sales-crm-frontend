@@ -488,39 +488,47 @@ const RowActions = ({
 		item.status === 'paused' ||
 		item.status === 'error' ||
 		item.status === 'interrupted'
+	/* Every button stays mounted all the time; each sits in a
+	 *  BtnSlot whose width + opacity + margin transition in sync
+	 *  with the $visible flag. Status flips (uploading → paused →
+	 *  error → …) now fade/shrink the stale buttons out and
+	 *  fade/expand the new ones in over 220 ms — no more
+	 *  "molнniyeносно" pop in/out. Width is hardcoded to the
+	 *  SquareBtn size (29 px) so the collapse is clean. */
 	return (
 		<RowActionsWrap>
-			{canRetryInMemory && !cancelling && (
-				<SquareBtn type='button' onClick={() => retryUpload(item.id)} aria-label='Retry'>
+			<BtnSlot $visible={canRetryInMemory && !cancelling} aria-hidden={!(canRetryInMemory && !cancelling)}>
+				<SquareBtn type='button' onClick={() => retryUpload(item.id)} aria-label='Retry' tabIndex={canRetryInMemory && !cancelling ? 0 : -1}>
 					<RefreshRounded style={{ fontSize: 20 }} />
 				</SquareBtn>
-			)}
-			{canPause && !cancelling && (
-				<SquareBtn type='button' onClick={() => pauseUpload(item.id)} aria-label='Pause'>
+			</BtnSlot>
+			<BtnSlot $visible={canPause && !cancelling} aria-hidden={!(canPause && !cancelling)}>
+				<SquareBtn type='button' onClick={() => pauseUpload(item.id)} aria-label='Pause' tabIndex={canPause && !cancelling ? 0 : -1}>
 					<PauseRounded style={{ fontSize: 20 }} />
 				</SquareBtn>
-			)}
-			{canResumeInMemory && !cancelling && (
-				<SquareBtn type='button' onClick={() => resumeUpload(item.id)} aria-label='Resume'>
+			</BtnSlot>
+			<BtnSlot $visible={canResumeInMemory && !cancelling} aria-hidden={!(canResumeInMemory && !cancelling)}>
+				<SquareBtn type='button' onClick={() => resumeUpload(item.id)} aria-label='Resume' tabIndex={canResumeInMemory && !cancelling ? 0 : -1}>
 					<PlayArrowRounded style={{ fontSize: 20 }} />
 				</SquareBtn>
-			)}
-			{needsPick && !cancelling && (
-				<SquareBtn type='button' onClick={onPickFile} aria-label='Resume (re-select file)'>
+			</BtnSlot>
+			<BtnSlot $visible={needsPick && !cancelling} aria-hidden={!(needsPick && !cancelling)}>
+				<SquareBtn type='button' onClick={onPickFile} aria-label='Resume (re-select file)' tabIndex={needsPick && !cancelling ? 0 : -1}>
 					<PlayArrowRounded style={{ fontSize: 20 }} />
 				</SquareBtn>
-			)}
-			{canCancel && (
+			</BtnSlot>
+			<BtnSlot $visible={canCancel} aria-hidden={!canCancel}>
 				<DangerSquareBtn
 					type='button'
 					onClick={onCancel}
-					disabled={cancelling}
+					disabled={cancelling || !canCancel}
 					aria-label='Cancel upload'
 					aria-busy={cancelling}
+					tabIndex={canCancel ? 0 : -1}
 				>
 					{cancelling ? <Spinner /> : <CloseRounded style={{ fontSize: 18 }} />}
 				</DangerSquareBtn>
-			)}
+			</BtnSlot>
 		</RowActionsWrap>
 	)
 }
@@ -598,8 +606,34 @@ const CloseBtn = styled(SquareBtn)`
 
 const RowActionsWrap = styled.div`
 	display: inline-flex;
-	gap: 6px;
+	align-items: center;
 	align-self: flex-start;
+	/* No gap: BtnSlot's own margin-left handles spacing so a hidden
+	 *  slot can zero its margin and collapse cleanly. */
+`
+
+/* Per-button slot that animates in/out. All buttons stay mounted;
+ *  flipping $visible transitions width (29 → 0 px), margin and
+ *  opacity in sync, so the controls fade and shrink out of the row
+ *  instead of popping. 29 px matches SquareBtn's fixed width;
+ *  overflow:hidden clips the button during the collapse. */
+const BtnSlot = styled.div<{ $visible: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	overflow: hidden;
+	width: ${({ $visible }) => ($visible ? '29px' : '0')};
+	opacity: ${({ $visible }) => ($visible ? 1 : 0)};
+	margin-left: ${({ $visible }) => ($visible ? '6px' : '0')};
+	transform: ${({ $visible }) => ($visible ? 'scale(1)' : 'scale(0.9)')};
+	pointer-events: ${({ $visible }) => ($visible ? 'auto' : 'none')};
+	transition:
+		width 220ms cubic-bezier(0.22, 1, 0.36, 1),
+		margin 220ms cubic-bezier(0.22, 1, 0.36, 1),
+		opacity 180ms ease,
+		transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+	&:first-child {
+		margin-left: 0;
+	}
 `
 
 const FileIcon = styled.div<{ $kind: MimeKind }>`
