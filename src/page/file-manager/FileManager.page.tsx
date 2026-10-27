@@ -708,6 +708,25 @@ const FileManagerPage = () => {
 
 	/* ── Selection helpers ─────────────────────────────────────── */
 	const selectionCount = selectedFolderIds.size + selectedFileIds.size
+	/* For portal workers, Delete only applies to rows they created
+	 *  within the 24 h window. Hiding the BulkBar Delete button when
+	 *  any selected item fails that check means no "pressed Delete,
+	 *  got silent skip" surprise. */
+	const canBulkDeleteSelection = (() => {
+		if (!isPortalHost) return true
+		if (selectionCount === 0) return false
+		const folderMap = new Map((data?.folders ?? []).map((f) => [f.id, f]))
+		const fileMap = new Map((data?.files ?? []).map((f) => [f.id, f]))
+		for (const id of selectedFolderIds) {
+			const f = folderMap.get(id)
+			if (!f || !canPortalDeleteFolder(f)) return false
+		}
+		for (const id of selectedFileIds) {
+			const f = fileMap.get(id)
+			if (!f || !canPortalDeleteFile(f)) return false
+		}
+		return true
+	})()
 	const clearSelection = () => {
 		setSelectedFolderIds(new Set())
 		setSelectedFileIds(new Set())
@@ -1319,14 +1338,16 @@ const FileManagerPage = () => {
 								Move
 							</BulkBtn>
 						)}
-						<BulkBtn
-							type='button'
-							$danger
-							onClick={() => setBulkDeleteOpen(true)}
-						>
-							<DeleteOutlineRounded style={{ fontSize: 14 }} />
-							Delete
-						</BulkBtn>
+						{canBulkDeleteSelection && (
+							<BulkBtn
+								type='button'
+								$danger
+								onClick={() => setBulkDeleteOpen(true)}
+							>
+								<DeleteOutlineRounded style={{ fontSize: 14 }} />
+								Delete
+							</BulkBtn>
+						)}
 						<BulkClear type='button' onClick={clearSelection} aria-label='Clear selection'>
 							<CloseRounded style={{ fontSize: 14 }} />
 						</BulkClear>
