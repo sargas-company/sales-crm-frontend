@@ -2742,14 +2742,20 @@ const FolderCard = styled.div<{
 	cursor: pointer;
 	font: inherit;
 	text-align: center;
-	/* Baseline opacity: 1 so if a later rule (like the $opening
-	 * pulse) replaces the entry animation, the card stays visible.
-	 * folderCardIn uses backwards-fill to apply its "from" state
-	 * before the animation runs — gives the stagger-in without
-	 * leaving the card at 0 if its animation ever gets overridden. */
 	opacity: 1;
-	animation: ${folderCardIn} 440ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
-	animation-delay: ${({ $index }) => Math.min($index, 20) * 50}ms;
+	/* No entry animation. Earlier folderCardIn staggered the cards
+	 * in with translateY + scale over up to 1.4 s (duration + per-
+	 * index delay). If the user clicked a card before its entry
+	 * animation finished, the `$opening` rule replaced the
+	 * `animation` property with folderPulseOut — but the two
+	 * keyframe lists have different transform structures (entry
+	 * uses translateY + scale, pulse uses only scale), so the
+	 * browser swapped between them discretely instead of
+	 * interpolating. The user saw a snap FROM the mid-entry state
+	 * TO the pulse's start, then the pulse itself — "double blink"
+	 * on the first click after page reload. Cards now mount at
+	 * their final position so the pulse always starts from a clean
+	 * identity transform. */
 	transition: border-color 180ms ease, opacity 220ms ease, filter 220ms ease,
 		box-shadow 220ms ease;
 
