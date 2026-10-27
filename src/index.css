@@ -95,25 +95,35 @@ textarea {
 	}
 }
 
-/* View Transitions — skip the default root crossfade.
+/* View Transitions — kill the whole root transition so unrelated
+ * siblings do not animate.
  *
- * By default the browser snapshots everything NOT carrying a
- * view-transition-name into a single ::view-transition-group(root)
- * and crossfades the old-root/new-root pseudos for ~250 ms. For
- * our use cases (one deleting card, or one upload row moving
- * between tray groups) the "root" is literally every other visible
- * element. Crossfading two snapshots of the surrounding layout
- * reads as a brief jitter / double-exposure on every sibling.
+ * By default the browser packs every element without a
+ * view-transition-name into ::view-transition-group(root) and plays
+ * three things on it over ~250 ms:
+ *   - the group's size/position morph,
+ *   - the old-root pseudo fading from opacity 1 → 0,
+ *   - the new-root pseudo fading from opacity 0 → 1.
+ * For our usage (one named leaving card, or one named upload row
+ * moving between tray groups) "root" is every other visible
+ * element — so all three animations above apply to the whole page
+ * chrome and look like a brief shimmer / double-exposure on every
+ * sibling row.
  *
- * Jump straight to the new state instead: ::view-transition-old(root)
- * disappears instantly, ::view-transition-new(root) stays full
- * opacity from frame 0. The specific named element we're animating
- * still runs its own position/opacity morph on top. */
+ * Disable the group animation entirely and skip the fade: old-root
+ * is hidden from frame 0, new-root is fully visible from frame 0.
+ * Only the specifically-named element plays its own morph. */
+::view-transition-group(root),
+::view-transition-image-pair(root) {
+	animation: none;
+}
 ::view-transition-old(root) {
 	animation: none;
 	opacity: 0;
+	mix-blend-mode: normal;
 }
 ::view-transition-new(root) {
 	animation: none;
 	opacity: 1;
+	mix-blend-mode: normal;
 }
