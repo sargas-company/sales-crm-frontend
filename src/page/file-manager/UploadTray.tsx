@@ -918,32 +918,6 @@ const FabRow = styled.div<{ $closing: boolean; $inline?: boolean }>`
 	display: inline-flex;
 	align-items: center;
 	gap: 14px;
-	/* Soft corner glow — a wide radial fade anchored past the
-	 * bottom-right of the FAB cluster so the fabs sit on a subtle
-	 * dark halo that makes them pop against a light page. Only
-	 * applied in the floating (non-inline) mode. */
-	${({ $inline }) =>
-		!$inline &&
-		css`
-			&::before {
-				content: '';
-				position: absolute;
-				right: -58px;
-				bottom: -58px;
-				width: 260px;
-				height: 260px;
-				border-radius: 50%;
-				background: radial-gradient(
-					circle at 70% 70%,
-					rgba(15, 23, 42, 0.16) 0%,
-					rgba(15, 23, 42, 0.072) 40%,
-					rgba(15, 23, 42, 0) 70%
-				);
-				filter: blur(4px);
-				pointer-events: none;
-				z-index: -1;
-			}
-		`}
 	${({ $inline, $closing }) =>
 		$inline
 			? ''
