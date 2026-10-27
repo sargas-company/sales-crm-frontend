@@ -9,6 +9,7 @@ import {
 } from '@mui/icons-material'
 
 import { useGetMeQuery } from '../store/auth/authApi'
+import { UploadTray } from '../page/file-manager/UploadTray'
 import {
 	TriggerWrap,
 	Trigger,
@@ -201,6 +202,12 @@ export const PortalShell = ({ children }: { children: ReactNode }) => {
 			{accountOpen && (
 				<MyAccountModal onClose={() => setAccountOpen(false)} />
 			)}
+
+			{/* Upload tray — portal workers can upload inside shared
+			 *  folders too, so they need the same in-flight / completed
+			 *  rail the admin shell carries. The tray itself portals to
+			 *  document.body, no layout concern. */}
+			<UploadTray />
 		</Root>
 	)
 }

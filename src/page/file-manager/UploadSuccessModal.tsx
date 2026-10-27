@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import styled, { keyframes } from 'styled-components'
 
 interface Props {
@@ -30,7 +31,14 @@ export const UploadSuccessModal = ({
 		}
 	}, [duration, onDone])
 
-	return (
+	/* Portal the modal to document.body so it escapes any ancestor
+	 *  that creates a containing block (anything with `transform`,
+	 *  `filter`, `backdrop-filter`, `perspective`, `will-change:
+	 *  transform` — common in shells with hero backgrounds). Without
+	 *  this the Scrim's position:fixed resolves to the nearest such
+	 *  ancestor, so the FullPanel stretches to that ancestor's
+	 *  height — the full-screen bug on the portal host. */
+	return createPortal(
 		<Scrim $closing={closing}>
 			<FullPanel $closing={closing}>
 				<SuccessColumn>
@@ -56,7 +64,8 @@ export const UploadSuccessModal = ({
 					<SuccessSub>{subtitle}</SuccessSub>
 				</SuccessColumn>
 			</FullPanel>
-		</Scrim>
+		</Scrim>,
+		document.body,
 	)
 }
 
