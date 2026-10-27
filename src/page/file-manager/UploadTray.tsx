@@ -371,17 +371,34 @@ const Row = ({ item, isLastInTray }: { item: UploadItem; isLastInTray: boolean }
 					)}
 					{item.status === 'cancelled' && <RowMetaTxt>Cancelled</RowMetaTxt>}
 				</RowMeta>
-				{(item.status === 'uploading' ||
-					item.status === 'paused' ||
-					item.status === 'verifying' ||
-					item.status === 'interrupted') && (
-					<Progress>
-						<ProgressFill
-							style={{ width: `${item.progress}%` }}
-							$paused={item.status !== 'uploading' && item.status !== 'verifying'}
-						/>
-					</Progress>
-				)}
+				{/* Progress bar lives in a grid-row slot that transitions
+				 *  grid-template-rows between 0fr and 1fr — gives the
+				 *  bar (and its sibling status text) a smooth height
+				 *  collapse/expand instead of a hard pop when the row's
+				 *  status flips between queued ↔ uploading ↔ done, so
+				 *  the next row glides down with the push instead of
+				 *  snapping. The inner div needs min-height:0 +
+				 *  overflow:hidden for the collapse to actually clip. */}
+				<ProgressSlot
+					$open={
+						item.status === 'uploading' ||
+						item.status === 'paused' ||
+						item.status === 'verifying' ||
+						item.status === 'interrupted'
+					}
+				>
+					<ProgressSlotInner>
+						<Progress>
+							<ProgressFill
+								style={{ width: `${item.progress}%` }}
+								$paused={
+									item.status !== 'uploading' &&
+									item.status !== 'verifying'
+								}
+							/>
+						</Progress>
+					</ProgressSlotInner>
+				</ProgressSlot>
 			</RowBody>
 			<RowActions
 				item={item}
@@ -626,6 +643,20 @@ const FileExt = styled.span`
 	color: #ffffff;
 `
 
+/* Grid-row collapse slot — animates from 0fr to 1fr over 260 ms
+ *  so the progress bar grows/shrinks smoothly as its sibling row
+ *  gains/loses the Progress element. Pairs with ProgressSlotInner
+ *  (overflow:hidden, min-height:0) so the collapse actually clips
+ *  the content box, not just the row size. */
+const ProgressSlot = styled.div<{ $open: boolean }>`
+	display: grid;
+	grid-template-rows: ${({ $open }) => ($open ? '1fr' : '0fr')};
+	transition: grid-template-rows 260ms cubic-bezier(0.22, 1, 0.36, 1);
+`
+const ProgressSlotInner = styled.div`
+	min-height: 0;
+	overflow: hidden;
+`
 const Progress = styled.div`
 	margin-top: 6px;
 	height: 6px;
