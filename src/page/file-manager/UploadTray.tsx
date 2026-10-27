@@ -551,6 +551,11 @@ const stripeShift = keyframes`
 /* ─── Shared primitives ───────────────────────────────────────────── */
 
 const SquareBtn = styled.button`
+	/* MUI's global button rule enforces min-width: 64px — it would
+	 *  override the hardcoded 29 px width and make the tray action
+	 *  buttons bulge out of their BtnSlot (29 px) + out of the row.
+	 *  Explicit min-width:0 escapes that cascade. */
+	min-width: 0;
 	width: 29px;
 	height: 29px;
 	border-radius: 8px;
@@ -575,6 +580,8 @@ const SquareBtn = styled.button`
 
 /* Red-tinted variant for destructive row actions (cancel upload). */
 const DangerSquareBtn = styled.button`
+	/* Same MUI min-width:64px escape as SquareBtn. */
+	min-width: 0;
 	width: 29px;
 	height: 29px;
 	border-radius: 8px;
