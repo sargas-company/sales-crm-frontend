@@ -203,7 +203,7 @@ export const TrayCardView = ({
 					)}
 				</HeadRight>
 			</Head>
-			<Body>
+			<Body data-upload-tray-body>
 				{(Object.entries(groups) as [keyof typeof groups, UploadItem[]][]).map(
 					([label, arr]) =>
 						arr.length > 0 && (

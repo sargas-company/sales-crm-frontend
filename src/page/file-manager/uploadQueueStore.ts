@@ -192,6 +192,25 @@ const patch = (id: string, p: Partial<UploadItem>) => {
 				.querySelectorAll<HTMLElement>('[data-upload-row]')
 				.forEach((el) => el.style.removeProperty('view-transition-name'))
 		}
+		/* Measure the tray body in viewport coords and expose its
+		 *  insets as CSS vars. Scoped CSS in index.css then
+		 *  `clip-path`s ::view-transition itself to those insets
+		 *  while `html.vt-tray` is active — stops a named row at
+		 *  the edge of the scroll region from "falling out" of the
+		 *  tray card during its position morph (VT pseudos ignore
+		 *  ancestor `overflow:auto` by design). */
+		const trayBody = document.querySelector<HTMLElement>(
+			'[data-upload-tray-body]',
+		)
+		if (trayBody) {
+			const r = trayBody.getBoundingClientRect()
+			const html = document.documentElement
+			html.style.setProperty('--vt-tray-top', `${Math.max(0, r.top)}px`)
+			html.style.setProperty('--vt-tray-right', `${Math.max(0, window.innerWidth - r.right)}px`)
+			html.style.setProperty('--vt-tray-bottom', `${Math.max(0, window.innerHeight - r.bottom)}px`)
+			html.style.setProperty('--vt-tray-left', `${Math.max(0, r.left)}px`)
+			html.classList.add('vt-tray')
+		}
 		tagAll()
 		;(
 			document as unknown as {
@@ -208,7 +227,10 @@ const patch = (id: string, p: Partial<UploadItem>) => {
 				 *  snapshot so the new nodes have the same names. */
 				tagAll()
 			})
-			.finished.finally(cleanAll)
+			.finished.finally(() => {
+				cleanAll()
+				document.documentElement.classList.remove('vt-tray')
+			})
 	} else {
 		mutate()
 	}

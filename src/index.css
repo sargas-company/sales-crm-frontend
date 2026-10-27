@@ -127,3 +127,20 @@ textarea {
 	opacity: 1;
 	mix-blend-mode: normal;
 }
+
+/* When uploadQueueStore sets `html.vt-tray` on a cross-group tray
+ * transition, clip the whole ::view-transition overlay to the
+ * tray body's viewport-fixed insets. Named row pseudos live at
+ * the :root level and don't inherit the tray's `overflow:auto`
+ * clip, so without this a row near the scroll edge visibly
+ * escaped the tray card during its position morph. The vars are
+ * set per-transition in uploadQueueStore.patch and cleared when
+ * the transition settles. */
+html.vt-tray::view-transition {
+	clip-path: inset(
+		var(--vt-tray-top, 0px)
+		var(--vt-tray-right, 0px)
+		var(--vt-tray-bottom, 0px)
+		var(--vt-tray-left, 0px)
+	);
+}
