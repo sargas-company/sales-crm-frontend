@@ -615,32 +615,33 @@ const RowActionsWrap = styled.div`
 	display: inline-flex;
 	align-items: center;
 	align-self: flex-start;
-	/* No gap: BtnSlot's own margin-left handles spacing so a hidden
-	 *  slot can zero its margin and collapse cleanly. */
+	gap: 6px;
 `
 
-/* Per-button slot that animates in/out. All buttons stay mounted;
- *  flipping $visible transitions width (29 → 0 px), margin and
- *  opacity in sync, so the controls fade and shrink out of the row
- *  instead of popping. 29 px matches SquareBtn's fixed width;
- *  overflow:hidden clips the button during the collapse. */
+/* Per-button slot. All five slots stay mounted and keep their
+ *  fixed 29 px width regardless of visibility — only opacity +
+ *  scale toggle. Fixed-width approach kills three problems the
+ *  width-collapsing version had:
+ *    - inter-button gap no longer vanishes when a hidden slot
+ *      sits between two visible ones (owner's "прилипают");
+ *    - no reflow of the row's third grid column on every status
+ *      flip;
+ *    - no interaction between `width` transition and the parent
+ *      inline-flex layout.
+ *  Trade-off: ~170 px of fixed real estate is reserved for actions
+ *  even when only one button is applicable. Fine; the row has
+ *  plenty of width. */
 const BtnSlot = styled.div<{ $visible: boolean }>`
 	display: inline-flex;
 	align-items: center;
-	overflow: hidden;
-	width: ${({ $visible }) => ($visible ? '29px' : '0')};
+	flex: 0 0 29px;
+	width: 29px;
 	opacity: ${({ $visible }) => ($visible ? 1 : 0)};
-	margin-left: ${({ $visible }) => ($visible ? '6px' : '0')};
-	transform: ${({ $visible }) => ($visible ? 'scale(1)' : 'scale(0.9)')};
+	transform: ${({ $visible }) => ($visible ? 'scale(1)' : 'scale(0.85)')};
 	pointer-events: ${({ $visible }) => ($visible ? 'auto' : 'none')};
 	transition:
-		width 220ms cubic-bezier(0.22, 1, 0.36, 1),
-		margin 220ms cubic-bezier(0.22, 1, 0.36, 1),
-		opacity 180ms ease,
+		opacity 200ms ease,
 		transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
-	&:first-child {
-		margin-left: 0;
-	}
 `
 
 const FileIcon = styled.div<{ $kind: MimeKind }>`
