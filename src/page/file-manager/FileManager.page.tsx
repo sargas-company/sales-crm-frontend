@@ -2566,8 +2566,16 @@ const folderCardIn = keyframes`
 	0%   { opacity: 0; transform: translateY(10px) scale(0.96); }
 	100% { opacity: 1; transform: translateY(0) scale(1); }
 `
+/* Open-pulse. Deliberately omits the 0% keyframe: when the user
+ *  clicks a folder mid-entry (first click right after page load,
+ *  while the staggered folderCardIn is still interpolating from
+ *  scale(0.96)), an explicit `0% { transform: scale(1) }` makes
+ *  the browser snap the transform from the current ~0.97 value to
+ *  1.0 before pulsing — reads as a double "bam". Without a 0%,
+ *  the browser uses the element's current rendered transform as
+ *  the implicit start, and the pulse glides from wherever we are
+ *  up to 1.04 and back. Single clean beat regardless of timing. */
 const folderPulseOut = keyframes`
-	0%   { transform: scale(1); }
 	60%  { transform: scale(1.04); }
 	100% { transform: scale(1); }
 `
