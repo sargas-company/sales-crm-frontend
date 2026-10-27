@@ -641,11 +641,15 @@ const FileManagerPage = () => {
 	}, [data, pendingDeleteIds, hiddenIds])
 
 	/* Helper: optimistically hide an id inside a View Transition so
-	 *  the browser interpolates sibling positions (grid auto-fill
-	 *  flow reshuffles smoothly instead of snapping). Each FolderCard
-	 *  / AttachCard carries a stable view-transition-name = fm-<id>,
-	 *  which gives the browser the identity it needs to animate
-	 *  everyone's new position. */
+	 *  the deleting card fades out smoothly. The view-transition-name
+	 *  is assigned IMPERATIVELY to the single leaving node — a
+	 *  stable name on every card made every unrelated transition
+	 *  (e.g. an upload tray cross-group move) snapshot every card
+	 *  as its own ::view-transition-group, flashing them
+	 *  visibility:hidden mid-flight. Here we tag just the one that's
+	 *  about to disappear, let the browser do the fade, then clean
+	 *  the name off in .finished.finally so the next transition
+	 *  doesn't see a stale named element. */
 	const hideWithTransition = (id: string) => {
 		const canVT =
 			typeof document !== 'undefined' &&
@@ -655,13 +659,26 @@ const FileManagerPage = () => {
 			setHiddenIds((s) => new Set([...s, id]))
 			return
 		}
+		const esc = CSS.escape(id)
+		const target = document.querySelector<HTMLElement>(
+			`[data-fm-folder="${esc}"], [data-fm-file="${esc}"]`,
+		)
+		const vtName = `fm-leaving-${id.replace(/[^a-zA-Z0-9_-]/g, '_')}`
+		if (target) target.style.setProperty('view-transition-name', vtName)
 		;(
 			document as unknown as {
-				startViewTransition: (cb: () => void) => unknown
+				startViewTransition: (cb: () => void) => {
+					finished: Promise<void>
+				}
 			}
-		).startViewTransition(() => {
-			flushSync(() => setHiddenIds((s) => new Set([...s, id])))
-		})
+		)
+			.startViewTransition(() => {
+				flushSync(() => setHiddenIds((s) => new Set([...s, id])))
+			})
+			.finished.finally(() => {
+				/* The node is gone from DOM by now (filtered out via
+				 *  hiddenIds), so nothing to clean on it. */
+			})
 	}
 	const closeMoveModal = () => {
 		/* Trigger ConfirmModal's exit animation first, then unmount
@@ -1423,14 +1440,17 @@ const FileManagerPage = () => {
 													openFolder(f.id)
 												}
 											}}
-											style={{
-												/* Identity for View Transitions — when
-												 *  hideWithTransition filters this id out,
-												 *  the browser uses this name to match
-												 *  siblings between snapshots and
-												 *  smoothly animate the grid reflow. */
-												viewTransitionName: `fm-folder-${f.id.replace(/[^a-zA-Z0-9_-]/g, '_')}`,
-											}}
+											/* data-fm-folder marks the DOM node so
+											 *  hideWithTransition can tag ONLY the deleting
+											 *  card with view-transition-name at the moment
+											 *  the VT fires. A static name on every card
+											 *  made every unrelated transition (e.g. an
+											 *  upload tray cross-group move) snapshot every
+											 *  grid cell as its own ::view-transition-group,
+											 *  flashing them visibility:hidden mid-flight —
+											 *  that's what made the tray rows look like they
+											 *  were leaping out of the panel. */
+											data-fm-folder={f.id}
 											$index={i}
 											$opening={isOpening}
 											$dimmed={isDimmed}
@@ -1506,8 +1526,8 @@ const FileManagerPage = () => {
 												}}
 												style={{
 													animationDelay: `${Math.min(i, 20) * 35}ms`,
-													viewTransitionName: `fm-file-${f.id.replace(/[^a-zA-Z0-9_-]/g, '_')}`,
 												}}
+												data-fm-file={f.id}
 											>
 												<AttachTypeIcon $kind={kind}>
 													<AttachFold />
