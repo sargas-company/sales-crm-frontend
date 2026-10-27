@@ -488,47 +488,55 @@ const RowActions = ({
 		item.status === 'paused' ||
 		item.status === 'error' ||
 		item.status === 'interrupted'
-	/* Every button stays mounted all the time; each sits in a
-	 *  BtnSlot whose width + opacity + margin transition in sync
-	 *  with the $visible flag. Status flips (uploading → paused →
-	 *  error → …) now fade/shrink the stale buttons out and
-	 *  fade/expand the new ones in over 220 ms — no more
-	 *  "molнniyeносно" pop in/out. Width is hardcoded to the
-	 *  SquareBtn size (29 px) so the collapse is clean. */
+	/* Only mount the applicable buttons — gap stays tight between
+	 *  visible ones. Each wraps in a BtnMount that plays a short
+	 *  fadeIn+scale on first mount; unmount is instant (React
+	 *  removes the DOM) but visually that's just a disappearance
+	 *  and reads cleanly, while an unexpected button appearing
+	 *  gets the smooth entry. */
 	return (
 		<RowActionsWrap>
-			<BtnSlot $visible={canRetryInMemory && !cancelling} aria-hidden={!(canRetryInMemory && !cancelling)}>
-				<SquareBtn type='button' onClick={() => retryUpload(item.id)} aria-label='Retry' tabIndex={canRetryInMemory && !cancelling ? 0 : -1}>
-					<RefreshRounded style={{ fontSize: 20 }} />
-				</SquareBtn>
-			</BtnSlot>
-			<BtnSlot $visible={canPause && !cancelling} aria-hidden={!(canPause && !cancelling)}>
-				<SquareBtn type='button' onClick={() => pauseUpload(item.id)} aria-label='Pause' tabIndex={canPause && !cancelling ? 0 : -1}>
-					<PauseRounded style={{ fontSize: 20 }} />
-				</SquareBtn>
-			</BtnSlot>
-			<BtnSlot $visible={canResumeInMemory && !cancelling} aria-hidden={!(canResumeInMemory && !cancelling)}>
-				<SquareBtn type='button' onClick={() => resumeUpload(item.id)} aria-label='Resume' tabIndex={canResumeInMemory && !cancelling ? 0 : -1}>
-					<PlayArrowRounded style={{ fontSize: 20 }} />
-				</SquareBtn>
-			</BtnSlot>
-			<BtnSlot $visible={needsPick && !cancelling} aria-hidden={!(needsPick && !cancelling)}>
-				<SquareBtn type='button' onClick={onPickFile} aria-label='Resume (re-select file)' tabIndex={needsPick && !cancelling ? 0 : -1}>
-					<PlayArrowRounded style={{ fontSize: 20 }} />
-				</SquareBtn>
-			</BtnSlot>
-			<BtnSlot $visible={canCancel} aria-hidden={!canCancel}>
-				<DangerSquareBtn
-					type='button'
-					onClick={onCancel}
-					disabled={cancelling || !canCancel}
-					aria-label='Cancel upload'
-					aria-busy={cancelling}
-					tabIndex={canCancel ? 0 : -1}
-				>
-					{cancelling ? <Spinner /> : <CloseRounded style={{ fontSize: 18 }} />}
-				</DangerSquareBtn>
-			</BtnSlot>
+			{canRetryInMemory && !cancelling && (
+				<BtnMount>
+					<SquareBtn type='button' onClick={() => retryUpload(item.id)} aria-label='Retry'>
+						<RefreshRounded style={{ fontSize: 20 }} />
+					</SquareBtn>
+				</BtnMount>
+			)}
+			{canPause && !cancelling && (
+				<BtnMount>
+					<SquareBtn type='button' onClick={() => pauseUpload(item.id)} aria-label='Pause'>
+						<PauseRounded style={{ fontSize: 20 }} />
+					</SquareBtn>
+				</BtnMount>
+			)}
+			{canResumeInMemory && !cancelling && (
+				<BtnMount>
+					<SquareBtn type='button' onClick={() => resumeUpload(item.id)} aria-label='Resume'>
+						<PlayArrowRounded style={{ fontSize: 20 }} />
+					</SquareBtn>
+				</BtnMount>
+			)}
+			{needsPick && !cancelling && (
+				<BtnMount>
+					<SquareBtn type='button' onClick={onPickFile} aria-label='Resume (re-select file)'>
+						<PlayArrowRounded style={{ fontSize: 20 }} />
+					</SquareBtn>
+				</BtnMount>
+			)}
+			{canCancel && (
+				<BtnMount>
+					<DangerSquareBtn
+						type='button'
+						onClick={onCancel}
+						disabled={cancelling}
+						aria-label='Cancel upload'
+						aria-busy={cancelling}
+					>
+						{cancelling ? <Spinner /> : <CloseRounded style={{ fontSize: 18 }} />}
+					</DangerSquareBtn>
+				</BtnMount>
+			)}
 		</RowActionsWrap>
 	)
 }
@@ -618,30 +626,17 @@ const RowActionsWrap = styled.div`
 	gap: 6px;
 `
 
-/* Per-button slot. All five slots stay mounted and keep their
- *  fixed 29 px width regardless of visibility — only opacity +
- *  scale toggle. Fixed-width approach kills three problems the
- *  width-collapsing version had:
- *    - inter-button gap no longer vanishes when a hidden slot
- *      sits between two visible ones (owner's "прилипают");
- *    - no reflow of the row's third grid column on every status
- *      flip;
- *    - no interaction between `width` transition and the parent
- *      inline-flex layout.
- *  Trade-off: ~170 px of fixed real estate is reserved for actions
- *  even when only one button is applicable. Fine; the row has
- *  plenty of width. */
-const BtnSlot = styled.div<{ $visible: boolean }>`
+/* Mounts a button into the row with a short fade+scale in. Only
+ *  the applicable buttons are rendered (so parent gap stays tight
+ *  between visible buttons); each one gets this entry animation
+ *  the moment it appears. React-driven unmount is instant — fine,
+ *  a disappearing button reads cleanly on its own. */
+const BtnMount = styled.div`
 	display: inline-flex;
-	align-items: center;
-	flex: 0 0 29px;
-	width: 29px;
-	opacity: ${({ $visible }) => ($visible ? 1 : 0)};
-	transform: ${({ $visible }) => ($visible ? 'scale(1)' : 'scale(0.85)')};
-	pointer-events: ${({ $visible }) => ($visible ? 'auto' : 'none')};
-	transition:
-		opacity 200ms ease,
-		transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+	animation: ${keyframes`
+		from { opacity: 0; transform: scale(0.85); }
+		to { opacity: 1; transform: scale(1); }
+	`} 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
 `
 
 const FileIcon = styled.div<{ $kind: MimeKind }>`
