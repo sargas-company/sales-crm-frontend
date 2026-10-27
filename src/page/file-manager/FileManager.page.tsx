@@ -30,6 +30,7 @@ import {
 	DriveFileMoveOutlined,
 } from '@mui/icons-material'
 
+import { useGetMeQuery } from '../../store/auth/authApi'
 import { ListPageShell } from '../../components/_shared/ListPageShell'
 import ConfirmModal from '../../components/_shared/ConfirmModal'
 import { useToast } from '../../context/toast/ToastContext'
@@ -481,6 +482,22 @@ const FileManagerPage = () => {
 	const folderId = paramFolderId ?? null
 
 	const { data, isLoading, isError, refetch } = useListFolderQuery(folderId)
+	/* Portal workers need their own user id to decide which rows get
+	 *  a Delete affordance (ownership check mirrors the backend 24 h
+	 *  window). Admins don't need this. */
+	const { data: me } = useGetMeQuery()
+	const myId = me?.id ?? null
+	const DELETE_WINDOW_MS = 24 * 60 * 60 * 1000
+	const canPortalDeleteFolder = (f: FileManagerFolder) =>
+		isPortalHost &&
+		!!myId &&
+		f.createdById === myId &&
+		Date.now() - new Date(f.createdAt).getTime() <= DELETE_WINDOW_MS
+	const canPortalDeleteFile = (f: FileManagerFile) =>
+		isPortalHost &&
+		!!myId &&
+		f.uploadedBy?.id === myId &&
+		Date.now() - new Date(f.createdAt).getTime() <= DELETE_WINDOW_MS
 	const { data: treeData } = useGetTreeQuery()
 	const { data: stats } = useGetStatsQuery()
 	const [createFolder, { isLoading: creatingFolder }] = useCreateFolderMutation()
@@ -805,6 +822,10 @@ const FileManagerPage = () => {
 		e.preventDefault()
 		e.stopPropagation()
 		setDragging(false)
+		/* Portal workers on the root view can't upload to root — bail
+		 *  silently rather than firing an unavoidable 403. Inside a
+		 *  shared folder the drop proceeds normally. */
+		if (isPortalHost && folderId === null) return
 		if (e.dataTransfer?.files?.length) {
 			void handleUpload(e.dataTransfer.files)
 		}
@@ -855,12 +876,22 @@ const FileManagerPage = () => {
 	const openFolderCtx = (e: React.MouseEvent, f: FileManagerFolder) => {
 		e.preventDefault()
 		e.stopPropagation()
-		/* Portal workers see a stripped menu — no Share (admin-only
-		 *  surface), no Rename / Delete (currently out of scope for
-		 *  portal, enforced server-side by AdminOnlyGuard anyway).
-		 *  They can still open folders by double-clicking the card. */
+		/* Portal workers see a stripped menu. Base is empty (no Share /
+		 *  Rename / Move — all 403 on the backend). Delete is added
+		 *  only when the row is their own and within the 24 h window;
+		 *  mirrors the backend ownership check so there's no silent
+		 *  skip surprise. */
 		const items = isPortalHost
-			? []
+			? canPortalDeleteFolder(f)
+				? [
+						{
+							label: 'Delete',
+							icon: <DeleteOutlineRounded style={{ fontSize: 16 }} />,
+							danger: true,
+							onClick: () => setToDeleteFolder(f),
+						},
+					]
+				: []
 			: [
 					{
 						label: 'Share',
@@ -907,7 +938,10 @@ const FileManagerPage = () => {
 	const openFileCtx = (e: React.MouseEvent, f: FileManagerFile) => {
 		e.preventDefault()
 		e.stopPropagation()
-		/* Portal workers: Download only (no Share / Rename / Delete). */
+		/* Portal workers: Download always; Delete when the row is their
+		 *  own upload within the 24 h window (matches the backend
+		 *  ownership rule for deleteFile). Share / Rename / Move stay
+		 *  admin-only (403 on the backend). */
 		const items = isPortalHost
 			? [
 					{
@@ -915,6 +949,16 @@ const FileManagerPage = () => {
 						icon: <DownloadRounded style={{ fontSize: 16 }} />,
 						onClick: () => void handleDownload(f),
 					},
+					...(canPortalDeleteFile(f)
+						? [
+								{
+									label: 'Delete',
+									icon: <DeleteOutlineRounded style={{ fontSize: 16 }} />,
+									danger: true,
+									onClick: () => setToDeleteFile(f),
+								},
+							]
+						: []),
 				]
 			: [
 					{
@@ -1122,15 +1166,24 @@ const FileManagerPage = () => {
 				}
 				action={
 					<HeaderBtns>
-						<UploadBtnWrap>
-							<UploadBtn type='button' onClick={() => setUploadModalOpen(true)}>
-								<span className='glow' aria-hidden='true' />
-								<span className='highlight' aria-hidden='true' />
-								<CloudUploadOutlined style={{ fontSize: 18 }} />
-								<span>Upload</span>
-							</UploadBtn>
-						</UploadBtnWrap>
-						{!isPortalHost && (
+						{/* Upload + New folder: hidden for portal workers on
+						 *  the root view — they can only upload / create
+						 *  inside shared folders anyway, so showing a CTA
+						 *  that always 403s is just a bad surprise. Inside
+						 *  a folder they get the buttons; if the specific
+						 *  permission isn't on that share, the backend
+						 *  will toast an actionable error. */}
+						{(!isPortalHost || folderId !== null) && (
+							<UploadBtnWrap>
+								<UploadBtn type='button' onClick={() => setUploadModalOpen(true)}>
+									<span className='glow' aria-hidden='true' />
+									<span className='highlight' aria-hidden='true' />
+									<CloudUploadOutlined style={{ fontSize: 18 }} />
+									<span>Upload</span>
+								</UploadBtn>
+							</UploadBtnWrap>
+						)}
+						{(!isPortalHost || folderId !== null) && (
 							<NewFolderBtn type='button' onClick={() => setNewFolderOpen(true)}>
 								<span className='new-folder-icon'>
 									<AddRounded style={{ fontSize: 18 }} />
@@ -1250,13 +1303,22 @@ const FileManagerPage = () => {
 					 *  without pushing surrounding elements around. */}
 					<BulkBar $visible={selectionCount > 0}>
 						<BulkCount>{selectionCount} selected</BulkCount>
-						<BulkBtn
-							type='button'
-							onClick={() => setMoveModalOpen(true)}
-						>
-							<DriveFileMoveOutlined style={{ fontSize: 14 }} />
-							Move
-						</BulkBtn>
+						{/* Move stays admin-only — single moveFile /
+						 *  moveFolder are 403 for portal and bulk-move
+						 *  requires upload rights on destination which is a
+						 *  per-folder concern. Delete, on the other hand,
+						 *  works for portal: the backend pre-filters to
+						 *  only the items the actor created in the last
+						 *  24 h and reports the rest in failed[]. */}
+						{!isPortalHost && (
+							<BulkBtn
+								type='button'
+								onClick={() => setMoveModalOpen(true)}
+							>
+								<DriveFileMoveOutlined style={{ fontSize: 14 }} />
+								Move
+							</BulkBtn>
+						)}
 						<BulkBtn
 							type='button'
 							$danger

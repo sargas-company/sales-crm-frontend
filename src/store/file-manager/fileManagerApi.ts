@@ -9,6 +9,9 @@ export interface FileManagerFolder {
 	id: string
 	name: string
 	parentId: string | null
+	/** Portal workers use this + the server-side 24 h window to decide
+	 *  whether to surface the Delete affordance on their own creations. */
+	createdById: string | null
 	createdAt: string
 	updatedAt: string
 	childFolderCount: number
