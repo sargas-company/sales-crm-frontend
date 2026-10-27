@@ -765,33 +765,19 @@ const RowWrap = styled.div<{ $status: UploadItem['status']; $exiting?: boolean }
 	align-items: flex-start;
 	padding: 12px 8px;
 	border-radius: 12px;
-	/* No entry animation — owner wants rows to appear/update in
-	 *  place, Google-Drive-style. The in-row progress bar + icon do
-	 *  all the status signalling.
-	 *
-	 * Static state: dim cancelled, otherwise opaque.
-	 * Exit transition: collapse height + fade + slight slide out of
-	 * list. max-height is large enough to cover any row content;
-	 * going to 0 produces a smooth height collapse because of the
-	 * transition on it. Overflow hidden prevents inner content from
-	 * flashing outside the shrinking box. */
-	opacity: ${({ $status, $exiting }) =>
-		$exiting ? 0 : $status === 'cancelled' ? 0.6 : 1};
-	max-height: ${({ $exiting }) => ($exiting ? '0' : '220px')};
-	margin-top: ${({ $exiting }) => ($exiting ? '0' : 'inherit')};
-	margin-bottom: ${({ $exiting }) => ($exiting ? '0' : 'inherit')};
-	padding-top: ${({ $exiting }) => ($exiting ? '0' : '12px')};
-	padding-bottom: ${({ $exiting }) => ($exiting ? '0' : '12px')};
-	transform: ${({ $exiting }) => ($exiting ? 'translateX(12px)' : 'none')};
-	overflow: hidden;
+	background: transparent;
+	/* Plain row: natural height from its content. Previously had a
+	 *  max-height:220px + overflow:hidden on the default state (left
+	 *  over from an earlier exit-collapse animation) — that clipped
+	 *  the status block and let rows visually overlap each other
+	 *  when a long filename pushed content past 220 px. Nothing
+	 *  caps the height now; the parent Body gets overflow-y:auto. */
+	opacity: ${({ $status }) => ($status === 'cancelled' ? 0.6 : 1)};
 	pointer-events: ${({ $exiting }) => ($exiting ? 'none' : 'auto')};
-	transition:
-		background 160ms ease,
-		opacity 240ms ease,
-		max-height 300ms cubic-bezier(0.4, 0, 0.2, 1),
-		padding 300ms cubic-bezier(0.4, 0, 0.2, 1),
-		transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
-	&:hover { background: rgba(15, 23, 42, 0.03); }
+	transition: background 160ms ease, opacity 160ms ease;
+	&:hover {
+		background: rgba(15, 23, 42, 0.03);
+	}
 `
 
 /* 16×16 CSS spinner that occupies the same slot as the close icon. */
