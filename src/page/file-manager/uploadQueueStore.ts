@@ -166,21 +166,38 @@ const patch = (id: string, p: Partial<UploadItem>) => {
 		typeof (document as unknown as { startViewTransition?: unknown })
 			.startViewTransition === 'function'
 	if (canViewTransition) {
-		/* Name EVERY tray row before the VT fires, not just the one
-		 *  that's crossing groups. Reason: with only one named row,
-		 *  all other rows are packed into ::view-transition-group(root)
-		 *  which either cross-fades two overlapping snapshots (jitter)
-		 *  or (with the index.css override that disables root
-		 *  animations) jumps straight to the new layout — the owner
-		 *  wants the sibling rows to *glide* into their new positions,
-		 *  not shimmer and not snap. Each named row gets its own
-		 *  ::view-transition-group with a smooth position morph. */
+		/* Name every tray row that is FULLY inside the tray body's
+		 *  visible rect — so each gets its own position morph and
+		 *  siblings glide into reflow positions. Rows outside the
+		 *  visible slice (scrolled off, clipped by overflow:auto)
+		 *  are intentionally left unnamed: VT pseudos live at :root
+		 *  and ignore ancestor overflow, so naming a scrolled-off
+		 *  row would render its pseudo OUTSIDE the tray card. We
+		 *  tolerate those rows snap-updating under the overlay —
+		 *  user can't see them anyway. The one row currently
+		 *  crossing groups is always tagged even if partially out
+		 *  of view, otherwise it visually teleports instead of
+		 *  gliding. */
+		const trayBody = document.querySelector<HTMLElement>(
+			'[data-upload-tray-body]',
+		)
+		const trayRect = trayBody?.getBoundingClientRect() ?? null
+		const insideTray = (el: HTMLElement): boolean => {
+			if (!trayRect) return true
+			const r = el.getBoundingClientRect()
+			return r.top >= trayRect.top && r.bottom <= trayRect.bottom
+		}
 		const tagAll = () => {
 			document
 				.querySelectorAll<HTMLElement>('[data-upload-row]')
 				.forEach((el) => {
 					const rid = el.getAttribute('data-upload-row')
 					if (!rid) return
+					const isMover = rid === id
+					if (!isMover && !insideTray(el)) {
+						el.style.removeProperty('view-transition-name')
+						return
+					}
 					el.style.setProperty(
 						'view-transition-name',
 						`upload-${rid.replace(/[^a-zA-Z0-9_-]/g, '_')}`,
@@ -191,25 +208,6 @@ const patch = (id: string, p: Partial<UploadItem>) => {
 			document
 				.querySelectorAll<HTMLElement>('[data-upload-row]')
 				.forEach((el) => el.style.removeProperty('view-transition-name'))
-		}
-		/* Measure the tray body in viewport coords and expose its
-		 *  insets as CSS vars. Scoped CSS in index.css then
-		 *  `clip-path`s ::view-transition itself to those insets
-		 *  while `html.vt-tray` is active — stops a named row at
-		 *  the edge of the scroll region from "falling out" of the
-		 *  tray card during its position morph (VT pseudos ignore
-		 *  ancestor `overflow:auto` by design). */
-		const trayBody = document.querySelector<HTMLElement>(
-			'[data-upload-tray-body]',
-		)
-		if (trayBody) {
-			const r = trayBody.getBoundingClientRect()
-			const html = document.documentElement
-			html.style.setProperty('--vt-tray-top', `${Math.max(0, r.top)}px`)
-			html.style.setProperty('--vt-tray-right', `${Math.max(0, window.innerWidth - r.right)}px`)
-			html.style.setProperty('--vt-tray-bottom', `${Math.max(0, window.innerHeight - r.bottom)}px`)
-			html.style.setProperty('--vt-tray-left', `${Math.max(0, r.left)}px`)
-			html.classList.add('vt-tray')
 		}
 		tagAll()
 		;(
@@ -227,10 +225,7 @@ const patch = (id: string, p: Partial<UploadItem>) => {
 				 *  snapshot so the new nodes have the same names. */
 				tagAll()
 			})
-			.finished.finally(() => {
-				cleanAll()
-				document.documentElement.classList.remove('vt-tray')
-			})
+			.finished.finally(cleanAll)
 	} else {
 		mutate()
 	}

@@ -128,19 +128,13 @@ textarea {
 	mix-blend-mode: normal;
 }
 
-/* When uploadQueueStore sets `html.vt-tray` on a cross-group tray
- * transition, clip the whole ::view-transition overlay to the
- * tray body's viewport-fixed insets. Named row pseudos live at
- * the :root level and don't inherit the tray's `overflow:auto`
- * clip, so without this a row near the scroll edge visibly
- * escaped the tray card during its position morph. The vars are
- * set per-transition in uploadQueueStore.patch and cleared when
- * the transition settles. */
-html.vt-tray::view-transition {
-	clip-path: inset(
-		var(--vt-tray-top, 0px)
-		var(--vt-tray-right, 0px)
-		var(--vt-tray-bottom, 0px)
-		var(--vt-tray-left, 0px)
-	);
-}
+/* NOTE: Earlier revision tried `html.vt-tray::view-transition {
+ * clip-path: inset(...) }` to stop a tray row at the scroll edge
+ * from "escaping" the tray card during its morph. Clip-path on
+ * ::view-transition clips the ENTIRE pseudo tree — and the
+ * browser hides the real DOM during a VT — so the rest of the
+ * page went black outside the clip. The clip approach is a
+ * dead-end for a scrollable container; the right fix is to not
+ * tag rows that lie outside the tray body's visible rect in the
+ * first place (see uploadQueueStore.patch tagAll). Leaving this
+ * comment so no one re-tries the clip. */
