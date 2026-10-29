@@ -68,6 +68,12 @@ export const baseApi = createApi({
 		'ProjectAttachment',
 		'FileManager',
 		'AiSpend',
+		'UpworkProfile',
+		'UpworkReference',
+		'UpworkChangeLog',
+		'UpworkSnapshot',
+		'UpworkReminders',
+		'UpworkAnalytics',
 	],
 	endpoints: () => ({}),
 })

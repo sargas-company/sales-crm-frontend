@@ -45,6 +45,10 @@ import {
 	BackupOutlined,
 	NotificationsNoneOutlined,
 	StoreOutlined,
+	WorkspacePremiumOutlined,
+	NotificationsActiveOutlined,
+	MenuBookOutlined,
+	EditNoteOutlined,
 } from '@mui/icons-material'
 import { ReactNode } from 'react'
 
@@ -83,6 +87,12 @@ const navList: NavOptions[] = [
 				'/dashboards/compensation',
 				<PaidOutlined />,
 				'compensation_analytics:view'
+			),
+			format(
+				'Upwork',
+				'/dashboards/upwork',
+				<WorkspacePremiumOutlined />,
+				'upwork_analytics:view'
 			),
 		],
 	},
@@ -203,6 +213,16 @@ const navList: NavOptions[] = [
 				'phone_numbers:maintain'
 			),
 			format('Services', '/phone-numbers/services', <AppsOutlined />, 'phone_numbers:view'),
+		],
+	},
+	{
+		parent: formatGroupButton('Upwork', <WorkspacePremiumOutlined />, '/upwork'),
+		permission: 'upwork:view',
+		childrens: [
+			format('Reminders', '/upwork/reminders', <NotificationsActiveOutlined />, 'upwork:view'),
+			format('Change Log', '/upwork/change-log', <EditNoteOutlined />, 'upwork:view'),
+			format('Reference Data', '/upwork/reference-data', <MenuBookOutlined />, 'upwork:view'),
+			format('Profiles', '/upwork/profiles', <AccountCircleOutlined />, 'upwork:view'),
 		],
 	},
 ]

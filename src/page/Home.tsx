@@ -86,6 +86,25 @@ const Runbook = lazy(() => import('./runbook/Runbook.page'))
 const RunbookDetail = lazy(() => import('./runbook/RunbookDetail.page'))
 const Help = lazy(() => import('./help/Help.page'))
 const HelpDetail = lazy(() => import('./help/HelpDetail.page'))
+const UpworkProfiles = lazy(() => import('./upwork/profiles/UpworkProfiles.page'))
+const UpworkReferenceData = lazy(
+	() => import('./upwork/reference-data/UpworkReferenceData.page'),
+)
+const UpworkChangeLog = lazy(
+	() => import('./upwork/change-log/UpworkChangeLog.page'),
+)
+const UpworkChangeLogForm = lazy(
+	() => import('./upwork/change-log/UpworkChangeLogForm'),
+)
+const UpworkChangeLogView = lazy(
+	() => import('./upwork/change-log/UpworkChangeLogView'),
+)
+const UpworkReminders = lazy(
+	() => import('./upwork/reminders/UpworkReminders.page'),
+)
+const UpworkAnalytics = lazy(
+	() => import('./analytics/upwork/UpworkAnalytics.page'),
+)
 
 const Home = () => {
 	return (
@@ -733,6 +752,79 @@ const Home = () => {
 								element={
 									<ProtectedRoute>
 										<HelpDetail />
+									</ProtectedRoute>
+								}
+							/>
+							{/* Upwork */}
+							<Route
+								path='/dashboards/upwork'
+								element={
+									<ProtectedRoute permission='upwork_analytics:view'>
+										<UpworkAnalytics />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork'
+								element={
+									<ProtectedRoute permission='upwork:view'>
+										<UpworkReminders />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/reminders'
+								element={
+									<ProtectedRoute permission='upwork:view'>
+										<UpworkReminders />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/profiles'
+								element={
+									<ProtectedRoute permission='upwork:view'>
+										<UpworkProfiles />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/reference-data'
+								element={
+									<ProtectedRoute permission='upwork:view'>
+										<UpworkReferenceData />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/change-log'
+								element={
+									<ProtectedRoute permission='upwork:view'>
+										<UpworkChangeLog />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/change-log/new'
+								element={
+									<ProtectedRoute permission='upwork:create'>
+										<UpworkChangeLogForm mode='create' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/change-log/:id'
+								element={
+									<ProtectedRoute permission='upwork:view'>
+										<UpworkChangeLogView />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/change-log/:id/edit'
+								element={
+									<ProtectedRoute permission='upwork:update'>
+										<UpworkChangeLogForm mode='edit' />
 									</ProtectedRoute>
 								}
 							/>
