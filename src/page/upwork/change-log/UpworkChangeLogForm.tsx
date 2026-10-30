@@ -209,7 +209,7 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 									label=''
 									value={fields.section}
 									onChange={(v) =>
-										setField('section', (v as UpworkChangeLogSection) ?? 'other')
+										setField('section', (v as UpworkChangeLogSection) ?? 'title')
 									}
 									width='100%'
 								>

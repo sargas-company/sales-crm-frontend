@@ -9,7 +9,6 @@ export type UpworkReferenceCategory =
 	| 'client_phrase'
 	| 'requirement'
 	| 'product_type'
-	| 'hire_list_skill'
 	| 'fact'
 
 export const UPWORK_REFERENCE_CATEGORIES: UpworkReferenceCategory[] = [
@@ -21,7 +20,6 @@ export const UPWORK_REFERENCE_CATEGORIES: UpworkReferenceCategory[] = [
 	'client_phrase',
 	'requirement',
 	'product_type',
-	'hire_list_skill',
 	'fact',
 ]
 
@@ -35,9 +33,6 @@ export type UpworkChangeLogSection =
 	| 'certificate'
 	| 'employment_history'
 	| 'other_experience'
-	| 'contract'
-	| 'video'
-	| 'other'
 
 export const UPWORK_CHANGELOG_SECTIONS: UpworkChangeLogSection[] = [
 	'title',
@@ -49,9 +44,6 @@ export const UPWORK_CHANGELOG_SECTIONS: UpworkChangeLogSection[] = [
 	'certificate',
 	'employment_history',
 	'other_experience',
-	'contract',
-	'video',
-	'other',
 ]
 
 export interface UpworkProfile {

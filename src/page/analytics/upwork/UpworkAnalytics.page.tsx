@@ -562,9 +562,6 @@ const UpworkAnalyticsPage = () => {
 			certificate: '#059669',
 			employment_history: '#a855f7',
 			other_experience: '#eab308',
-			contract: '#dc2626',
-			video: '#f97316',
-			other: '#64748b',
 		}
 		return Array.from(counts.entries())
 			.map(([section, count]) => ({
