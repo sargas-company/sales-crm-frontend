@@ -56,13 +56,19 @@ export const UPWORK_CHANGELOG_SECTIONS: UpworkChangeLogSection[] = [
 
 export interface UpworkProfile {
 	id: string
-	name: string
+	firstName: string
+	lastName: string | null
+	title: string | null
 	url: string | null
 	note: string | null
 	active: boolean
 	createdAt: string
 	updatedAt: string
 }
+
+export const upworkProfileName = (
+	p: Pick<UpworkProfile, 'firstName' | 'lastName'>,
+): string => `${p.firstName} ${p.lastName ?? ''}`.trim()
 
 export interface UpworkReferenceData {
 	id: string
@@ -77,7 +83,12 @@ export interface UpworkReferenceData {
 	active: boolean
 	createdAt: string
 	updatedAt: string
-	profile?: { id: string; name: string } | null
+	profile?: {
+		id: string
+		firstName: string
+		lastName: string | null
+		title: string | null
+	} | null
 	parent?: {
 		id: string
 		value: string
@@ -106,7 +117,12 @@ export interface UpworkChangeLog {
 	after: string
 	createdAt: string
 	updatedAt: string
-	profile: { id: string; name: string }
+	profile: {
+		id: string
+		firstName: string
+		lastName: string | null
+		title: string | null
+	}
 	references: UpworkChangeLogRefLink[]
 }
 

@@ -1,220 +1,193 @@
-import { useState } from 'react'
-import styled from 'styled-components'
+import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
-	Button,
-	Checkbox,
-	Dialog,
-	DialogActions,
-	DialogContent,
-	DialogTitle,
-	FormControlLabel,
-	IconButton,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-	TextField,
-} from '@mui/material'
-import { Add, Delete, Edit } from '@mui/icons-material'
+	AddRounded,
+	DeleteOutline,
+	EditOutlined,
+	WorkspacePremiumOutlined,
+} from '@mui/icons-material'
+
+import { ListPageShell } from '../../../components/_shared/ListPageShell'
+import {
+	Actions,
+	DataTable,
+	IconAction,
+	TableSkeleton,
+	type DataTableColumn,
+	type SortState,
+} from '../../../components/_shared/DataTable'
+import ConfirmModal from '../../../components/_shared/ConfirmModal'
+import PermissionGate from '../../../components/auth/PermissionGate'
+import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
+import {
+	Clip,
+	DateTimeCell,
+	EmptyBadge,
+	StatusPill,
+} from '../_shared/cells'
+import { ProfileLink } from '../_shared/ProfileLink'
 
 import {
-	useCreateUpworkProfileMutation,
+	upworkProfileName,
 	useDeleteUpworkProfileMutation,
 	useListUpworkProfilesQuery,
-	useUpdateUpworkProfileMutation,
 	type UpworkProfile,
 } from '../../../store/upwork/upworkApi'
 
-const PageWrap = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 20px;
-`
-const Header = styled.div`
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-`
-const Title = styled.h1`
-	font-size: 24px;
-	font-weight: 700;
-	color: #0f172a;
-	margin: 0;
-`
-
-interface FormState {
-	name: string
-	url: string
-	note: string
-	active: boolean
-}
-
-const emptyForm: FormState = { name: '', url: '', note: '', active: true }
+const PAGE_SIZE = 20
 
 const UpworkProfilesPage = () => {
-	const { data: profiles = [], isLoading } = useListUpworkProfilesQuery()
-	const [create] = useCreateUpworkProfileMutation()
-	const [update] = useUpdateUpworkProfileMutation()
-	const [remove] = useDeleteUpworkProfileMutation()
+	const nav = useNavigate()
+	const [page, setPage] = useState(1)
+	const [sort, setSort] = useState<SortState | null>({
+		key: 'updatedAt',
+		direction: 'desc',
+	})
+	const [toDelete, setToDelete] = useState<UpworkProfile | null>(null)
 
-	const [open, setOpen] = useState(false)
-	const [editing, setEditing] = useState<UpworkProfile | null>(null)
-	const [form, setForm] = useState<FormState>(emptyForm)
+	const { data: all = [], isLoading, isError, refetch } = useListUpworkProfilesQuery()
+	const [del, { isLoading: deleting }] = useDeleteUpworkProfileMutation()
 
-	const openCreate = () => {
-		setEditing(null)
-		setForm(emptyForm)
-		setOpen(true)
-	}
-	const openEdit = (p: UpworkProfile) => {
-		setEditing(p)
-		setForm({
-			name: p.name,
-			url: p.url ?? '',
-			note: p.note ?? '',
-			active: p.active,
-		})
-		setOpen(true)
-	}
-	const close = () => setOpen(false)
+	const total = all.length
+	const paged = useMemo(
+		() => all.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+		[all, page],
+	)
 
-	const save = async () => {
-		const payload = {
-			name: form.name.trim(),
-			url: form.url.trim() || null,
-			note: form.note.trim() || null,
-			active: form.active,
-		}
-		if (!payload.name) return
-		if (editing) {
-			await update({ id: editing.id, patch: payload }).unwrap()
-		} else {
-			await create({
-				...payload,
-				url: payload.url ?? undefined,
-				note: payload.note ?? undefined,
-			} as never).unwrap()
-		}
-		close()
-	}
-
-	const del = async (id: string) => {
-		if (!confirm('Delete this profile? Change log and snapshots will be removed too.')) return
-		await remove(id).unwrap()
-	}
+	const columns: DataTableColumn<UpworkProfile>[] = [
+		{
+			key: 'name',
+			label: 'Name',
+			sortable: true,
+			sortValue: (r) => upworkProfileName(r),
+			render: (r) => <ProfileLink profile={r} max={240} />,
+			skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
+		},
+		{
+			key: 'title',
+			label: 'Title',
+			sortable: true,
+			sortValue: (r) => r.title ?? '',
+			render: (r) =>
+				r.title ? <Clip $max={320}>{r.title}</Clip> : <EmptyBadge>no title</EmptyBadge>,
+			skeleton: () => <TableSkeleton $w='200px' $h='13px' />,
+		},
+		{
+			key: 'active',
+			label: 'Status',
+			sortable: true,
+			sortValue: (r) => (r.active ? 1 : 0),
+			render: (r) => (
+				<StatusPill $tone={r.active ? 'success' : 'muted'}>
+					{r.active ? 'Active' : 'Archived'}
+				</StatusPill>
+			),
+			skeleton: () => <TableSkeleton $w='70px' $h='18px' />,
+		},
+		{
+			key: 'createdAt',
+			label: 'Created',
+			sortable: true,
+			sortValue: (r) => r.createdAt,
+			render: (r) => <DateTimeCell iso={r.createdAt} />,
+			skeleton: () => <TableSkeleton $w='110px' $h='13px' />,
+		},
+		{
+			key: 'updatedAt',
+			label: 'Updated',
+			sortable: true,
+			sortValue: (r) => r.updatedAt,
+			render: (r) => <DateTimeCell iso={r.updatedAt} />,
+			skeleton: () => <TableSkeleton $w='110px' $h='13px' />,
+		},
+		{
+			key: 'actions',
+			label: '',
+			render: (r) => (
+				<Actions>
+					<PermissionGate permission='upwork:update'>
+						<IconAction
+							onClick={() => nav(`/upwork/profiles/${r.id}/edit`)}
+							title='Edit'
+						>
+							<EditOutlined fontSize='small' />
+						</IconAction>
+					</PermissionGate>
+					<PermissionGate permission='upwork:delete'>
+						<IconAction $danger onClick={() => setToDelete(r)} title='Delete'>
+							<DeleteOutline fontSize='small' />
+						</IconAction>
+					</PermissionGate>
+				</Actions>
+			),
+		},
+	]
 
 	return (
-		<PageWrap>
-			<Header>
-				<Title>Upwork Profiles</Title>
-				<Button
-					variant='contained'
-					startIcon={<Add />}
-					onClick={openCreate}
-				>
-					New profile
-				</Button>
-			</Header>
+		<>
+			<ListPageShell
+				crumbs={[
+					{ label: 'Upwork', href: '/upwork/reminders' },
+					{ label: 'Profiles', current: true },
+				]}
+				icon={<WorkspacePremiumOutlined />}
+				title='Upwork Profiles'
+				subtitle='Managed Upwork accounts.'
+				action={
+					<PermissionGate permission='upwork:create'>
+						<PrimarySolidButton onClick={() => nav('/upwork/profiles/new')}>
+							<AddRounded fontSize='small' />
+							New profile
+						</PrimarySolidButton>
+					</PermissionGate>
+				}
+			>
+				<DataTable<UpworkProfile>
+					columns={columns}
+					rows={paged}
+					rowKey={(r) => r.id}
+					isLoading={isLoading}
+					isError={isError}
+					onRetry={refetch}
+					emptyTitle='No profiles yet.'
+					sort={sort}
+					onSortChange={(next) => {
+						setSort(next)
+						setPage(1)
+					}}
+					pagination={{
+						page,
+						pageSize: PAGE_SIZE,
+						total,
+						onPageChange: setPage,
+					}}
+				/>
+			</ListPageShell>
 
-			<Table>
-				<TableHead>
-					<TableRow>
-						<TableCell>Name</TableCell>
-						<TableCell>URL</TableCell>
-						<TableCell>Active</TableCell>
-						<TableCell>Updated</TableCell>
-						<TableCell align='right'>Actions</TableCell>
-					</TableRow>
-				</TableHead>
-				<TableBody>
-					{isLoading && (
-						<TableRow>
-							<TableCell colSpan={5}>Loading…</TableCell>
-						</TableRow>
-					)}
-					{!isLoading && profiles.length === 0 && (
-						<TableRow>
-							<TableCell colSpan={5}>No profiles yet.</TableCell>
-						</TableRow>
-					)}
-					{profiles.map((p) => (
-						<TableRow key={p.id}>
-							<TableCell>{p.name}</TableCell>
-							<TableCell>
-								{p.url ? (
-									<a href={p.url} target='_blank' rel='noreferrer'>
-										{p.url}
-									</a>
-								) : (
-									'—'
-								)}
-							</TableCell>
-							<TableCell>{p.active ? 'Yes' : 'No'}</TableCell>
-							<TableCell>
-								{new Date(p.updatedAt).toLocaleDateString()}
-							</TableCell>
-							<TableCell align='right'>
-								<IconButton onClick={() => openEdit(p)} size='small'>
-									<Edit fontSize='small' />
-								</IconButton>
-								<IconButton
-									onClick={() => del(p.id)}
-									size='small'
-									color='error'
-								>
-									<Delete fontSize='small' />
-								</IconButton>
-							</TableCell>
-						</TableRow>
-					))}
-				</TableBody>
-			</Table>
-
-			<Dialog open={open} onClose={close} fullWidth maxWidth='sm'>
-				<DialogTitle>{editing ? 'Edit profile' : 'New profile'}</DialogTitle>
-				<DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-					<TextField
-						label='Name'
-						value={form.name}
-						onChange={(e) => setForm({ ...form, name: e.target.value })}
-						required
-						fullWidth
-					/>
-					<TextField
-						label='URL'
-						value={form.url}
-						onChange={(e) => setForm({ ...form, url: e.target.value })}
-						fullWidth
-					/>
-					<TextField
-						label='Note'
-						value={form.note}
-						onChange={(e) => setForm({ ...form, note: e.target.value })}
-						multiline
-						rows={3}
-						fullWidth
-					/>
-					<FormControlLabel
-						control={
-							<Checkbox
-								checked={form.active}
-								onChange={(e) =>
-									setForm({ ...form, active: e.target.checked })
-								}
-							/>
-						}
-						label='Active'
-					/>
-				</DialogContent>
-				<DialogActions>
-					<Button onClick={close}>Cancel</Button>
-					<Button variant='contained' onClick={save}>
-						Save
-					</Button>
-				</DialogActions>
-			</Dialog>
-		</PageWrap>
+			{toDelete && (
+				<ConfirmModal
+					icon={<DeleteOutline />}
+					iconTone='danger'
+					confirmColor='error'
+					title='Delete profile?'
+					description={
+						<>
+							Delete <strong>{upworkProfileName(toDelete)}</strong>? All
+							change-log entries and snapshots for this profile will be removed
+							too. This cannot be undone.
+						</>
+					}
+					confirmLabel='Delete'
+					confirmLoadingLabel='Deleting…'
+					isLoading={deleting}
+					onConfirm={async () => {
+						await del(toDelete.id).unwrap()
+						setToDelete(null)
+					}}
+					onClose={() => setToDelete(null)}
+				/>
+			)}
+		</>
 	)
 }
 

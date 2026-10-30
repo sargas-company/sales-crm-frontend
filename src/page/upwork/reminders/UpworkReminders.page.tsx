@@ -1,106 +1,428 @@
-import { useState } from 'react'
-import styled from 'styled-components'
+import { useEffect, useMemo, useState } from 'react'
+import styled, { keyframes } from 'styled-components'
 import {
-	Alert,
-	Chip,
-	FormControl,
-	InputLabel,
-	MenuItem,
-	Select,
-} from '@mui/material'
+	CheckCircleOutline,
+	NotificationsActiveOutlined,
+} from '@mui/icons-material'
 
+import { ListPageShell } from '../../../components/_shared/ListPageShell'
 import {
+	BottomSlot,
+	FreshFiltersWrap as BaseFreshFiltersWrap,
+	InlineField,
+	InlineSelect,
+} from '../../../components/_shared/filters/freshPaperFilters'
+import { T } from '../../../components/sales-analytics/_shared/tokens'
+import {
+	upworkProfileName,
 	useGetUpworkRemindersQuery,
 	useListUpworkProfilesQuery,
+	type UpworkProfile,
+	type UpworkReminder,
 } from '../../../store/upwork/upworkApi'
 
-const PageWrap = styled.div`
+const FreshFiltersWrap = styled(BaseFreshFiltersWrap)`
+	width: 100%;
+	box-sizing: border-box;
+`
+
+/* ─── Decorative accents ─────────────────────────────────────── */
+
+const HeadAccent = styled.div`
+	display: inline-flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 2px;
+	margin-left: auto;
+	.line {
+		font-family: 'Caveat', 'Brush Script MT', cursive;
+		font-weight: 700;
+		font-size: 32px;
+		line-height: 1;
+		color: ${T.primary};
+		transform: rotate(-2deg);
+		letter-spacing: 0.3px;
+	}
+	.flourish {
+		color: ${T.primary};
+		opacity: 0.75;
+	}
+	@media (max-width: 900px) {
+		display: none;
+	}
+`
+
+const FilterAccent = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	pointer-events: none;
+	.k {
+		font-family: 'Caveat', 'Brush Script MT', cursive;
+		font-size: 24px;
+		font-weight: 700;
+		line-height: 1;
+		color: #241e16;
+		transform: rotate(-2deg);
+	}
+	.o {
+		font-family: 'Caveat', 'Brush Script MT', cursive;
+		font-size: 26px;
+		font-weight: 700;
+		line-height: 1;
+		color: #e85d2f;
+		transform: rotate(1.5deg);
+	}
+	.star {
+		color: #e85d2f;
+		font-size: 14px;
+	}
+	@media (max-width: 760px) {
+		display: none;
+	}
+`
+
+/* ─── Headline + feed layout ─────────────────────────────────── */
+
+const fadeIn = keyframes`
+	from { opacity: 0; transform: translateY(6px); }
+	to   { opacity: 1; transform: translateY(0); }
+`
+
+const Block = styled.section<{ $delay: number }>`
+	animation: ${fadeIn} 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	animation-delay: ${(p) => p.$delay}ms;
+	padding: 22px 24px 26px;
+	border: 1px solid ${T.border};
+	border-radius: 16px;
+	background: ${T.cardBg};
 	display: flex;
 	flex-direction: column;
-	gap: 20px;
+	gap: 14px;
+	@media (prefers-reduced-motion: reduce) {
+		animation: none;
+	}
 `
-const Title = styled.h1`
-	font-size: 24px;
-	font-weight: 700;
-	color: #0f172a;
+
+const BlockHead = styled.header`
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding-bottom: 10px;
+	border-bottom: 1px dashed ${T.border};
+	.name {
+		font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+		font-size: 18px;
+		font-weight: 700;
+		color: ${T.textStrong};
+		letter-spacing: -0.4px;
+	}
+	.n {
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 12px;
+		font-weight: 700;
+		color: ${T.textStrong};
+		background: ${T.cardBg};
+		border: 1px solid ${T.border};
+		border-radius: 999px;
+		padding: 3px 11px;
+		letter-spacing: 0.2px;
+	}
+`
+
+const HeadlineRow = styled.div`
+	display: grid;
+	grid-template-columns: minmax(180px, 240px) 1fr;
+	gap: 28px;
+	align-items: center;
+	@media (max-width: 760px) {
+		grid-template-columns: 1fr;
+	}
+`
+const BigNumber = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	.n {
+		font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+		font-size: 54px;
+		font-weight: 800;
+		line-height: 1;
+		color: ${T.textStrong};
+		letter-spacing: -2px;
+		font-variant-numeric: tabular-nums;
+	}
+	.sub {
+		font-family: 'Caveat', 'Brush Script MT', cursive;
+		font-size: 24px;
+		color: #d97706;
+		margin-top: 6px;
+		letter-spacing: 0.5px;
+		transform: rotate(-1.5deg);
+		transform-origin: left center;
+	}
+	.cap {
+		font-size: 12px;
+		color: ${T.textSecondary};
+		margin-top: 10px;
+		font-family: 'JetBrains Mono', monospace;
+		letter-spacing: 0.5px;
+	}
+`
+const FeedList = styled.ul`
+	list-style: none;
 	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
 `
-const Row = styled.div`
+const rowIn = keyframes`
+	from { opacity: 0; transform: translateX(-6px); }
+	to   { opacity: 1; transform: translateX(0); }
+`
+const FeedRow = styled.li<{ $warn: boolean; $i: number }>`
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 10px 2px;
+	border-bottom: 1px dashed ${T.border};
+	animation: ${rowIn} 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	animation-delay: ${(p) => 80 + p.$i * 55}ms;
+	@media (prefers-reduced-motion: reduce) {
+		animation: none;
+	}
+	&:last-child {
+		border-bottom: none;
+	}
+	.dot {
+		width: 9px;
+		height: 9px;
+		border-radius: 999px;
+		background: ${(p) => (p.$warn ? '#dc2626' : '#d97706')};
+		flex: 0 0 auto;
+	}
+	.lbl {
+		font-size: 14.5px;
+		font-weight: 500;
+		color: ${T.textStrong};
+		flex: 1;
+	}
+	.d {
+		font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+		font-weight: 700;
+		font-size: 20px;
+		letter-spacing: -0.4px;
+		font-variant-numeric: tabular-nums;
+		color: ${(p) => (p.$warn ? '#b91c1c' : '#a26608')};
+		sup {
+			font-size: 11px;
+			color: ${T.textMuted};
+			font-weight: 600;
+			margin-left: 3px;
+			vertical-align: top;
+		}
+	}
+`
+
+/* ─── Profile reminders — one block per profile ──────────────── */
+
+const ProfileReminders = ({
+	profile,
+	index,
+}: {
+	profile: UpworkProfile
+	index: number
+}) => {
+	const { data: reminders = [], isLoading, isFetching } =
+		useGetUpworkRemindersQuery(profile.id)
+
+	const critical = reminders.filter((r) => r.severity === 'warn').length
+	const info = reminders.length - critical
+	const delay = index * 140
+
+	if (isLoading || isFetching) {
+		return (
+			<Block $delay={delay}>
+				<BlockHead>
+					<span className='name'>{upworkProfileName(profile)}</span>
+				</BlockHead>
+				<Hint>Loading…</Hint>
+			</Block>
+		)
+	}
+
+	if (reminders.length === 0) {
+		return (
+			<Block $delay={delay}>
+				<BlockHead>
+					<span className='name'>{upworkProfileName(profile)}</span>
+					<span className='n'>0 reminders</span>
+				</BlockHead>
+				<Clean>
+					<CheckCircleOutline fontSize='small' />
+					All caught up.
+				</Clean>
+			</Block>
+		)
+	}
+
+	return (
+		<Block $delay={delay}>
+			<BlockHead>
+				<span className='name'>{upworkProfileName(profile)}</span>
+				<span className='n'>{reminders.length} reminders</span>
+			</BlockHead>
+			<HeadlineRow>
+				<BigNumber>
+					<span className='n'>{reminders.length}</span>
+					<span className='sub'>need attention</span>
+					<span className='cap'>
+						{critical} critical · {info} info
+					</span>
+				</BigNumber>
+				<FeedList>
+					{reminders.map((r: UpworkReminder, i: number) => (
+						<FeedRow key={r.key} $warn={r.severity === 'warn'} $i={i}>
+							<span className='dot' />
+							<span className='lbl'>{r.label}</span>
+							<span className='d'>
+								{r.days}
+								<sup>d</sup>
+							</span>
+						</FeedRow>
+					))}
+				</FeedList>
+			</HeadlineRow>
+		</Block>
+	)
+}
+
+/* ─── Shell ──────────────────────────────────────────────────── */
+
+const Hint = styled.div`
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	padding: 20px 24px;
+	border: 1px dashed ${T.border};
+	border-radius: 12px;
+	color: ${T.textSecondary};
+	font-size: 14px;
+`
+const Clean = styled.div`
 	display: flex;
 	gap: 12px;
 	align-items: center;
-`
-const List = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-`
-const Card = styled.div<{ $warn: boolean }>`
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 12px 16px;
-	border-radius: 10px;
-	border: 1px solid ${(p) => (p.$warn ? '#fecaca' : '#e2e8f0')};
-	background: ${(p) => (p.$warn ? '#fef2f2' : '#ffffff')};
-`
-const Label = styled.div`
+	padding: 16px 20px;
+	border: 1px solid #dcfce7;
+	border-radius: 12px;
+	background: #f0fdf4;
+	color: #15803d;
 	font-size: 14px;
 	font-weight: 600;
-	color: #0f172a;
+`
+
+const Stack = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
 `
 
 const UpworkRemindersPage = () => {
 	const { data: profiles = [] } = useListUpworkProfilesQuery()
-	const activeProfiles = profiles.filter((p) => p.active)
-	const [profileId, setProfileId] = useState<string>('')
-	const { data: reminders = [], isLoading } = useGetUpworkRemindersQuery(
-		profileId,
-		{ skip: !profileId },
+	const activeProfiles = useMemo(
+		() => profiles.filter((p) => p.active),
+		[profiles],
 	)
+	const [selection, setSelection] = useState<string>('')
+
+	/* First render → default to All. */
+	useEffect(() => {
+		if (!selection && activeProfiles.length) setSelection('__all__')
+	}, [selection, activeProfiles])
+
+	const chosen: UpworkProfile[] =
+		selection === '__all__'
+			? activeProfiles
+			: activeProfiles.filter((p) => p.id === selection)
 
 	return (
-		<PageWrap>
-			<Title>Reminders</Title>
-			<Row>
-				<FormControl size='small' sx={{ minWidth: 240 }}>
-					<InputLabel>Profile</InputLabel>
-					<Select
-						label='Profile'
-						value={profileId}
-						onChange={(e) => setProfileId(e.target.value)}
+		<ListPageShell
+			crumbs={[
+				{ label: 'Upwork', href: '/upwork/reminders' },
+				{ label: 'Reminders', current: true },
+			]}
+			icon={<NotificationsActiveOutlined />}
+			title='Reminders'
+			subtitle='Freshness checks across your Upwork profiles.'
+			middle={
+				<HeadAccent aria-hidden='true'>
+					<span className='line'>spot the drift</span>
+					<svg
+						className='flourish'
+						viewBox='0 0 120 10'
+						width='120'
+						height='10'
 					>
-						{activeProfiles.length === 0 && (
-							<MenuItem disabled value=''>
-								No active profiles
-							</MenuItem>
-						)}
-						{activeProfiles.map((p) => (
-							<MenuItem key={p.id} value={p.id}>
-								{p.name}
-							</MenuItem>
-						))}
-					</Select>
-				</FormControl>
-			</Row>
-
-			{profileId && isLoading && <div>Loading…</div>}
-			{profileId && !isLoading && reminders.length === 0 && (
-				<Alert severity='success'>All caught up for this profile.</Alert>
-			)}
-			<List>
-				{reminders.map((r) => (
-					<Card key={r.key} $warn={r.severity === 'warn'}>
-						<Label>{r.label}</Label>
-						<Chip
-							size='small'
-							color={r.severity === 'warn' ? 'error' : 'default'}
-							label={`${r.days}d threshold`}
+						<path
+							d='M2 5 C 30 1, 60 9, 118 3'
+							fill='none'
+							stroke='currentColor'
+							strokeWidth='2'
+							strokeLinecap='round'
 						/>
-					</Card>
-				))}
-			</List>
-		</PageWrap>
+					</svg>
+				</HeadAccent>
+			}
+			filters={
+				<FreshFiltersWrap role='region' aria-label='Reminders filters'>
+					<BottomSlot>
+						<InlineField>
+							<span className='l'>Profile</span>
+							<InlineSelect
+								value={selection}
+								onChange={(e) => setSelection(e.target.value)}
+								disabled={activeProfiles.length === 0}
+								style={{ minWidth: 260 }}
+							>
+								{activeProfiles.length === 0 && (
+									<option value=''>No active profiles</option>
+								)}
+								{activeProfiles.length > 0 && (
+									<option value='__all__'>All profiles</option>
+								)}
+								{activeProfiles.map((p) => (
+									<option key={p.id} value={p.id}>
+										{upworkProfileName(p)}
+									</option>
+								))}
+							</InlineSelect>
+						</InlineField>
+					</BottomSlot>
+
+					<div style={{ flex: 1 }} />
+
+					<FilterAccent aria-hidden='true'>
+						<span className='k'>keep profiles</span>
+						<span className='o'>fresh</span>
+						<span className='star'>★</span>
+					</FilterAccent>
+				</FreshFiltersWrap>
+			}
+		>
+			{activeProfiles.length === 0 && (
+				<Hint>Create an active profile first — reminders are computed per profile.</Hint>
+			)}
+
+			{chosen.length > 0 && (
+				<Stack>
+					{chosen.map((p, i) => (
+						<ProfileReminders key={p.id} profile={p} index={i} />
+					))}
+				</Stack>
+			)}
+		</ListPageShell>
 	)
 }
 

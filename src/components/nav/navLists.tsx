@@ -49,6 +49,7 @@ import {
 	NotificationsActiveOutlined,
 	MenuBookOutlined,
 	EditNoteOutlined,
+	CameraAltOutlined,
 } from '@mui/icons-material'
 import { ReactNode } from 'react'
 
@@ -221,6 +222,7 @@ const navList: NavOptions[] = [
 		childrens: [
 			format('Reminders', '/upwork/reminders', <NotificationsActiveOutlined />, 'upwork:view'),
 			format('Change Log', '/upwork/change-log', <EditNoteOutlined />, 'upwork:view'),
+			format('Snapshots', '/upwork/snapshots', <CameraAltOutlined />, 'upwork_analytics:view'),
 			format('Reference Data', '/upwork/reference-data', <MenuBookOutlined />, 'upwork:view'),
 			format('Profiles', '/upwork/profiles', <AccountCircleOutlined />, 'upwork:view'),
 		],

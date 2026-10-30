@@ -87,8 +87,20 @@ const RunbookDetail = lazy(() => import('./runbook/RunbookDetail.page'))
 const Help = lazy(() => import('./help/Help.page'))
 const HelpDetail = lazy(() => import('./help/HelpDetail.page'))
 const UpworkProfiles = lazy(() => import('./upwork/profiles/UpworkProfiles.page'))
+const UpworkProfileForm = lazy(
+	() => import('./upwork/profiles/UpworkProfileForm'),
+)
+const UpworkProfileView = lazy(
+	() => import('./upwork/profiles/UpworkProfileView'),
+)
 const UpworkReferenceData = lazy(
 	() => import('./upwork/reference-data/UpworkReferenceData.page'),
+)
+const UpworkReferenceDataForm = lazy(
+	() => import('./upwork/reference-data/UpworkReferenceDataForm'),
+)
+const UpworkReferenceBulkAdd = lazy(
+	() => import('./upwork/reference-data/UpworkReferenceBulkAdd'),
 )
 const UpworkChangeLog = lazy(
 	() => import('./upwork/change-log/UpworkChangeLog.page'),
@@ -101,6 +113,12 @@ const UpworkChangeLogView = lazy(
 )
 const UpworkReminders = lazy(
 	() => import('./upwork/reminders/UpworkReminders.page'),
+)
+const UpworkSnapshots = lazy(
+	() => import('./upwork/snapshots/UpworkSnapshots.page'),
+)
+const UpworkSnapshotForm = lazy(
+	() => import('./upwork/snapshots/UpworkSnapshotForm'),
 )
 const UpworkAnalytics = lazy(
 	() => import('./analytics/upwork/UpworkAnalytics.page'),
@@ -781,6 +799,30 @@ const Home = () => {
 								}
 							/>
 							<Route
+								path='/upwork/snapshots'
+								element={
+									<ProtectedRoute permission='upwork_analytics:view'>
+										<UpworkSnapshots />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/snapshots/new'
+								element={
+									<ProtectedRoute permission='upwork:create'>
+										<UpworkSnapshotForm mode='create' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/snapshots/:id/edit'
+								element={
+									<ProtectedRoute permission='upwork:update'>
+										<UpworkSnapshotForm mode='edit' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
 								path='/upwork/profiles'
 								element={
 									<ProtectedRoute permission='upwork:view'>
@@ -789,10 +831,58 @@ const Home = () => {
 								}
 							/>
 							<Route
+								path='/upwork/profiles/new'
+								element={
+									<ProtectedRoute permission='upwork:create'>
+										<UpworkProfileForm mode='create' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/profiles/:id/edit'
+								element={
+									<ProtectedRoute permission='upwork:update'>
+										<UpworkProfileForm mode='edit' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/profiles/:id'
+								element={
+									<ProtectedRoute permission='upwork:view'>
+										<UpworkProfileView />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
 								path='/upwork/reference-data'
 								element={
 									<ProtectedRoute permission='upwork:view'>
 										<UpworkReferenceData />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/reference-data/new'
+								element={
+									<ProtectedRoute permission='upwork:create'>
+										<UpworkReferenceDataForm mode='create' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/reference-data/bulk-add'
+								element={
+									<ProtectedRoute permission='upwork:create'>
+										<UpworkReferenceBulkAdd />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/reference-data/:id/edit'
+								element={
+									<ProtectedRoute permission='upwork:update'>
+										<UpworkReferenceDataForm mode='edit' />
 									</ProtectedRoute>
 								}
 							/>

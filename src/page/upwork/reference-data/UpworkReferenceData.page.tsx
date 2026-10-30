@@ -1,414 +1,573 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import {
-	Button,
-	Dialog,
-	DialogActions,
-	DialogContent,
-	DialogTitle,
-	FormControl,
-	IconButton,
-	InputLabel,
-	MenuItem,
-	Select,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-	TextField,
-	Checkbox,
-	FormControlLabel,
-	Chip,
-} from '@mui/material'
-import { Add, Archive, Delete, PlaylistAdd } from '@mui/icons-material'
+	AddRounded,
+	ArchiveOutlined,
+	ArticleOutlined,
+	ClearRounded,
+	DeleteOutline,
+	EditOutlined,
+	FilterListOutlined,
+	MenuBookOutlined,
+	PlaylistAddOutlined,
+	SearchOutlined,
+} from '@mui/icons-material'
+
+import { ListPageShell } from '../../../components/_shared/ListPageShell'
+import {
+	Actions,
+	DataTable,
+	IconAction,
+	TableSkeleton,
+	type DataTableColumn,
+	type DataTableSelection,
+	type SortState,
+} from '../../../components/_shared/DataTable'
+import ConfirmModal from '../../../components/_shared/ConfirmModal'
+import BulkActionBar from '../../../components/_shared/BulkActionBar'
+import PermissionGate from '../../../components/auth/PermissionGate'
+import {
+	BottomSlot,
+	ClearBtn,
+	FreshFiltersWrap,
+	InlineField,
+	InlineSelect,
+	RowBreak,
+	SearchPill,
+} from '../../../components/_shared/filters/freshPaperFilters'
+import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
+import { GhostIconButton } from '../_shared/GhostIconButton'
+import {
+	CategoryPill,
+	Clip,
+	DateTimeCell,
+	EmptyBadge,
+	FreqChip,
+	StatusPill,
+} from '../_shared/cells'
+import { ProfileLink } from '../_shared/ProfileLink'
+import { FilterTapes } from '../_shared/FilterTapes'
 
 import {
 	UPWORK_REFERENCE_CATEGORIES,
+	upworkProfileName,
 	useArchiveUpworkReferenceMutation,
-	useBulkAddUpworkReferencesMutation,
 	useBulkDeleteUpworkReferencesMutation,
-	useCreateUpworkReferenceMutation,
 	useListUpworkProfilesQuery,
 	useListUpworkReferencesQuery,
 	type UpworkReferenceCategory,
+	type UpworkReferenceData,
 } from '../../../store/upwork/upworkApi'
 
-const PageWrap = styled.div`
+const PAGE_SIZE = 25
+
+type ActivePreset = 'all' | 'active' | 'archived'
+const PRESETS: { value: ActivePreset; label: string }[] = [
+	{ value: 'all', label: 'All' },
+	{ value: 'active', label: 'Active' },
+	{ value: 'archived', label: 'Archived' },
+]
+
+const ValueButton = styled.button`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: transparent;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	max-width: 100%;
+	> span {
+		border-bottom: 1px dotted transparent;
+		transition:
+			color 160ms ease,
+			border-color 160ms ease;
+	}
+	&:hover > span {
+		color: #0369a1;
+		border-bottom-color: rgba(3, 105, 161, 0.5);
+	}
+`
+
+const PopupBody = styled.div`
 	display: flex;
 	flex-direction: column;
-	gap: 20px;
+	gap: 14px;
+	padding: 4px 2px 2px;
 `
-const Header = styled.div`
+const PopupMeta = styled.div`
 	display: flex;
-	justify-content: space-between;
-	align-items: center;
 	flex-wrap: wrap;
-	gap: 12px;
+	gap: 8px;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 11.5px;
+	color: #64748b;
 `
-const Title = styled.h1`
-	font-size: 24px;
-	font-weight: 700;
+const PopupValue = styled.div`
+	padding: 14px 16px;
+	border: 1px solid #e2e8f0;
+	border-radius: 10px;
+	background: #f8fafc;
+	font-size: 15px;
+	line-height: 1.5;
 	color: #0f172a;
-	margin: 0;
+	white-space: pre-wrap;
+	word-break: break-word;
 `
-const Filters = styled.div`
-	display: flex;
-	gap: 12px;
-	align-items: center;
-	flex-wrap: wrap;
+const PopupNote = styled.div`
+	padding: 10px 14px;
+	border-left: 3px solid #cbd5e1;
+	background: #f1f5f9;
+	border-radius: 0 8px 8px 0;
+	font-size: 13.5px;
+	color: #475569;
+	line-height: 1.5;
+	white-space: pre-wrap;
 `
-
-const todayIso = () => new Date().toISOString().slice(0, 10)
 
 const UpworkReferenceDataPage = () => {
-	const [profileFilter, setProfileFilter] = useState<string>('')
-	const [categoryFilter, setCategoryFilter] = useState<UpworkReferenceCategory | ''>(
-		'',
+	const nav = useNavigate()
+	const [sp, setSp] = useSearchParams()
+
+	const profileParam = sp.get('profile') ?? ''
+	const categoryParam = (sp.get('category') ?? '') as UpworkReferenceCategory | ''
+	const sortFreq = sp.get('sort') === 'freq'
+	const searchParam = sp.get('q') ?? ''
+	const activeParam = (sp.get('active') ?? 'all') as ActivePreset
+
+	const [searchInput, setSearchInput] = useState(searchParam)
+	const [page, setPage] = useState(1)
+	const [sort, setSort] = useState<SortState | null>(
+		sortFreq
+			? { key: 'frequency', direction: 'desc' }
+			: { key: 'collectedDate', direction: 'desc' },
 	)
-	const [sortByFrequency, setSortByFrequency] = useState(false)
 	const [selected, setSelected] = useState<Set<string>>(new Set())
+	const [toArchive, setToArchive] = useState<UpworkReferenceData | null>(null)
+	const [bulkOpen, setBulkOpen] = useState(false)
+	const [valuePopup, setValuePopup] = useState<UpworkReferenceData | null>(null)
+
+	const search = searchInput.trim().toLowerCase()
+
+	useEffect(() => {
+		setPage(1)
+	}, [search, profileParam, categoryParam, sortFreq])
+
+	useEffect(() => {
+		const next = new URLSearchParams(sp)
+		if (search) next.set('q', search)
+		else next.delete('q')
+		setSp(next, { replace: true })
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [search])
+
+	const updateParam = (key: string, value: string) => {
+		const next = new URLSearchParams(sp)
+		if (value) next.set(key, value)
+		else next.delete(key)
+		setSp(next, { replace: true })
+	}
 
 	const { data: profiles = [] } = useListUpworkProfilesQuery()
-	const { data: rows = [], isLoading } = useListUpworkReferencesQuery({
-		profileId: profileFilter || undefined,
-		category: categoryFilter || undefined,
-		sortByFrequency,
+	const {
+		data: rowsAll = [],
+		isLoading,
+		isError,
+		refetch,
+	} = useListUpworkReferencesQuery({
+		profileId: profileParam || undefined,
+		category: categoryParam || undefined,
+		sortByFrequency: sortFreq,
+		active:
+			activeParam === 'active' ? true : activeParam === 'archived' ? false : undefined,
 	})
-	const [createRef] = useCreateUpworkReferenceMutation()
-	const [bulkAdd] = useBulkAddUpworkReferencesMutation()
 	const [archive] = useArchiveUpworkReferenceMutation()
-	const [bulkDelete] = useBulkDeleteUpworkReferencesMutation()
+	const [bulkDelete, { isLoading: bulkDeleting }] =
+		useBulkDeleteUpworkReferencesMutation()
 
-	const [createOpen, setCreateOpen] = useState(false)
-	const [bulkOpen, setBulkOpen] = useState(false)
+	const filtered = useMemo(() => {
+		if (!search) return rowsAll
+		return rowsAll.filter(
+			(r) =>
+				r.value.toLowerCase().includes(search) ||
+				(r.note ?? '').toLowerCase().includes(search) ||
+				r.category.toLowerCase().includes(search),
+		)
+	}, [rowsAll, search])
 
-	// Create modal state
-	const [newProfileId, setNewProfileId] = useState<string>('')
-	const [newCategory, setNewCategory] = useState<UpworkReferenceCategory>(
-		'title_phrase',
+	useEffect(() => {
+		if (!selected.size) return
+		const live = new Set(filtered.map((r) => r.id))
+		const next = new Set<string>()
+		for (const id of selected) if (live.has(id)) next.add(id)
+		if (next.size !== selected.size) setSelected(next)
+	}, [filtered])
+
+	const total = filtered.length
+	const paged = useMemo(
+		() => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+		[filtered, page],
 	)
-	const [newValue, setNewValue] = useState('')
-	const [newNote, setNewNote] = useState('')
-	const [newDate, setNewDate] = useState(todayIso())
 
-	// Bulk-add modal state
-	const [bulkProfileId, setBulkProfileId] = useState<string>('')
-	const [bulkCategory, setBulkCategory] = useState<UpworkReferenceCategory>(
-		'title_phrase',
+	const selection = useMemo<DataTableSelection<UpworkReferenceData>>(
+		() => ({
+			selected,
+			onToggleRow: (id, on) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					if (on) n.add(id)
+					else n.delete(id)
+					return n
+				}),
+			onToggleAllOnPage: (rows, on) =>
+				setSelected((prev) => {
+					const n = new Set(prev)
+					for (const r of rows) {
+						if (on) n.add(r.id)
+						else n.delete(r.id)
+					}
+					return n
+				}),
+			headerLabel: 'Select every entry on this page',
+			rowLabel: (r) => `Select ${r.value}`,
+		}),
+		[selected],
 	)
-	const [bulkText, setBulkText] = useState('')
-	const [bulkDate, setBulkDate] = useState(todayIso())
 
-	const toggle = (id: string) => {
-		const next = new Set(selected)
-		if (next.has(id)) next.delete(id)
-		else next.add(id)
-		setSelected(next)
-	}
+	const columns: DataTableColumn<UpworkReferenceData>[] = [
+		{
+			key: 'value',
+			label: 'Value',
+			sortable: true,
+			sortValue: (r) => r.value,
+			render: (r) => (
+				<ValueButton type='button' onClick={() => setValuePopup(r)}>
+					<Clip $max={340}>{r.value}</Clip>
+				</ValueButton>
+			),
+			skeleton: () => <TableSkeleton $w='180px' $h='13px' />,
+		},
+		{
+			key: 'category',
+			label: 'Category',
+			sortable: true,
+			sortValue: (r) => r.category,
+			render: (r) => <CategoryPill>{r.category.replace(/_/g, ' ')}</CategoryPill>,
+			skeleton: () => <TableSkeleton $w='90px' $h='18px' />,
+		},
+		{
+			key: 'profile',
+			label: 'Profile',
+			render: (r) =>
+				r.profile ? (
+					<ProfileLink profile={r.profile} max={180} />
+				) : (
+					<EmptyBadge>shared</EmptyBadge>
+				),
+			skeleton: () => <TableSkeleton $w='120px' $h='13px' />,
+		},
+		{
+			key: 'frequency',
+			label: 'Freq.',
+			sortable: true,
+			sortValue: (r) => r.frequency ?? -1,
+			render: (r) =>
+				r.frequency == null ? (
+					<EmptyBadge>n/a</EmptyBadge>
+				) : (
+					<FreqChip $warm={r.frequency >= 100}>{r.frequency}</FreqChip>
+				),
+		},
+		{
+			key: 'collectedDate',
+			label: 'Collected',
+			sortable: true,
+			sortValue: (r) => r.collectedDate,
+			render: (r) => <DateTimeCell iso={r.collectedDate} />,
+		},
+		{
+			key: 'active',
+			label: 'Status',
+			render: (r) => (
+				<StatusPill $tone={r.active ? 'success' : 'muted'}>
+					{r.active ? 'Active' : 'Archived'}
+				</StatusPill>
+			),
+		},
+		{
+			key: 'actions',
+			label: '',
+			render: (r) => (
+				<Actions>
+					<PermissionGate permission='upwork:update'>
+						<IconAction
+							onClick={() => nav(`/upwork/reference-data/${r.id}/edit`)}
+							title='Edit'
+						>
+							<EditOutlined fontSize='small' />
+						</IconAction>
+						{r.active && (
+							<IconAction onClick={() => setToArchive(r)} title='Archive'>
+								<ArchiveOutlined fontSize='small' />
+							</IconAction>
+						)}
+					</PermissionGate>
+				</Actions>
+			),
+		},
+	]
 
-	const submitCreate = async () => {
-		if (!newValue.trim()) return
-		await createRef({
-			profileId: newProfileId || undefined,
-			category: newCategory,
-			value: newValue.trim(),
-			note: newNote.trim() || undefined,
-			collectedDate: newDate,
-		}).unwrap()
-		setCreateOpen(false)
-		setNewValue('')
-		setNewNote('')
-	}
-
-	const submitBulk = async () => {
-		const values = bulkText
-			.split('\n')
-			.map((l) => l.trim())
-			.filter(Boolean)
-		if (values.length === 0) return
-		await bulkAdd({
-			profileId: bulkProfileId || undefined,
-			category: bulkCategory,
-			collectedDate: bulkDate,
-			values,
-		}).unwrap()
-		setBulkOpen(false)
-		setBulkText('')
-	}
-
-	const doBulkDelete = async () => {
-		if (selected.size === 0) return
-		if (!confirm(`Delete ${selected.size} entries?`)) return
-		await bulkDelete({ ids: Array.from(selected) }).unwrap()
-		setSelected(new Set())
+	const activeFilterCount =
+		(search ? 1 : 0) + (profileParam ? 1 : 0) + (categoryParam ? 1 : 0) + (sortFreq ? 1 : 0)
+	const clearFilters = () => {
+		setSearchInput('')
+		setSort({ key: 'collectedDate', direction: 'desc' })
+		setSp(new URLSearchParams(), { replace: true })
 	}
 
 	return (
-		<PageWrap>
-			<Header>
-				<Title>Reference Data</Title>
-				<div style={{ display: 'flex', gap: 8 }}>
-					<Button
-						variant='outlined'
-						startIcon={<PlaylistAdd />}
-						onClick={() => setBulkOpen(true)}
-					>
-						Bulk add
-					</Button>
-					<Button
-						variant='contained'
-						startIcon={<Add />}
-						onClick={() => setCreateOpen(true)}
-					>
-						New entry
-					</Button>
-				</div>
-			</Header>
+		<>
+			<ListPageShell
+				crumbs={[
+					{ label: 'Upwork', href: '/upwork/reminders' },
+					{ label: 'Reference Data', current: true },
+				]}
+				icon={<MenuBookOutlined />}
+				title='Reference Data'
+				subtitle='Words, phrases and skills used in change-log entries.'
+				action={
+					<div style={{ display: 'inline-flex', gap: 10 }}>
+						<PermissionGate permission='upwork:create'>
+							<GhostIconButton
+								onClick={() => nav('/upwork/reference-data/bulk-add')}
+							>
+								<PlaylistAddOutlined fontSize='small' />
+								Bulk add
+							</GhostIconButton>
+							<PrimarySolidButton
+								onClick={() => nav('/upwork/reference-data/new')}
+							>
+								<AddRounded fontSize='small' />
+								New entry
+							</PrimarySolidButton>
+						</PermissionGate>
+					</div>
+				}
+				filters={
+					<FreshFiltersWrap role='region' aria-label='Reference-data filters'>
+						<div className='filter-lead'>
+							<span className='lead-icon'>
+								<FilterListOutlined />
+							</span>
+							<div className='lead-text'>
+								<span className='top'>Status</span>
+								<span className='bot'>
+									{PRESETS.find((p) => p.value === activeParam)?.label ?? 'All'}
+								</span>
+							</div>
+						</div>
 
-			<Filters>
-				<FormControl size='small' sx={{ minWidth: 180 }}>
-					<InputLabel>Profile</InputLabel>
-					<Select
-						label='Profile'
-						value={profileFilter}
-						onChange={(e) => setProfileFilter(e.target.value)}
-					>
-						<MenuItem value=''>All (incl. shared)</MenuItem>
-						{profiles.map((p) => (
-							<MenuItem key={p.id} value={p.id}>
-								{p.name}
-							</MenuItem>
-						))}
-					</Select>
-				</FormControl>
-				<FormControl size='small' sx={{ minWidth: 180 }}>
-					<InputLabel>Category</InputLabel>
-					<Select
-						label='Category'
-						value={categoryFilter}
-						onChange={(e) =>
-							setCategoryFilter(e.target.value as UpworkReferenceCategory)
-						}
-					>
-						<MenuItem value=''>All</MenuItem>
-						{UPWORK_REFERENCE_CATEGORIES.map((c) => (
-							<MenuItem key={c} value={c}>
-								{c}
-							</MenuItem>
-						))}
-					</Select>
-				</FormControl>
-				<FormControlLabel
-					control={
-						<Checkbox
-							checked={sortByFrequency}
-							onChange={(e) => setSortByFrequency(e.target.checked)}
+						<FilterTapes
+							presets={PRESETS}
+							value={activeParam}
+							onChange={(v) => updateParam('active', v === 'all' ? '' : v)}
+							ariaLabel='Reference-data status preset'
 						/>
-					}
-					label='Sort by frequency'
-				/>
-				{selected.size > 0 && (
-					<Button
-						color='error'
-						variant='outlined'
-						startIcon={<Delete />}
-						onClick={doBulkDelete}
-					>
-						Delete {selected.size}
-					</Button>
-				)}
-			</Filters>
 
-			<Table size='small'>
-				<TableHead>
-					<TableRow>
-						<TableCell padding='checkbox' />
-						<TableCell>Value</TableCell>
-						<TableCell>Category</TableCell>
-						<TableCell>Profile</TableCell>
-						<TableCell>Frequency</TableCell>
-						<TableCell>Collected</TableCell>
-						<TableCell>Active</TableCell>
-						<TableCell align='right'>Actions</TableCell>
-					</TableRow>
-				</TableHead>
-				<TableBody>
-					{isLoading && (
-						<TableRow>
-							<TableCell colSpan={8}>Loading…</TableCell>
-						</TableRow>
-					)}
-					{!isLoading && rows.length === 0 && (
-						<TableRow>
-							<TableCell colSpan={8}>No entries yet.</TableCell>
-						</TableRow>
-					)}
-					{rows.map((r) => (
-						<TableRow key={r.id} selected={selected.has(r.id)}>
-							<TableCell padding='checkbox'>
-								<Checkbox
-									checked={selected.has(r.id)}
-									onChange={() => toggle(r.id)}
+						<SearchPill>
+							<SearchOutlined className='ico' />
+							<input
+								value={searchInput}
+								onChange={(e) => setSearchInput(e.target.value)}
+								placeholder='Search value, category, note…'
+								aria-label='Search reference entries'
+							/>
+						</SearchPill>
+
+						<PermissionGate permission='upwork:delete'>
+							<div style={{ marginLeft: 'auto' }}>
+								<BulkActionBar
+									count={selected.size}
+									onClear={() => setSelected(new Set())}
+									onConfirm={() => setBulkOpen(true)}
+									isLoading={bulkDeleting}
 								/>
-							</TableCell>
-							<TableCell>{r.value}</TableCell>
-							<TableCell>
-								<Chip label={r.category} size='small' />
-							</TableCell>
-							<TableCell>{r.profile?.name ?? '— shared'}</TableCell>
-							<TableCell>{r.frequency ?? '—'}</TableCell>
-							<TableCell>{r.collectedDate.slice(0, 10)}</TableCell>
-							<TableCell>{r.active ? 'Yes' : 'No'}</TableCell>
-							<TableCell align='right'>
-								{r.active && (
-									<IconButton
-										size='small'
-										onClick={() => archive(r.id)}
-										title='Archive'
-									>
-										<Archive fontSize='small' />
-									</IconButton>
+							</div>
+						</PermissionGate>
+
+						<RowBreak />
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Profile</span>
+								<InlineSelect
+									value={profileParam}
+									onChange={(e) => updateParam('profile', e.target.value)}
+								>
+									<option value=''>All (incl. shared)</option>
+									{profiles.map((p) => (
+										<option key={p.id} value={p.id}>
+											{upworkProfileName(p)}
+										</option>
+									))}
+								</InlineSelect>
+							</InlineField>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Category</span>
+								<InlineSelect
+									value={categoryParam}
+									onChange={(e) => updateParam('category', e.target.value)}
+								>
+									<option value=''>All</option>
+									{UPWORK_REFERENCE_CATEGORIES.map((c) => (
+										<option key={c} value={c}>
+											{c}
+										</option>
+									))}
+								</InlineSelect>
+							</InlineField>
+						</BottomSlot>
+
+						<BottomSlot>
+							<InlineField>
+								<span className='l'>Sort</span>
+								<InlineSelect
+									value={sortFreq ? 'freq' : 'date'}
+									onChange={(e) => updateParam('sort', e.target.value === 'freq' ? 'freq' : '')}
+								>
+									<option value='date'>Newest first</option>
+									<option value='freq'>By frequency</option>
+								</InlineSelect>
+							</InlineField>
+						</BottomSlot>
+
+						<div className='filter-spacer' style={{ flex: 1 }} />
+
+						<ClearBtn
+							type='button'
+							onClick={clearFilters}
+							disabled={activeFilterCount === 0}
+						>
+							<ClearRounded style={{ fontSize: 15 }} />
+							Clear
+						</ClearBtn>
+					</FreshFiltersWrap>
+				}
+			>
+				<DataTable<UpworkReferenceData>
+					columns={columns}
+					rows={paged}
+					rowKey={(r) => r.id}
+					isLoading={isLoading}
+					isError={isError}
+					onRetry={refetch}
+					searchActive={!!search}
+					emptyTitle='No reference entries yet.'
+					emptyTitleSearch='Nothing matches the current filter.'
+					sort={sort}
+					onSortChange={(next) => {
+						setSort(next)
+						setPage(1)
+					}}
+					selection={selection}
+					pagination={{
+						page,
+						pageSize: PAGE_SIZE,
+						total,
+						onPageChange: setPage,
+					}}
+				/>
+			</ListPageShell>
+
+			{toArchive && (
+				<ConfirmModal
+					icon={<ArchiveOutlined />}
+					iconTone='warning'
+					confirmColor='warning'
+					title='Archive entry?'
+					description={
+						<>
+							Archive <strong>{toArchive.value}</strong>? It stops appearing in
+							filters and reference pickers but is kept for historical change-log
+							references.
+						</>
+					}
+					confirmLabel='Archive'
+					confirmLoadingLabel='Archiving…'
+					onConfirm={async () => {
+						await archive(toArchive.id).unwrap()
+						setToArchive(null)
+					}}
+					onClose={() => setToArchive(null)}
+				/>
+			)}
+
+			{bulkOpen && (
+				<ConfirmModal
+					icon={<DeleteOutline />}
+					iconTone='danger'
+					confirmColor='error'
+					title={`Delete ${selected.size} entries?`}
+					description='Removes the selected reference entries permanently. Entries referenced by existing change-log rows cannot be deleted — those rows must be edited or removed first.'
+					confirmLabel='Delete'
+					confirmLoadingLabel='Deleting…'
+					isLoading={bulkDeleting}
+					onConfirm={async () => {
+						await bulkDelete({ ids: Array.from(selected) }).unwrap()
+						setSelected(new Set())
+						setBulkOpen(false)
+					}}
+					onClose={() => setBulkOpen(false)}
+				/>
+			)}
+
+			{valuePopup && (
+				<ConfirmModal
+					icon={<ArticleOutlined />}
+					iconTone='info'
+					title='Reference entry'
+					description={
+						<PopupBody>
+							<PopupMeta>
+								<CategoryPill>{valuePopup.category.replace(/_/g, ' ')}</CategoryPill>
+								{valuePopup.profile ? (
+									<ProfileLink profile={valuePopup.profile} max={200} />
+								) : (
+									<EmptyBadge>shared</EmptyBadge>
 								)}
-							</TableCell>
-						</TableRow>
-					))}
-				</TableBody>
-			</Table>
-
-			{/* Create modal */}
-			<Dialog
-				open={createOpen}
-				onClose={() => setCreateOpen(false)}
-				fullWidth
-				maxWidth='sm'
-			>
-				<DialogTitle>New reference entry</DialogTitle>
-				<DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-					<FormControl size='small' fullWidth>
-						<InputLabel>Profile</InputLabel>
-						<Select
-							label='Profile'
-							value={newProfileId}
-							onChange={(e) => setNewProfileId(e.target.value)}
-						>
-							<MenuItem value=''>— shared (all profiles)</MenuItem>
-							{profiles.map((p) => (
-								<MenuItem key={p.id} value={p.id}>
-									{p.name}
-								</MenuItem>
-							))}
-						</Select>
-					</FormControl>
-					<FormControl size='small' fullWidth>
-						<InputLabel>Category</InputLabel>
-						<Select
-							label='Category'
-							value={newCategory}
-							onChange={(e) =>
-								setNewCategory(e.target.value as UpworkReferenceCategory)
-							}
-						>
-							{UPWORK_REFERENCE_CATEGORIES.map((c) => (
-								<MenuItem key={c} value={c}>
-									{c}
-								</MenuItem>
-							))}
-						</Select>
-					</FormControl>
-					<TextField
-						label='Value'
-						value={newValue}
-						onChange={(e) => setNewValue(e.target.value)}
-						required
-					/>
-					<TextField
-						label='Note'
-						value={newNote}
-						onChange={(e) => setNewNote(e.target.value)}
-						multiline
-						rows={2}
-					/>
-					<TextField
-						label='Collected date'
-						type='date'
-						value={newDate}
-						onChange={(e) => setNewDate(e.target.value)}
-						slotProps={{ inputLabel: { shrink: true } }}
-					/>
-				</DialogContent>
-				<DialogActions>
-					<Button onClick={() => setCreateOpen(false)}>Cancel</Button>
-					<Button variant='contained' onClick={submitCreate}>
-						Create
-					</Button>
-				</DialogActions>
-			</Dialog>
-
-			{/* Bulk-add modal */}
-			<Dialog
-				open={bulkOpen}
-				onClose={() => setBulkOpen(false)}
-				fullWidth
-				maxWidth='sm'
-			>
-				<DialogTitle>Bulk add reference entries</DialogTitle>
-				<DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-					<FormControl size='small' fullWidth>
-						<InputLabel>Profile</InputLabel>
-						<Select
-							label='Profile'
-							value={bulkProfileId}
-							onChange={(e) => setBulkProfileId(e.target.value)}
-						>
-							<MenuItem value=''>— shared (all profiles)</MenuItem>
-							{profiles.map((p) => (
-								<MenuItem key={p.id} value={p.id}>
-									{p.name}
-								</MenuItem>
-							))}
-						</Select>
-					</FormControl>
-					<FormControl size='small' fullWidth>
-						<InputLabel>Category</InputLabel>
-						<Select
-							label='Category'
-							value={bulkCategory}
-							onChange={(e) =>
-								setBulkCategory(e.target.value as UpworkReferenceCategory)
-							}
-						>
-							{UPWORK_REFERENCE_CATEGORIES.map((c) => (
-								<MenuItem key={c} value={c}>
-									{c}
-								</MenuItem>
-							))}
-						</Select>
-					</FormControl>
-					<TextField
-						label='Values (one per line)'
-						value={bulkText}
-						onChange={(e) => setBulkText(e.target.value)}
-						multiline
-						rows={10}
-						placeholder={'react developer\ntypescript\nnode.js'}
-					/>
-					<TextField
-						label='Collected date'
-						type='date'
-						value={bulkDate}
-						onChange={(e) => setBulkDate(e.target.value)}
-						slotProps={{ inputLabel: { shrink: true } }}
-					/>
-				</DialogContent>
-				<DialogActions>
-					<Button onClick={() => setBulkOpen(false)}>Cancel</Button>
-					<Button variant='contained' onClick={submitBulk}>
-						Add
-					</Button>
-				</DialogActions>
-			</Dialog>
-		</PageWrap>
+								<span>collected {valuePopup.collectedDate.slice(0, 10)}</span>
+								{valuePopup.frequency != null && (
+									<FreqChip $warm={valuePopup.frequency >= 100}>
+										freq {valuePopup.frequency}
+									</FreqChip>
+								)}
+								<StatusPill $tone={valuePopup.active ? 'success' : 'muted'}>
+									{valuePopup.active ? 'Active' : 'Archived'}
+								</StatusPill>
+							</PopupMeta>
+							<PopupValue>{valuePopup.value}</PopupValue>
+							{valuePopup.note && <PopupNote>{valuePopup.note}</PopupNote>}
+						</PopupBody>
+					}
+					confirmLabel='Edit'
+					confirmColor='primary'
+					cancelLabel='Close'
+					onConfirm={() => {
+						const target = valuePopup
+						setValuePopup(null)
+						nav(`/upwork/reference-data/${target.id}/edit`)
+					}}
+					onClose={() => setValuePopup(null)}
+				/>
+			)}
+		</>
 	)
 }
 
