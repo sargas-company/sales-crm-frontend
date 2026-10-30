@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import {
 	DeleteOutline,
@@ -378,6 +378,7 @@ const COUNTRY_NAMES_REVERSE: Record<string, string> = Object.fromEntries(
 
 const JobPostList = () => {
 	const navigate = useNavigate()
+	const location = useLocation()
 	const { showToast } = useToast()
 	const [searchParams, setSearchParams] = useSearchParams()
 
@@ -434,27 +435,62 @@ const JobPostList = () => {
 		searchParams.get('country') ?? '',
 	)
 
-	// Debounce search input → server request; also snap back to page 1 whenever
-	// the effective query (search or sort) changes.
+	/* Reset-to-page-1 effects detect ACTUAL value changes (not just
+	 * "effect fired") via a ref holding the previous signature. This
+	 * survives React 18 StrictMode double-mount in dev and preserves
+	 * `?p=` on mount after returning from the detail page. */
+	const prevSearch = useRef<string | null>(null)
+	const prevCountry = useRef<string | null>(null)
+	const prevFilters = useRef<string | null>(null)
+
 	useEffect(() => {
 		const h = setTimeout(() => {
-			setSearch(searchInput.trim())
+			const trimmed = searchInput.trim()
+			if (prevSearch.current === null) {
+				prevSearch.current = trimmed
+				return
+			}
+			if (prevSearch.current === trimmed) return
+			prevSearch.current = trimmed
+			setSearch(trimmed)
 			setPage(1)
 		}, SEARCH_DEBOUNCE_MS)
 		return () => clearTimeout(h)
 	}, [searchInput])
 
-	// Country input shares the same debounce timing as Search.
 	useEffect(() => {
 		const h = setTimeout(() => {
-			setFilterCountry(countryInput.trim())
+			const trimmed = countryInput.trim()
+			if (prevCountry.current === null) {
+				prevCountry.current = trimmed
+				return
+			}
+			if (prevCountry.current === trimmed) return
+			prevCountry.current = trimmed
+			setFilterCountry(trimmed)
 			setPage(1)
 		}, SEARCH_DEBOUNCE_MS)
 		return () => clearTimeout(h)
 	}, [countryInput])
 
-	// Reset to page 1 whenever any filter changes.
 	useEffect(() => {
+		const sig = JSON.stringify([
+			filterDecision,
+			filterPriority,
+			filterStatus,
+			filterMinScore,
+			filterMaxScore,
+			filterFrom,
+			filterTo,
+			filterViewed,
+			filterCountry,
+		])
+		if (prevFilters.current === null) {
+			prevFilters.current = sig
+			return
+		}
+		if (prevFilters.current === sig) return
+		prevFilters.current = sig
 		setPage(1)
 	}, [
 		filterDecision,
@@ -598,7 +634,9 @@ const JobPostList = () => {
 		useBulkAnalyzeJobPostsMutation()
 	const openJobPost = (id: string) => {
 		markViewed(id)
-		navigate(`/job-posts/preview/${id}`)
+		navigate(`/job-posts/preview/${id}`, {
+			state: { from: `${location.pathname}${location.search}` },
+		})
 	}
 	const items = data?.data ?? []
 	const total = data?.meta.total ?? 0

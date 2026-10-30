@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import {
+	useLocation,
+	useNavigate,
+	useParams,
+	useSearchParams,
+} from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import {
 	ArrowBackRounded,
@@ -462,6 +467,13 @@ function clientRankVisual(label: string | null | undefined): {
 const JobPostPreview = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
+	const location = useLocation()
+	/* Back-nav: prefer the exact list URL we came from (preserves
+	 * pagination/search/sort/status). Falls back to the default list
+	 * URL when deep-linked / bookmarked / arrived from Discord. */
+	const backTo =
+		(location.state as { from?: string } | null)?.from ??
+		'/job-posts/list?status=any'
 	const [searchParams] = useSearchParams()
 	const { showToast } = useToast()
 	const [showProposalModal, setShowProposalModal] = useState(false)
@@ -716,7 +728,7 @@ const JobPostPreview = () => {
 				<TopRow>
 					<BackChip
 						type='button'
-						onClick={() => navigate('/job-posts/list?status=any')}
+						onClick={() => navigate(backTo)}
 					>
 						<span className='arrow'>
 							<ArrowBackRounded sx={{ fontSize: 16 }} />
