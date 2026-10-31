@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { EditNoteOutlined } from '@mui/icons-material'
 
@@ -25,11 +25,11 @@ import {
 } from '../../../components/_shared/formShell.styled'
 import {
 	UPWORK_CHANGELOG_SECTIONS,
+	UPWORK_SECTION_LABEL,
 	useCreateUpworkChangeLogMutation,
 	useGetUpworkChangeLogQuery,
 	upworkProfileName,
 	useListUpworkProfilesQuery,
-	useListUpworkReferencesQuery,
 	useUpdateUpworkChangeLogMutation,
 	type UpworkChangeLogSection,
 } from '../../../store/upwork/upworkApi'
@@ -49,7 +49,6 @@ interface FormState {
 	reason: string
 	before: string
 	after: string
-	referenceIds: string[]
 }
 
 const empty: FormState = {
@@ -61,7 +60,6 @@ const empty: FormState = {
 	reason: '',
 	before: '',
 	after: '',
-	referenceIds: [],
 }
 
 const UpworkChangeLogForm = ({ mode }: Props) => {
@@ -96,33 +94,12 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 				reason: existing.reason ?? '',
 				before: existing.before,
 				after: existing.after,
-				referenceIds: existing.references.map((r) => r.referenceData.id),
 			})
 		}
 	}, [isEdit, existing])
 
-	const { data: refOptions = [] } = useListUpworkReferencesQuery(
-		{ profileId: fields.profileId || undefined, active: true },
-		{ skip: !fields.profileId },
-	)
-
-	const refById = useMemo(() => {
-		const m = new Map<string, (typeof refOptions)[number]>()
-		for (const r of refOptions) m.set(r.id, r)
-		return m
-	}, [refOptions])
-
 	const setField = <K extends keyof FormState>(k: K, v: FormState[K]) =>
 		setFields((p) => ({ ...p, [k]: v }))
-
-	const toggleRef = (id: string) => {
-		setFields((p) => ({
-			...p,
-			referenceIds: p.referenceIds.includes(id)
-				? p.referenceIds.filter((x) => x !== id)
-				: [...p.referenceIds, id],
-		}))
-	}
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
@@ -143,7 +120,6 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 			reason: fields.reason.trim() || undefined,
 			before: fields.before,
 			after: fields.after,
-			referenceIds: fields.referenceIds,
 		}
 		if (isEdit && id) {
 			await update({ id, patch: payload }).unwrap()
@@ -214,7 +190,7 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 									width='100%'
 								>
 									{UPWORK_CHANGELOG_SECTIONS.map((s) => (
-										<SelectItem key={s} label={s} value={s} />
+										<SelectItem key={s} label={UPWORK_SECTION_LABEL[s]} value={s} />
 									))}
 								</Select>
 							</Field>
@@ -260,9 +236,17 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 					</Section>
 
 					<Section $delay={240}>
-						<SectionHead num='03' title='Before / After' hint='Full text before and after the change.' />
+						<SectionHead
+							num='03'
+							title='Before / After'
+							hint={
+								fields.section === 'job_analysis'
+									? 'Optional for job post analysis — leave empty if this is pure research.'
+									: 'Full text before and after the change.'
+							}
+						/>
 						<FieldGrid>
-							<Field label='Before' span='auto'>
+							<Field label='Before' span='full'>
 								<TextField
 									name='before'
 									value={fields.before}
@@ -273,7 +257,7 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 									style={{ minHeight: 220, resize: 'vertical' }}
 								/>
 							</Field>
-							<Field label='After' span='auto'>
+							<Field label='After' span='full'>
 								<TextField
 									name='after'
 									value={fields.after}
@@ -285,77 +269,6 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 								/>
 							</Field>
 						</FieldGrid>
-					</Section>
-
-					<Section $delay={320}>
-						<SectionHead
-							num='04'
-							title='Reference entries used'
-							hint={
-								fields.profileId
-									? 'Pick which reference entries drove this edit.'
-									: 'Pick a profile first.'
-							}
-						/>
-						{!fields.profileId ? (
-							<div style={{ fontSize: 13, color: '#a5a1b0', padding: '12px 0' }}>
-								—
-							</div>
-						) : refOptions.length === 0 ? (
-							<div style={{ fontSize: 13, color: '#a5a1b0', padding: '12px 0' }}>
-								No reference entries yet for this profile.
-							</div>
-						) : (
-							<div
-								style={{
-									display: 'flex',
-									flexWrap: 'wrap',
-									gap: 8,
-									padding: '4px 0',
-								}}
-							>
-								{refOptions.map((r) => {
-									const on = fields.referenceIds.includes(r.id)
-									return (
-										<button
-											key={r.id}
-											type='button'
-											onClick={() => toggleRef(r.id)}
-											style={{
-												display: 'inline-flex',
-												alignItems: 'center',
-												gap: 6,
-												padding: '6px 12px',
-												borderRadius: 999,
-												border: `1px solid ${on ? '#0369a1' : '#eeecf3'}`,
-												background: on ? '#f0f9ff' : '#ffffff',
-												color: on ? '#0369a1' : '#3a3541',
-												cursor: 'pointer',
-												fontSize: 12.5,
-												fontWeight: on ? 700 : 500,
-												transition: 'all 160ms ease-out',
-											}}
-										>
-											<span style={{ opacity: 0.65 }}>{r.category}:</span>{' '}
-											{r.value}
-										</button>
-									)
-								})}
-							</div>
-						)}
-						{fields.referenceIds.length > 0 && (
-							<div
-								style={{
-									marginTop: 10,
-									fontSize: 12,
-									color: '#7a7686',
-								}}
-							>
-								{fields.referenceIds.length} selected
-							</div>
-						)}
-						{/* refById currently informational; keep for future label expansion */}
-						{refById.size > 0 ? null : null}
 					</Section>
 
 					<FootBar $dark={isDark}>

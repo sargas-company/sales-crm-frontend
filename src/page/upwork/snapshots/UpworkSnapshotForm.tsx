@@ -1,6 +1,10 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { CameraAltOutlined } from '@mui/icons-material'
+import {
+	AddRounded,
+	CameraAltOutlined,
+	DeleteOutline,
+} from '@mui/icons-material'
 
 import { Select, SelectItem, TextField } from '../../../ui'
 import useTheme from '../../../theme/useTheme'
@@ -28,7 +32,6 @@ import {
 	upworkProfileName,
 	useCreateUpworkSnapshotMutation,
 	useListUpworkProfilesQuery,
-	useListUpworkReferencesQuery,
 	useListUpworkSnapshotsQuery,
 	useUpdateUpworkSnapshotMutation,
 } from '../../../store/upwork/upworkApi'
@@ -38,6 +41,12 @@ interface Props {
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
+const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
+
+interface PositionRow {
+	phrase: string
+	position: string // empty string = "skip on save"
+}
 
 interface FormState {
 	profileId: string
@@ -45,7 +54,7 @@ interface FormState {
 	views: string
 	invites: string
 	directMessages: string
-	positions: Record<string, string>
+	positions: PositionRow[]
 }
 
 const empty = (): FormState => ({
@@ -54,7 +63,7 @@ const empty = (): FormState => ({
 	views: '0',
 	invites: '0',
 	directMessages: '0',
-	positions: {},
+	positions: [],
 })
 
 const UpworkSnapshotForm = ({ mode }: Props) => {
@@ -66,25 +75,19 @@ const UpworkSnapshotForm = ({ mode }: Props) => {
 	const isEdit = mode === 'edit'
 
 	const { data: profiles = [] } = useListUpworkProfilesQuery()
-	const activeProfiles = useMemo(() => profiles.filter((p) => p.active), [profiles])
-
-	/* Edit mode: find snapshot in a list query (we don't have a
-	 * single-snapshot query hook — tiny dataset per profile). We
-	 * iterate every active profile until we find the id. */
-	const { data: profileHint, isLoading: hintLoading } =
-		useListUpworkSnapshotsQuery(
-			{ profileId: activeProfiles[0]?.id ?? '' },
-			{ skip: !isEdit || activeProfiles.length === 0 },
-		)
-	void profileHint
+	const activeProfiles = useMemo(
+		() => profiles.filter((p) => p.active),
+		[profiles],
+	)
 
 	const [fields, setFields] = useState<FormState>(empty)
 	const [errors, setErrors] = useState<{ profileId?: string; date?: string }>({})
 	const [loadedExisting, setLoadedExisting] = useState(false)
 	const [notFound, setNotFound] = useState(false)
+	const [prefillAppliedFor, setPrefillAppliedFor] = useState<string | null>(null)
 
-	/* Prefill profile from ?profile= query (coming from the list
-	 * page) on create. */
+	/* Pre-select profile from ?profile= (coming from the list page)
+	 * or default to the first active profile. Only on create. */
 	useEffect(() => {
 		if (!isEdit && !fields.profileId) {
 			const p = sp.get('profile') ?? activeProfiles[0]?.id ?? ''
@@ -93,18 +96,19 @@ const UpworkSnapshotForm = ({ mode }: Props) => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [activeProfiles])
 
-	/* Edit mode — search for the snapshot across all active profiles'
-	 * snapshot lists via the single-profile hook, lazily. */
-	const [existingProbe, setExistingProbe] = useState<number>(0)
-	const probeProfileId = activeProfiles[existingProbe]?.id ?? ''
-	const { data: probeList = [] } = useListUpworkSnapshotsQuery(
-		{ profileId: probeProfileId },
-		{ skip: !isEdit || !probeProfileId || loadedExisting || notFound },
-	)
+	/* Snapshots for the selected profile — used both to find the
+	 * record being edited and to pre-fill phrase rows on create. */
+	const { data: profileSnapshots = [], isLoading: snapshotsLoading } =
+		useListUpworkSnapshotsQuery(
+			{ profileId: fields.profileId },
+			{ skip: !fields.profileId },
+		)
+
+	/* Edit mode: find the snapshot being edited in the loaded list. */
 	useEffect(() => {
-		if (!isEdit || !id || loadedExisting || notFound) return
-		if (!probeProfileId) return
-		const found = probeList.find((s) => s.id === id)
+		if (!isEdit || !id || loadedExisting || notFound || snapshotsLoading) return
+		if (!fields.profileId) return
+		const found = profileSnapshots.find((s) => s.id === id)
 		if (found) {
 			setFields({
 				profileId: found.profileId,
@@ -112,22 +116,51 @@ const UpworkSnapshotForm = ({ mode }: Props) => {
 				views: String(found.views),
 				invites: String(found.invites),
 				directMessages: String(found.directMessages),
-				positions: Object.fromEntries(
-					found.positions.map((p) => [p.referenceDataId, String(p.position)]),
-				),
+				positions: found.positions.map((p) => ({
+					phrase: p.phrase,
+					position: String(p.position),
+				})),
 			})
 			setLoadedExisting(true)
 			return
 		}
-		/* Move to next profile; if we've exhausted, mark not found. */
-		if (existingProbe + 1 >= activeProfiles.length) setNotFound(true)
-		else setExistingProbe((n) => n + 1)
-	}, [isEdit, id, probeList, probeProfileId, existingProbe, activeProfiles.length, loadedExisting, notFound])
+		if (profileSnapshots.length > 0) setNotFound(true)
+	}, [
+		isEdit,
+		id,
+		fields.profileId,
+		profileSnapshots,
+		snapshotsLoading,
+		loadedExisting,
+		notFound,
+	])
 
-	const { data: titlePhrases = [] } = useListUpworkReferencesQuery(
-		{ profileId: fields.profileId, category: 'title_phrase', active: true },
-		{ skip: !fields.profileId },
-	)
+	/* Create mode: when the user picks a profile, pre-fill the
+	 * positions block with phrases from that profile's latest
+	 * snapshot (positions empty — owner types the new rank). */
+	useEffect(() => {
+		if (isEdit || !fields.profileId || snapshotsLoading) return
+		if (prefillAppliedFor === fields.profileId) return
+		const latest = profileSnapshots[0] // backend orders desc
+		if (!latest) {
+			setPrefillAppliedFor(fields.profileId)
+			return
+		}
+		setFields((prev) => ({
+			...prev,
+			positions:
+				prev.positions.length > 0
+					? prev.positions
+					: latest.positions.map((p) => ({ phrase: p.phrase, position: '' })),
+		}))
+		setPrefillAppliedFor(fields.profileId)
+	}, [
+		isEdit,
+		fields.profileId,
+		profileSnapshots,
+		snapshotsLoading,
+		prefillAppliedFor,
+	])
 
 	const [create, { isLoading: creating }] = useCreateUpworkSnapshotMutation()
 	const [update, { isLoading: updating }] = useUpdateUpworkSnapshotMutation()
@@ -135,6 +168,24 @@ const UpworkSnapshotForm = ({ mode }: Props) => {
 
 	const setField = <K extends keyof FormState>(k: K, v: FormState[K]) =>
 		setFields((p) => ({ ...p, [k]: v }))
+
+	const setPositionAt = (i: number, patch: Partial<PositionRow>) =>
+		setFields((p) => ({
+			...p,
+			positions: p.positions.map((row, idx) =>
+				idx === i ? { ...row, ...patch } : row,
+			),
+		}))
+	const addPositionRow = () =>
+		setFields((p) => ({
+			...p,
+			positions: [...p.positions, { phrase: '', position: '' }],
+		}))
+	const removePositionRow = (i: number) =>
+		setFields((p) => ({
+			...p,
+			positions: p.positions.filter((_, idx) => idx !== i),
+		}))
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
@@ -146,12 +197,24 @@ const UpworkSnapshotForm = ({ mode }: Props) => {
 			return
 		}
 		setErrors({})
-		const positions = Object.entries(fields.positions)
-			.map(([referenceDataId, v]) => ({
-				referenceDataId,
-				position: Number(v) || 0,
+
+		/* Rows with empty position are skipped per spec. Normalize +
+		 * dedupe client-side so the UI feedback matches the server. */
+		const seen = new Set<string>()
+		const positions = fields.positions
+			.map((r) => ({
+				phrase: normalize(r.phrase),
+				position: Number(r.position),
 			}))
-			.filter((p) => p.position > 0)
+			.filter(
+				(r) =>
+					r.phrase &&
+					Number.isFinite(r.position) &&
+					r.position > 0 &&
+					!seen.has(r.phrase) &&
+					(seen.add(r.phrase), true),
+			)
+
 		const payload = {
 			date: fields.date,
 			views: Number(fields.views) || 0,
@@ -163,15 +226,16 @@ const UpworkSnapshotForm = ({ mode }: Props) => {
 			await update({ id, patch: payload }).unwrap()
 			nav('/upwork/snapshots')
 		} else {
-			await create({
-				profileId: fields.profileId,
-				...payload,
-			}).unwrap()
+			await create({ profileId: fields.profileId, ...payload }).unwrap()
 			nav('/upwork/snapshots')
 		}
 	}
 
-	if (isEdit && !loadedExisting && !notFound && (hintLoading || existingProbe < activeProfiles.length)) {
+	const selectedProfile =
+		profiles.find((p) => p.id === fields.profileId) ?? null
+	const isSecondary = selectedProfile?.tier === 'secondary'
+
+	if (isEdit && !loadedExisting && !notFound && snapshotsLoading) {
 		return <FormLoading label='Loading snapshot…' />
 	}
 	if (isEdit && notFound) return <FormNotFound label='Snapshot not found' />
@@ -186,8 +250,12 @@ const UpworkSnapshotForm = ({ mode }: Props) => {
 					title={isEdit ? 'Edit snapshot' : 'New snapshot'}
 					subtitle={
 						isEdit
-							? 'Update daily metrics.'
-							: 'One row per profile per day. Views + invites + DMs. Positions optional.'
+							? isSecondary
+								? 'Update monthly totals.'
+								: 'Update daily metrics.'
+							: isSecondary
+								? 'Monthly totals: views + invites + DMs for the past 30 days.'
+								: 'One row per profile per day. Views + invites + DMs. Positions optional.'
 					}
 					badgeLabel={isEdit ? 'Editing' : 'New'}
 					badgeTone={isEdit ? 'edit' : 'new'}
@@ -210,7 +278,11 @@ const UpworkSnapshotForm = ({ mode }: Props) => {
 								>
 									<SelectItem label='— pick a profile' value='' />
 									{activeProfiles.map((p) => (
-										<SelectItem key={p.id} label={upworkProfileName(p)} value={p.id} />
+										<SelectItem
+											key={p.id}
+											label={upworkProfileName(p)}
+											value={p.id}
+										/>
 									))}
 								</Select>
 							</Field>
@@ -229,8 +301,12 @@ const UpworkSnapshotForm = ({ mode }: Props) => {
 					<Section $delay={160}>
 						<SectionHead
 							num='02'
-							title='Daily metrics'
-							hint='Views and invites grow each day; direct messages are per-day too.'
+							title={isSecondary ? 'Monthly totals' : 'Daily metrics'}
+							hint={
+								isSecondary
+									? 'Totals for the past ~30 days. One snapshot per month is the norm.'
+									: 'Views and invites grow each day; direct messages are per-day too.'
+							}
 						/>
 						<FieldGrid>
 							<Field label='Views'>
@@ -263,44 +339,77 @@ const UpworkSnapshotForm = ({ mode }: Props) => {
 						</FieldGrid>
 					</Section>
 
-					{fields.profileId && (
+					{fields.profileId && !isSecondary && (
 						<Section $delay={240}>
 							<SectionHead
 								num='03'
 								title='Positions'
-								hint='Search page per title phrase. Leave 0 if not measured today.'
+								hint='Phrases pre-filled from your last snapshot. Rows with an empty position are not saved.'
 							/>
-							{titlePhrases.length === 0 ? (
+							{fields.positions.length === 0 && (
 								<div style={{ fontSize: 13, color: '#a5a1b0', padding: '12px 0' }}>
-									No title_phrase reference entries yet for this profile.
+									No phrases yet — click “Add phrase” to start tracking a title.
 								</div>
-							) : (
-								<FieldGrid>
-									{titlePhrases.map((tp) => (
-										<Field key={tp.id} label={tp.value}>
+							)}
+							{fields.positions.map((row, i) => (
+								<FieldGrid key={i}>
+									<Field label={i === 0 ? 'Phrase' : ''} span='two-thirds'>
+										<TextField
+											name={`phrase-${i}`}
+											value={row.phrase}
+											onChange={(e) => setPositionAt(i, { phrase: e.target.value })}
+											width='100%'
+											placeholder='e.g. senior react developer'
+										/>
+									</Field>
+									<Field label={i === 0 ? 'Position' : ''} span='third'>
+										<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
 											<TextField
-												name={`pos-${tp.id}`}
+												name={`pos-${i}`}
 												type='number'
-												value={fields.positions[tp.id] ?? ''}
+												value={row.position}
 												onChange={(e) =>
-													setField('positions', {
-														...fields.positions,
-														[tp.id]: e.target.value,
-													})
+													setPositionAt(i, { position: e.target.value })
 												}
 												width='100%'
+												placeholder='empty = skip'
 											/>
-										</Field>
-									))}
+											<button
+												type='button'
+												onClick={() => removePositionRow(i)}
+												title='Remove row'
+												style={{
+													appearance: 'none',
+													border: '1px solid #e2e8f0',
+													background: '#fff',
+													borderRadius: 8,
+													padding: 6,
+													cursor: 'pointer',
+													display: 'inline-flex',
+													color: '#64748b',
+												}}
+											>
+												<DeleteOutline fontSize='small' />
+											</button>
+										</div>
+									</Field>
 								</FieldGrid>
-							)}
+							))}
+							<div style={{ marginTop: 10 }}>
+								<PrimaryGhostButton type='button' onClick={addPositionRow}>
+									<AddRounded fontSize='small' />
+									Add phrase
+								</PrimaryGhostButton>
+							</div>
 						</Section>
 					)}
 
 					<FootBar $dark={isDark}>
 						<FootLeft $dark={isDark}>
 							<DotMini />
-							One snapshot per profile per day.
+							{isSecondary
+								? 'One snapshot per profile per month.'
+								: 'One snapshot per profile per day. Empty-position rows are skipped.'}
 						</FootLeft>
 						<FootActions>
 							<PrimaryGhostButton

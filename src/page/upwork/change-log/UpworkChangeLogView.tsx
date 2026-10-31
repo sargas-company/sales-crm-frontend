@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { EditNoteOutlined, EditOutlined } from '@mui/icons-material'
 
@@ -7,7 +7,6 @@ import {
 	FormHeader,
 	FormLoading,
 	FormNotFound,
-	SectionHead,
 } from '../../../components/_shared/FormShell'
 import {
 	FootActions,
@@ -22,6 +21,7 @@ import {
 } from '../../../components/_shared/formShell.styled'
 import PermissionGate from '../../../components/auth/PermissionGate'
 import {
+	UPWORK_SECTION_LABEL,
 	upworkProfileName,
 	useGetUpworkChangeLogQuery,
 } from '../../../store/upwork/upworkApi'
@@ -100,26 +100,6 @@ const PanelBody = styled.pre`
 	word-break: break-word;
 	margin: 0;
 `
-const RefList = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-	margin-top: 8px;
-`
-const RefChip = styled.span`
-	display: inline-flex;
-	padding: 4px 12px;
-	border-radius: 999px;
-	border: 1px solid #eeecf3;
-	background: #f8f5ff;
-	color: #3a3541;
-	font-size: 12.5px;
-	.cat {
-		color: #7a7686;
-		margin-right: 4px;
-	}
-`
-
 const UpworkChangeLogView = () => {
 	const nav = useNavigate()
 	const { id } = useParams<{ id: string }>()
@@ -150,7 +130,7 @@ const UpworkChangeLogView = () => {
 					<MetaRow>
 						<MetaItem>{data.date.slice(0, 10)}</MetaItem>
 						<MetaItem>{upworkProfileName(data.profile)}</MetaItem>
-						<SectionBadge>{data.section.replace(/_/g, ' ')}</SectionBadge>
+						<SectionBadge>{UPWORK_SECTION_LABEL[data.section]}</SectionBadge>
 					</MetaRow>
 
 					{data.reason && <Reason>{data.reason}</Reason>}
@@ -165,36 +145,6 @@ const UpworkChangeLogView = () => {
 							<PanelBody>{data.after || <em style={{ color: '#a5a1b0' }}>empty</em>}</PanelBody>
 						</Panel>
 					</TwoCol>
-				</Section>
-
-				<Section $delay={160}>
-					<SectionHead
-						num='02'
-						title='Reference entries used'
-						hint={
-							data.references.length
-								? `${data.references.length} entries drove this change.`
-								: 'No reference entries attached.'
-						}
-					/>
-					<RefList>
-						{data.references.length === 0 ? (
-							<span style={{ color: '#a5a1b0', fontSize: 13 }}>—</span>
-						) : (
-							data.references.map((r) => (
-								<Link
-									key={r.referenceData.id}
-									to={`/upwork/reference-data/${r.referenceData.id}/edit`}
-									style={{ textDecoration: 'none' }}
-								>
-									<RefChip>
-										<span className='cat'>{r.referenceData.category}:</span>
-										{r.referenceData.value}
-									</RefChip>
-								</Link>
-							))
-						)}
-					</RefList>
 				</Section>
 
 				<FootBar $dark={isDark}>

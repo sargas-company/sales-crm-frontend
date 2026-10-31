@@ -13,7 +13,9 @@ import {
 	InlineSelect,
 } from '../../../components/_shared/filters/freshPaperFilters'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
+import { StatusPill } from '../_shared/cells'
 import {
+	UPWORK_PROFILE_TIER_LABEL,
 	upworkProfileName,
 	useGetUpworkRemindersQuery,
 	useListUpworkProfilesQuery,
@@ -129,6 +131,12 @@ const BlockHead = styled.header`
 		letter-spacing: 0.2px;
 	}
 `
+
+const TierPill = ({ tier }: { tier: 'primary' | 'secondary' }) => (
+	<StatusPill $tone={tier === 'primary' ? 'warn' : 'muted'}>
+		{UPWORK_PROFILE_TIER_LABEL[tier]}
+	</StatusPill>
+)
 
 const HeadlineRow = styled.div`
 	display: grid;
@@ -246,6 +254,7 @@ const ProfileReminders = ({
 			<Block $delay={delay}>
 				<BlockHead>
 					<span className='name'>{upworkProfileName(profile)}</span>
+					<TierPill tier={profile.tier} />
 				</BlockHead>
 				<Hint>Loading…</Hint>
 			</Block>
@@ -257,6 +266,7 @@ const ProfileReminders = ({
 			<Block $delay={delay}>
 				<BlockHead>
 					<span className='name'>{upworkProfileName(profile)}</span>
+					<TierPill tier={profile.tier} />
 					<span className='n'>0 reminders</span>
 				</BlockHead>
 				<Clean>
@@ -271,6 +281,7 @@ const ProfileReminders = ({
 		<Block $delay={delay}>
 			<BlockHead>
 				<span className='name'>{upworkProfileName(profile)}</span>
+				<TierPill tier={profile.tier} />
 				<span className='n'>{reminders.length} reminders</span>
 			</BlockHead>
 			<HeadlineRow>
@@ -315,12 +326,15 @@ const Clean = styled.div`
 	gap: 12px;
 	align-items: center;
 	padding: 16px 20px;
-	border: 1px solid #dcfce7;
+	border: 1px solid ${T.border};
 	border-radius: 12px;
-	background: #f0fdf4;
-	color: #15803d;
+	background: ${T.cardBg};
+	color: ${T.textSecondary};
 	font-size: 14px;
 	font-weight: 600;
+	svg {
+		color: ${T.textMuted};
+	}
 `
 
 const Stack = styled.div`
@@ -332,7 +346,16 @@ const Stack = styled.div`
 const UpworkRemindersPage = () => {
 	const { data: profiles = [] } = useListUpworkProfilesQuery()
 	const activeProfiles = useMemo(
-		() => profiles.filter((p) => p.active),
+		() =>
+			profiles
+				.filter((p) => p.active)
+				.slice()
+				.sort((a, b) => {
+					const ta = a.tier === 'primary' ? 0 : 1
+					const tb = b.tier === 'primary' ? 0 : 1
+					if (ta !== tb) return ta - tb
+					return upworkProfileName(a).localeCompare(upworkProfileName(b))
+				}),
 		[profiles],
 	)
 	const [selection, setSelection] = useState<string>('')

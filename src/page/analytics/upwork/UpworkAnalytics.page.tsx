@@ -36,6 +36,7 @@ import {
 } from '../../../components/_shared/filters/freshPaperFilters'
 
 import {
+	UPWORK_SECTION_LABEL,
 	upworkProfileName,
 	useGetUpworkAnalyticsQuery,
 	useListUpworkProfilesQuery,
@@ -486,6 +487,13 @@ const CHART_COLORS = [
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
+function fmtDelta(d: number, decimals = 0): string {
+	if (d === 0) return '±0'
+	const sign = d > 0 ? '+' : '−'
+	const n = Math.abs(d)
+	return `${sign}${decimals > 0 ? n.toFixed(decimals) : Math.round(n).toLocaleString()}`
+}
+
 const SNAP_PAGE_SIZE = 10
 
 interface SnapshotFormState {
@@ -544,6 +552,49 @@ const UpworkAnalyticsPage = () => {
 		{ profileId, from, to },
 		{ skip: !profileId },
 	)
+
+	const selectedProfile = profiles.find((p) => p.id === profileId) ?? null
+	const isSecondary = selectedProfile?.tier === 'secondary'
+
+	/* Secondary profiles use "latest vs previous" KPI regardless of the
+	 * selected range — one monthly snapshot can land outside a 30-day
+	 * window, so the strip needs the two newest snapshots *globally*
+	 * for the profile. Backend already orders by date desc; take [0]
+	 * and [1]. */
+	const { data: allSnapshotsForTier = [] } = useListUpworkSnapshotsQuery(
+		{ profileId },
+		{ skip: !profileId || !isSecondary },
+	)
+	const secondaryDelta = useMemo(() => {
+		if (!isSecondary) return null
+		const [latest, previous] = allSnapshotsForTier
+		if (!latest) return null
+		const vpi = (s: typeof latest) =>
+			s.invites > 0 ? s.views / s.invites : null
+		return {
+			latest,
+			previous: previous ?? null,
+			views: {
+				v: latest.views,
+				d: previous ? latest.views - previous.views : null,
+			},
+			invites: {
+				v: latest.invites,
+				d: previous ? latest.invites - previous.invites : null,
+			},
+			directMessages: {
+				v: latest.directMessages,
+				d: previous ? latest.directMessages - previous.directMessages : null,
+			},
+			vpi: {
+				v: vpi(latest),
+				d:
+					previous && vpi(latest) != null && vpi(previous) != null
+						? (vpi(latest) as number) - (vpi(previous) as number)
+						: null,
+			},
+		}
+	}, [isSecondary, allSnapshotsForTier])
 	/* Aggregate change-log markers into a section-distribution bar.
 	 * Colors mirror the per-section palette elsewhere in the module. */
 	const sectionActivity = useMemo(() => {
@@ -629,7 +680,7 @@ const UpworkAnalyticsPage = () => {
 							<span className='dot'>★</span>
 							<div className='body'>
 								<span className='k'>
-									Latest change · {latestChange.section.replace(/_/g, ' ')}
+									Latest change · {UPWORK_SECTION_LABEL[latestChange.section as keyof typeof UPWORK_SECTION_LABEL] ?? latestChange.section.replace(/_/g, ' ')}
 								</span>
 								<span className='sum'>{latestChange.summary}</span>
 								<span className='meta'>{latestChange.date}</span>
@@ -680,7 +731,71 @@ const UpworkAnalyticsPage = () => {
 					</SectionCard>
 				)}
 
-				{profileId && (
+				{profileId && isSecondary && (
+					<KpiPanel>
+						<KpiHeader>
+							<span className='kpi-kicker'>Latest vs previous snapshot</span>
+							<span className='kpi-period'>
+								<span className='kpi-period-dot' aria-hidden='true' />
+								{secondaryDelta?.previous
+									? `${secondaryDelta.latest.date.slice(0, 10)} vs ${secondaryDelta.previous.date.slice(0, 10)}`
+									: secondaryDelta?.latest
+										? secondaryDelta.latest.date.slice(0, 10)
+										: 'No snapshots yet'}
+							</span>
+						</KpiHeader>
+						<KpiStrip>
+							<KpiCell>
+								<div className='kpi-label'>Views</div>
+								<div className='kpi-value'>
+									{secondaryDelta?.latest ? secondaryDelta.views.v.toLocaleString() : '—'}
+								</div>
+								<div className='kpi-caption'>
+									{secondaryDelta?.views.d == null
+										? 'no previous snapshot'
+										: fmtDelta(secondaryDelta.views.d)}
+								</div>
+							</KpiCell>
+							<KpiCell>
+								<div className='kpi-label'>Invites</div>
+								<div className='kpi-value'>
+									{secondaryDelta?.latest ? secondaryDelta.invites.v.toLocaleString() : '—'}
+								</div>
+								<div className='kpi-caption'>
+									{secondaryDelta?.invites.d == null
+										? 'no previous snapshot'
+										: fmtDelta(secondaryDelta.invites.d)}
+								</div>
+							</KpiCell>
+							<KpiCell>
+								<div className='kpi-label'>Direct messages</div>
+								<div className='kpi-value'>
+									{secondaryDelta?.latest
+										? secondaryDelta.directMessages.v.toLocaleString()
+										: '—'}
+								</div>
+								<div className='kpi-caption'>
+									{secondaryDelta?.directMessages.d == null
+										? 'no previous snapshot'
+										: fmtDelta(secondaryDelta.directMessages.d)}
+								</div>
+							</KpiCell>
+							<KpiCell>
+								<div className='kpi-label'>Views / invite</div>
+								<div className='kpi-value'>
+									{secondaryDelta?.vpi.v == null ? '—' : secondaryDelta.vpi.v.toFixed(1)}
+								</div>
+								<div className='kpi-caption'>
+									{secondaryDelta?.vpi.d == null
+										? 'no previous snapshot'
+										: fmtDelta(secondaryDelta.vpi.d, 1)}
+								</div>
+							</KpiCell>
+						</KpiStrip>
+					</KpiPanel>
+				)}
+
+				{profileId && !isSecondary && (
 					<KpiPanel>
 						<KpiHeader>
 							<span className='kpi-kicker'>At a glance</span>
@@ -725,7 +840,7 @@ const UpworkAnalyticsPage = () => {
 					</KpiPanel>
 				)}
 
-				{profileId && sectionActivity.length > 0 && (
+				{profileId && !isSecondary && sectionActivity.length > 0 && (
 					<SectionCard
 						title='Change-log activity by section'
 						hint={`${totalSectionCount} entries in the selected range.`}
@@ -740,7 +855,7 @@ const UpworkAnalyticsPage = () => {
 								{sectionActivity.map((s) => (
 									<SumLegendRow key={s.section} $c={s.color}>
 										<span className='dot' />
-										<span className='sec'>{s.section.replace(/_/g, ' ').toUpperCase()}</span>
+										<span className='sec'>{(UPWORK_SECTION_LABEL[s.section as keyof typeof UPWORK_SECTION_LABEL] ?? s.section.replace(/_/g, ' ')).toUpperCase()}</span>
 										<span className='n'>{s.count}</span>
 									</SumLegendRow>
 								))}
@@ -749,7 +864,7 @@ const UpworkAnalyticsPage = () => {
 					</SectionCard>
 				)}
 
-				{profileId && analytics && (
+				{profileId && !isSecondary && analytics && (
 					<SectionCard
 						title='Weekly trends'
 						hint='Three independent charts — each metric gets its own Y-axis, so small-magnitude series are not flat-lined by big ones.'
@@ -797,8 +912,12 @@ const UpworkAnalyticsPage = () => {
 
 				{profileId && snapshots.length > 0 && (
 					<SectionCard
-						title='Recent daily snapshots'
-						hint='Last 15 days — raw per-day numbers. Edit individual rows from the Snapshots page.'
+						title={isSecondary ? 'Recent monthly snapshots' : 'Recent daily snapshots'}
+						hint={
+							isSecondary
+								? 'Each bar = one monthly totals snapshot. Edit individual rows from the Snapshots page.'
+								: 'Last 15 days — raw per-day numbers. Edit individual rows from the Snapshots page.'
+						}
 					>
 						<ChartWrap>
 							<LegendRow>

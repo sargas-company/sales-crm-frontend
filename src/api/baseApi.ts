@@ -69,7 +69,6 @@ export const baseApi = createApi({
 		'FileManager',
 		'AiSpend',
 		'UpworkProfile',
-		'UpworkReference',
 		'UpworkChangeLog',
 		'UpworkSnapshot',
 		'UpworkReminders',

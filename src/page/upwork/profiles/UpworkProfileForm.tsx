@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { WorkspacePremiumOutlined } from '@mui/icons-material'
 
-import { Checkbox, TextField } from '../../../ui'
+import { Checkbox, Select, SelectItem, TextField } from '../../../ui'
 import useTheme from '../../../theme/useTheme'
 import {
 	Field,
@@ -24,19 +24,25 @@ import {
 	Surface,
 } from '../../../components/_shared/formShell.styled'
 import {
+	UPWORK_PROFILE_TIER_LABEL,
+	UPWORK_PROFILE_TIERS,
 	useCreateUpworkProfileMutation,
 	useGetUpworkProfileQuery,
 	useUpdateUpworkProfileMutation,
+	type UpworkProfileTier,
 } from '../../../store/upwork/upworkApi'
 
 interface Props {
 	mode: 'create' | 'edit'
 }
 
+const TITLE_MAX = 70
+
 interface FormState {
 	firstName: string
 	lastName: string
 	title: string
+	tier: UpworkProfileTier
 	url: string
 	note: string
 	active: boolean
@@ -46,6 +52,7 @@ const empty: FormState = {
 	firstName: '',
 	lastName: '',
 	title: '',
+	tier: 'secondary',
 	url: '',
 	note: '',
 	active: true,
@@ -69,7 +76,9 @@ const UpworkProfileForm = ({ mode }: Props) => {
 	const isLoading = creating || updating
 
 	const [fields, setFields] = useState<FormState>(empty)
-	const [errors, setErrors] = useState<{ firstName?: string }>({})
+	const [errors, setErrors] = useState<{ firstName?: string; title?: string }>(
+		{},
+	)
 
 	useEffect(() => {
 		if (isEdit && existing) {
@@ -77,6 +86,7 @@ const UpworkProfileForm = ({ mode }: Props) => {
 				firstName: existing.firstName,
 				lastName: existing.lastName ?? '',
 				title: existing.title ?? '',
+				tier: existing.tier,
 				url: existing.url ?? '',
 				note: existing.note ?? '',
 				active: existing.active,
@@ -90,8 +100,14 @@ const UpworkProfileForm = ({ mode }: Props) => {
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
 		const firstName = fields.firstName.trim()
-		if (!firstName) {
-			setErrors({ firstName: 'First name is required' })
+		const title = fields.title.trim()
+		const next: typeof errors = {}
+		if (!firstName) next.firstName = 'First name is required'
+		if (title.length > TITLE_MAX) {
+			next.title = `Title must be ≤ ${TITLE_MAX} characters (${title.length} now)`
+		}
+		if (Object.keys(next).length) {
+			setErrors(next)
 			return
 		}
 		setErrors({})
@@ -99,6 +115,7 @@ const UpworkProfileForm = ({ mode }: Props) => {
 			firstName,
 			lastName: fields.lastName.trim() || undefined,
 			title: fields.title.trim() || undefined,
+			tier: fields.tier,
 			url: fields.url.trim() || undefined,
 			note: fields.note.trim() || undefined,
 			active: fields.active,
@@ -157,13 +174,37 @@ const UpworkProfileForm = ({ mode }: Props) => {
 									width='100%'
 								/>
 							</Field>
-							<Field label='Title' span='two-thirds' hint='e.g. Senior Full-Stack · React + Node'>
+							<Field
+								label='Title'
+								span='full'
+								error={errors.title}
+								hint={`e.g. Senior Full-Stack · React + Node — ${fields.title.length}/${TITLE_MAX}`}
+							>
 								<TextField
 									name='title'
 									value={fields.title}
-									onChange={(e) => setField('title', e.target.value)}
+									onChange={(e) =>
+										setField('title', e.target.value.slice(0, TITLE_MAX))
+									}
+									maxLength={TITLE_MAX}
+									error={!!errors.title}
 									width='100%'
 								/>
+							</Field>
+							<Field
+								label='Tier'
+								span='two-thirds'
+								hint='Primary = vitrine profile (strict reminder cadence). Secondary = worker profile (monthly stats only).'
+							>
+								<Select
+									value={fields.tier}
+									onChange={(v) => setField('tier', v as UpworkProfileTier)}
+									width='100%'
+								>
+									{UPWORK_PROFILE_TIERS.map((t) => (
+										<SelectItem key={t} label={UPWORK_PROFILE_TIER_LABEL[t]} value={t} />
+									))}
+								</Select>
 							</Field>
 							<Field label='Status' span='third'>
 								<label

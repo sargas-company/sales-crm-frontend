@@ -32,17 +32,14 @@ import {
 	SearchPill,
 } from '../../../components/_shared/filters/freshPaperFilters'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
-import {
-	CategoryPill,
-	Clip,
-	DateTimeCell,
-	NumCell,
-} from '../_shared/cells'
+import styled from 'styled-components'
+import { Clip, DateTimeCell } from '../_shared/cells'
 import { ProfileLink } from '../_shared/ProfileLink'
 import { FilterTapes } from '../_shared/FilterTapes'
 
 import {
 	UPWORK_CHANGELOG_SECTIONS,
+	UPWORK_SECTION_LABEL,
 	upworkProfileName,
 	useDeleteUpworkChangeLogMutation,
 	useListUpworkChangeLogQuery,
@@ -52,6 +49,43 @@ import {
 } from '../../../store/upwork/upworkApi'
 
 const PAGE_SIZE = 25
+
+/* 9 colour tokens — same geometry and transparency model as
+ * `StatusPill` in `_shared/cells.tsx` (project canonical pill):
+ *   4px/10px padding · 11px / weight 700 · 0.3 letter-spacing ·
+ *   rgba(colour, ~0.12) background · fg = colour anchor.
+ * Reuses existing tone anchors (success / danger / warn / muted /
+ * info / category purple) and adds 3 compatible siblings
+ * (cyan / indigo / rose). */
+const SECTION_PALETTE: Record<
+	UpworkChangeLogSection,
+	{ bg: string; fg: string }
+> = {
+	title: { bg: 'rgba(3, 105, 161, 0.12)', fg: '#0369a1' },
+	overview: { bg: 'rgba(124, 58, 237, 0.10)', fg: '#6d28d9' },
+	skills: { bg: 'rgba(34, 197, 94, 0.14)', fg: '#15803d' },
+	portfolio: { bg: 'rgba(245, 158, 11, 0.16)', fg: '#a26608' },
+	project_catalog: { bg: 'rgba(239, 68, 68, 0.12)', fg: '#b91c1c' },
+	consultation: { bg: 'rgba(6, 182, 212, 0.14)', fg: '#0e7490' },
+	certificate: { bg: 'rgba(99, 102, 241, 0.14)', fg: '#4338ca' },
+	employment_history: { bg: 'rgba(244, 63, 94, 0.12)', fg: '#be123c' },
+	other_experience: { bg: 'rgba(100, 116, 139, 0.12)', fg: '#64748b' },
+	job_analysis: { bg: 'rgba(217, 119, 6, 0.14)', fg: '#92400e' },
+}
+
+const SectionPill = styled.span<{ $section: UpworkChangeLogSection }>`
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	white-space: nowrap;
+	background: ${({ $section }) => SECTION_PALETTE[$section].bg};
+	color: ${({ $section }) => SECTION_PALETTE[$section].fg};
+`
 
 type RangePreset = 'all' | '7d' | '30d' | '90d'
 const RANGE_PRESETS: { value: RangePreset; label: string }[] = [
@@ -155,28 +189,44 @@ const UpworkChangeLogPage = () => {
 			label: 'Section',
 			sortable: true,
 			sortValue: (r) => r.section,
-			render: (r) => <CategoryPill>{r.section.replace(/_/g, ' ')}</CategoryPill>,
-			skeleton: () => <TableSkeleton $w='90px' $h='18px' />,
+			render: (r) => (
+				<SectionPill $section={r.section}>
+					{UPWORK_SECTION_LABEL[r.section]}
+				</SectionPill>
+			),
+			skeleton: () => <TableSkeleton $w='110px' $h='18px' />,
 		},
 		{
-			key: 'summary',
-			label: 'Summary',
+			key: 'change',
+			label: 'What changed',
 			render: (r) => (
-				<Clip $max={360}>
-					<Link
-						to={`/upwork/change-log/${r.id}`}
-						style={{ color: '#252d3a', textDecoration: 'none', fontWeight: 400 }}
+				<Link
+					to={`/upwork/change-log/${r.id}`}
+					style={{ display: 'block', textDecoration: 'none' }}
+				>
+					{r.item && (
+						<div
+							style={{
+								fontFamily: 'Bricolage Grotesque, Inter, system-ui, sans-serif',
+								fontSize: 14,
+								fontWeight: 700,
+								color: '#0f172a',
+								letterSpacing: '-0.3px',
+								marginBottom: 2,
+							}}
+						>
+							{r.item}
+						</div>
+					)}
+					<Clip
+						$max={420}
+						style={{ color: '#475569', fontSize: 12.5, fontWeight: 400 }}
 					>
 						{r.summary}
-					</Link>
-				</Clip>
+					</Clip>
+				</Link>
 			),
 			skeleton: () => <TableSkeleton $w='240px' $h='13px' />,
-		},
-		{
-			key: 'refs',
-			label: 'Refs',
-			render: (r) => <NumCell>{r.references.length}</NumCell>,
 		},
 		{
 			key: 'actions',
@@ -296,7 +346,7 @@ const UpworkChangeLogPage = () => {
 									<option value=''>All</option>
 									{UPWORK_CHANGELOG_SECTIONS.map((s) => (
 										<option key={s} value={s}>
-											{s}
+											{UPWORK_SECTION_LABEL[s]}
 										</option>
 									))}
 								</InlineSelect>

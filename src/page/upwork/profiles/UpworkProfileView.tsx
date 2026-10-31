@@ -30,11 +30,11 @@ import PermissionGate from '../../../components/auth/PermissionGate'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
 
 import {
+	UPWORK_SECTION_LABEL,
 	upworkProfileName,
 	useDeleteUpworkProfileMutation,
 	useGetUpworkProfileQuery,
 	useListUpworkChangeLogQuery,
-	useListUpworkReferencesQuery,
 	useListUpworkSnapshotsQuery,
 } from '../../../store/upwork/upworkApi'
 import { CategoryPill, DateTimeCell, EmptyBadge, StatusPill } from '../_shared/cells'
@@ -213,10 +213,6 @@ const UpworkProfileView = () => {
 	const { data, isLoading, isError } = useGetUpworkProfileQuery(id ?? '', {
 		skip: !id,
 	})
-	const { data: refs = [] } = useListUpworkReferencesQuery(
-		{ profileId: id, active: true },
-		{ skip: !id },
-	)
 	const { data: changeLog = [] } = useListUpworkChangeLogQuery(
 		{ profileId: id },
 		{ skip: !id },
@@ -263,6 +259,9 @@ const UpworkProfileView = () => {
 									<EmptyBadge>no title</EmptyBadge>
 								)}
 								<HeroMeta>
+									<StatusPill $tone={data.tier === 'primary' ? 'warn' : 'muted'}>
+										{data.tier === 'primary' ? 'Primary' : 'Secondary'}
+									</StatusPill>
 									<StatusPill $tone={data.active ? 'success' : 'muted'}>
 										{data.active ? 'Active' : 'Archived'}
 									</StatusPill>
@@ -286,11 +285,6 @@ const UpworkProfileView = () => {
 
 						<StatsStrip>
 							<StatCell>
-								<span className='k'>Reference entries</span>
-								<span className='v'>{refs.length.toLocaleString()}</span>
-								<span className='cap'>active rows for this profile</span>
-							</StatCell>
-							<StatCell>
 								<span className='k'>Change log</span>
 								<span className='v'>{changeLog.length.toLocaleString()}</span>
 								<span className='cap'>recorded edits</span>
@@ -313,7 +307,7 @@ const UpworkProfileView = () => {
 									{recent.map((r) => (
 										<RecentRow key={r.id} to={`/upwork/change-log/${r.id}`}>
 											<DateTimeCell iso={r.date} />
-											<CategoryPill>{r.section.replace(/_/g, ' ')}</CategoryPill>
+											<CategoryPill>{UPWORK_SECTION_LABEL[r.section]}</CategoryPill>
 											<span className='sum'>{r.summary}</span>
 											<span className='arrow'>→</span>
 										</RecentRow>

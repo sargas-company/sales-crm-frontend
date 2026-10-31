@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
 	AddRounded,
+	ArrowDownwardRounded,
+	ArrowUpwardRounded,
 	CameraAltOutlined,
 	ClearRounded,
 	DeleteOutline,
 	EditOutlined,
 	FilterListOutlined,
+	TrendingFlatRounded,
 } from '@mui/icons-material'
 
 import { ListPageShell } from '../../../components/_shared/ListPageShell'
@@ -33,8 +36,92 @@ const FreshFiltersWrap = styled(BaseFreshFiltersWrap)`
 	width: 100%;
 	box-sizing: border-box;
 `
+
+/* Visual separation ONLY between the four metric columns in the
+ * body — header is untouched. A dashed divider appears to the left
+ * of every metric cell except the first one. */
+const TableScope = styled.div`
+	table tbody td.cell--metric + td.cell--metric {
+		border-left: 1px dashed #e2e8f0;
+	}
+`
+
+/* ─── Trend cell (same visual language as the Position column
+ *   on the profiles list — arrow + delta, then the raw value). */
+const TREND_TONE = {
+	gain: '#166534',
+	loss: '#991b1b',
+	flat: '#475569',
+	none: '#94a3b8',
+}
+const TrendWrap = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 14px;
+`
+const TrendArrow = styled.div<{ $t: 'gain' | 'loss' | 'flat' | 'none' }>`
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	min-width: 52px;
+	font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1;
+	letter-spacing: -0.3px;
+	font-variant-numeric: tabular-nums;
+	color: ${({ $t }) => TREND_TONE[$t]};
+	svg {
+		font-size: 15px;
+	}
+`
+const TrendValue = styled.span`
+	font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+	font-size: 17px;
+	font-weight: 900;
+	letter-spacing: -0.5px;
+	color: #0f172a;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	line-height: 1;
+`
+const TrendCell = ({
+	value,
+	previous,
+	format = (n: number) => n.toLocaleString(),
+}: {
+	value: number
+	previous: number | null | undefined
+	format?: (n: number) => string
+}) => {
+	const delta = previous == null ? null : value - previous
+	const t: 'gain' | 'loss' | 'flat' | 'none' =
+		delta == null ? 'none' : delta > 0 ? 'gain' : delta < 0 ? 'loss' : 'flat'
+	return (
+		<TrendWrap>
+			<TrendArrow $t={t}>
+				{delta == null ? (
+					'·'
+				) : t === 'gain' ? (
+					<>
+						<ArrowUpwardRounded />+{format(delta)}
+					</>
+				) : t === 'loss' ? (
+					<>
+						<ArrowDownwardRounded />−{format(Math.abs(delta))}
+					</>
+				) : (
+					<>
+						<TrendingFlatRounded />0
+					</>
+				)}
+			</TrendArrow>
+			<TrendValue>{format(value)}</TrendValue>
+		</TrendWrap>
+	)
+}
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
-import { DateTimeCell, NumCell } from '../_shared/cells'
+import { DateTimeCell } from '../_shared/cells'
 import { ProfileLink } from '../_shared/ProfileLink'
 
 import {
@@ -56,15 +143,6 @@ const UpworkSnapshotsPage = () => {
 
 	const profileParam = sp.get('profile') ?? ''
 
-	useEffect(() => {
-		if (!profileParam && activeProfiles.length) {
-			const next = new URLSearchParams(sp)
-			next.set('profile', activeProfiles[0].id)
-			setSp(next, { replace: true })
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [activeProfiles])
-
 	const [page, setPage] = useState(1)
 	const [sort, setSort] = useState<SortState | null>({
 		key: 'date',
@@ -72,10 +150,12 @@ const UpworkSnapshotsPage = () => {
 	})
 	const [toDelete, setToDelete] = useState<UpworkSnapshot | null>(null)
 
+	/* "All profiles" is the default — profileParam = '' triggers a
+	 * global list (no profile filter). Only when the owner picks a
+	 * specific profile do we send profileId. */
 	const { data: snapshots = [], isLoading, isError, refetch } =
 		useListUpworkSnapshotsQuery(
-			{ profileId: profileParam },
-			{ skip: !profileParam },
+			profileParam ? { profileId: profileParam } : {},
 		)
 	const [del, { isLoading: deleting }] = useDeleteUpworkSnapshotMutation()
 
@@ -89,7 +169,29 @@ const UpworkSnapshotsPage = () => {
 		[snapshots, page],
 	)
 
-	const activeProfile = activeProfiles.find((p) => p.id === profileParam)
+	/* For every row, the "previous" (older) snapshot is the next
+	 * snapshot of THE SAME PROFILE in date-desc order. In single-
+	 * profile view this reduces to "next row"; in All view each
+	 * profile's snapshots form their own stream. */
+	const prevById = useMemo(() => {
+		const byProfile = new Map<string, UpworkSnapshot[]>()
+		for (const s of snapshots) {
+			const arr = byProfile.get(s.profileId) ?? []
+			arr.push(s)
+			byProfile.set(s.profileId, arr)
+		}
+		const map = new Map<string, UpworkSnapshot>()
+		for (const arr of byProfile.values()) {
+			arr.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+			for (let i = 0; i < arr.length - 1; i++) map.set(arr[i].id, arr[i + 1])
+		}
+		return map
+	}, [snapshots])
+
+	const profilesById = useMemo(
+		() => new Map(profiles.map((p) => [p.id, p])),
+		[profiles],
+	)
 
 	const columns: DataTableColumn<UpworkSnapshot>[] = [
 		{
@@ -103,40 +205,66 @@ const UpworkSnapshotsPage = () => {
 		{
 			key: 'profile',
 			label: 'Profile',
-			render: () =>
-				activeProfile ? (
-					<ProfileLink
-						profile={activeProfile}
-						max={200}
-					/>
-				) : null,
+			sortable: true,
+			sortValue: (r) => {
+				const p = profilesById.get(r.profileId)
+				return p ? upworkProfileName(p) : ''
+			},
+			render: (r) => {
+				const p = profilesById.get(r.profileId)
+				return p ? <ProfileLink profile={p} max={200} /> : null
+			},
 			skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
 		},
 		{
 			key: 'views',
 			label: 'Views',
+			className: 'cell--metric',
 			sortable: true,
 			sortValue: (r) => r.views,
-			render: (r) => <NumCell>{r.views.toLocaleString()}</NumCell>,
+			render: (r) => (
+				<TrendCell value={r.views} previous={prevById.get(r.id)?.views} />
+			),
+			skeleton: () => <TableSkeleton $w='130px' $h='24px' />,
 		},
 		{
 			key: 'invites',
 			label: 'Invites',
+			className: 'cell--metric',
 			sortable: true,
 			sortValue: (r) => r.invites,
-			render: (r) => <NumCell>{r.invites.toLocaleString()}</NumCell>,
+			render: (r) => (
+				<TrendCell value={r.invites} previous={prevById.get(r.id)?.invites} />
+			),
+			skeleton: () => <TableSkeleton $w='130px' $h='24px' />,
 		},
 		{
 			key: 'directMessages',
 			label: 'Direct msgs',
+			className: 'cell--metric',
 			sortable: true,
 			sortValue: (r) => r.directMessages,
-			render: (r) => <NumCell>{r.directMessages.toLocaleString()}</NumCell>,
+			render: (r) => (
+				<TrendCell
+					value={r.directMessages}
+					previous={prevById.get(r.id)?.directMessages}
+				/>
+			),
+			skeleton: () => <TableSkeleton $w='130px' $h='24px' />,
 		},
 		{
 			key: 'positions',
 			label: 'Positions',
-			render: (r) => <NumCell>{r.positions.length}</NumCell>,
+			className: 'cell--metric',
+			sortable: true,
+			sortValue: (r) => r.positions.length,
+			render: (r) => (
+				<TrendCell
+					value={r.positions.length}
+					previous={prevById.get(r.id)?.positions.length}
+				/>
+			),
+			skeleton: () => <TableSkeleton $w='130px' $h='24px' />,
 		},
 		{
 			key: 'actions',
@@ -169,7 +297,7 @@ const UpworkSnapshotsPage = () => {
 	}
 
 	const clearFilters = () => {
-		if (activeProfiles[0]) updateParam('profile', activeProfiles[0].id)
+		updateParam('profile', '')
 		setSort({ key: 'date', direction: 'desc' })
 	}
 
@@ -214,9 +342,7 @@ const UpworkSnapshotsPage = () => {
 									onChange={(e) => updateParam('profile', e.target.value)}
 									disabled={activeProfiles.length === 0}
 								>
-									{activeProfiles.length === 0 && (
-										<option value=''>No active profiles</option>
-									)}
+									<option value=''>All profiles</option>
 									{activeProfiles.map((p) => (
 										<option key={p.id} value={p.id}>
 											{upworkProfileName(p)}
@@ -235,26 +361,28 @@ const UpworkSnapshotsPage = () => {
 					</FreshFiltersWrap>
 				}
 			>
-				<DataTable<UpworkSnapshot>
-					columns={columns}
-					rows={paged}
-					rowKey={(r) => r.id}
-					isLoading={isLoading}
-					isError={isError}
-					onRetry={refetch}
-					emptyTitle='No snapshots yet.'
-					sort={sort}
-					onSortChange={(next) => {
-						setSort(next)
-						setPage(1)
-					}}
-					pagination={{
-						page,
-						pageSize: PAGE_SIZE,
-						total,
-						onPageChange: setPage,
-					}}
-				/>
+				<TableScope>
+					<DataTable<UpworkSnapshot>
+						columns={columns}
+						rows={paged}
+						rowKey={(r) => r.id}
+						isLoading={isLoading}
+						isError={isError}
+						onRetry={refetch}
+						emptyTitle='No snapshots yet.'
+						sort={sort}
+						onSortChange={(next) => {
+							setSort(next)
+							setPage(1)
+						}}
+						pagination={{
+							page,
+							pageSize: PAGE_SIZE,
+							total,
+							onPageChange: setPage,
+						}}
+					/>
+				</TableScope>
 			</ListPageShell>
 
 			{toDelete && (

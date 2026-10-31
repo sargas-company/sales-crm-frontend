@@ -1,28 +1,5 @@
 import { baseApi } from '../../api/baseApi'
 
-export type UpworkReferenceCategory =
-	| 'title_phrase'
-	| 'suggestion'
-	| 'related_query'
-	| 'green_skill'
-	| 'job_skill'
-	| 'client_phrase'
-	| 'requirement'
-	| 'product_type'
-	| 'fact'
-
-export const UPWORK_REFERENCE_CATEGORIES: UpworkReferenceCategory[] = [
-	'title_phrase',
-	'suggestion',
-	'related_query',
-	'green_skill',
-	'job_skill',
-	'client_phrase',
-	'requirement',
-	'product_type',
-	'fact',
-]
-
 export type UpworkChangeLogSection =
 	| 'title'
 	| 'overview'
@@ -33,6 +10,7 @@ export type UpworkChangeLogSection =
 	| 'certificate'
 	| 'employment_history'
 	| 'other_experience'
+	| 'job_analysis'
 
 export const UPWORK_CHANGELOG_SECTIONS: UpworkChangeLogSection[] = [
 	'title',
@@ -44,13 +22,40 @@ export const UPWORK_CHANGELOG_SECTIONS: UpworkChangeLogSection[] = [
 	'certificate',
 	'employment_history',
 	'other_experience',
+	'job_analysis',
 ]
+
+/* Section labels — the enum keys read fine with `_` → ` `, except
+ * `job_analysis` which carries a specific "Job post analysis"
+ * label everywhere it shows (pill, filter dropdown, markers). */
+export const UPWORK_SECTION_LABEL: Record<UpworkChangeLogSection, string> = {
+	title: 'title',
+	overview: 'overview',
+	skills: 'skills',
+	portfolio: 'portfolio',
+	project_catalog: 'project catalog',
+	consultation: 'consultation',
+	certificate: 'certificate',
+	employment_history: 'employment history',
+	other_experience: 'other experience',
+	job_analysis: 'Job post analysis',
+}
+
+export type UpworkProfileTier = 'primary' | 'secondary'
+
+export const UPWORK_PROFILE_TIERS: UpworkProfileTier[] = ['primary', 'secondary']
+
+export const UPWORK_PROFILE_TIER_LABEL: Record<UpworkProfileTier, string> = {
+	primary: 'Primary',
+	secondary: 'Secondary',
+}
 
 export interface UpworkProfile {
 	id: string
 	firstName: string
 	lastName: string | null
 	title: string | null
+	tier: UpworkProfileTier
 	url: string | null
 	note: string | null
 	active: boolean
@@ -61,41 +66,6 @@ export interface UpworkProfile {
 export const upworkProfileName = (
 	p: Pick<UpworkProfile, 'firstName' | 'lastName'>,
 ): string => `${p.firstName} ${p.lastName ?? ''}`.trim()
-
-export interface UpworkReferenceData {
-	id: string
-	profileId: string | null
-	category: UpworkReferenceCategory
-	value: string
-	parentId: string | null
-	order: number | null
-	frequency: number | null
-	note: string | null
-	collectedDate: string
-	active: boolean
-	createdAt: string
-	updatedAt: string
-	profile?: {
-		id: string
-		firstName: string
-		lastName: string | null
-		title: string | null
-	} | null
-	parent?: {
-		id: string
-		value: string
-		category: UpworkReferenceCategory
-	} | null
-}
-
-export interface UpworkChangeLogRefLink {
-	referenceData: {
-		id: string
-		category: UpworkReferenceCategory
-		value: string
-		profileId: string | null
-	}
-}
 
 export interface UpworkChangeLog {
 	id: string
@@ -115,19 +85,12 @@ export interface UpworkChangeLog {
 		lastName: string | null
 		title: string | null
 	}
-	references: UpworkChangeLogRefLink[]
 }
 
 export interface UpworkSnapshotPosition {
 	id: string
-	snapshotId: string
-	referenceDataId: string
+	phrase: string
 	position: number
-	referenceData: {
-		id: string
-		value: string
-		category: UpworkReferenceCategory
-	}
 }
 
 export interface UpworkSnapshot {
@@ -160,9 +123,9 @@ export interface UpworkAnalytics {
 	}>
 	positionsWeekly: Array<{
 		weekStart: string
-		byReferenceId: Record<string, number>
+		byPhrase: Record<string, number>
 	}>
-	titlePhrases: Array<{ id: string; value: string }>
+	titlePhrases: string[]
 	changeLogMarkers: Array<{ date: string; section: string; summary: string }>
 	viewsPerInvite4w: {
 		value: number | null
@@ -206,89 +169,16 @@ export const upworkApi = baseApi.injectEndpoints({
 			query: (id) => ({ url: `/upwork/profiles/${id}`, method: 'DELETE' }),
 			invalidatesTags: ['UpworkProfile'],
 		}),
-
-		/* Reference data */
-		listUpworkReferences: builder.query<
-			UpworkReferenceData[],
-			{
-				profileId?: string
-				category?: UpworkReferenceCategory
-				active?: boolean
-				sortByFrequency?: boolean
-			}
-		>({
-			query: (params) => ({
-				url: '/upwork/reference-data',
-				method: 'GET',
-				params,
-			}),
-			providesTags: ['UpworkReference'],
-		}),
-		createUpworkReference: builder.mutation<
-			UpworkReferenceData,
-			{
-				profileId?: string
-				category: UpworkReferenceCategory
-				value: string
-				parentId?: string
-				order?: number
-				frequency?: number
-				note?: string
-				collectedDate: string
-				active?: boolean
-			}
-		>({
-			query: (body) => ({
-				url: '/upwork/reference-data',
-				method: 'POST',
-				body,
-			}),
-			invalidatesTags: ['UpworkReference'],
-		}),
-		bulkAddUpworkReferences: builder.mutation<
-			{ added: number },
-			{
-				profileId?: string
-				category: UpworkReferenceCategory
-				collectedDate: string
-				values: string[]
-			}
-		>({
-			query: (body) => ({
-				url: '/upwork/reference-data/bulk-add',
-				method: 'POST',
-				body,
-			}),
-			invalidatesTags: ['UpworkReference'],
-		}),
-		updateUpworkReference: builder.mutation<
-			UpworkReferenceData,
-			{ id: string; patch: Partial<UpworkReferenceData> }
-		>({
-			query: ({ id, patch }) => ({
-				url: `/upwork/reference-data/${id}`,
-				method: 'PATCH',
-				body: patch,
-			}),
-			invalidatesTags: ['UpworkReference'],
-		}),
-		archiveUpworkReference: builder.mutation<UpworkReferenceData, string>({
-			query: (id) => ({
-				url: `/upwork/reference-data/${id}/archive`,
-				method: 'POST',
-			}),
-			invalidatesTags: ['UpworkReference'],
-		}),
-		bulkDeleteUpworkReferences: builder.mutation<
+		bulkDeleteUpworkProfiles: builder.mutation<
 			{ deleted: number },
 			{ ids: string[] }
 		>({
 			query: (body) => ({
-				url: '/upwork/reference-data/bulk-delete',
+				url: '/upwork/profiles/bulk-delete',
 				method: 'POST',
 				body,
 			}),
-			invalidatesTags: ['UpworkReference'],
+			invalidatesTags: ['UpworkProfile'],
 		}),
 
 		/* Change log */
@@ -319,7 +209,6 @@ export const upworkApi = baseApi.injectEndpoints({
 				reason?: string
 				before: string
 				after: string
-				referenceIds?: string[]
 			}
 		>({
 			query: (body) => ({
@@ -342,7 +231,6 @@ export const upworkApi = baseApi.injectEndpoints({
 					reason: string
 					before: string
 					after: string
-					referenceIds: string[]
 				}>
 			}
 		>({
@@ -361,7 +249,7 @@ export const upworkApi = baseApi.injectEndpoints({
 		/* Snapshots */
 		listUpworkSnapshots: builder.query<
 			UpworkSnapshot[],
-			{ profileId: string; from?: string; to?: string }
+			{ profileId?: string; from?: string; to?: string }
 		>({
 			query: (params) => ({
 				url: '/upwork/snapshots',
@@ -378,7 +266,7 @@ export const upworkApi = baseApi.injectEndpoints({
 				views: number
 				invites: number
 				directMessages: number
-				positions?: Array<{ referenceDataId: string; position: number }>
+				positions?: Array<{ phrase: string; position: number }>
 			}
 		>({
 			query: (body) => ({
@@ -397,7 +285,7 @@ export const upworkApi = baseApi.injectEndpoints({
 					views: number
 					invites: number
 					directMessages: number
-					positions: Array<{ referenceDataId: string; position: number }>
+					positions: Array<{ phrase: string; position: number }>
 				}>
 			}
 		>({
@@ -444,12 +332,7 @@ export const {
 	useCreateUpworkProfileMutation,
 	useUpdateUpworkProfileMutation,
 	useDeleteUpworkProfileMutation,
-	useListUpworkReferencesQuery,
-	useCreateUpworkReferenceMutation,
-	useBulkAddUpworkReferencesMutation,
-	useUpdateUpworkReferenceMutation,
-	useArchiveUpworkReferenceMutation,
-	useBulkDeleteUpworkReferencesMutation,
+	useBulkDeleteUpworkProfilesMutation,
 	useListUpworkChangeLogQuery,
 	useGetUpworkChangeLogQuery,
 	useCreateUpworkChangeLogMutation,

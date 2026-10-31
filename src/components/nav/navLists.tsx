@@ -47,7 +47,6 @@ import {
 	StoreOutlined,
 	WorkspacePremiumOutlined,
 	NotificationsActiveOutlined,
-	MenuBookOutlined,
 	EditNoteOutlined,
 	CameraAltOutlined,
 } from '@mui/icons-material'
@@ -224,8 +223,7 @@ const navList: NavOptions[] = [
 			format('Snapshots', '/upwork/snapshots', <CameraAltOutlined />, 'upwork_analytics:view'),
 			format('Reminders', '/upwork/reminders', <NotificationsActiveOutlined />, 'upwork:view'),
 			format('Change Log', '/upwork/change-log', <EditNoteOutlined />, 'upwork:view'),
-			format('Reference Data', '/upwork/reference-data', <MenuBookOutlined />, 'upwork:view'),
-		],
+			],
 	},
 ]
 
