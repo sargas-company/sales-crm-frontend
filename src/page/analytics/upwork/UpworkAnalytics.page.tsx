@@ -42,7 +42,10 @@ import {
 	TapePill,
 	TapePills,
 } from '../filters/filters.styled'
-import { CalendarTodayOutlined } from '@mui/icons-material'
+import {
+	CalendarTodayOutlined,
+	QueryStatsOutlined,
+} from '@mui/icons-material'
 
 import {
 	upworkProfileName,
@@ -508,6 +511,61 @@ const EmptyChart = styled.div`
 	color: ${T.textMuted};
 	font-size: 13px;
 `
+
+const emptyFloat = keyframes`
+	0%, 100% { transform: translateY(0); }
+	50%      { transform: translateY(-6px); }
+`
+
+const emptyFade = keyframes`
+	from { opacity: 0; transform: translateY(8px); }
+	to   { opacity: 1; transform: translateY(0); }
+`
+
+const AnalyticsEmptyState = styled.div`
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 14px;
+	padding: 72px 24px;
+	text-align: center;
+	animation: ${emptyFade} 450ms ease-out both;
+
+	.ico-wrap {
+		width: 112px;
+		height: 112px;
+		border-radius: 50%;
+		background: ${T.primaryTint};
+		color: ${T.primary};
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		animation: ${emptyFloat} 3.4s ease-in-out infinite;
+		svg {
+			font-size: 54px;
+		}
+		@media (prefers-reduced-motion: reduce) {
+			animation: none;
+		}
+	}
+	.title {
+		margin: 0;
+		font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+		font-size: 22px;
+		font-weight: 700;
+		letter-spacing: -0.4px;
+		color: ${T.textStrong};
+	}
+	.sub {
+		margin: 0;
+		font-size: 13.5px;
+		font-weight: 500;
+		color: ${T.textSecondary};
+		max-width: 46ch;
+		line-height: 1.5;
+	}
+`
 const SectionTitle = styled.h2`
 	font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
 	font-size: 22px;
@@ -818,7 +876,16 @@ const UpworkAnalyticsPage = () => {
 
 				{!profileId && (
 					<SectionCard>
-						<EmptyChart>Pick a profile to see analytics.</EmptyChart>
+						<AnalyticsEmptyState>
+							<span className='ico-wrap'>
+								<QueryStatsOutlined />
+							</span>
+							<h3 className='title'>Pick a profile to begin</h3>
+							<p className='sub'>
+								Choose an Upwork profile from the filter above —
+								totals, position trend and weekly charts appear here.
+							</p>
+						</AnalyticsEmptyState>
 					</SectionCard>
 				)}
 

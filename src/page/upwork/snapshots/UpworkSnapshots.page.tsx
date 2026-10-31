@@ -314,11 +314,23 @@ const UpworkSnapshotsPage = () => {
 				action={
 					<PermissionGate permission='upwork:create'>
 						<PrimarySolidButton
-							onClick={() => nav('/upwork/snapshots/new')}
-							disabled={activeProfiles.length === 0}
+							onClick={() =>
+								nav(
+									activeProfiles.length === 0
+										? '/upwork/profiles/new'
+										: '/upwork/snapshots/new',
+								)
+							}
+							title={
+								activeProfiles.length === 0
+									? 'No active profiles yet — create one first'
+									: 'Record a new snapshot'
+							}
 						>
 							<AddRounded fontSize='small' />
-							New snapshot
+							{activeProfiles.length === 0
+								? 'Create profile'
+								: 'New snapshot'}
 						</PrimarySolidButton>
 					</PermissionGate>
 				}
@@ -340,7 +352,6 @@ const UpworkSnapshotsPage = () => {
 								<InlineSelect
 									value={profileParam}
 									onChange={(e) => updateParam('profile', e.target.value)}
-									disabled={activeProfiles.length === 0}
 								>
 									<option value=''>All profiles</option>
 									{activeProfiles.map((p) => (
