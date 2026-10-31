@@ -125,11 +125,14 @@ export type JobPostSortBy =
 
 export type JobPostSortDirection = 'asc' | 'desc'
 
+export type JobPostGate = 'pass' | 'reject'
+
 export interface JobPostListParams {
 	limit: number
 	offset: number
 	decision?: JobPostDecision
 	priority?: JobPostPriority
+	gate?: JobPostGate
 	status?: JobPostStatus
 	minScore?: number
 	maxScore?: number

@@ -45,7 +45,6 @@ import usePermissions from '../../../hooks/usePermissions'
 import type {
 	JobPostDecision,
 	JobPostItem,
-	JobPostPriority,
 	JobPostSortBy,
 	JobPostStatus,
 } from '../../../store/job-posts/types/definition'
@@ -87,11 +86,10 @@ const DECISION_OPTIONS: { value: JobPostDecision | ''; label: string }[] = [
 	{ value: 'decline', label: 'Decline' },
 ]
 
-const PRIORITY_OPTIONS: { value: JobPostPriority | ''; label: string }[] = [
+const GATE_OPTIONS: { value: '' | 'pass' | 'reject'; label: string }[] = [
 	{ value: '', label: 'Any' },
-	{ value: 'high', label: 'High' },
-	{ value: 'medium', label: 'Medium' },
-	{ value: 'low', label: 'Low' },
+	{ value: 'pass', label: 'Pass' },
+	{ value: 'reject', label: 'Reject' },
 ]
 
 type StatusFilterValue = JobPostStatus | ''
@@ -407,8 +405,8 @@ const JobPostList = () => {
 	const [filterDecision, setFilterDecision] = useState<JobPostDecision | ''>(
 		(searchParams.get('decision') as JobPostDecision) ?? '',
 	)
-	const [filterPriority, setFilterPriority] = useState<JobPostPriority | ''>(
-		(searchParams.get('priority') as JobPostPriority) ?? '',
+	const [filterGate, setFilterGate] = useState<'' | 'pass' | 'reject'>(
+		(searchParams.get('gate') as 'pass' | 'reject') ?? '',
 	)
 	const [filterStatus, setFilterStatus] = useState<StatusFilterValue>(() => {
 		const raw = searchParams.get('status')
@@ -476,7 +474,7 @@ const JobPostList = () => {
 	useEffect(() => {
 		const sig = JSON.stringify([
 			filterDecision,
-			filterPriority,
+			filterGate,
 			filterStatus,
 			filterMinScore,
 			filterMaxScore,
@@ -494,7 +492,7 @@ const JobPostList = () => {
 		setPage(1)
 	}, [
 		filterDecision,
-		filterPriority,
+		filterGate,
 		filterStatus,
 		filterMinScore,
 		filterMaxScore,
@@ -511,7 +509,7 @@ const JobPostList = () => {
 		const next = new URLSearchParams()
 		if (search) next.set('q', search)
 		if (filterDecision) next.set('decision', filterDecision)
-		if (filterPriority) next.set('priority', filterPriority)
+		if (filterGate) next.set('gate', filterGate)
 		if (filterStatus !== DEFAULT_STATUS) {
 			next.set('status', filterStatus === '' ? 'any' : filterStatus)
 		}
@@ -530,7 +528,7 @@ const JobPostList = () => {
 	}, [
 		search,
 		filterDecision,
-		filterPriority,
+		filterGate,
 		filterStatus,
 		filterMinScore,
 		filterMaxScore,
@@ -568,7 +566,7 @@ const JobPostList = () => {
 		return [
 			searchInput.trim() ? 1 : 0,
 			filterDecision ? 1 : 0,
-			filterPriority ? 1 : 0,
+			filterGate ? 1 : 0,
 			filterStatus !== DEFAULT_STATUS ? 1 : 0,
 			minScoreNum != null ? 1 : 0,
 			maxScoreNum != null ? 1 : 0,
@@ -580,7 +578,7 @@ const JobPostList = () => {
 	}, [
 		searchInput,
 		filterDecision,
-		filterPriority,
+		filterGate,
 		filterStatus,
 		minScoreNum,
 		maxScoreNum,
@@ -593,7 +591,7 @@ const JobPostList = () => {
 	const clearAll = () => {
 		setSearchInput('')
 		setFilterDecision('')
-		setFilterPriority('')
+		setFilterGate('')
 		setFilterStatus(DEFAULT_STATUS)
 		setFilterMinScore('')
 		setFilterMaxScore('')
@@ -611,7 +609,7 @@ const JobPostList = () => {
 		offset,
 		search: search || undefined,
 		decision: filterDecision || undefined,
-		priority: filterPriority || undefined,
+		gate: filterGate || undefined,
 		status: filterStatus || undefined,
 		country: filterCountry || undefined,
 		minScore: minScoreNum ?? undefined,
@@ -1192,14 +1190,16 @@ const JobPostList = () => {
 
 							<BottomFilterRow>
 								<InlineField>
-									<span className='l'>Priority</span>
+									<span className='l'>Gate</span>
 									<InlineSelect
-										value={filterPriority}
+										value={filterGate}
 										onChange={(e) =>
-											setFilterPriority(e.target.value as JobPostPriority | '')
+											setFilterGate(
+												e.target.value as '' | 'pass' | 'reject',
+											)
 										}
 									>
-										{PRIORITY_OPTIONS.map((opt) => (
+										{GATE_OPTIONS.map((opt) => (
 											<option key={opt.value || 'any'} value={opt.value}>
 												{opt.label}
 											</option>

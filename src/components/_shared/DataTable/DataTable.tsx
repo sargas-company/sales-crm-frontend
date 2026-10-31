@@ -1,4 +1,4 @@
-import { ReactNode, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { InboxOutlined, SearchOffOutlined } from '@mui/icons-material'
 import {
 	DataRow,
@@ -169,6 +169,52 @@ function DataTable<T>({
 	// Horizontal overflow hints — soft fade on either side, only visible
 	// when there is actual content clipped in that direction.
 	const scrollRef = useRef<HTMLDivElement>(null)
+
+	/* On pagination click, scroll the page all the way to the top first,
+	 * then swap the data. Sort / filter changes don't trigger this —
+	 * they stay in place. Sequential (not parallel) so the row-entry
+	 * stagger animation runs against a stable viewport. */
+	const scrollRafRef = useRef<number | null>(null)
+	const changePage = (next: number) => {
+		const reduce =
+			typeof window !== 'undefined' &&
+			window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+		const startY = window.scrollY
+		if (startY < 2) {
+			onPageChange(next)
+			return
+		}
+		if (reduce) {
+			window.scrollTo(0, 0)
+			onPageChange(next)
+			return
+		}
+		if (scrollRafRef.current != null) {
+			cancelAnimationFrame(scrollRafRef.current)
+			scrollRafRef.current = null
+		}
+		const startT = performance.now()
+		const duration = 360
+		const step = (now: number) => {
+			const p = Math.min(1, (now - startT) / duration)
+			const eased = 1 - Math.pow(1 - p, 3)
+			window.scrollTo(0, startY * (1 - eased))
+			if (p < 1) {
+				scrollRafRef.current = requestAnimationFrame(step)
+			} else {
+				scrollRafRef.current = null
+				onPageChange(next)
+			}
+		}
+		scrollRafRef.current = requestAnimationFrame(step)
+	}
+	useEffect(
+		() => () => {
+			if (scrollRafRef.current != null)
+				cancelAnimationFrame(scrollRafRef.current)
+		},
+		[],
+	)
 	const [edge, setEdge] = useState({ left: false, right: false })
 
 	const recalc = () => {
@@ -397,7 +443,7 @@ function DataTable<T>({
 					<PagerBtn
 						type='button'
 						disabled={clampedPage === 1}
-						onClick={() => onPageChange(clampedPage - 1)}
+						onClick={() => changePage(clampedPage - 1)}
 					>
 						Prev
 					</PagerBtn>
@@ -407,7 +453,7 @@ function DataTable<T>({
 					<PagerBtn
 						type='button'
 						disabled={clampedPage >= totalPages}
-						onClick={() => onPageChange(clampedPage + 1)}
+						onClick={() => changePage(clampedPage + 1)}
 					>
 						Next
 					</PagerBtn>
