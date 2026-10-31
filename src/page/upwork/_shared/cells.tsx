@@ -2,6 +2,39 @@ import styled from 'styled-components'
 import { formatDate } from '../../../utils/format'
 import { formatDateTimeSec } from '../../../utils/formatDate'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
+import type { UpworkChangeLogSection } from '../../../store/upwork/upworkApi'
+
+/* 10-tone palette for change-log sections. Same geometry as
+ * StatusPill. Shared between the change-log list and anywhere else
+ * that renders a section tag (e.g. profile view recent changes). */
+export const SECTION_PALETTE: Record<
+	UpworkChangeLogSection,
+	{ bg: string; fg: string }
+> = {
+	title: { bg: 'rgba(3, 105, 161, 0.12)', fg: '#0369a1' },
+	overview: { bg: 'rgba(124, 58, 237, 0.10)', fg: '#6d28d9' },
+	skills: { bg: 'rgba(34, 197, 94, 0.14)', fg: '#15803d' },
+	portfolio: { bg: 'rgba(245, 158, 11, 0.16)', fg: '#a26608' },
+	project_catalog: { bg: 'rgba(239, 68, 68, 0.12)', fg: '#b91c1c' },
+	consultation: { bg: 'rgba(6, 182, 212, 0.14)', fg: '#0e7490' },
+	certificate: { bg: 'rgba(99, 102, 241, 0.14)', fg: '#4338ca' },
+	employment_history: { bg: 'rgba(244, 63, 94, 0.12)', fg: '#be123c' },
+	other_experience: { bg: 'rgba(100, 116, 139, 0.12)', fg: '#64748b' },
+}
+
+export const SectionPill = styled.span<{ $section: UpworkChangeLogSection }>`
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	white-space: nowrap;
+	background: ${({ $section }) => SECTION_PALETTE[$section].bg};
+	color: ${({ $section }) => SECTION_PALETTE[$section].fg};
+`
 
 /* ─── Date + time cell ───────────────────────────────────────────
  * Date pops (semi-bold slate), time trails in mono muted.

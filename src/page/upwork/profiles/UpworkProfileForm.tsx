@@ -36,12 +36,9 @@ interface Props {
 	mode: 'create' | 'edit'
 }
 
-const TITLE_MAX = 70
-
 interface FormState {
 	firstName: string
 	lastName: string
-	title: string
 	tier: UpworkProfileTier
 	url: string
 	note: string
@@ -51,7 +48,6 @@ interface FormState {
 const empty: FormState = {
 	firstName: '',
 	lastName: '',
-	title: '',
 	tier: 'secondary',
 	url: '',
 	note: '',
@@ -76,16 +72,13 @@ const UpworkProfileForm = ({ mode }: Props) => {
 	const isLoading = creating || updating
 
 	const [fields, setFields] = useState<FormState>(empty)
-	const [errors, setErrors] = useState<{ firstName?: string; title?: string }>(
-		{},
-	)
+	const [errors, setErrors] = useState<{ firstName?: string }>({})
 
 	useEffect(() => {
 		if (isEdit && existing) {
 			setFields({
 				firstName: existing.firstName,
 				lastName: existing.lastName ?? '',
-				title: existing.title ?? '',
 				tier: existing.tier,
 				url: existing.url ?? '',
 				note: existing.note ?? '',
@@ -100,21 +93,14 @@ const UpworkProfileForm = ({ mode }: Props) => {
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
 		const firstName = fields.firstName.trim()
-		const title = fields.title.trim()
-		const next: typeof errors = {}
-		if (!firstName) next.firstName = 'First name is required'
-		if (title.length > TITLE_MAX) {
-			next.title = `Title must be ≤ ${TITLE_MAX} characters (${title.length} now)`
-		}
-		if (Object.keys(next).length) {
-			setErrors(next)
+		if (!firstName) {
+			setErrors({ firstName: 'First name is required' })
 			return
 		}
 		setErrors({})
 		const payload = {
 			firstName,
 			lastName: fields.lastName.trim() || undefined,
-			title: fields.title.trim() || undefined,
 			tier: fields.tier,
 			url: fields.url.trim() || undefined,
 			note: fields.note.trim() || undefined,
@@ -154,7 +140,7 @@ const UpworkProfileForm = ({ mode }: Props) => {
 						<SectionHead
 							num='01'
 							title='Basics'
-							hint='Owner name, profile title and link.'
+							hint='Owner name, tier, link and status.'
 						/>
 						<FieldGrid>
 							<Field label='First name' required error={errors.firstName}>
@@ -171,23 +157,6 @@ const UpworkProfileForm = ({ mode }: Props) => {
 									name='lastName'
 									value={fields.lastName}
 									onChange={(e) => setField('lastName', e.target.value)}
-									width='100%'
-								/>
-							</Field>
-							<Field
-								label='Title'
-								span='full'
-								error={errors.title}
-								hint={`e.g. Senior Full-Stack · React + Node — ${fields.title.length}/${TITLE_MAX}`}
-							>
-								<TextField
-									name='title'
-									value={fields.title}
-									onChange={(e) =>
-										setField('title', e.target.value.slice(0, TITLE_MAX))
-									}
-									maxLength={TITLE_MAX}
-									error={!!errors.title}
 									width='100%'
 								/>
 							</Field>

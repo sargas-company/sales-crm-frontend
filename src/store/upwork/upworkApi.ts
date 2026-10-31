@@ -10,7 +10,6 @@ export type UpworkChangeLogSection =
 	| 'certificate'
 	| 'employment_history'
 	| 'other_experience'
-	| 'job_analysis'
 
 export const UPWORK_CHANGELOG_SECTIONS: UpworkChangeLogSection[] = [
 	'title',
@@ -22,12 +21,10 @@ export const UPWORK_CHANGELOG_SECTIONS: UpworkChangeLogSection[] = [
 	'certificate',
 	'employment_history',
 	'other_experience',
-	'job_analysis',
 ]
 
-/* Section labels — the enum keys read fine with `_` → ` `, except
- * `job_analysis` which carries a specific "Job post analysis"
- * label everywhere it shows (pill, filter dropdown, markers). */
+/* Section labels — human-readable text for every section (enum
+ * keys read fine with `_` → ` `, kept explicit for clarity). */
 export const UPWORK_SECTION_LABEL: Record<UpworkChangeLogSection, string> = {
 	title: 'title',
 	overview: 'overview',
@@ -38,7 +35,6 @@ export const UPWORK_SECTION_LABEL: Record<UpworkChangeLogSection, string> = {
 	certificate: 'certificate',
 	employment_history: 'employment history',
 	other_experience: 'other experience',
-	job_analysis: 'Job post analysis',
 }
 
 export type UpworkProfileTier = 'primary' | 'secondary'
@@ -54,7 +50,6 @@ export interface UpworkProfile {
 	id: string
 	firstName: string
 	lastName: string | null
-	title: string | null
 	tier: UpworkProfileTier
 	url: string | null
 	note: string | null
@@ -72,18 +67,13 @@ export interface UpworkChangeLog {
 	date: string
 	profileId: string
 	section: UpworkChangeLogSection
-	item: string | null
-	summary: string
-	reason: string | null
-	before: string
-	after: string
+	note: string
 	createdAt: string
 	updatedAt: string
 	profile: {
 		id: string
 		firstName: string
 		lastName: string | null
-		title: string | null
 	}
 }
 
@@ -126,7 +116,7 @@ export interface UpworkAnalytics {
 		byPhrase: Record<string, number>
 	}>
 	titlePhrases: string[]
-	changeLogMarkers: Array<{ date: string; section: string; summary: string }>
+	changeLogMarkers: Array<{ date: string; section: string; note: string }>
 	viewsPerInvite4w: {
 		value: number | null
 		warn: boolean
@@ -169,17 +159,6 @@ export const upworkApi = baseApi.injectEndpoints({
 			query: (id) => ({ url: `/upwork/profiles/${id}`, method: 'DELETE' }),
 			invalidatesTags: ['UpworkProfile'],
 		}),
-		bulkDeleteUpworkProfiles: builder.mutation<
-			{ deleted: number },
-			{ ids: string[] }
-		>({
-			query: (body) => ({
-				url: '/upwork/profiles/bulk-delete',
-				method: 'POST',
-				body,
-			}),
-			invalidatesTags: ['UpworkProfile'],
-		}),
 
 		/* Change log */
 		listUpworkChangeLog: builder.query<
@@ -204,11 +183,7 @@ export const upworkApi = baseApi.injectEndpoints({
 				date: string
 				profileId: string
 				section: UpworkChangeLogSection
-				item?: string
-				summary: string
-				reason?: string
-				before: string
-				after: string
+				note: string
 			}
 		>({
 			query: (body) => ({
@@ -226,11 +201,7 @@ export const upworkApi = baseApi.injectEndpoints({
 					date: string
 					profileId: string
 					section: UpworkChangeLogSection
-					item: string
-					summary: string
-					reason: string
-					before: string
-					after: string
+					note: string
 				}>
 			}
 		>({
@@ -332,7 +303,6 @@ export const {
 	useCreateUpworkProfileMutation,
 	useUpdateUpworkProfileMutation,
 	useDeleteUpworkProfileMutation,
-	useBulkDeleteUpworkProfilesMutation,
 	useListUpworkChangeLogQuery,
 	useGetUpworkChangeLogQuery,
 	useCreateUpworkChangeLogMutation,

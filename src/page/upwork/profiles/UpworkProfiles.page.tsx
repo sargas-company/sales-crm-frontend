@@ -6,7 +6,10 @@ import {
 	DeleteOutline,
 	EditOutlined,
 	FilterListOutlined,
+	OpenInNewRounded,
 	SearchOutlined,
+	SensorsOffRounded,
+	SensorsRounded,
 	WorkspacePremiumOutlined,
 } from '@mui/icons-material'
 
@@ -17,13 +20,11 @@ import {
 	IconAction,
 	TableSkeleton,
 	type DataTableColumn,
-	type DataTableSelection,
 	type SortState,
 } from '../../../components/_shared/DataTable'
 import ConfirmModal from '../../../components/_shared/ConfirmModal'
-import BulkActionBar from '../../../components/_shared/BulkActionBar'
 import PermissionGate from '../../../components/auth/PermissionGate'
-import styled from 'styled-components'
+import styled, { keyframes } from 'styled-components'
 import {
 	ClearBtn,
 	FreshFiltersWrap as BaseFreshFiltersWrap,
@@ -48,10 +49,61 @@ const SecondRow = styled.div`
 	margin-top: 10px;
 `
 
+const StatusLabel = styled.span<{ $active: boolean }>`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-family: 'JetBrains Mono', monospace;
+	font-size: 11.5px;
+	font-weight: 700;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	color: ${({ $active }) => ($active ? '#15803d' : '#64748b')};
+`
+
+/* External link to the Upwork freelancer page — rendered in its own
+ * column. Opens in a new tab; just a plain blue icon, no background. */
+const UpworkExternalLink = styled.a`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: #0369a1;
+	text-decoration: none;
+	transition: transform 160ms ease;
+	&:hover {
+		transform: translateY(-1px);
+	}
+	svg {
+		font-size: 22px;
+	}
+`
+
+/* Active-status icon wrapper — soft scale pulse. No glow, no halo. */
+const sensorsPulse = keyframes`
+	0%   { transform: scale(1); }
+	50%  { transform: scale(1.14); }
+	100% { transform: scale(1); }
+`
+
+const LiveSensor = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	svg {
+		animation: ${sensorsPulse} 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+		transform-origin: center;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		svg {
+			animation: none;
+		}
+	}
+`
+
+
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
 import {
 	DateTimeCell,
-	EmptyBadge,
 	StatusPill,
 } from '../_shared/cells'
 import { ProfileLink } from '../_shared/ProfileLink'
@@ -60,7 +112,6 @@ import { FilterTapes } from '../_shared/FilterTapes'
 import {
 	UPWORK_PROFILE_TIER_LABEL,
 	upworkProfileName,
-	useBulkDeleteUpworkProfilesMutation,
 	useDeleteUpworkProfileMutation,
 	useListUpworkProfilesQuery,
 	type UpworkProfile,
@@ -98,8 +149,6 @@ const UpworkProfilesPage = () => {
 		direction: 'desc',
 	})
 	const [toDelete, setToDelete] = useState<UpworkProfile | null>(null)
-	const [selected, setSelected] = useState<Set<string>>(new Set())
-	const [bulkOpen, setBulkOpen] = useState(false)
 
 	const search = searchInput.trim().toLowerCase()
 
@@ -124,8 +173,6 @@ const UpworkProfilesPage = () => {
 
 	const { data: all = [], isLoading, isError, refetch } = useListUpworkProfilesQuery()
 	const [del, { isLoading: deleting }] = useDeleteUpworkProfileMutation()
-	const [bulkDelete, { isLoading: bulkDeleting }] =
-		useBulkDeleteUpworkProfilesMutation()
 
 	const filtered = useMemo(() => {
 		return all.filter((p) => {
@@ -133,50 +180,17 @@ const UpworkProfilesPage = () => {
 			if (activeParam === 'archived' && p.active) return false
 			if (tierParam !== 'all' && p.tier !== tierParam) return false
 			if (!search) return true
-			const haystack = [p.firstName, p.lastName ?? '', p.title ?? '']
+			const haystack = [p.firstName, p.lastName ?? '']
 				.join(' ')
 				.toLowerCase()
 			return haystack.includes(search)
 		})
 	}, [all, activeParam, tierParam, search])
 
-	useEffect(() => {
-		if (!selected.size) return
-		const live = new Set(filtered.map((p) => p.id))
-		const next = new Set<string>()
-		for (const id of selected) if (live.has(id)) next.add(id)
-		if (next.size !== selected.size) setSelected(next)
-	}, [filtered])
-
 	const total = filtered.length
 	const paged = useMemo(
 		() => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
 		[filtered, page],
-	)
-
-	const selection = useMemo<DataTableSelection<UpworkProfile>>(
-		() => ({
-			selected,
-			onToggleRow: (id, on) =>
-				setSelected((prev) => {
-					const n = new Set(prev)
-					if (on) n.add(id)
-					else n.delete(id)
-					return n
-				}),
-			onToggleAllOnPage: (rows, on) =>
-				setSelected((prev) => {
-					const n = new Set(prev)
-					for (const r of rows) {
-						if (on) n.add(r.id)
-						else n.delete(r.id)
-					}
-					return n
-				}),
-			headerLabel: 'Select every profile on this page',
-			rowLabel: (r) => `Select ${upworkProfileName(r)}`,
-		}),
-		[selected],
 	)
 
 	const columns: DataTableColumn<UpworkProfile>[] = [
@@ -189,17 +203,24 @@ const UpworkProfilesPage = () => {
 			skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
 		},
 		{
-			key: 'title',
-			label: 'Title',
-			sortable: true,
-			sortValue: (r) => r.title ?? '',
+			key: 'upwork',
+			label: 'Profile URL',
 			render: (r) =>
-				r.title ? (
-					<span style={{ whiteSpace: 'nowrap' }}>{r.title}</span>
+				r.url ? (
+					<UpworkExternalLink
+						href={r.url}
+						target='_blank'
+						rel='noreferrer'
+						onClick={(e) => e.stopPropagation()}
+						title='Open on Upwork'
+						aria-label='Open on Upwork'
+					>
+						<OpenInNewRounded />
+					</UpworkExternalLink>
 				) : (
-					<EmptyBadge>no title</EmptyBadge>
+					<span style={{ color: '#cbd5e1' }}>—</span>
 				),
-			skeleton: () => <TableSkeleton $w='200px' $h='13px' />,
+			skeleton: () => <TableSkeleton $w='80px' $h='15px' />,
 		},
 		{
 			key: 'tier',
@@ -207,11 +228,11 @@ const UpworkProfilesPage = () => {
 			sortable: true,
 			sortValue: (r) => (r.tier === 'primary' ? 0 : 1),
 			render: (r) => (
-				<StatusPill $tone={r.tier === 'primary' ? 'warn' : 'muted'}>
+				<StatusPill $tone={r.tier === 'primary' ? 'danger' : 'info'}>
 					{UPWORK_PROFILE_TIER_LABEL[r.tier]}
 				</StatusPill>
 			),
-			skeleton: () => <TableSkeleton $w='80px' $h='18px' />,
+			skeleton: () => <TableSkeleton $w='80px' $h='22px' />,
 		},
 		{
 			key: 'active',
@@ -219,11 +240,18 @@ const UpworkProfilesPage = () => {
 			sortable: true,
 			sortValue: (r) => (r.active ? 1 : 0),
 			render: (r) => (
-				<StatusPill $tone={r.active ? 'success' : 'muted'}>
+				<StatusLabel $active={r.active}>
 					{r.active ? 'Active' : 'Archived'}
-				</StatusPill>
+					{r.active ? (
+						<LiveSensor>
+							<SensorsRounded style={{ fontSize: 24 }} />
+						</LiveSensor>
+					) : (
+						<SensorsOffRounded style={{ fontSize: 24 }} />
+					)}
+				</StatusLabel>
 			),
-			skeleton: () => <TableSkeleton $w='70px' $h='18px' />,
+			skeleton: () => <TableSkeleton $w='100px' $h='24px' />,
 		},
 		{
 			key: 'updatedAt',
@@ -312,25 +340,13 @@ const UpworkProfilesPage = () => {
 							ariaLabel='Profile tier preset'
 						/>
 
-						<PermissionGate permission='upwork:delete'>
-							<div style={{ marginLeft: 'auto' }}>
-								<BulkActionBar
-									count={selected.size}
-									onClear={() => setSelected(new Set())}
-									onConfirm={() => setBulkOpen(true)}
-									isLoading={bulkDeleting}
-									persistent
-								/>
-							</div>
-						</PermissionGate>
-
 						<SecondRow>
-							<SearchPill style={{ flex: 1, maxWidth: 420 }}>
+							<SearchPill>
 								<SearchOutlined className='ico' />
 								<input
 									value={searchInput}
 									onChange={(e) => setSearchInput(e.target.value)}
-									placeholder='Search by name or title…'
+									placeholder='Search by name'
 									aria-label='Search profiles'
 								/>
 							</SearchPill>
@@ -362,7 +378,6 @@ const UpworkProfilesPage = () => {
 						setSort(next)
 						setPage(1)
 					}}
-					selection={selection}
 					pagination={{
 						page,
 						pageSize: PAGE_SIZE,
@@ -396,24 +411,6 @@ const UpworkProfilesPage = () => {
 				/>
 			)}
 
-			{bulkOpen && (
-				<ConfirmModal
-					icon={<DeleteOutline />}
-					iconTone='danger'
-					confirmColor='error'
-					title={`Delete ${selected.size} profile(s)?`}
-					description='Removes the selected profiles and ALL their reference entries, change-log rows and snapshots. This cannot be undone.'
-					confirmLabel='Delete'
-					confirmLoadingLabel='Deleting…'
-					isLoading={bulkDeleting}
-					onConfirm={async () => {
-						await bulkDelete({ ids: Array.from(selected) }).unwrap()
-						setSelected(new Set())
-						setBulkOpen(false)
-					}}
-					onClose={() => setBulkOpen(false)}
-				/>
-			)}
 		</>
 	)
 }

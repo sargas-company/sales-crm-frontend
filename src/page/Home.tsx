@@ -87,14 +87,8 @@ const RunbookDetail = lazy(() => import('./runbook/RunbookDetail.page'))
 const Help = lazy(() => import('./help/Help.page'))
 const HelpDetail = lazy(() => import('./help/HelpDetail.page'))
 const UpworkProfiles = lazy(() => import('./upwork/profiles/UpworkProfiles.page'))
-const UpworkTierFilterDemo = lazy(
-	() => import('./upwork/profiles/_demo/TierFilterDemo'),
-)
 const UpworkProfileForm = lazy(
 	() => import('./upwork/profiles/UpworkProfileForm'),
-)
-const UpworkProfileView = lazy(
-	() => import('./upwork/profiles/UpworkProfileView'),
 )
 const UpworkChangeLog = lazy(
 	() => import('./upwork/change-log/UpworkChangeLog.page'),
@@ -825,14 +819,6 @@ const Home = () => {
 								}
 							/>
 							<Route
-								path='/upwork/profiles/_demo/tier-filter'
-								element={
-									<ProtectedRoute permission='upwork:view'>
-										<UpworkTierFilterDemo />
-									</ProtectedRoute>
-								}
-							/>
-							<Route
 								path='/upwork/profiles/new'
 								element={
 									<ProtectedRoute permission='upwork:create'>
@@ -845,14 +831,6 @@ const Home = () => {
 								element={
 									<ProtectedRoute permission='upwork:update'>
 										<UpworkProfileForm mode='edit' />
-									</ProtectedRoute>
-								}
-							/>
-							<Route
-								path='/upwork/profiles/:id'
-								element={
-									<ProtectedRoute permission='upwork:view'>
-										<UpworkProfileView />
 									</ProtectedRoute>
 								}
 							/>

@@ -44,22 +44,14 @@ interface FormState {
 	date: string
 	profileId: string
 	section: UpworkChangeLogSection
-	item: string
-	summary: string
-	reason: string
-	before: string
-	after: string
+	note: string
 }
 
 const empty: FormState = {
 	date: todayIso(),
 	profileId: '',
 	section: 'title',
-	item: '',
-	summary: '',
-	reason: '',
-	before: '',
-	after: '',
+	note: '',
 }
 
 const UpworkChangeLogForm = ({ mode }: Props) => {
@@ -81,7 +73,7 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 	const isLoading = creating || updating
 
 	const [fields, setFields] = useState<FormState>(empty)
-	const [errors, setErrors] = useState<{ profileId?: string; summary?: string }>({})
+	const [errors, setErrors] = useState<{ profileId?: string; note?: string }>({})
 
 	useEffect(() => {
 		if (isEdit && existing) {
@@ -89,11 +81,7 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 				date: existing.date.slice(0, 10),
 				profileId: existing.profileId,
 				section: existing.section,
-				item: existing.item ?? '',
-				summary: existing.summary,
-				reason: existing.reason ?? '',
-				before: existing.before,
-				after: existing.after,
+				note: existing.note,
 			})
 		}
 	}, [isEdit, existing])
@@ -105,7 +93,7 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 		e.preventDefault()
 		const next: typeof errors = {}
 		if (!fields.profileId) next.profileId = 'Pick a profile'
-		if (!fields.summary.trim()) next.summary = 'Summary is required'
+		if (!fields.note.trim()) next.note = 'Note is required'
 		if (Object.keys(next).length) {
 			setErrors(next)
 			return
@@ -115,11 +103,7 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 			date: fields.date,
 			profileId: fields.profileId,
 			section: fields.section,
-			item: fields.item.trim() || undefined,
-			summary: fields.summary.trim(),
-			reason: fields.reason.trim() || undefined,
-			before: fields.before,
-			after: fields.after,
+			note: fields.note.trim(),
 		}
 		if (isEdit && id) {
 			await update({ id, patch: payload }).unwrap()
@@ -144,7 +128,7 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 					subtitle={
 						isEdit
 							? 'Update entry details.'
-							: 'Record a profile edit with before / after text and the reference entries that drove it.'
+							: 'Record that you touched a profile section. A short note is enough.'
 					}
 					badgeLabel={isEdit ? 'Editing' : 'New'}
 					badgeTone={isEdit ? 'edit' : 'new'}
@@ -180,7 +164,7 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 									))}
 								</Select>
 							</Field>
-							<Field label='Section' required>
+							<Field label='Section' required span='full'>
 								<Select
 									label=''
 									value={fields.section}
@@ -194,78 +178,22 @@ const UpworkChangeLogForm = ({ mode }: Props) => {
 									))}
 								</Select>
 							</Field>
-							<Field label='Item' hint='Optional, e.g. the portfolio case title.'>
+							<Field
+								label='Note'
+								required
+								span='full'
+								error={errors.note}
+								hint='In a sentence or two, what did you change?'
+							>
 								<TextField
-									name='item'
-									value={fields.item}
-									onChange={(e) => setField('item', e.target.value)}
-									width='100%'
-								/>
-							</Field>
-						</FieldGrid>
-					</Section>
-
-					<Section $delay={160}>
-						<SectionHead
-							num='02'
-							title='Narrative'
-							hint='A one-line summary and optional long reason.'
-						/>
-						<FieldGrid>
-							<Field label='Summary' required span='full' error={errors.summary}>
-								<TextField
-									name='summary'
-									value={fields.summary}
-									onChange={(e) => setField('summary', e.target.value)}
-									error={!!errors.summary}
-									width='100%'
-								/>
-							</Field>
-							<Field label='Reason' span='full'>
-								<TextField
-									name='reason'
-									value={fields.reason}
-									onChange={(e) => setField('reason', e.target.value)}
+									name='note'
+									value={fields.note}
+									onChange={(e) => setField('note', e.target.value)}
+									error={!!errors.note}
 									multiline
 									multiRow
 									width='100%'
 									style={{ minHeight: 100, resize: 'vertical' }}
-								/>
-							</Field>
-						</FieldGrid>
-					</Section>
-
-					<Section $delay={240}>
-						<SectionHead
-							num='03'
-							title='Before / After'
-							hint={
-								fields.section === 'job_analysis'
-									? 'Optional for job post analysis — leave empty if this is pure research.'
-									: 'Full text before and after the change.'
-							}
-						/>
-						<FieldGrid>
-							<Field label='Before' span='full'>
-								<TextField
-									name='before'
-									value={fields.before}
-									onChange={(e) => setField('before', e.target.value)}
-									multiline
-									multiRow
-									width='100%'
-									style={{ minHeight: 220, resize: 'vertical' }}
-								/>
-							</Field>
-							<Field label='After' span='full'>
-								<TextField
-									name='after'
-									value={fields.after}
-									onChange={(e) => setField('after', e.target.value)}
-									multiline
-									multiRow
-									width='100%'
-									style={{ minHeight: 220, resize: 'vertical' }}
 								/>
 							</Field>
 						</FieldGrid>

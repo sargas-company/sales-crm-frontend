@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import styled, { keyframes } from 'styled-components'
 import {
 	AddRounded,
 	ClearRounded,
 	DeleteOutline,
 	EditNoteOutlined,
 	EditOutlined,
-	FilterListOutlined,
 	SearchOutlined,
 	VisibilityOutlined,
 } from '@mui/icons-material'
 
-import { ListPageShell } from '../../../components/_shared/ListPageShell'
 import {
 	Actions,
 	DataTable,
@@ -25,18 +24,15 @@ import PermissionGate from '../../../components/auth/PermissionGate'
 import {
 	BottomSlot,
 	ClearBtn,
-	FreshFiltersWrap,
 	InlineField,
 	InlineSelect,
-	RowBreak,
 	SearchPill,
 } from '../../../components/_shared/filters/freshPaperFilters'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
-import styled from 'styled-components'
-import { Clip, DateTimeCell } from '../_shared/cells'
+import { Clip, DateTimeCell, SectionPill } from '../_shared/cells'
 import { ProfileLink } from '../_shared/ProfileLink'
-import { FilterTapes } from '../_shared/FilterTapes'
-
+import DatePickerPill from '../../finance-weekly/DatePickerPill'
+import { T } from '../../../components/sales-analytics/_shared/tokens'
 import {
 	UPWORK_CHANGELOG_SECTIONS,
 	UPWORK_SECTION_LABEL,
@@ -50,57 +46,6 @@ import {
 
 const PAGE_SIZE = 25
 
-/* 9 colour tokens — same geometry and transparency model as
- * `StatusPill` in `_shared/cells.tsx` (project canonical pill):
- *   4px/10px padding · 11px / weight 700 · 0.3 letter-spacing ·
- *   rgba(colour, ~0.12) background · fg = colour anchor.
- * Reuses existing tone anchors (success / danger / warn / muted /
- * info / category purple) and adds 3 compatible siblings
- * (cyan / indigo / rose). */
-const SECTION_PALETTE: Record<
-	UpworkChangeLogSection,
-	{ bg: string; fg: string }
-> = {
-	title: { bg: 'rgba(3, 105, 161, 0.12)', fg: '#0369a1' },
-	overview: { bg: 'rgba(124, 58, 237, 0.10)', fg: '#6d28d9' },
-	skills: { bg: 'rgba(34, 197, 94, 0.14)', fg: '#15803d' },
-	portfolio: { bg: 'rgba(245, 158, 11, 0.16)', fg: '#a26608' },
-	project_catalog: { bg: 'rgba(239, 68, 68, 0.12)', fg: '#b91c1c' },
-	consultation: { bg: 'rgba(6, 182, 212, 0.14)', fg: '#0e7490' },
-	certificate: { bg: 'rgba(99, 102, 241, 0.14)', fg: '#4338ca' },
-	employment_history: { bg: 'rgba(244, 63, 94, 0.12)', fg: '#be123c' },
-	other_experience: { bg: 'rgba(100, 116, 139, 0.12)', fg: '#64748b' },
-	job_analysis: { bg: 'rgba(217, 119, 6, 0.14)', fg: '#92400e' },
-}
-
-const SectionPill = styled.span<{ $section: UpworkChangeLogSection }>`
-	display: inline-flex;
-	align-items: center;
-	padding: 4px 10px;
-	border-radius: 999px;
-	font-size: 11px;
-	font-weight: 700;
-	text-transform: uppercase;
-	letter-spacing: 0.3px;
-	white-space: nowrap;
-	background: ${({ $section }) => SECTION_PALETTE[$section].bg};
-	color: ${({ $section }) => SECTION_PALETTE[$section].fg};
-`
-
-type RangePreset = 'all' | '7d' | '30d' | '90d'
-const RANGE_PRESETS: { value: RangePreset; label: string }[] = [
-	{ value: 'all', label: 'All' },
-	{ value: '7d', label: '7 days' },
-	{ value: '30d', label: '30 days' },
-	{ value: '90d', label: '90 days' },
-]
-
-const presetToFrom = (p: RangePreset): string | undefined => {
-	if (p === 'all') return undefined
-	const d = new Date()
-	d.setDate(d.getDate() - (p === '7d' ? 7 : p === '30d' ? 30 : 90))
-	return d.toISOString().slice(0, 10)
-}
 
 const UpworkChangeLogPage = () => {
 	const nav = useNavigate()
@@ -108,7 +53,8 @@ const UpworkChangeLogPage = () => {
 
 	const profileParam = sp.get('profile') ?? ''
 	const sectionParam = (sp.get('section') ?? '') as UpworkChangeLogSection | ''
-	const rangeParam = (sp.get('range') ?? 'all') as RangePreset
+	const fromParam = sp.get('from') ?? ''
+	const toParam = sp.get('to') ?? ''
 	const searchParam = sp.get('q') ?? ''
 
 	const [searchInput, setSearchInput] = useState(searchParam)
@@ -123,7 +69,7 @@ const UpworkChangeLogPage = () => {
 
 	useEffect(() => {
 		setPage(1)
-	}, [search, profileParam, sectionParam, rangeParam])
+	}, [search, profileParam, sectionParam, fromParam, toParam])
 
 	useEffect(() => {
 		const next = new URLSearchParams(sp)
@@ -149,18 +95,14 @@ const UpworkChangeLogPage = () => {
 	} = useListUpworkChangeLogQuery({
 		profileId: profileParam || undefined,
 		section: sectionParam || undefined,
-		from: presetToFrom(rangeParam),
+		from: fromParam || undefined,
+		to: toParam || undefined,
 	})
 	const [del, { isLoading: deleting }] = useDeleteUpworkChangeLogMutation()
 
 	const filtered = useMemo(() => {
 		if (!search) return rowsAll
-		return rowsAll.filter(
-			(r) =>
-				r.summary.toLowerCase().includes(search) ||
-				(r.item ?? '').toLowerCase().includes(search) ||
-				(r.reason ?? '').toLowerCase().includes(search),
-		)
+		return rowsAll.filter((r) => r.note.toLowerCase().includes(search))
 	}, [rowsAll, search])
 
 	const total = filtered.length
@@ -197,36 +139,18 @@ const UpworkChangeLogPage = () => {
 			skeleton: () => <TableSkeleton $w='110px' $h='18px' />,
 		},
 		{
-			key: 'change',
-			label: 'What changed',
+			key: 'note',
+			label: 'Note',
 			render: (r) => (
-				<Link
-					to={`/upwork/change-log/${r.id}`}
-					style={{ display: 'block', textDecoration: 'none' }}
+				<Clip
+					$max={420}
+					style={{ color: '#475569', fontSize: 13, fontWeight: 400 }}
+					title={r.note}
 				>
-					{r.item && (
-						<div
-							style={{
-								fontFamily: 'Bricolage Grotesque, Inter, system-ui, sans-serif',
-								fontSize: 14,
-								fontWeight: 700,
-								color: '#0f172a',
-								letterSpacing: '-0.3px',
-								marginBottom: 2,
-							}}
-						>
-							{r.item}
-						</div>
-					)}
-					<Clip
-						$max={420}
-						style={{ color: '#475569', fontSize: 12.5, fontWeight: 400 }}
-					>
-						{r.summary}
-					</Clip>
-				</Link>
+					{r.note}
+				</Clip>
 			),
-			skeleton: () => <TableSkeleton $w='240px' $h='13px' />,
+			skeleton: () => <TableSkeleton $w='320px' $h='13px' />,
 		},
 		{
 			key: 'actions',
@@ -261,7 +185,8 @@ const UpworkChangeLogPage = () => {
 		(search ? 1 : 0) +
 		(profileParam ? 1 : 0) +
 		(sectionParam ? 1 : 0) +
-		(rangeParam !== 'all' ? 1 : 0)
+		(fromParam ? 1 : 0) +
+		(toParam ? 1 : 0)
 	const clearFilters = () => {
 		setSearchInput('')
 		setSort({ key: 'date', direction: 'desc' })
@@ -270,125 +195,192 @@ const UpworkChangeLogPage = () => {
 
 	return (
 		<>
-			<ListPageShell
-				crumbs={[
-					{ label: 'Upwork', href: '/upwork/reminders' },
-					{ label: 'Change Log', current: true },
-				]}
-				icon={<EditNoteOutlined />}
-				title='Change Log'
-				subtitle='Edits to a profile with before / after text.'
-				action={
-					<PermissionGate permission='upwork:create'>
-						<PrimarySolidButton onClick={() => nav('/upwork/change-log/new')}>
-							<AddRounded fontSize='small' />
-							New entry
-						</PrimarySolidButton>
-					</PermissionGate>
-				}
-				filters={
-					<FreshFiltersWrap role='region' aria-label='Change log filters'>
-						<div className='filter-lead'>
-							<span className='lead-icon'>
-								<FilterListOutlined />
+			<ViewFade>
+				<ShellCard>
+					<ShellInner>
+						<Crumbs>
+							<span className='crumb-dot' aria-hidden='true' />
+							<span className='crumb-parent'>Upwork</span>
+							<span className='crumb-sep' aria-hidden='true'>
+								/
 							</span>
-							<div className='lead-text'>
-								<span className='top'>Range</span>
-								<span className='bot'>
-									{RANGE_PRESETS.find((p) => p.value === rangeParam)?.label ?? 'All'}
+							<span className='current'>Change log</span>
+						</Crumbs>
+
+						<PageHead>
+							<div className='title'>
+								<HeadIcon>
+									<EditNoteOutlined />
+								</HeadIcon>
+								<div className='title-text'>
+									<h1>Change log</h1>
+									<p>
+										Record of profile edits — a date, a section and a short
+										note.
+									</p>
+								</div>
+							</div>
+							<div className='title-right' aria-hidden='true'>
+								<span className='hand-line'>touch it, log it</span>
+								<span className='hand-flourish'>
+									<svg viewBox='0 0 120 20' width='120' height='20'>
+										<path
+											d='M2 12 C 28 2, 60 22, 96 6'
+											fill='none'
+											stroke='currentColor'
+											strokeWidth='2.2'
+											strokeLinecap='round'
+										/>
+										<path
+											d='M88 4 L 98 6 L 92 14'
+											fill='none'
+											stroke='currentColor'
+											strokeWidth='2.2'
+											strokeLinecap='round'
+											strokeLinejoin='round'
+										/>
+									</svg>
 								</span>
 							</div>
-						</div>
+							<div className='title-action'>
+								<PermissionGate permission='upwork:create'>
+									<PrimarySolidButton
+										onClick={() => nav('/upwork/change-log/new')}
+									>
+										<AddRounded fontSize='small' />
+										New entry
+									</PrimarySolidButton>
+								</PermissionGate>
+							</div>
+						</PageHead>
 
-						<FilterTapes
-							presets={RANGE_PRESETS}
-							value={rangeParam}
-							onChange={(v) => updateParam('range', v === 'all' ? '' : v)}
-							ariaLabel='Change log date range'
-						/>
+						<FiltersBlock role='region' aria-label='Change log filters'>
+							<TopFilterRow>
+								<DecisionGroup>
+									<div className='filter-lead'>
+										<span className='lead-icon'>
+											<EditNoteOutlined />
+										</span>
+										<div className='lead-text'>
+											<span className='top'>Filters</span>
+											<span className='bot'>
+												{activeFilterCount
+													? `${activeFilterCount} active`
+													: 'Date, profile, section'}
+											</span>
+										</div>
+									</div>
 
-						<SearchPill>
-							<SearchOutlined className='ico' />
-							<input
-								value={searchInput}
-								onChange={(e) => setSearchInput(e.target.value)}
-								placeholder='Search summary, item, reason…'
-								aria-label='Search change log'
+									<RangeGroup aria-label='Date range'>
+										<BottomSlot>
+											<DatePickerPill
+												label='From'
+												value={fromParam}
+												onChange={(v) => updateParam('from', v)}
+												accent='orange'
+												size='lg'
+												placeholder='Any'
+											/>
+										</BottomSlot>
+
+										<RangeDash aria-hidden='true'>—</RangeDash>
+
+										<BottomSlot>
+											<DatePickerPill
+												label='To'
+												value={toParam}
+												onChange={(v) => updateParam('to', v)}
+												accent='orange'
+												size='lg'
+												placeholder='Any'
+											/>
+										</BottomSlot>
+									</RangeGroup>
+								</DecisionGroup>
+							</TopFilterRow>
+
+							<BottomFilterRow>
+								<InlineField>
+									<span className='l'>Profile</span>
+									<InlineSelect
+										value={profileParam}
+										onChange={(e) => updateParam('profile', e.target.value)}
+									>
+										<option value=''>All</option>
+										{profiles.map((p) => (
+											<option key={p.id} value={p.id}>
+												{upworkProfileName(p)}
+											</option>
+										))}
+									</InlineSelect>
+								</InlineField>
+
+								<InlineField>
+									<span className='l'>Section</span>
+									<InlineSelect
+										value={sectionParam}
+										onChange={(e) => updateParam('section', e.target.value)}
+									>
+										<option value=''>All</option>
+										{UPWORK_CHANGELOG_SECTIONS.map((s) => (
+											<option key={s} value={s}>
+												{UPWORK_SECTION_LABEL[s]}
+											</option>
+										))}
+									</InlineSelect>
+								</InlineField>
+
+								<SearchPill className='search'>
+									<SearchOutlined className='ico' />
+									<input
+										type='text'
+										name='search-change-log'
+										placeholder='Search by note'
+										value={searchInput}
+										onChange={(e) => setSearchInput(e.target.value)}
+										aria-label='Search change log'
+									/>
+								</SearchPill>
+
+								<ClearBtn
+									className='clear'
+									type='button'
+									onClick={clearFilters}
+									disabled={activeFilterCount === 0}
+								>
+									<ClearRounded style={{ fontSize: 15 }} />
+									Clear
+								</ClearBtn>
+							</BottomFilterRow>
+						</FiltersBlock>
+
+						<TableWrap>
+							<DataTable<UpworkChangeLog>
+								columns={columns}
+								rows={paged}
+								rowKey={(r) => r.id}
+								isLoading={isLoading}
+								isError={isError}
+								onRetry={refetch}
+								searchActive={!!search}
+								emptyTitle='No change-log entries yet.'
+								emptyTitleSearch='Nothing matches the current filter.'
+								sort={sort}
+								onSortChange={(next) => {
+									setSort(next)
+									setPage(1)
+								}}
+								pagination={{
+									page,
+									pageSize: PAGE_SIZE,
+									total,
+									onPageChange: setPage,
+								}}
 							/>
-						</SearchPill>
-
-						<RowBreak />
-
-						<BottomSlot>
-							<InlineField>
-								<span className='l'>Profile</span>
-								<InlineSelect
-									value={profileParam}
-									onChange={(e) => updateParam('profile', e.target.value)}
-								>
-									<option value=''>All</option>
-									{profiles.map((p) => (
-										<option key={p.id} value={p.id}>
-											{upworkProfileName(p)}
-										</option>
-									))}
-								</InlineSelect>
-							</InlineField>
-						</BottomSlot>
-
-						<BottomSlot>
-							<InlineField>
-								<span className='l'>Section</span>
-								<InlineSelect
-									value={sectionParam}
-									onChange={(e) => updateParam('section', e.target.value)}
-								>
-									<option value=''>All</option>
-									{UPWORK_CHANGELOG_SECTIONS.map((s) => (
-										<option key={s} value={s}>
-											{UPWORK_SECTION_LABEL[s]}
-										</option>
-									))}
-								</InlineSelect>
-							</InlineField>
-						</BottomSlot>
-
-						<div className='filter-spacer' style={{ flex: 1 }} />
-
-						<ClearBtn
-							type='button'
-							onClick={clearFilters}
-							disabled={activeFilterCount === 0}
-						>
-							<ClearRounded style={{ fontSize: 15 }} />
-							Clear
-						</ClearBtn>
-					</FreshFiltersWrap>
-				}
-			>
-				<DataTable<UpworkChangeLog>
-					columns={columns}
-					rows={paged}
-					rowKey={(r) => r.id}
-					isLoading={isLoading}
-					isError={isError}
-					onRetry={refetch}
-					searchActive={!!search}
-					emptyTitle='No change-log entries yet.'
-					emptyTitleSearch='Nothing matches the current filter.'
-					sort={sort}
-					onSortChange={(next) => {
-						setSort(next)
-						setPage(1)
-					}}
-					pagination={{
-						page,
-						pageSize: PAGE_SIZE,
-						total,
-						onPageChange: setPage,
-					}}
-				/>
-			</ListPageShell>
+						</TableWrap>
+					</ShellInner>
+				</ShellCard>
+			</ViewFade>
 
 			{toDelete && (
 				<ConfirmModal
@@ -398,8 +390,9 @@ const UpworkChangeLogPage = () => {
 					title='Delete entry?'
 					description={
 						<>
-							Delete <strong>{toDelete.summary}</strong>? Reference links are kept
-							for history but the entry itself is removed. This cannot be undone.
+							Delete the <strong>{UPWORK_SECTION_LABEL[toDelete.section]}</strong>
+							{' '}entry from {new Date(toDelete.date).toLocaleDateString('en-GB')}?
+							This cannot be undone.
 						</>
 					}
 					confirmLabel='Delete'
@@ -417,3 +410,308 @@ const UpworkChangeLogPage = () => {
 }
 
 export default UpworkChangeLogPage
+
+/* ─── Styled shell — mirrored from job-posts list ──────────────── */
+
+const fadeUp = keyframes`
+	from { opacity: 0; transform: translateY(6px); }
+	to   { opacity: 1; transform: translateY(0); }
+`
+
+const handDraw = keyframes`
+	from { opacity: 0; transform: translate(-6px, 4px) rotate(-6deg); }
+	to   { opacity: 1; transform: translate(0, 0)     rotate(-6deg); }
+`
+
+const flourishDraw = keyframes`
+	from { stroke-dashoffset: 240; opacity: 0; }
+	to   { stroke-dashoffset: 0;   opacity: 1; }
+`
+
+const ViewFade = styled.div`
+	animation: ${fadeUp} 240ms ${T.ease};
+`
+
+const ShellCard = styled.div`
+	position: relative;
+	background: ${T.cardBg};
+	border-radius: ${T.radiusLg};
+	box-shadow:
+		0 1px 2px rgba(15, 23, 42, 0.04),
+		0 12px 40px rgba(39, 36, 45, 0.06);
+	overflow: hidden;
+`
+
+const ShellInner = styled.div`
+	padding: 30px 32px 32px;
+	display: flex;
+	flex-direction: column;
+	gap: 22px;
+
+	@media (max-width: 767px) {
+		padding: 22px 18px 24px;
+		gap: 18px;
+	}
+`
+
+const Crumbs = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12.5px;
+	color: ${T.textMuted};
+
+	.crumb-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: ${T.primary};
+	}
+	.crumb-sep {
+		opacity: 0.4;
+	}
+	.current {
+		color: ${T.textSecondary};
+		font-weight: 600;
+	}
+`
+
+const PageHead = styled.header`
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 20px;
+	flex-wrap: wrap;
+	padding-bottom: 22px;
+	border-bottom: 1px solid ${T.divider};
+
+	.title {
+		display: inline-flex;
+		align-items: center;
+		gap: 18px;
+		min-width: 0;
+	}
+	.title-text {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		min-width: 0;
+	}
+	.title-text h1 {
+		margin: 0;
+		font-size: 34px;
+		font-weight: 700;
+		letter-spacing: -0.8px;
+		line-height: 1.05;
+		color: ${T.textStrong};
+	}
+	.title-text p {
+		margin: 0;
+		font-size: 14px;
+		line-height: 1.5;
+		color: ${T.textSecondary};
+		max-width: 62ch;
+	}
+
+	.title-right {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 4px;
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+	.hand-line {
+		font-family: 'Caveat', 'Brush Script MT', cursive;
+		font-size: 42px;
+		font-weight: 700;
+		line-height: 1;
+		color: #0369a1;
+		transform: rotate(-6deg);
+		transform-origin: right center;
+		text-shadow: 0 6px 22px rgba(2, 132, 199, 0.22);
+		animation: ${handDraw} 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+		white-space: nowrap;
+	}
+	.hand-flourish {
+		display: inline-flex;
+		color: #0284c7;
+		opacity: 0.75;
+		margin-right: -4px;
+		transform: rotate(-4deg);
+	}
+	.hand-flourish svg path {
+		stroke-dasharray: 240;
+		stroke-dashoffset: 240;
+		animation: ${flourishDraw} 1.1s cubic-bezier(0.22, 1, 0.36, 1) 0.55s forwards;
+	}
+
+	.title-action {
+		display: inline-flex;
+		align-items: center;
+		flex-shrink: 0;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.hand-line {
+			animation: none;
+			transform: rotate(-6deg);
+		}
+		.hand-flourish svg path {
+			animation: none;
+			stroke-dashoffset: 0;
+			opacity: 1;
+		}
+	}
+
+	@media (max-width: 720px) {
+		.title-text h1 {
+			font-size: 28px;
+			letter-spacing: -0.5px;
+		}
+		.title-right {
+			display: none;
+		}
+	}
+`
+
+const HeadIcon = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 52px;
+	height: 52px;
+	border-radius: 14px;
+	background: ${T.primaryTint};
+	color: ${T.primary};
+	flex-shrink: 0;
+
+	svg {
+		font-size: 28px;
+	}
+`
+
+const FiltersBlock = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+`
+
+const TopFilterRow = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px 16px;
+	min-height: 56px;
+`
+
+const DecisionGroup = styled.div`
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 14px;
+	flex: 1 1 auto;
+	min-width: 0;
+
+	.filter-lead {
+		display: inline-flex;
+		align-items: center;
+		gap: 12px;
+		padding-right: 22px;
+		border-right: 1px solid rgba(36, 30, 22, 0.08);
+	}
+	.filter-lead .lead-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		border-radius: 11px;
+		background: #241e16;
+		color: #fdfaf2;
+		transition:
+			transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+			background 220ms ease;
+	}
+	.filter-lead .lead-icon svg {
+		font-size: 20px;
+		transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+	.filter-lead:hover .lead-icon {
+		transform: rotate(-6deg) scale(1.08);
+		background: #e85d2f;
+	}
+	.filter-lead .lead-text {
+		display: flex;
+		flex-direction: column;
+		line-height: 1.15;
+		min-width: 78px;
+	}
+	.filter-lead .lead-text .top {
+		font-family: 'Fraunces', 'Georgia', serif;
+		font-variation-settings: 'opsz' 36;
+		font-size: 17px;
+		font-weight: 600;
+		color: #241e16;
+		letter-spacing: -0.2px;
+	}
+	.filter-lead .lead-text .bot {
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-variant-numeric: tabular-nums;
+		font-size: 10.5px;
+		color: #7d6e5d;
+		letter-spacing: 0.7px;
+		text-transform: uppercase;
+		margin-top: 3px;
+		white-space: nowrap;
+		transition: color 200ms ease;
+	}
+	.filter-lead:hover .lead-text .bot {
+		color: #e85d2f;
+	}
+`
+
+const BottomFilterRow = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 10px 12px;
+
+	.search {
+		flex: 0 0 auto;
+		min-width: 180px;
+	}
+	.search input {
+		width: 180px;
+	}
+
+	.clear {
+		margin-left: auto;
+	}
+`
+
+const RangeGroup = styled.div`
+	display: inline-flex;
+	align-items: flex-end;
+	gap: 10px;
+	align-self: flex-end;
+	padding: 4px 10px;
+	border: 1px dashed rgba(36, 30, 22, 0.14);
+	border-radius: 14px;
+`
+
+const RangeDash = styled.span`
+	align-self: flex-end;
+	display: inline-flex;
+	align-items: center;
+	min-height: 42px;
+	padding: 0 2px;
+	color: #7d6e5d;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1;
+	user-select: none;
+`
+
+const TableWrap = styled.div``

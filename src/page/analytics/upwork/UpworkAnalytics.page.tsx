@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import styled, { keyframes } from 'styled-components'
 import {
+	Area,
+	AreaChart,
 	Bar,
 	BarChart,
 	CartesianGrid,
+	LabelList,
 	Line,
 	LineChart,
 	ReferenceLine,
@@ -30,13 +33,18 @@ import {
 } from '../kpi.styled'
 import {
 	BottomSlot,
-	FreshFiltersWrap,
 	InlineField,
 	InlineSelect,
 } from '../../../components/_shared/filters/freshPaperFilters'
+import DatePickerPill from '../../finance-weekly/DatePickerPill'
+import {
+	TapeIndicator,
+	TapePill,
+	TapePills,
+} from '../filters/filters.styled'
+import { CalendarTodayOutlined } from '@mui/icons-material'
 
 import {
-	UPWORK_SECTION_LABEL,
 	upworkProfileName,
 	useGetUpworkAnalyticsQuery,
 	useListUpworkProfilesQuery,
@@ -83,8 +91,60 @@ const MiniHead = styled.div`
 interface MarkerSpec {
 	date: string
 	section: string
-	summary: string
+	note: string
 }
+interface LabelRenderProps {
+	x?: number | string
+	y?: number | string
+	width?: number | string
+	height?: number | string
+	value?: number | string
+}
+
+const toNum = (v: number | string | undefined): number | null => {
+	if (v == null) return null
+	const n = typeof v === 'number' ? v : Number(v)
+	return Number.isFinite(n) ? n : null
+}
+
+/* Floating number with a short tick connecting it to the bar top. */
+const TickLabel = (props: LabelRenderProps & { tone: string }) => {
+	const x = toNum(props.x)
+	const y = toNum(props.y)
+	const width = toNum(props.width)
+	const n = toNum(props.value)
+	if (n == null || n <= 0 || x == null || y == null || width == null)
+		return <g />
+	const cx = x + width / 2
+	const tickTop = y - 12
+	return (
+		<g>
+			<line
+				x1={cx}
+				y1={y - 2}
+				x2={cx}
+				y2={tickTop}
+				stroke={props.tone}
+				strokeWidth={1.5}
+				strokeLinecap='round'
+				opacity={0.4}
+			/>
+			<text
+				x={cx}
+				y={tickTop - 5}
+				textAnchor='middle'
+				fill={T.textStrong}
+				fontSize={15}
+				fontWeight={800}
+				fontFamily='Bricolage Grotesque, Inter, sans-serif'
+				style={{ letterSpacing: '-0.4px' }}
+			>
+				{n.toLocaleString()}
+			</text>
+		</g>
+	)
+}
+
 interface MiniChartProps {
 	label: string
 	color: string
@@ -92,6 +152,30 @@ interface MiniChartProps {
 	dataKey: string
 	markers: MarkerSpec[]
 	showX: boolean
+	kind?: 'bar' | 'area'
+	showTooltip?: boolean
+}
+
+/* Compact MMM-D label for short ranges, MMM-only for long ones.
+ * Keeps 1-year sparklines readable (12 month ticks instead of 52
+ * weekly ones). */
+const formatWeekTick = (iso: string, total: number): string => {
+	if (!iso) return ''
+	const d = new Date(iso)
+	if (Number.isNaN(d.getTime())) return iso
+	return d.toLocaleDateString('en-US', {
+		month: 'short',
+		...(total <= 24 ? { day: 'numeric' as const } : {}),
+	})
+}
+
+/* How many ticks to skip between labels — scales from "show all"
+ * for tiny windows to "~12 ticks" for a full year. */
+const calcTickInterval = (n: number): number | 'preserveStartEnd' => {
+	if (n <= 10) return 0
+	if (n <= 20) return 1
+	if (n <= 40) return 3
+	return Math.max(3, Math.floor(n / 12))
 }
 
 const MiniChart = ({
@@ -101,60 +185,129 @@ const MiniChart = ({
 	dataKey,
 	markers,
 	showX,
-}: MiniChartProps) => (
-	<div>
-		<MiniHead>
-			<span className='dot' style={{ background: color }} />
-			<span className='lbl'>{label}</span>
-		</MiniHead>
-		<ResponsiveContainer width='100%' height={showX ? 130 : 110}>
-			<BarChart data={data} margin={{ left: 4, right: 12, top: 4, bottom: 0 }}>
-				<CartesianGrid
-					strokeDasharray='3 3'
-					stroke={T.divider}
-					vertical={false}
-				/>
-				<XAxis
-					dataKey='weekStart'
-					stroke={T.divider}
-					tick={
-						showX
-							? { fill: T.textSecondary, fontSize: 11, fontWeight: 600 }
+	kind = 'bar',
+	showTooltip = true,
+}: MiniChartProps) => {
+	const gradId = `mini-grad-${label.replace(/\s+/g, '-').toLowerCase()}`
+	const points = data.length
+
+	const commonAxes = (
+		<>
+			<CartesianGrid
+				strokeDasharray='3 3'
+				stroke={T.divider}
+				vertical={false}
+			/>
+			<XAxis
+				dataKey='weekStart'
+				stroke={T.divider}
+				tick={
+					showX
+						? { fill: T.textSecondary, fontSize: 11, fontWeight: 600 }
+						: false
+				}
+				tickLine={false}
+				axisLine={{ stroke: T.divider }}
+				height={showX ? 28 : 0}
+				dy={showX ? 6 : 0}
+				interval={calcTickInterval(points)}
+				minTickGap={12}
+				tickFormatter={(iso: string) => formatWeekTick(iso, points)}
+			/>
+			<YAxis
+				stroke={T.divider}
+				tick={{ fill: T.textSecondary, fontSize: 11, fontWeight: 600 }}
+				tickLine={false}
+				axisLine={{ stroke: T.divider }}
+				width={42}
+				allowDecimals={false}
+				domain={kind === 'area' ? ['auto', 'auto'] : [0, 'auto']}
+			/>
+			{showTooltip && (
+				<RechartsTooltip
+					cursor={
+						kind === 'area'
+							? { stroke: T.divider, strokeDasharray: '3 4' }
 							: false
 					}
-					tickLine={false}
-					axisLine={{ stroke: T.divider }}
-					height={showX ? 24 : 0}
-					dy={showX ? 6 : 0}
+					content={<BarTipContent />}
 				/>
-				<YAxis
-					stroke={T.divider}
-					tick={{ fill: T.textSecondary, fontSize: 11, fontWeight: 600 }}
-					tickLine={false}
-					axisLine={{ stroke: T.divider }}
-					width={42}
-					allowDecimals={false}
+			)}
+			{markers.map((m, i) => (
+				<ReferenceLine
+					key={`${m.date}-${i}`}
+					x={weekStartIso(m.date)}
+					stroke={T.textMuted}
+					strokeDasharray='4 4'
 				/>
-				<RechartsTooltip cursor={false} content={<BarTipContent />} />
-				<Bar
-					dataKey={dataKey}
-					fill={color}
-					radius={[6, 6, 0, 0]}
-					maxBarSize={32}
-					isAnimationActive
-				/>
-				{markers.map((m, i) => (
-					<ReferenceLine
-						key={`${m.date}-${i}`}
-						x={weekStartIso(m.date)}
-						stroke={T.textMuted}
-						strokeDasharray='4 4'
-					/>
-				))}
-			</BarChart>
-		</ResponsiveContainer>
-	</div>
-)
+			))}
+		</>
+	)
+
+	return (
+		<div>
+			<MiniHead>
+				<span className='dot' style={{ background: color }} />
+				<span className='lbl'>{label}</span>
+			</MiniHead>
+			<ResponsiveContainer width='100%' height={showX ? 260 : 220}>
+				{kind === 'area' ? (
+					<AreaChart
+						data={data}
+						margin={{ left: 4, right: 12, top: 10, bottom: 0 }}
+					>
+						<defs>
+							<linearGradient id={gradId} x1='0' y1='0' x2='0' y2='1'>
+								<stop offset='0%' stopColor={color} stopOpacity={0.35} />
+								<stop offset='100%' stopColor={color} stopOpacity={0} />
+							</linearGradient>
+						</defs>
+						{commonAxes}
+						<Area
+							type='monotone'
+							dataKey={dataKey}
+							stroke={color}
+							strokeWidth={2.5}
+							fill={`url(#${gradId})`}
+							activeDot={{
+								r: 5,
+								fill: color,
+								stroke: '#fff',
+								strokeWidth: 2,
+							}}
+							isAnimationActive
+							animationDuration={700}
+							animationEasing='ease-out'
+						/>
+					</AreaChart>
+				) : (
+					<BarChart
+						data={data}
+						margin={{ left: 4, right: 12, top: 30, bottom: 0 }}
+					>
+						{commonAxes}
+						<Bar
+							dataKey={dataKey}
+							fill={color}
+							radius={[6, 6, 0, 0]}
+							maxBarSize={32}
+							isAnimationActive
+							animationDuration={700}
+						>
+							<LabelList
+								dataKey={dataKey}
+								position='top'
+								content={(props) => (
+									<TickLabel {...props} tone={color} />
+								)}
+							/>
+						</Bar>
+					</BarChart>
+				)}
+			</ResponsiveContainer>
+		</div>
+	)
+}
 
 /* Mirror of HeatmapTooltip's entry animation — same keyframe, same
  * timing, so the Upwork page tooltips feel identical to the Sales
@@ -259,11 +412,13 @@ const BAR_TIP_LABELS: Record<string, string> = {
 	views: 'Views',
 	invites: 'Invites',
 	directMessages: 'Direct messages',
+	position: 'Position',
 }
 const BAR_TIP_UNITS: Record<string, string> = {
 	views: 'views',
 	invites: 'invites',
 	directMessages: 'direct messages',
+	position: 'avg rank',
 }
 const BarTipContent = ({ active, label, payload }: BarTipProps) => {
 	if (!active || !payload || payload.length === 0) return null
@@ -353,118 +508,6 @@ const EmptyChart = styled.div`
 	color: ${T.textMuted};
 	font-size: 13px;
 `
-const VpiCaption = styled.span`
-	font-family: 'Fraunces', Georgia, serif;
-	font-style: italic;
-	font-size: 13px;
-	color: ${T.textSecondary};
-	flex: 1;
-	margin-left: 16px;
-	margin-right: auto;
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-`
-const SumBarWrap = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 14px;
-	padding: 6px 2px 2px;
-`
-const SumBar = styled.div`
-	display: flex;
-	gap: 2px;
-	height: 18px;
-	border-radius: 999px;
-	overflow: hidden;
-	background: ${T.subtleBg};
-`
-const SumSeg = styled.div<{ $w: number; $c: string }>`
-	flex: ${(p) => p.$w} 0 0;
-	background: ${(p) => p.$c};
-	transition: flex 400ms ${T.ease};
-`
-const SumLegend = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	gap: 10px 18px;
-`
-const SumLegendRow = styled.div<{ $c: string }>`
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 12px;
-	color: ${T.textSecondary};
-	.dot {
-		width: 10px;
-		height: 10px;
-		border-radius: 999px;
-		background: ${(p) => p.$c};
-	}
-	.sec {
-		font-weight: 700;
-		color: ${T.textStrong};
-	}
-	.n {
-		font-family: 'JetBrains Mono', ui-monospace, monospace;
-		font-weight: 600;
-	}
-`
-const LatestCard = styled.div`
-	display: flex;
-	gap: 18px;
-	align-items: center;
-	padding: 18px 22px;
-	margin: 18px 0 22px;
-	border-radius: 16px;
-	background: linear-gradient(
-		135deg,
-		rgba(3, 105, 161, 0.08) 0%,
-		rgba(124, 58, 237, 0.08) 100%
-	);
-	border: 1px solid ${T.border};
-	.dot {
-		width: 54px;
-		height: 54px;
-		border-radius: 14px;
-		background: linear-gradient(135deg, #0369a1 0%, #7c3aed 100%);
-		color: #fff;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		font-family: 'Bricolage Grotesque', sans-serif;
-		font-size: 22px;
-		font-weight: 800;
-		flex: 0 0 auto;
-	}
-	.body {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		min-width: 0;
-	}
-	.k {
-		font-size: 11px;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: ${T.textSecondary};
-		font-weight: 700;
-	}
-	.sum {
-		font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
-		font-size: 20px;
-		font-weight: 700;
-		color: ${T.textStrong};
-		letter-spacing: -0.4px;
-		line-height: 1.25;
-	}
-	.meta {
-		font-family: 'JetBrains Mono', ui-monospace, monospace;
-		font-size: 12px;
-		color: ${T.textSecondary};
-	}
-`
 const SectionTitle = styled.h2`
 	font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
 	font-size: 22px;
@@ -527,7 +570,10 @@ const UpworkAnalyticsPage = () => {
 	const activeProfiles = profiles.filter((p) => p.active)
 
 	const [profileId, setProfileId] = useState<string>('')
-	const [range, setRange] = useState<'30d' | '90d' | '180d'>('90d')
+	type RangeKey = '7d' | '30d' | '90d' | '180d' | '1y' | 'custom'
+	const [range, setRange] = useState<RangeKey>('90d')
+	const [customFrom, setCustomFrom] = useState<string>('')
+	const [customTo, setCustomTo] = useState<string>('')
 
 	/* Auto-select the first active profile the moment it arrives so the
 	 * dashboard isn't a blank screen on first open. User can still pick
@@ -537,12 +583,58 @@ const UpworkAnalyticsPage = () => {
 	}, [profileId, activeProfiles])
 
 	const { from, to } = useMemo(() => {
+		if (range === 'custom' && (customFrom || customTo)) {
+			return { from: customFrom || undefined, to: customTo || undefined }
+		}
 		const toD = new Date()
 		const fromD = new Date()
-		const days = range === '30d' ? 30 : range === '90d' ? 90 : 180
+		const days =
+			range === '7d'
+				? 7
+				: range === '30d'
+					? 30
+					: range === '90d'
+						? 90
+						: range === '180d'
+							? 180
+							: range === '1y'
+								? 365
+								: 90
 		fromD.setDate(fromD.getDate() - days)
-		return { from: fromD.toISOString().slice(0, 10), to: toD.toISOString().slice(0, 10) }
+		return {
+			from: fromD.toISOString().slice(0, 10),
+			to: toD.toISOString().slice(0, 10),
+		}
+	}, [range, customFrom, customTo])
+
+	/* Sliding orange tape indicator for the Range pills. */
+	const pillsRef = useRef<HTMLDivElement>(null)
+	const [ind, setInd] = useState<{
+		left: number
+		width: number
+		opacity: number
+	}>({ left: 0, width: 0, opacity: 0 })
+	useLayoutEffect(() => {
+		if (!pillsRef.current) return
+		const el = pillsRef.current.querySelector<HTMLButtonElement>(
+			'[data-active="true"]',
+		)
+		if (el) {
+			setInd({ left: el.offsetLeft, width: el.offsetWidth, opacity: 1 })
+		}
 	}, [range])
+
+	const RANGE_OPTIONS: { value: RangeKey; label: string }[] = [
+		{ value: '7d', label: '7 days' },
+		{ value: '30d', label: '30 days' },
+		{ value: '90d', label: '90 days' },
+		{ value: '180d', label: '180 days' },
+		{ value: '1y', label: '1 year' },
+	]
+	const activeRangeLabel =
+		range === 'custom'
+			? 'Custom'
+			: RANGE_OPTIONS.find((o) => o.value === range)?.label ?? '—'
 
 	const { data: analytics } = useGetUpworkAnalyticsQuery(
 		{ profileId, from, to },
@@ -556,84 +648,41 @@ const UpworkAnalyticsPage = () => {
 	const selectedProfile = profiles.find((p) => p.id === profileId) ?? null
 	const isSecondary = selectedProfile?.tier === 'secondary'
 
-	/* Secondary profiles use "latest vs previous" KPI regardless of the
-	 * selected range — one monthly snapshot can land outside a 30-day
-	 * window, so the strip needs the two newest snapshots *globally*
-	 * for the profile. Backend already orders by date desc; take [0]
-	 * and [1]. */
-	const { data: allSnapshotsForTier = [] } = useListUpworkSnapshotsQuery(
-		{ profileId },
-		{ skip: !profileId || !isSecondary },
-	)
-	const secondaryDelta = useMemo(() => {
-		if (!isSecondary) return null
-		const [latest, previous] = allSnapshotsForTier
-		if (!latest) return null
-		const vpi = (s: typeof latest) =>
-			s.invites > 0 ? s.views / s.invites : null
-		return {
-			latest,
-			previous: previous ?? null,
-			views: {
-				v: latest.views,
-				d: previous ? latest.views - previous.views : null,
-			},
-			invites: {
-				v: latest.invites,
-				d: previous ? latest.invites - previous.invites : null,
-			},
-			directMessages: {
-				v: latest.directMessages,
-				d: previous ? latest.directMessages - previous.directMessages : null,
-			},
-			vpi: {
-				v: vpi(latest),
-				d:
-					previous && vpi(latest) != null && vpi(previous) != null
-						? (vpi(latest) as number) - (vpi(previous) as number)
-						: null,
-			},
-		}
-	}, [isSecondary, allSnapshotsForTier])
-	/* Aggregate change-log markers into a section-distribution bar.
-	 * Colors mirror the per-section palette elsewhere in the module. */
-	const sectionActivity = useMemo(() => {
-		if (!analytics) return [] as Array<{ section: string; count: number; color: string }>
-		const counts = new Map<string, number>()
-		for (const m of analytics.changeLogMarkers) {
-			counts.set(m.section, (counts.get(m.section) ?? 0) + 1)
-		}
-		const palette: Record<string, string> = {
-			title: '#0369a1',
-			overview: '#7c3aed',
-			skills: '#16a34a',
-			portfolio: '#d97706',
-			project_catalog: '#c94b4b',
-			consultation: '#0ea5e9',
-			certificate: '#059669',
-			employment_history: '#a855f7',
-			other_experience: '#eab308',
-		}
-		return Array.from(counts.entries())
-			.map(([section, count]) => ({
-				section,
-				count,
-				color: palette[section] ?? '#64748b',
-			}))
-			.sort((a, b) => b.count - a.count)
-	}, [analytics])
+	/* Totals in the selected period — sum across in-range snapshots. */
+	const periodTotals = useMemo(() => {
+		return snapshots.reduce(
+			(acc, s) => ({
+				views: acc.views + s.views,
+				invites: acc.invites + s.invites,
+				directMessages: acc.directMessages + s.directMessages,
+			}),
+			{ views: 0, invites: 0, directMessages: 0 },
+		)
+	}, [snapshots])
 
-	const latestChange = useMemo(() => {
-		if (!analytics || analytics.changeLogMarkers.length === 0) return null
-		return [...analytics.changeLogMarkers].sort((a, b) =>
-			a.date < b.date ? 1 : -1,
-		)[0]
+	/* Weekly-average position series + latest value, used by the
+	 * Position card's big number + sparkline. Lower is better; a
+	 * value of zero is impossible as a real Upwork rank, so treat
+	 * anything ≤ 0 as missing (filter it out). */
+	const positionSeries = useMemo(() => {
+		if (!analytics) return [] as Array<{ weekStart: string; position: number }>
+		return analytics.positionsWeekly
+			.map((w) => {
+				const nums = Object.values(w.byPhrase).filter((n) => n > 0)
+				if (!nums.length) return null
+				const avg = nums.reduce((a, b) => a + b, 0) / nums.length
+				return { weekStart: w.weekStart, position: avg }
+			})
+			.filter((x): x is { weekStart: string; position: number } => x != null)
 	}, [analytics])
+	const currentPosition = positionSeries.at(-1)?.position ?? null
 
-	const totalSectionCount = sectionActivity.reduce((s, r) => s + r.count, 0)
-	const vpi = analytics?.viewsPerInvite4w
-	const vpiValue = vpi?.value
-	const vpiWarn = !!vpi?.warn
+	/* Keyed on all filter inputs. Passing this as a React `key` to
+	 * each AnimatedNumber / MiniChart forces a remount on any
+	 * filter change, which restarts recharts' entry animation and
+	 * the KPI counters even when the underlying value happens to
+	 * match the previous one. */
+	const resetKey = `${profileId}-${range}-${customFrom}-${customTo}`
 
 	return (
 		<ViewFade>
@@ -675,21 +724,79 @@ const UpworkAnalyticsPage = () => {
 						</div>
 					</PageHead>
 
-					{profileId && latestChange && (
-						<LatestCard>
-							<span className='dot'>★</span>
-							<div className='body'>
-								<span className='k'>
-									Latest change · {UPWORK_SECTION_LABEL[latestChange.section as keyof typeof UPWORK_SECTION_LABEL] ?? latestChange.section.replace(/_/g, ' ')}
-								</span>
-								<span className='sum'>{latestChange.summary}</span>
-								<span className='meta'>{latestChange.date}</span>
-							</div>
-						</LatestCard>
-					)}
+					<FiltersBlock role='region' aria-label='Analytics filters'>
+						<SingleRow>
+							<LeadInline>
+								<div className='filter-lead'>
+									<span className='lead-icon'>
+										<CalendarTodayOutlined />
+									</span>
+									<div className='lead-text'>
+										<span className='top'>Range</span>
+										<span className='bot'>{activeRangeLabel}</span>
+									</div>
+								</div>
 
-					<FreshFiltersWrap role='region' aria-label='Analytics filters'>
-						<BottomSlot>
+								<TapePills ref={pillsRef} role='tablist' aria-label='Date range'>
+									<TapeIndicator
+										style={{
+											transform: `translateX(${ind.left}px) rotate(-1.2deg)`,
+											width: `${ind.width}px`,
+											opacity: ind.opacity,
+										}}
+									/>
+									{RANGE_OPTIONS.map((opt) => (
+										<TapePill
+											key={opt.value}
+											type='button'
+											role='tab'
+											data-active={range === opt.value || undefined}
+											aria-selected={range === opt.value}
+											$active={range === opt.value}
+											onClick={() => {
+												setRange(opt.value)
+												setCustomFrom('')
+												setCustomTo('')
+											}}
+										>
+											{opt.label}
+										</TapePill>
+									))}
+								</TapePills>
+							</LeadInline>
+
+							<RangeGroup aria-label='Custom date range'>
+								<BottomSlot>
+									<DatePickerPill
+										label='From'
+										value={customFrom}
+										onChange={(v) => {
+											setCustomFrom(v)
+											if (v || customTo) setRange('custom')
+										}}
+										accent='orange'
+										size='lg'
+										placeholder='Any'
+									/>
+								</BottomSlot>
+
+								<RangeDash aria-hidden='true'>—</RangeDash>
+
+								<BottomSlot>
+									<DatePickerPill
+										label='To'
+										value={customTo}
+										onChange={(v) => {
+											setCustomTo(v)
+											if (v || customFrom) setRange('custom')
+										}}
+										accent='orange'
+										size='lg'
+										placeholder='Any'
+									/>
+								</BottomSlot>
+							</RangeGroup>
+
 							<InlineField>
 								<span className='l'>Profile</span>
 								<InlineSelect
@@ -704,24 +811,8 @@ const UpworkAnalyticsPage = () => {
 									))}
 								</InlineSelect>
 							</InlineField>
-						</BottomSlot>
-						<BottomSlot>
-							<InlineField>
-								<span className='l'>Range</span>
-								<InlineSelect
-									value={range}
-									onChange={(e) =>
-										setRange((e.target.value as '30d' | '90d' | '180d') ?? '90d')
-									}
-								>
-									<option value='30d'>Last 30 days</option>
-									<option value='90d'>Last 90 days</option>
-									<option value='180d'>Last 180 days</option>
-								</InlineSelect>
-							</InlineField>
-						</BottomSlot>
-						<div className='filter-spacer' style={{ flex: 1 }} />
-					</FreshFiltersWrap>
+						</SingleRow>
+					</FiltersBlock>
 
 					<InnerStack>
 
@@ -731,178 +822,106 @@ const UpworkAnalyticsPage = () => {
 					</SectionCard>
 				)}
 
-				{profileId && isSecondary && (
+				{profileId && (
 					<KpiPanel>
 						<KpiHeader>
-							<span className='kpi-kicker'>Latest vs previous snapshot</span>
-							<span className='kpi-period'>
-								<span className='kpi-period-dot' aria-hidden='true' />
-								{secondaryDelta?.previous
-									? `${secondaryDelta.latest.date.slice(0, 10)} vs ${secondaryDelta.previous.date.slice(0, 10)}`
-									: secondaryDelta?.latest
-										? secondaryDelta.latest.date.slice(0, 10)
-										: 'No snapshots yet'}
-							</span>
+							<span className='kpi-kicker'>Totals in period</span>
 						</KpiHeader>
 						<KpiStrip>
 							<KpiCell>
 								<div className='kpi-label'>Views</div>
 								<div className='kpi-value'>
-									{secondaryDelta?.latest ? secondaryDelta.views.v.toLocaleString() : '—'}
-								</div>
-								<div className='kpi-caption'>
-									{secondaryDelta?.views.d == null
-										? 'no previous snapshot'
-										: fmtDelta(secondaryDelta.views.d)}
+									<AnimatedNumber
+										key={resetKey}
+										value={periodTotals.views}
+									/>
 								</div>
 							</KpiCell>
 							<KpiCell>
 								<div className='kpi-label'>Invites</div>
 								<div className='kpi-value'>
-									{secondaryDelta?.latest ? secondaryDelta.invites.v.toLocaleString() : '—'}
-								</div>
-								<div className='kpi-caption'>
-									{secondaryDelta?.invites.d == null
-										? 'no previous snapshot'
-										: fmtDelta(secondaryDelta.invites.d)}
+									<AnimatedNumber
+										key={resetKey}
+										value={periodTotals.invites}
+									/>
 								</div>
 							</KpiCell>
 							<KpiCell>
 								<div className='kpi-label'>Direct messages</div>
 								<div className='kpi-value'>
-									{secondaryDelta?.latest
-										? secondaryDelta.directMessages.v.toLocaleString()
-										: '—'}
-								</div>
-								<div className='kpi-caption'>
-									{secondaryDelta?.directMessages.d == null
-										? 'no previous snapshot'
-										: fmtDelta(secondaryDelta.directMessages.d)}
+									<AnimatedNumber
+										key={resetKey}
+										value={periodTotals.directMessages}
+									/>
 								</div>
 							</KpiCell>
 							<KpiCell>
-								<div className='kpi-label'>Views / invite</div>
+								<div className='kpi-label'>Position</div>
 								<div className='kpi-value'>
-									{secondaryDelta?.vpi.v == null ? '—' : secondaryDelta.vpi.v.toFixed(1)}
+									{currentPosition == null ? (
+										'—'
+									) : (
+										<AnimatedNumber
+											key={resetKey}
+											value={currentPosition}
+										/>
+									)}
 								</div>
-								<div className='kpi-caption'>
-									{secondaryDelta?.vpi.d == null
-										? 'no previous snapshot'
-										: fmtDelta(secondaryDelta.vpi.d, 1)}
-								</div>
+								<PositionCaption>current</PositionCaption>
 							</KpiCell>
 						</KpiStrip>
 					</KpiPanel>
 				)}
 
-				{profileId && !isSecondary && (
-					<KpiPanel>
-						<KpiHeader>
-							<span className='kpi-kicker'>At a glance</span>
-							{vpiWarn && (
-								<VpiCaption>
-									views-per-invite is above {vpi?.threshold ?? 50} — profile is
-									being seen but not messaged. Likely a title / hero copy issue.
-								</VpiCaption>
-							)}
-							<span className='kpi-period'>
-								<span className='kpi-period-dot' aria-hidden='true' />
-								{range === '30d' ? 'Last 30d' : range === '90d' ? 'Last 90d' : 'Last 180d'}
-							</span>
-						</KpiHeader>
-						<KpiStrip>
-							<KpiCell>
-								<div className='kpi-label'>Views / invite · 4w</div>
-								<div className='kpi-value' style={{ color: vpiWarn ? T.error : undefined }}>
-									{vpiValue == null ? '—' : vpiValue.toFixed(1)}
-								</div>
-								<div className='kpi-caption'>
-									threshold {vpi?.threshold ?? 50}
-									{vpiWarn ? ' · above threshold' : ''}
-								</div>
-							</KpiCell>
-							<KpiCell>
-								<div className='kpi-label'>Views (4w)</div>
-								<div className='kpi-value'>{(vpi?.views ?? 0).toLocaleString()}</div>
-								<div className='kpi-caption'>Σ across last 28 days</div>
-							</KpiCell>
-							<KpiCell>
-								<div className='kpi-label'>Invites (4w)</div>
-								<div className='kpi-value'>{(vpi?.invites ?? 0).toLocaleString()}</div>
-								<div className='kpi-caption'>Σ across last 28 days</div>
-							</KpiCell>
-							<KpiCell>
-								<div className='kpi-label'>Snapshots</div>
-								<div className='kpi-value'>{snapshots.length.toLocaleString()}</div>
-								<div className='kpi-caption'>in selected range</div>
-							</KpiCell>
-						</KpiStrip>
-					</KpiPanel>
-				)}
-
-				{profileId && !isSecondary && sectionActivity.length > 0 && (
-					<SectionCard
-						title='Change-log activity by section'
-						hint={`${totalSectionCount} entries in the selected range.`}
-					>
-						<SumBarWrap>
-							<SumBar>
-								{sectionActivity.map((s) => (
-									<SumSeg key={s.section} $w={s.count} $c={s.color} title={`${s.section}: ${s.count}`} />
-								))}
-							</SumBar>
-							<SumLegend>
-								{sectionActivity.map((s) => (
-									<SumLegendRow key={s.section} $c={s.color}>
-										<span className='dot' />
-										<span className='sec'>{(UPWORK_SECTION_LABEL[s.section as keyof typeof UPWORK_SECTION_LABEL] ?? s.section.replace(/_/g, ' ')).toUpperCase()}</span>
-										<span className='n'>{s.count}</span>
-									</SumLegendRow>
-								))}
-							</SumLegend>
-						</SumBarWrap>
-					</SectionCard>
-				)}
-
-				{profileId && !isSecondary && analytics && (
+				{profileId && analytics && (
 					<SectionCard
 						title='Weekly trends'
-						hint='Three independent charts — each metric gets its own Y-axis, so small-magnitude series are not flat-lined by big ones.'
+						hint='Four independent charts — each metric gets its own Y-axis so small-magnitude series are not flat-lined by big ones. Dashed verticals mark change-log entries.'
 					>
 						<ChartWrap>
-							<ChartHeader>
-								<span className='chart-title'>WEEKLY TOTALS</span>
-								<span className='chart-sub'>
-									dashed vertical = change-log entry
-								</span>
-							</ChartHeader>
 							{analytics.weekly.length === 0 ? (
 								<EmptyChart>No snapshots in this range yet.</EmptyChart>
 							) : (
 								<SmallMultiples>
 									<MiniChart
+										key={`views-${resetKey}`}
 										label='Views'
-										color='#0369a1'
+										color='#334155'
 										data={analytics.weekly}
 										dataKey='views'
 										markers={analytics.changeLogMarkers}
-										showX={false}
+										showX
+										showTooltip={false}
 									/>
 									<MiniChart
+										key={`invites-${resetKey}`}
 										label='Invites'
-										color='#d97706'
+										color='#e85d2f'
 										data={analytics.weekly}
 										dataKey='invites'
 										markers={analytics.changeLogMarkers}
-										showX={false}
+										showX
+										showTooltip={false}
 									/>
 									<MiniChart
+										key={`dms-${resetKey}`}
 										label='Direct messages'
-										color='#16a34a'
+										color='#2563eb'
 										data={analytics.weekly}
 										dataKey='directMessages'
 										markers={analytics.changeLogMarkers}
 										showX
+										showTooltip={false}
+									/>
+									<MiniChart
+										key={`position-${resetKey}`}
+										label='Position · avg rank'
+										color='#2563eb'
+										data={positionSeries}
+										dataKey='position'
+										markers={analytics.changeLogMarkers}
+										showX
+										kind='area'
 									/>
 								</SmallMultiples>
 							)}
@@ -910,93 +929,6 @@ const UpworkAnalyticsPage = () => {
 					</SectionCard>
 				)}
 
-				{profileId && snapshots.length > 0 && (
-					<SectionCard
-						title={isSecondary ? 'Recent monthly snapshots' : 'Recent daily snapshots'}
-						hint={
-							isSecondary
-								? 'Each bar = one monthly totals snapshot. Edit individual rows from the Snapshots page.'
-								: 'Last 15 days — raw per-day numbers. Edit individual rows from the Snapshots page.'
-						}
-					>
-						<ChartWrap>
-							<LegendRow>
-								<LegendItem $c='#0369a1'>Views</LegendItem>
-								<LegendItem $c='#d97706'>Invites</LegendItem>
-								<LegendItem $c='#16a34a'>Direct messages</LegendItem>
-							</LegendRow>
-							<ResponsiveContainer width='100%' height={280}>
-								<BarChart
-									data={[...snapshots]
-										.sort((a, b) => (a.date < b.date ? -1 : 1))
-										.slice(-15)
-										.map((s) => ({
-											date: s.date.slice(5, 10),
-											views: s.views,
-											invites: s.invites,
-											directMessages: s.directMessages,
-										}))}
-									margin={{ left: 4, right: 12 }}
-								>
-									<CartesianGrid
-										strokeDasharray='3 3'
-										stroke={T.divider}
-										vertical={false}
-									/>
-									<XAxis
-										dataKey='date'
-										stroke={T.divider}
-										tick={{ fill: T.textSecondary, fontSize: 11, fontWeight: 600 }}
-										tickLine={false}
-										axisLine={{ stroke: T.divider }}
-										dy={6}
-									/>
-									<YAxis
-										yAxisId='left'
-										orientation='left'
-										stroke={T.divider}
-										tick={{ fill: T.textSecondary, fontSize: 11, fontWeight: 600 }}
-										tickLine={false}
-										axisLine={{ stroke: T.divider }}
-										width={44}
-									/>
-									<YAxis
-										yAxisId='right'
-										orientation='right'
-										allowDecimals={false}
-										stroke={T.divider}
-										tick={{ fill: T.textSecondary, fontSize: 11, fontWeight: 600 }}
-										tickLine={false}
-										axisLine={{ stroke: T.divider }}
-										width={38}
-									/>
-									<RechartsTooltip cursor={false} content={<BarTipContent />} />
-									<Bar
-										yAxisId='left'
-										dataKey='views'
-										fill='#0369a1'
-										radius={[6, 6, 0, 0]}
-										maxBarSize={28}
-									/>
-									<Bar
-										yAxisId='right'
-										dataKey='invites'
-										fill='#d97706'
-										radius={[6, 6, 0, 0]}
-										maxBarSize={28}
-									/>
-									<Bar
-										yAxisId='right'
-										dataKey='directMessages'
-										fill='#16a34a'
-										radius={[6, 6, 0, 0]}
-										maxBarSize={28}
-									/>
-								</BarChart>
-							</ResponsiveContainer>
-						</ChartWrap>
-					</SectionCard>
-				)}
 					</InnerStack>
 				</ShellInner>
 			</ShellCard>
@@ -1005,4 +937,168 @@ const UpworkAnalyticsPage = () => {
 }
 
 
+const PositionCaption = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 10.5px;
+	font-weight: 700;
+	letter-spacing: 1.4px;
+	text-transform: uppercase;
+	color: ${T.textMuted};
+	margin-top: 4px;
+`
+
+/* Smooth count-up on value change (rAF, ease-out cubic). Null is
+ * rendered as a dash; `decimals` controls display precision —
+ * integers are shown via toLocaleString(), decimals via toFixed(). */
+const AnimatedNumber = ({
+	value,
+	decimals = 0,
+	duration = 700,
+}: {
+	value: number | null
+	decimals?: number
+	duration?: number
+}) => {
+	/* Initialise at 0 so even the first render tweens up to the
+	 * target — gives the whole KPI strip a dashboard-reveal feel on
+	 * mount and whenever the selected profile / range changes. */
+	const [display, setDisplay] = useState<number | null>(value == null ? null : 0)
+	const prevRef = useRef<number | null>(value == null ? null : 0)
+	useEffect(() => {
+		if (value == null) {
+			setDisplay(null)
+			prevRef.current = null
+			return
+		}
+		const from = prevRef.current ?? 0
+		const to = value
+		if (from === to) {
+			setDisplay(to)
+			return
+		}
+		const start = performance.now()
+		let raf = 0
+		const tick = (t: number) => {
+			const p = Math.min(1, (t - start) / duration)
+			const eased = 1 - Math.pow(1 - p, 3)
+			setDisplay(from + (to - from) * eased)
+			if (p < 1) raf = requestAnimationFrame(tick)
+			else prevRef.current = to
+		}
+		raf = requestAnimationFrame(tick)
+		return () => cancelAnimationFrame(raf)
+	}, [value, duration])
+	if (display == null) return <>—</>
+	return (
+		<>
+			{decimals > 0
+				? display.toFixed(decimals)
+				: Math.round(display).toLocaleString()}
+		</>
+	)
+}
+
 export default UpworkAnalyticsPage
+
+/* ─── Filter block — mirrored from job-posts list ──────────────── */
+
+const FiltersBlock = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+`
+
+const SingleRow = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 12px 16px;
+	min-height: 56px;
+`
+
+const LeadInline = styled.div`
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 14px;
+	min-width: 0;
+
+	.filter-lead {
+		display: inline-flex;
+		align-items: center;
+		gap: 12px;
+		padding-right: 22px;
+		border-right: 1px solid rgba(36, 30, 22, 0.08);
+	}
+	.filter-lead .lead-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		border-radius: 11px;
+		background: #241e16;
+		color: #fdfaf2;
+		transition:
+			transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+			background 220ms ease;
+	}
+	.filter-lead .lead-icon svg {
+		font-size: 20px;
+		transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+	.filter-lead:hover .lead-icon {
+		transform: rotate(-6deg) scale(1.08);
+		background: #e85d2f;
+	}
+	.filter-lead .lead-text {
+		display: flex;
+		flex-direction: column;
+		line-height: 1.15;
+		min-width: 78px;
+	}
+	.filter-lead .lead-text .top {
+		font-family: 'Fraunces', 'Georgia', serif;
+		font-variation-settings: 'opsz' 36;
+		font-size: 17px;
+		font-weight: 600;
+		color: #241e16;
+		letter-spacing: -0.2px;
+	}
+	.filter-lead .lead-text .bot {
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-variant-numeric: tabular-nums;
+		font-size: 10.5px;
+		color: #7d6e5d;
+		letter-spacing: 0.7px;
+		text-transform: uppercase;
+		margin-top: 3px;
+		white-space: nowrap;
+		transition: color 200ms ease;
+	}
+	.filter-lead:hover .lead-text .bot {
+		color: #e85d2f;
+	}
+`
+
+const RangeGroup = styled.div`
+	display: inline-flex;
+	align-items: flex-end;
+	gap: 10px;
+	padding: 4px 10px;
+	border: 1px dashed rgba(36, 30, 22, 0.14);
+	border-radius: 14px;
+`
+
+const RangeDash = styled.span`
+	display: inline-flex;
+	align-items: center;
+	min-height: 42px;
+	padding: 0 2px;
+	color: #7d6e5d;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1;
+	user-select: none;
+`

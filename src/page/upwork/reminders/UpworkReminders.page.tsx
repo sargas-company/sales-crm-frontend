@@ -133,7 +133,7 @@ const BlockHead = styled.header`
 `
 
 const TierPill = ({ tier }: { tier: 'primary' | 'secondary' }) => (
-	<StatusPill $tone={tier === 'primary' ? 'warn' : 'muted'}>
+	<StatusPill $tone={tier === 'primary' ? 'danger' : 'info'}>
 		{UPWORK_PROFILE_TIER_LABEL[tier]}
 	</StatusPill>
 )
@@ -191,7 +191,7 @@ const rowIn = keyframes`
 `
 const FeedRow = styled.li<{ $warn: boolean; $i: number }>`
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: 14px;
 	padding: 10px 2px;
 	border-bottom: 1px dashed ${T.border};
@@ -209,12 +209,25 @@ const FeedRow = styled.li<{ $warn: boolean; $i: number }>`
 		border-radius: 999px;
 		background: ${(p) => (p.$warn ? '#dc2626' : '#d97706')};
 		flex: 0 0 auto;
+		margin-top: 7px;
+	}
+	.lbl-col {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		flex: 1;
+		min-width: 0;
 	}
 	.lbl {
 		font-size: 14.5px;
 		font-weight: 500;
 		color: ${T.textStrong};
-		flex: 1;
+	}
+	.explain {
+		font-size: 12px;
+		font-weight: 400;
+		color: ${T.textMuted};
+		line-height: 1.4;
 	}
 	.d {
 		font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
@@ -232,6 +245,28 @@ const FeedRow = styled.li<{ $warn: boolean; $i: number }>`
 		}
 	}
 `
+
+/* Plain-language explanation under each reminder label. Keyed by
+ * the `key` field the backend returns (see `upwork.constants.ts`).
+ * Falls back to empty string for unknown keys. */
+const REMINDER_EXPLAIN: Record<string, string> = {
+	'daily-update':
+		'No fresh entry in portfolio, skills or title for 2+ days. Any touch in any of these sections resets the timer.',
+	'project-catalog-stale':
+		'Nothing changed in project_catalog for 3+ days. Prompts you to review the catalogs and rewrite the weakest.',
+	'overview-stale':
+		'Overview untouched for 30+ days. Revisit suggestions / related queries / highlighted skills and rewrite.',
+	'consultation-stale':
+		'Consultation untouched for 30+ days. Refresh topics, text and skills.',
+	'employment-history-stale':
+		'Employment history untouched for 30+ days. Add or refresh a job entry.',
+	'snapshot-stale':
+		'Latest snapshot is 7+ days old. Record fresh views / invites / direct messages.',
+	'secondary-snapshot':
+		'Secondary profile: latest snapshot is 30+ days old. Record monthly totals.',
+	'secondary-review':
+		'Secondary profile: no edits in any section for 90+ days. Open it and tweak something.',
+}
 
 /* ─── Profile reminders — one block per profile ──────────────── */
 
@@ -296,7 +331,12 @@ const ProfileReminders = ({
 					{reminders.map((r: UpworkReminder, i: number) => (
 						<FeedRow key={r.key} $warn={r.severity === 'warn'} $i={i}>
 							<span className='dot' />
-							<span className='lbl'>{r.label}</span>
+							<span className='lbl-col'>
+								<span className='lbl'>{r.label}</span>
+								{REMINDER_EXPLAIN[r.key] && (
+									<span className='explain'>{REMINDER_EXPLAIN[r.key]}</span>
+								)}
+							</span>
 							<span className='d'>
 								{r.days}
 								<sup>d</sup>

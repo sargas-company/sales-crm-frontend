@@ -20,6 +20,7 @@ import {
 	Surface,
 } from '../../../components/_shared/formShell.styled'
 import PermissionGate from '../../../components/auth/PermissionGate'
+import { SectionPill } from '../_shared/cells'
 import {
 	UPWORK_SECTION_LABEL,
 	upworkProfileName,
@@ -42,63 +43,13 @@ const MetaItem = styled.span`
 	font-family: 'JetBrains Mono', monospace;
 	font-size: 12.5px;
 `
-const SectionBadge = styled.span`
-	display: inline-flex;
-	padding: 4px 10px;
-	border-radius: 999px;
-	font-size: 11px;
-	font-weight: 700;
-	text-transform: uppercase;
-	letter-spacing: 0.3px;
-	white-space: nowrap;
-	background: rgba(124, 58, 237, 0.1);
-	color: #6d28d9;
-`
-const Reason = styled.div`
-	border-left: 3px solid #d4cfe0;
-	background: #f6f4fb;
-	padding: 10px 16px;
-	border-radius: 0 10px 10px 0;
-	color: #3a3541;
-	font-size: 13.5px;
-	line-height: 1.55;
-	margin-bottom: 20px;
-`
-const TwoCol = styled.div`
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 20px;
-	@media (max-width: 900px) {
-		grid-template-columns: 1fr;
-	}
-`
-const Panel = styled.article`
-	background: #ffffff;
-	border: 1px solid #eeecf3;
-	border-radius: 14px;
-	padding: 18px 20px 20px;
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-	min-height: 220px;
-`
-const PanelHead = styled.h3`
-	font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
-	font-size: 13px;
-	font-weight: 700;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-	color: #7a7686;
+const NoteText = styled.p`
 	margin: 0;
-`
-const PanelBody = styled.pre`
+	max-width: 68ch;
 	font-family: 'Inter', system-ui, sans-serif;
-	font-size: 14px;
-	line-height: 1.6;
-	color: #252d3a;
-	white-space: pre-wrap;
-	word-break: break-word;
-	margin: 0;
+	font-size: 15.5px;
+	line-height: 1.65;
+	color: #1a1a1a;
 `
 const UpworkChangeLogView = () => {
 	const nav = useNavigate()
@@ -120,8 +71,8 @@ const UpworkChangeLogView = () => {
 					backTo='/upwork/change-log'
 					backLabel='Back to change log'
 					icon={<EditNoteOutlined />}
-					title={data.summary}
-					subtitle={data.item ?? 'Change-log entry'}
+					title={`${UPWORK_SECTION_LABEL[data.section]} — ${data.date.slice(0, 10)}`}
+					subtitle={upworkProfileName(data.profile)}
 					badgeLabel='View'
 					badgeTone='view'
 				/>
@@ -130,21 +81,12 @@ const UpworkChangeLogView = () => {
 					<MetaRow>
 						<MetaItem>{data.date.slice(0, 10)}</MetaItem>
 						<MetaItem>{upworkProfileName(data.profile)}</MetaItem>
-						<SectionBadge>{UPWORK_SECTION_LABEL[data.section]}</SectionBadge>
+						<SectionPill $section={data.section}>
+							{UPWORK_SECTION_LABEL[data.section]}
+						</SectionPill>
 					</MetaRow>
 
-					{data.reason && <Reason>{data.reason}</Reason>}
-
-					<TwoCol>
-						<Panel>
-							<PanelHead>Before</PanelHead>
-							<PanelBody>{data.before || <em style={{ color: '#a5a1b0' }}>empty</em>}</PanelBody>
-						</Panel>
-						<Panel>
-							<PanelHead>After</PanelHead>
-							<PanelBody>{data.after || <em style={{ color: '#a5a1b0' }}>empty</em>}</PanelBody>
-						</Panel>
-					</TwoCol>
+					<NoteText>{data.note}</NoteText>
 				</Section>
 
 				<FootBar $dark={isDark}>
