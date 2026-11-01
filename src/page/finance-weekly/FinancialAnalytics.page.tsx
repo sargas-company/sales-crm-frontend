@@ -1406,7 +1406,7 @@ const Money = ({
 }) => {
 	const abs = Math.abs(value)
 	const animated = useCountUp(abs)
-	const digits = formatMoneyCompact(animated).replace(/^\$/, '')
+	const digits = formatMoney(animated).replace(/^\$/, '')
 	const sign = showSign ? (value < 0 ? '−' : value > 0 ? '+' : '') : ''
 	return (
 		<span className='val'>
@@ -1432,7 +1432,7 @@ const AnimatedMoneyDigits = ({ value }: { value: number }) => {
 	const animated = useCountUp(Math.abs(value))
 	return (
 		<span className='big'>
-			{formatMoneyCompact(animated).replace(/^\$/, '')}
+			{formatMoney(animated).replace(/^\$/, '')}
 		</span>
 	)
 }
@@ -3036,7 +3036,7 @@ const RowList = styled.div`
 
 const RowHead = styled.div`
 	display: grid;
-	grid-template-columns: 0.9fr 2fr 2fr 1fr 0.7fr;
+	grid-template-columns: 1fr 1.6fr 1.6fr 1.2fr 0.8fr;
 	gap: 20px;
 	align-items: center;
 	padding: 14px 24px;
@@ -3061,7 +3061,7 @@ const RowHead = styled.div`
 const RowItem = styled.div<{ $dim: boolean }>`
 	position: relative;
 	display: grid;
-	grid-template-columns: 0.9fr 2fr 2fr 1fr 0.7fr;
+	grid-template-columns: 1fr 1.6fr 1.6fr 1.2fr 0.8fr;
 	gap: 20px;
 	align-items: center;
 	padding: 18px 24px;
