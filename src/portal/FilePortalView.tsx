@@ -178,18 +178,22 @@ const Shell = styled.div`
 const PreviewFrame = styled.div`
 	flex: 1;
 	min-height: 0;
+	display: flex;
+	flex-direction: column;
 	overflow: hidden;
 	background: #ffffff;
 
-	/* FilePreview defaults iframe / content to 80vh for the embedded
-	 * modal use. Portal file-view is a dedicated page — stretch to
-	 * the full container so there's no white gap at the bottom. */
-	& iframe,
-	& > div,
-	& > pre,
-	& > article {
-		height: 100% !important;
-		max-height: none !important;
+	/* FilePreview defaults iframe to 80vh for the embedded modal use.
+	 * Portal file-view is a dedicated page — stretch the iframe to
+	 * the full container, no white gap at the bottom. Non-iframe
+	 * preview types (docx / xlsx / markdown) keep their natural
+	 * flow; a flex column lets them extend when they want to. */
+	& > iframe {
+		flex: 1;
+		height: auto !important;
+		min-height: 0;
+		border: none;
+		width: 100%;
 	}
 `
 
