@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import {
 	BlockRounded,
@@ -9,7 +10,9 @@ import {
 	FolderOpenOutlined,
 	FolderOutlined,
 	InsertDriveFileOutlined,
+	InsertLinkRounded,
 	LinkOffRounded,
+	NorthEastRounded,
 	PeopleOutlineRounded,
 	SearchOutlined,
 	VisibilityOutlined,
@@ -689,11 +692,49 @@ const PortalUserDetailModal = ({
 	const { data: user } = useGetPortalUserQuery(userId)
 	const [revokeShare] = useRevokeShareMutation()
 	const { showToast } = useToast()
+	const navigate = useNavigate()
 	/* Done/Confirm should play the same scrim+scale exit animation as
 	 * Cancel/outside. ConfirmModal's `onConfirm` fires straight through
 	 * (no animation), so we route Done through `forceClose` which
 	 * triggers the regular close sequence inside the modal. */
 	const [closing, setClosing] = useState(false)
+	/* Jump target: for a folder share → the folder itself; for a file
+	 * share → its parent folder (so admin lands next to the file). */
+	const handleJump = (folderId: string | null) => {
+		if (folderId) {
+			navigate(`/file-manager/folder/${folderId}`)
+		} else {
+			navigate('/file-manager')
+		}
+		onClose()
+	}
+
+	/* Mirrors the "Copy portal link" context menu in FileManager — same
+	 * URL format the recipient would open. */
+	const handleCopyLink = async (
+		s: PortalUserDetail['fileManagerSharesReceived'][number],
+	) => {
+		const envHost = (import.meta as { env?: Record<string, string> }).env
+			?.VITE_PORTAL_URL
+		let origin = envHost ?? ''
+		if (!origin && typeof window !== 'undefined') {
+			const parts = window.location.hostname.split('.')
+			if (parts.length > 1) parts[0] = 'files'
+			else parts.unshift('files')
+			origin = `${window.location.protocol}//${parts.join('.')}`
+		}
+		const url =
+			s.resourceType === 'FOLDER'
+				? `${origin}/file-manager/folder/${s.resourceId}`
+				: `${origin}/file-manager/file/${s.resourceId}`
+		try {
+			await navigator.clipboard.writeText(url)
+			showToast('Portal link copied', 'success')
+		} catch {
+			showToast('Could not copy — select the URL manually', 'error')
+		}
+	}
+
 	const handleRevoke = async (s: PortalUserDetail['fileManagerSharesReceived'][number]) => {
 		try {
 			await revokeShare({
@@ -762,38 +803,74 @@ const PortalUserDetailModal = ({
 							<BLegendItem><BIconMkdir /> create subfolder</BLegendItem>
 						</BLegend>
 						<SharesScroll>
-							{user.fileManagerSharesReceived.map((s) => (
-								<BRow key={s.id}>
-									<BResource>
-										{s.resourceType === 'FOLDER' ? (
-											<FileBadgeFolder>
-												<FileBadgeFold />
-												<FileBadgeExt>DIR</FileBadgeExt>
-											</FileBadgeFolder>
-										) : (
-											<FileBadgeFile $kind={fileKind(resName(s))}>
-												<FileBadgeFold />
-												<FileBadgeExt>{fileExt(resName(s))}</FileBadgeExt>
-											</FileBadgeFile>
-										)}
-										<BResourceName>{resName(s)}</BResourceName>
-									</BResource>
-									<BMatrix>
-										<BBit $on={s.canDownload}><BIconDl /></BBit>
-										<BBit $on={s.canUpload}><BIconUp /></BBit>
-										<BBit $on={s.canCreateSubfolders}><BIconMkdir /></BBit>
-									</BMatrix>
-									<RevokeAction
-										type='button'
-										aria-label='Revoke share'
-										title='Revoke share'
-										onClick={() => handleRevoke(s)}
-									>
-										<LinkOffRounded style={{ fontSize: 16 }} />
-										<span>Revoke</span>
-									</RevokeAction>
-								</BRow>
-							))}
+							{user.fileManagerSharesReceived.map((s) => {
+								const crumbs = shareCrumbs(s)
+								const parentId = sharePartentId(s)
+								const jumpFolderId =
+									s.resourceType === 'FOLDER' ? s.resourceId : parentId
+								return (
+									<BRow key={s.id}>
+										<BResource>
+											{s.resourceType === 'FOLDER' ? (
+												<FileBadgeFolder>
+													<FileBadgeFold />
+													<FileBadgeExt>DIR</FileBadgeExt>
+												</FileBadgeFolder>
+											) : (
+												<FileBadgeFile $kind={fileKind(resName(s))}>
+													<FileBadgeFold />
+													<FileBadgeExt>{fileExt(resName(s))}</FileBadgeExt>
+												</FileBadgeFile>
+											)}
+											<BResourceText>
+												<BResourceName>{resName(s)}</BResourceName>
+												{crumbs.length > 0 && (
+													<BPath title={crumbs.map((c) => c.name).join(' / ')}>
+														{crumbs.map((c, i) => (
+															<span key={c.id}>
+																{i > 0 && <PathSep>›</PathSep>}
+																<PathSeg>{c.name}</PathSeg>
+															</span>
+														))}
+													</BPath>
+												)}
+											</BResourceText>
+										</BResource>
+										<BMatrix>
+											<BBit $on={s.canDownload}><BIconDl /></BBit>
+											<BBit $on={s.canUpload}><BIconUp /></BBit>
+											<BBit $on={s.canCreateSubfolders}><BIconMkdir /></BBit>
+										</BMatrix>
+										<ShareActions>
+											<IconGhost
+												type='button'
+												aria-label='Jump to folder'
+												title='Open in file manager'
+												onClick={() => handleJump(jumpFolderId)}
+											>
+												<NorthEastRounded style={{ fontSize: 16 }} />
+											</IconGhost>
+											<IconGhost
+												type='button'
+												aria-label='Copy portal link'
+												title='Copy portal link'
+												onClick={() => handleCopyLink(s)}
+											>
+												<InsertLinkRounded style={{ fontSize: 16 }} />
+											</IconGhost>
+											<RevokeAction
+												type='button'
+												aria-label='Revoke share'
+												title='Revoke share'
+												onClick={() => handleRevoke(s)}
+											>
+												<LinkOffRounded style={{ fontSize: 16 }} />
+												<span>Revoke</span>
+											</RevokeAction>
+										</ShareActions>
+									</BRow>
+								)
+							})}
 						</SharesScroll>
 					</>
 				)}
@@ -808,6 +885,11 @@ type DetailShare = PortalUserDetail['fileManagerSharesReceived'][number]
 const resName = (s: DetailShare): string =>
 	(s as DetailShare & { resourceName: string | null }).resourceName ??
 	`(${s.resourceType.toLowerCase()})`
+const shareCrumbs = (s: DetailShare): Array<{ id: string; name: string }> =>
+	(s as DetailShare & { breadcrumbs?: Array<{ id: string; name: string }> })
+		.breadcrumbs ?? []
+const sharePartentId = (s: DetailShare): string | null =>
+	(s as DetailShare & { parentId?: string | null }).parentId ?? null
 
 /* Pick a gradient family for the file-badge from the extension —
  * mirrors AttachmentsSection / UploadTray palette. */
@@ -1107,16 +1189,88 @@ const BRow = styled.div`
 const BResource = styled.div`
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
+	gap: 10px;
+	min-width: 0;
+`
+const BResourceText = styled.div`
+	display: inline-flex;
+	flex-direction: column;
+	gap: 2px;
 	min-width: 0;
 `
 const BResourceName = styled.span`
 	font-size: 13px;
 	color: #0f172a;
-	font-weight: 500;
+	font-weight: 600;
+	letter-spacing: -0.1px;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+`
+const BPath = styled.span`
+	display: inline-flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 2px;
+	max-width: 100%;
+	font-size: 11px;
+	line-height: 1.3;
+	color: #94a3b8;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+`
+const PathSeg = styled.span`
+	display: inline-block;
+	color: #64748b;
+	font-weight: 500;
+`
+const PathSep = styled.span`
+	display: inline-block;
+	margin: 0 3px;
+	color: rgba(100, 116, 139, 0.55);
+	font-weight: 400;
+`
+const ShareActions = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+`
+const IconGhost = styled.button`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	border: none;
+	border-radius: 8px;
+	background: transparent;
+	color: #64748b;
+	cursor: pointer;
+	transition:
+		background 180ms cubic-bezier(0.22, 1, 0.36, 1),
+		color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+		transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+	svg {
+		transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	&:hover {
+		background: rgba(15, 23, 42, 0.06);
+		color: #0f172a;
+	}
+	&:hover svg {
+		transform: translate(1px, -1px);
+	}
+	&:active {
+		transform: translateY(0.5px);
+	}
+	&:focus-visible {
+		outline: none;
+		background: rgba(15, 23, 42, 0.06);
+		color: #0f172a;
+		box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+	}
 `
 const BMatrix = styled.div`
 	display: inline-flex;
