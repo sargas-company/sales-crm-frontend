@@ -1582,9 +1582,13 @@ const FileManagerPage = () => {
 
 					{isError && isForbidden && (
 						<AccessDeniedBlock>
-							<AccessDeniedIcon>
-								<LockOutlined />
-							</AccessDeniedIcon>
+							<AccessDeniedBigCode>
+								<span className='digit'>4</span>
+								<AccessDeniedIcon aria-hidden='true'>
+									<LockOutlined />
+								</AccessDeniedIcon>
+								<span className='digit'>3</span>
+							</AccessDeniedBigCode>
 							<AccessDeniedTitle>No access to this folder</AccessDeniedTitle>
 							<AccessDeniedSub>
 								This folder isn't shared with your account. Ask an admin to
@@ -2782,21 +2786,54 @@ const AccessDeniedBlock = styled.div`
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 14px;
+	gap: 16px;
 	padding: 72px 24px 80px;
 	text-align: center;
 `
+
+const digitDropFM = keyframes`
+	from { opacity: 0; transform: translateY(-12px); }
+	to   { opacity: 1; transform: translateY(0); }
+`
+
+const AccessDeniedBigCode = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 4px;
+	font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+	line-height: 1;
+
+	.digit {
+		font-size: 128px;
+		font-weight: 800;
+		letter-spacing: -6px;
+		color: #0f172a;
+		opacity: 0.9;
+		animation: ${digitDropFM} 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+	.digit:nth-child(3) {
+		animation-delay: 0.08s;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.digit {
+			animation: none;
+		}
+	}
+`
+
 const AccessDeniedIcon = styled.span`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 88px;
-	height: 88px;
+	width: 96px;
+	height: 96px;
 	border-radius: 50%;
 	background: #f1f5f9;
 	color: #94a3b8;
 	svg {
-		font-size: 44px;
+		font-size: 50px;
 	}
 `
 const AccessDeniedTitle = styled.h3`
