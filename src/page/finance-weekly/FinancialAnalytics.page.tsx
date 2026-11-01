@@ -1333,6 +1333,11 @@ const MonthlyMarginRows = ({ data }: { data: PnlRow[] }) => {
 				const negative = m.margin < 0
 				const revPct = (m.revenueReceived / max) * 100
 				const salPct = (m.salaryCost / max) * 100
+				/* Salary = 0 with any revenue is an impossible state — the
+				 * admin just hasn't entered payroll yet. Hide the margin
+				 * cells behind the pending placeholder so the number isn't
+				 * misleading until salary lands. */
+				const marginAvailable = m.salaryCost > 0
 				return (
 					<RowItem key={m.monthId} $dim={empty}>
 						<span className='mo'>{m.label}</span>
@@ -1349,8 +1354,8 @@ const MonthlyMarginRows = ({ data }: { data: PnlRow[] }) => {
 							<Money value={m.salaryCost} dim={empty} />
 						</RowBarCell>
 						<span className='num'>
-							{empty ? (
-								<EmptyPill title='No data yet'>
+							{!marginAvailable ? (
+								<EmptyPill title='Salary not entered — margin pending'>
 									<span />
 									<span />
 									<span />
@@ -1366,8 +1371,8 @@ const MonthlyMarginRows = ({ data }: { data: PnlRow[] }) => {
 							)}
 						</span>
 						<span className='pct'>
-							{m.marginPercent === null ? (
-								<EmptyPill title='No data yet'>
+							{!marginAvailable || m.marginPercent === null ? (
+								<EmptyPill title='Salary not entered — margin pending'>
 									<span />
 									<span />
 									<span />
