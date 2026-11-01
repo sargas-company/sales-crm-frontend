@@ -116,7 +116,11 @@ export const PortalShell = ({ children }: { children: ReactNode }) => {
 				{/* Brand — identical to AppLogo on the admin shell: real
 				 *  logo image + "Sargas" in Bebas Neue. One language
 				 *  across admin + portal. */}
-				<BrandRow>
+				<BrandRow
+					type='button'
+					onClick={() => navigate('/file-manager')}
+					aria-label='Go to your folders'
+				>
 					<LogoSlot>
 						<LogoImg src={sargasLogo} alt='Sargas' />
 					</LogoSlot>
@@ -232,11 +236,30 @@ const Header = styled.header`
 `
 
 /* Admin AppLogo clone — real logo image + Bebas Neue "Sargas". */
-const BrandRow = styled.div`
-	display: flex;
+const BrandRow = styled.button`
+	display: inline-flex;
 	align-items: center;
 	gap: 14px;
+	padding: 2px 4px;
+	border: none;
+	border-radius: 10px;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
 	text-decoration: none;
+	transition:
+		background 180ms cubic-bezier(0.22, 1, 0.36, 1),
+		transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+	&:hover {
+		background: rgba(15, 23, 42, 0.04);
+	}
+	&:active {
+		transform: translateY(0.5px);
+	}
+	&:focus-visible {
+		outline: none;
+		box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+	}
 `
 const LogoSlot = styled.span`
 	display: inline-flex;

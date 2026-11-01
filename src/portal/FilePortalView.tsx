@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import {
-	ArrowBackRounded,
 	DeleteOutlineRounded,
 	FolderOpenOutlined,
 	LockOutlined,
@@ -156,19 +155,6 @@ export const FilePortalView = () => {
 
 	return (
 		<Shell>
-			<HeaderStrip>
-				<BackChip
-					type='button'
-					onClick={() => navigate('/file-manager')}
-					aria-label='Back to folders'
-					title='Back to folders'
-				>
-					<ArrowBackRounded style={{ fontSize: 16 }} />
-				</BackChip>
-				<HeaderSep>/</HeaderSep>
-				<HeaderName title={meta.originalName}>{meta.originalName}</HeaderName>
-			</HeaderStrip>
-
 			{previewError ? (
 				<ErrorBlock>{previewError}</ErrorBlock>
 			) : preview ? (
@@ -185,74 +171,9 @@ export const FilePortalView = () => {
 const Shell = styled.div`
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
-	padding: 14px 16px 0;
+	padding: 16px;
 	height: 100%;
 	min-height: 0;
-`
-
-const HeaderStrip = styled.div`
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	min-width: 0;
-	padding: 2px 2px 0;
-`
-
-const BackChip = styled.button`
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 28px;
-	height: 28px;
-	padding: 0;
-	border: none;
-	border-radius: 50%;
-	background: transparent;
-	color: #64748b;
-	cursor: pointer;
-	transition:
-		background 180ms cubic-bezier(0.22, 1, 0.36, 1),
-		color 180ms cubic-bezier(0.22, 1, 0.36, 1),
-		transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
-	svg {
-		transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
-	}
-	&:hover {
-		background: rgba(15, 23, 42, 0.06);
-		color: #0f172a;
-	}
-	&:hover svg {
-		transform: translateX(-2px);
-	}
-	&:active {
-		transform: translateY(0.5px);
-	}
-	&:focus-visible {
-		outline: none;
-		background: rgba(15, 23, 42, 0.06);
-		color: #0f172a;
-		box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
-	}
-`
-
-const HeaderSep = styled.span`
-	color: #cbd5e1;
-	font-size: 13px;
-	font-weight: 500;
-	user-select: none;
-`
-
-const HeaderName = styled.span`
-	font-family: 'Inter', system-ui, sans-serif;
-	font-size: 13px;
-	font-weight: 600;
-	letter-spacing: -0.1px;
-	color: #0f172a;
-	max-width: 60ch;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 `
 
 const PreviewFrame = styled.div`
