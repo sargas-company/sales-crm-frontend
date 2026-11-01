@@ -810,7 +810,7 @@ const PortalUserDetailModal = ({
 									s.resourceType === 'FOLDER' ? s.resourceId : parentId
 								return (
 									<BRow key={s.id}>
-										<BResource>
+										<BRowTop>
 											{s.resourceType === 'FOLDER' ? (
 												<FileBadgeFolder>
 													<FileBadgeFold />
@@ -835,39 +835,41 @@ const PortalUserDetailModal = ({
 													</BPath>
 												)}
 											</BResourceText>
-										</BResource>
-										<BMatrix>
-											<BBit $on={s.canDownload}><BIconDl /></BBit>
-											<BBit $on={s.canUpload}><BIconUp /></BBit>
-											<BBit $on={s.canCreateSubfolders}><BIconMkdir /></BBit>
-										</BMatrix>
-										<ShareActions>
-											<IconGhost
-												type='button'
-												aria-label='Jump to folder'
-												title='Open in file manager'
-												onClick={() => handleJump(jumpFolderId)}
-											>
-												<NorthEastRounded style={{ fontSize: 16 }} />
-											</IconGhost>
-											<IconGhost
-												type='button'
-												aria-label='Copy portal link'
-												title='Copy portal link'
-												onClick={() => handleCopyLink(s)}
-											>
-												<InsertLinkRounded style={{ fontSize: 16 }} />
-											</IconGhost>
-											<RevokeAction
-												type='button'
-												aria-label='Revoke share'
-												title='Revoke share'
-												onClick={() => handleRevoke(s)}
-											>
-												<LinkOffRounded style={{ fontSize: 16 }} />
-												<span>Revoke</span>
-											</RevokeAction>
-										</ShareActions>
+										</BRowTop>
+										<BRowBottom>
+											<BMatrix>
+												<BBit $on={s.canDownload}><BIconDl /></BBit>
+												<BBit $on={s.canUpload}><BIconUp /></BBit>
+												<BBit $on={s.canCreateSubfolders}><BIconMkdir /></BBit>
+											</BMatrix>
+											<ShareActions>
+												<IconGhost
+													type='button'
+													aria-label='Jump to folder'
+													title='Open in file manager'
+													onClick={() => handleJump(jumpFolderId)}
+												>
+													<NorthEastRounded style={{ fontSize: 16 }} />
+												</IconGhost>
+												<IconGhost
+													type='button'
+													aria-label='Copy portal link'
+													title='Copy portal link'
+													onClick={() => handleCopyLink(s)}
+												>
+													<InsertLinkRounded style={{ fontSize: 16 }} />
+												</IconGhost>
+												<RevokeAction
+													type='button'
+													aria-label='Revoke share'
+													title='Revoke share'
+													onClick={() => handleRevoke(s)}
+												>
+													<LinkOffRounded style={{ fontSize: 16 }} />
+													<span>Revoke</span>
+												</RevokeAction>
+											</ShareActions>
+										</BRowBottom>
 									</BRow>
 								)
 							})}
@@ -1177,14 +1179,31 @@ const BLegendItem = styled.span`
 	color: #94a3b8;
 `
 const BRow = styled.div`
-	display: grid;
-	grid-template-columns: 1fr auto auto;
-	gap: 12px;
-	align-items: center;
-	padding: 8px 12px;
-	border-radius: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 12px 14px;
+	border-radius: 10px;
 	transition: background 160ms ease;
-	&:hover { background: #f8fafc; }
+	&:hover {
+		background: #f8fafc;
+	}
+	& + & {
+		margin-top: 2px;
+	}
+`
+const BRowTop = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+`
+const BRowBottom = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding-left: 54px;
 `
 const BResource = styled.div`
 	display: inline-flex;
