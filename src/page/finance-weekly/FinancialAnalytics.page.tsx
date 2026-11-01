@@ -146,6 +146,7 @@ const FinancialAnalyticsPage = () => {
 
 	const snapshot = data?.snapshot
 	const monthly = data?.monthly
+	const monthlyPnl = data?.monthlyPnl
 	const byProject = data?.byProject ?? []
 	const byClient = data?.byClient ?? []
 	const concentration = data?.concentration
@@ -577,6 +578,34 @@ const FinancialAnalyticsPage = () => {
 							{monthly && <MonthlyChart data={monthly.months} average={monthly.average} />}
 						</Panel>
 
+						{/* ── 4b. Monthly margin ────────────────────────── */}
+						<Panel>
+							<PanelHead>
+								<div>
+									<PanelTitle>Monthly margin · {monthlyPnl?.year ?? year}</PanelTitle>
+									<PanelSub>
+										Revenue minus salary cost per fiscal month (cash-basis). Negative margin shown in red.
+									</PanelSub>
+								</div>
+								{monthlyPnl && (
+									<AvgTag>
+										YTD{' '}
+										<strong>
+											{monthlyPnl.totals.margin >= 0 ? '' : '−'}
+											{formatMoneyCompact(Math.abs(monthlyPnl.totals.margin))}
+										</strong>
+										{monthlyPnl.totals.marginPercent !== null && (
+											<>
+												{' · '}
+												<strong>{monthlyPnl.totals.marginPercent.toFixed(1)}%</strong>
+											</>
+										)}
+									</AvgTag>
+								)}
+							</PanelHead>
+							{monthlyPnl && <MonthlyMarginTable data={monthlyPnl.months} />}
+						</Panel>
+
 						{/* ── 5. Pipeline breakdown ───────────────────────── */}
 			<Panel>
 				<PanelHead>
@@ -872,6 +901,70 @@ function niceCeil(v: number): number {
 	else if (norm <= 5) n = 5
 	else n = 10
 	return n * pow
+}
+
+const MonthlyMarginTable = ({
+	data,
+}: {
+	data: Array<{
+		monthId: string
+		label: string
+		sequenceInYear: number
+		revenueReceived: number
+		salaryCost: number
+		margin: number
+		marginPercent: number | null
+		headcount: number
+	}>
+}) => {
+	const hasAny = data.some(
+		(m) => m.revenueReceived > 0 || m.salaryCost > 0,
+	)
+	if (!hasAny) {
+		return (
+			<EmptyState>
+				<span className='ico'>
+					<SearchOffRounded />
+				</span>
+				<span className='title'>No margin data yet</span>
+				<span className='sub'>
+					Nothing received and no payroll paid in this year. Numbers appear once
+					both sides start showing up.
+				</span>
+			</EmptyState>
+		)
+	}
+	return (
+		<MarginGrid>
+			<MarginHeadRow>
+				<span>Month</span>
+				<span className='num'>Revenue</span>
+				<span className='num'>Salary</span>
+				<span className='num'>Margin</span>
+				<span className='num'>Margin %</span>
+				<span className='num'>Headcount</span>
+			</MarginHeadRow>
+			{data.map((m) => {
+				const empty = m.revenueReceived === 0 && m.salaryCost === 0
+				const negative = m.margin < 0
+				return (
+					<MarginRow key={m.monthId} $dim={empty}>
+						<span className='mo'>{m.label}</span>
+						<span className='num'>{formatMoney(m.revenueReceived)}</span>
+						<span className='num'>{formatMoney(m.salaryCost)}</span>
+						<span className={`num ${negative ? 'neg' : m.margin > 0 ? 'pos' : ''}`}>
+							{negative ? '−' : ''}
+							{formatMoney(Math.abs(m.margin))}
+						</span>
+						<span className={`num ${negative ? 'neg' : m.marginPercent !== null && m.marginPercent > 0 ? 'pos' : ''}`}>
+							{m.marginPercent === null ? '—' : `${m.marginPercent.toFixed(1)}%`}
+						</span>
+						<span className='num hc'>{m.headcount || '—'}</span>
+					</MarginRow>
+				)
+			})}
+		</MarginGrid>
+	)
 }
 
 const MonthlyChart = ({
@@ -2182,6 +2275,66 @@ const EmptyState = styled.div`
 		font-size: 12.5px;
 		color: #64748b;
 		line-height: 1.5;
+	}
+`
+
+const MarginGrid = styled.div`
+	display: flex;
+	flex-direction: column;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	border-radius: 14px;
+	overflow: hidden;
+`
+const MarginHeadRow = styled.div`
+	display: grid;
+	grid-template-columns: 1.2fr 1fr 1fr 1fr 0.8fr 0.8fr;
+	gap: 10px;
+	padding: 10px 16px;
+	background: #f8fafc;
+	border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+	font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.5px;
+	text-transform: uppercase;
+	color: #64748b;
+	.num {
+		text-align: right;
+	}
+`
+const MarginRow = styled.div<{ $dim: boolean }>`
+	display: grid;
+	grid-template-columns: 1.2fr 1fr 1fr 1fr 0.8fr 0.8fr;
+	gap: 10px;
+	padding: 11px 16px;
+	border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+	color: ${(p) => (p.$dim ? '#94a3b8' : '#0f172a')};
+	transition: background 160ms ease;
+	&:last-child {
+		border-bottom: none;
+	}
+	&:hover {
+		background: #fafbfc;
+	}
+	.mo {
+		font-weight: 600;
+	}
+	.num {
+		text-align: right;
+	}
+	.pos {
+		color: #15803d;
+		font-weight: 600;
+	}
+	.neg {
+		color: #b91c1c;
+		font-weight: 700;
+	}
+	.hc {
+		color: #64748b;
+		font-weight: 500;
 	}
 `
 
