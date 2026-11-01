@@ -735,16 +735,38 @@ const PortalUserDetailModal = ({
 		}
 	}
 
-	const handleRevoke = async (s: PortalUserDetail['fileManagerSharesReceived'][number]) => {
+	/* Slide-out animation state: shares queued for removal get a
+	 * `removing` class → CSS collapses opacity/translate/max-height
+	 * over ~280 ms. After the animation, the actual mutation fires,
+	 * which flows through the optimistic update in revokeShare and
+	 * drops the row from cache. */
+	const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
+	const handleRevoke = async (
+		s: PortalUserDetail['fileManagerSharesReceived'][number],
+	) => {
+		if (removingIds.has(s.id)) return
+		setRemovingIds((prev) => {
+			const next = new Set(prev)
+			next.add(s.id)
+			return next
+		})
+		const REVOKE_ANIM_MS = 280
+		await new Promise((resolve) => window.setTimeout(resolve, REVOKE_ANIM_MS))
 		try {
 			await revokeShare({
 				id: s.id,
+				userId,
 				resourceType: s.resourceType,
 				resourceId: s.resourceId,
 			}).unwrap()
 			showToast('Share revoked', 'success')
 		} catch {
 			showToast('Revoke failed', 'error')
+			setRemovingIds((prev) => {
+				const next = new Set(prev)
+				next.delete(s.id)
+				return next
+			})
 		}
 	}
 	if (!user) return null
@@ -809,7 +831,7 @@ const PortalUserDetailModal = ({
 								const jumpFolderId =
 									s.resourceType === 'FOLDER' ? s.resourceId : parentId
 								return (
-									<BRow key={s.id}>
+									<BRow key={s.id} $removing={removingIds.has(s.id)}>
 										<BRowTop>
 											<BRowLeft>
 												{s.resourceType === 'FOLDER' ? (
@@ -1182,18 +1204,53 @@ const BLegendItem = styled.span`
 	gap: 4px;
 	color: #94a3b8;
 `
-const BRow = styled.div`
+const BRow = styled.div<{ $removing?: boolean }>`
 	display: flex;
 	flex-direction: column;
 	gap: 10px;
 	padding: 12px 14px;
 	border-radius: 10px;
-	transition: background 160ms ease;
+	max-height: 280px;
+	overflow: hidden;
+	transition:
+		background 160ms ease,
+		opacity 220ms ease,
+		transform 240ms cubic-bezier(0.4, 0, 1, 1),
+		max-height 280ms 40ms cubic-bezier(0.4, 0, 0.2, 1),
+		padding 280ms 40ms cubic-bezier(0.4, 0, 0.2, 1),
+		margin 280ms 40ms cubic-bezier(0.4, 0, 0.2, 1);
+
 	&:hover {
 		background: #f8fafc;
 	}
 	& + & {
 		margin-top: 2px;
+	}
+
+	${(p) =>
+		p.$removing &&
+		`
+		opacity: 0;
+		transform: translateX(28px);
+		max-height: 0;
+		padding-top: 0;
+		padding-bottom: 0;
+		margin-top: 0;
+		pointer-events: none;
+	`}
+
+	@media (prefers-reduced-motion: reduce) {
+		transition:
+			background 160ms ease,
+			opacity 120ms ease;
+		${(p) =>
+			p.$removing &&
+			`
+			max-height: 0;
+			padding: 0;
+			margin: 0;
+			transform: none;
+		`}
 	}
 `
 const BRowTop = styled.div`

@@ -103,12 +103,14 @@ export const fileManagerShareApi = baseApi.injectEndpoints({
 			invalidatesTags: (_r, _e, arg) => [
 				{ type: 'FileManager', id: `SHARES:${arg.share.resourceType}:${arg.share.resourceId}` },
 				{ type: 'FileManager', id: 'PORTAL_USERS' },
+				{ type: 'FileManager', id: `PORTAL_USER:${arg.userId}` },
 			],
 		}),
 		updateShare: builder.mutation<
 			FileManagerShareRow,
 			{
 				id: string
+				userId: string
 				resourceType: ShareResourceType
 				resourceId: string
 				patch: Partial<Omit<ShareBlueprint, 'resourceType' | 'resourceId'>>
@@ -122,19 +124,51 @@ export const fileManagerShareApi = baseApi.injectEndpoints({
 			invalidatesTags: (_r, _e, arg) => [
 				{ type: 'FileManager', id: `SHARES:${arg.resourceType}:${arg.resourceId}` },
 				{ type: 'FileManager', id: 'PORTAL_USERS' },
+				{ type: 'FileManager', id: `PORTAL_USER:${arg.userId}` },
 			],
 		}),
 		revokeShare: builder.mutation<
 			{ id: string },
-			{ id: string; resourceType: ShareResourceType; resourceId: string }
+			{
+				id: string
+				userId: string
+				resourceType: ShareResourceType
+				resourceId: string
+			}
 		>({
 			query: ({ id }) => ({
 				url: `/file-manager/shares/${id}`,
 				method: 'DELETE',
 			}),
+			/* Optimistic update: drop the share from the open portal-user
+			 * cache immediately so the row disappears without waiting for
+			 * the server round-trip. Revoke rarely fails; if it does, we
+			 * undo the patch so the row re-appears.  Final invalidation
+			 * still re-fetches the authoritative server state. */
+			async onQueryStarted(
+				{ id, userId },
+				{ dispatch, queryFulfilled },
+			) {
+				const patch = dispatch(
+					fileManagerShareApi.util.updateQueryData(
+						'getPortalUser',
+						userId,
+						(draft) => {
+							draft.fileManagerSharesReceived =
+								draft.fileManagerSharesReceived.filter((s) => s.id !== id)
+						},
+					),
+				)
+				try {
+					await queryFulfilled
+				} catch {
+					patch.undo()
+				}
+			},
 			invalidatesTags: (_r, _e, arg) => [
 				{ type: 'FileManager', id: `SHARES:${arg.resourceType}:${arg.resourceId}` },
 				{ type: 'FileManager', id: 'PORTAL_USERS' },
+				{ type: 'FileManager', id: `PORTAL_USER:${arg.userId}` },
 			],
 		}),
 
