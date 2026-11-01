@@ -603,7 +603,12 @@ const FinancialAnalyticsPage = () => {
 									</AvgTag>
 								)}
 							</PanelHead>
-							{monthlyPnl && <MonthlyMarginTable data={monthlyPnl.months} />}
+							{monthlyPnl && (
+								<MonthlyMarginChart
+									data={monthlyPnl.months}
+									avgMargin={yr?.avgMonthlyMargin ?? 0}
+								/>
+							)}
 						</Panel>
 
 						{/* ── 5. Pipeline breakdown ───────────────────────── */}
@@ -903,8 +908,9 @@ function niceCeil(v: number): number {
 	return n * pow
 }
 
-const MonthlyMarginTable = ({
+const MonthlyMarginChart = ({
 	data,
+	avgMargin,
 }: {
 	data: Array<{
 		monthId: string
@@ -914,12 +920,11 @@ const MonthlyMarginTable = ({
 		salaryCost: number
 		margin: number
 		marginPercent: number | null
-		headcount: number
 	}>
+	avgMargin: number
 }) => {
-	const hasAny = data.some(
-		(m) => m.revenueReceived > 0 || m.salaryCost > 0,
-	)
+	const [hover, setHover] = useState<number | null>(null)
+	const hasAny = data.some((m) => m.revenueReceived > 0 || m.salaryCost > 0)
 	if (!hasAny) {
 		return (
 			<EmptyState>
@@ -934,36 +939,121 @@ const MonthlyMarginTable = ({
 			</EmptyState>
 		)
 	}
+	const rawMax = Math.max(
+		1,
+		...data.map((m) => Math.max(m.revenueReceived, m.salaryCost)),
+	)
+	const max = niceCeil(rawMax)
+	const gridTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * max)
+	const avgPct = max > 0 && avgMargin > 0 ? (avgMargin / max) * 100 : 0
+	const today = new Date()
+	const currentMonthIdx = Math.min(data.length - 1, Math.max(0, today.getMonth()))
 	return (
-		<MarginGrid>
-			<MarginHeadRow>
-				<span>Month</span>
-				<span className='num'>Revenue</span>
-				<span className='num'>Salary</span>
-				<span className='num'>Margin</span>
-				<span className='num'>Margin %</span>
-				<span className='num'>Headcount</span>
-			</MarginHeadRow>
-			{data.map((m) => {
-				const empty = m.revenueReceived === 0 && m.salaryCost === 0
-				const negative = m.margin < 0
-				return (
-					<MarginRow key={m.monthId} $dim={empty}>
-						<span className='mo'>{m.label}</span>
-						<span className='num'>{formatMoney(m.revenueReceived)}</span>
-						<span className='num'>{formatMoney(m.salaryCost)}</span>
-						<span className={`num ${negative ? 'neg' : m.margin > 0 ? 'pos' : ''}`}>
-							{negative ? '−' : ''}
-							{formatMoney(Math.abs(m.margin))}
-						</span>
-						<span className={`num ${negative ? 'neg' : m.marginPercent !== null && m.marginPercent > 0 ? 'pos' : ''}`}>
-							{m.marginPercent === null ? '—' : `${m.marginPercent.toFixed(1)}%`}
-						</span>
-						<span className='num hc'>{m.headcount || '—'}</span>
-					</MarginRow>
-				)
-			})}
-		</MarginGrid>
+		<ChartWrap>
+			<ChartGrid>
+				<YAxis>
+					{[...gridTicks].reverse().map((t, i) => (
+						<span key={i}>{formatMoneyCompact(t)}</span>
+					))}
+				</YAxis>
+				<Plot>
+					{gridTicks.map((_, i) => (
+						<GridLine key={i} style={{ bottom: `${(i / (gridTicks.length - 1)) * 100}%` }} />
+					))}
+					{avgMargin > 0 && (
+						<AvgLine style={{ bottom: `${avgPct}%` }}>
+							<span className='lbl'>Avg margin {formatMoneyCompact(avgMargin)}</span>
+						</AvgLine>
+					)}
+					<Bars>
+						{data.map((m, i) => {
+							const revenuePct = (m.revenueReceived / max) * 100
+							const salaryPct = (m.salaryCost / max) * 100
+							const isCurrent = i === currentMonthIdx
+							const hasAnyMoney = m.revenueReceived > 0 || m.salaryCost > 0
+							const align: 'left' | 'center' | 'right' =
+								i <= 1 ? 'left' : i >= data.length - 2 ? 'right' : 'center'
+							const open = hasAnyMoney && hover === i
+							const negative = m.margin < 0
+							const maxBarPct = Math.max(revenuePct, salaryPct)
+							return (
+								<MonthCol key={m.monthId} $hover={hover === i}>
+									<HoverCard
+										data-open={open}
+										data-align={align}
+										aria-hidden={!open}
+										style={{ bottom: `calc(${maxBarPct}% + 24px)` }}
+									>
+										<div className='hd'>
+											{m.label}
+											{isCurrent && <span className='cur-pill'>Current</span>}
+										</div>
+										<div className='rw'>
+											<span className='k'>
+												<span className='dot rev' /> Revenue
+											</span>
+											<span className='v'>{formatMoney(m.revenueReceived)}</span>
+										</div>
+										<div className='rw'>
+											<span className='k'>
+												<span className='dot sal' /> Salary
+											</span>
+											<span className='v'>{formatMoney(m.salaryCost)}</span>
+										</div>
+										<div className='sep' />
+										<div className='rw total'>
+											<span className='k'>Margin</span>
+											<span className={`v ${negative ? 'neg' : 'pos'}`}>
+												{negative ? '−' : ''}
+												{formatMoney(Math.abs(m.margin))}
+											</span>
+										</div>
+										{m.marginPercent !== null && (
+											<div className='meta'>
+												{m.marginPercent.toFixed(1)}% of revenue
+											</div>
+										)}
+										<span className='arrow' aria-hidden='true' />
+									</HoverCard>
+									{hasAnyMoney && m.margin !== 0 && (
+										<MarginTag
+											$negative={negative}
+											style={{ bottom: `calc(${maxBarPct}% + 6px)` }}
+										>
+											{negative ? '−' : '+'}
+											{formatMoneyCompact(Math.abs(m.margin))}
+										</MarginTag>
+									)}
+									<MarginDualBar>
+										<div className='bar rev' style={{ height: `${revenuePct}%` }} />
+										<div className='bar sal' style={{ height: `${salaryPct}%` }} />
+									</MarginDualBar>
+									{hasAnyMoney && (
+										<HoverZone
+											style={{ height: `${maxBarPct}%` }}
+											onMouseEnter={() => setHover(i)}
+											onMouseLeave={() => setHover(null)}
+										/>
+									)}
+									<MonthLbl $current={isCurrent}>{m.label.slice(0, 3)}</MonthLbl>
+								</MonthCol>
+							)
+						})}
+					</Bars>
+				</Plot>
+			</ChartGrid>
+			<ChartLegend>
+				<span className='item'>
+					<span className='dot rev' /> Revenue
+				</span>
+				<span className='item'>
+					<span className='dot sal' /> Salary
+				</span>
+				<span className='item'>
+					<span className='dot mar' /> Margin
+				</span>
+			</ChartLegend>
+		</ChartWrap>
 	)
 }
 
@@ -2037,6 +2127,21 @@ const HoverCard = styled.div`
 	.dot.pip {
 		background: rgba(3, 105, 161, 0.30);
 	}
+	.dot.rev {
+		background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+	}
+	.dot.sal {
+		background: linear-gradient(180deg, #f87171 0%, #dc2626 100%);
+	}
+	.dot.mar {
+		background: #0f172a;
+	}
+	.v.pos {
+		color: #15803d;
+	}
+	.v.neg {
+		color: #b91c1c;
+	}
 	.arrow {
 		position: absolute;
 		bottom: -6px;
@@ -2083,6 +2188,15 @@ const ChartLegend = styled.div`
 	}
 	.dot.pip {
 		background: rgba(3, 105, 161, 0.30);
+	}
+	.dot.rev {
+		background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+	}
+	.dot.sal {
+		background: linear-gradient(180deg, #f87171 0%, #dc2626 100%);
+	}
+	.dot.mar {
+		background: #0f172a;
 	}
 	.dot.cur {
 		background: #d97706;
@@ -2278,64 +2392,56 @@ const EmptyState = styled.div`
 	}
 `
 
-const MarginGrid = styled.div`
+const MarginDualBar = styled.div`
+	position: absolute;
+	left: 50%;
+	bottom: 0;
+	transform: translateX(-50%);
 	display: flex;
-	flex-direction: column;
-	border: 1px solid rgba(15, 23, 42, 0.08);
-	border-radius: 14px;
-	overflow: hidden;
+	align-items: flex-end;
+	justify-content: center;
+	gap: 4px;
+	width: 72%;
+	height: 100%;
+	pointer-events: none;
+
+	.bar {
+		width: 50%;
+		border-radius: 6px 6px 0 0;
+		transition:
+			background 160ms ease,
+			box-shadow 160ms ease;
+	}
+	.bar.rev {
+		background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+		box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04) inset;
+	}
+	.bar.sal {
+		background: linear-gradient(180deg, #f87171 0%, #dc2626 100%);
+		box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04) inset;
+	}
 `
-const MarginHeadRow = styled.div`
-	display: grid;
-	grid-template-columns: 1.2fr 1fr 1fr 1fr 0.8fr 0.8fr;
-	gap: 10px;
-	padding: 10px 16px;
-	background: #f8fafc;
-	border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-	font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
+
+const MarginTag = styled.span<{ $negative: boolean }>`
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 3px 8px;
 	font-size: 11px;
 	font-weight: 700;
-	letter-spacing: 0.5px;
-	text-transform: uppercase;
-	color: #64748b;
-	.num {
-		text-align: right;
-	}
-`
-const MarginRow = styled.div<{ $dim: boolean }>`
-	display: grid;
-	grid-template-columns: 1.2fr 1fr 1fr 1fr 0.8fr 0.8fr;
-	gap: 10px;
-	padding: 11px 16px;
-	border-bottom: 1px solid rgba(15, 23, 42, 0.05);
-	font-size: 13px;
 	font-variant-numeric: tabular-nums;
-	color: ${(p) => (p.$dim ? '#94a3b8' : '#0f172a')};
-	transition: background 160ms ease;
-	&:last-child {
-		border-bottom: none;
-	}
-	&:hover {
-		background: #fafbfc;
-	}
-	.mo {
-		font-weight: 600;
-	}
-	.num {
-		text-align: right;
-	}
-	.pos {
-		color: #15803d;
-		font-weight: 600;
-	}
-	.neg {
-		color: #b91c1c;
-		font-weight: 700;
-	}
-	.hc {
-		color: #64748b;
-		font-weight: 500;
-	}
+	letter-spacing: -0.1px;
+	border-radius: 6px;
+	white-space: nowrap;
+	pointer-events: none;
+	color: ${(p) => (p.$negative ? '#b91c1c' : '#15803d')};
+	background: ${(p) =>
+		p.$negative ? 'rgba(220, 38, 38, 0.08)' : 'rgba(21, 128, 61, 0.08)'};
+	border: 1px solid
+		${(p) => (p.$negative ? 'rgba(220, 38, 38, 0.18)' : 'rgba(21, 128, 61, 0.18)')};
 `
 
 const RiskBadge = styled.span`
