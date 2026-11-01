@@ -6,8 +6,10 @@ import {
 	ClearRounded,
 	DeleteOutline,
 	FilterListOutlined,
+	FolderOpenOutlined,
 	FolderOutlined,
 	InsertDriveFileOutlined,
+	LinkOffRounded,
 	PeopleOutlineRounded,
 	SearchOutlined,
 	VisibilityOutlined,
@@ -747,41 +749,54 @@ const PortalUserDetailModal = ({
 				 *  renders 4 bit cells for download / upload / mkdir /
 				 *  recursive; lit (ink) = granted, dim = denied. */}
 				<SharesSubTitle>Shares ({user.fileManagerSharesReceived.length})</SharesSubTitle>
-				<BLegend>
-					<BLegendItem><BIconDl /> download</BLegendItem>
-					<BLegendItem><BIconUp /> upload</BLegendItem>
-					<BLegendItem><BIconMkdir /> create subfolder</BLegendItem>
-					<BLegendItem><BIconRec /> recursive</BLegendItem>
-				</BLegend>
-				<SharesScroll>
-					{user.fileManagerSharesReceived.map((s) => (
-						<BRow key={s.id}>
-							<BResource>
-								{s.resourceType === 'FOLDER' ? (
-									<FileBadgeFolder>
-										<FileBadgeFold />
-										<FileBadgeExt>DIR</FileBadgeExt>
-									</FileBadgeFolder>
-								) : (
-									<FileBadgeFile $kind={fileKind(resName(s))}>
-										<FileBadgeFold />
-										<FileBadgeExt>{fileExt(resName(s))}</FileBadgeExt>
-									</FileBadgeFile>
-								)}
-								<BResourceName>{resName(s)}</BResourceName>
-							</BResource>
-							<BMatrix>
-								<BBit $on={s.canDownload}><BIconDl /></BBit>
-								<BBit $on={s.canUpload}><BIconUp /></BBit>
-								<BBit $on={s.canCreateSubfolders}><BIconMkdir /></BBit>
-								<BBit $on={s.recursive}><BIconRec /></BBit>
-							</BMatrix>
-							<IconAction type='button' $danger aria-label='Revoke share' onClick={() => handleRevoke(s)}>
-								<DeleteOutline />
-							</IconAction>
-						</BRow>
-					))}
-				</SharesScroll>
+				{user.fileManagerSharesReceived.length === 0 ? (
+					<SharesEmpty>
+						<FolderOpenOutlined style={{ fontSize: 20, opacity: 0.4 }} />
+						<span>No shared resources yet.</span>
+					</SharesEmpty>
+				) : (
+					<>
+						<BLegend>
+							<BLegendItem><BIconDl /> download</BLegendItem>
+							<BLegendItem><BIconUp /> upload</BLegendItem>
+							<BLegendItem><BIconMkdir /> create subfolder</BLegendItem>
+						</BLegend>
+						<SharesScroll>
+							{user.fileManagerSharesReceived.map((s) => (
+								<BRow key={s.id}>
+									<BResource>
+										{s.resourceType === 'FOLDER' ? (
+											<FileBadgeFolder>
+												<FileBadgeFold />
+												<FileBadgeExt>DIR</FileBadgeExt>
+											</FileBadgeFolder>
+										) : (
+											<FileBadgeFile $kind={fileKind(resName(s))}>
+												<FileBadgeFold />
+												<FileBadgeExt>{fileExt(resName(s))}</FileBadgeExt>
+											</FileBadgeFile>
+										)}
+										<BResourceName>{resName(s)}</BResourceName>
+									</BResource>
+									<BMatrix>
+										<BBit $on={s.canDownload}><BIconDl /></BBit>
+										<BBit $on={s.canUpload}><BIconUp /></BBit>
+										<BBit $on={s.canCreateSubfolders}><BIconMkdir /></BBit>
+									</BMatrix>
+									<RevokeAction
+										type='button'
+										aria-label='Revoke share'
+										title='Revoke share'
+										onClick={() => handleRevoke(s)}
+									>
+										<LinkOffRounded style={{ fontSize: 16 }} />
+										<span>Revoke</span>
+									</RevokeAction>
+								</BRow>
+							))}
+						</SharesScroll>
+					</>
+				)}
 			</DetailBody>
 		</ConfirmModal>
 	)
@@ -1120,6 +1135,66 @@ const BBit = styled.span<{ $on: boolean }>`
 	background: ${({ $on }) => ($on ? '#0f172a' : 'transparent')};
 	color: ${({ $on }) => ($on ? '#ffffff' : 'rgba(15, 23, 42, 0.18)')};
 	transition: background 160ms ease, color 160ms ease;
+`
+
+/* Revoke button — ghost pill in the file-manager ink palette, no red.
+ * Icon is a link-off (visual metaphor for cutting the share). Hover
+ * brings in a soft slate background + ink text; focus adds a muted
+ * ring. Confirmation lives at the toast level — same low-friction
+ * pattern used for row-level deletes elsewhere in the file-manager. */
+const RevokeAction = styled.button`
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 6px 10px;
+	border-radius: 8px;
+	border: none;
+	background: transparent;
+	color: #64748b;
+	font: inherit;
+	font-size: 11.5px;
+	font-weight: 600;
+	letter-spacing: 0.2px;
+	cursor: pointer;
+	transition:
+		background 180ms cubic-bezier(0.22, 1, 0.36, 1),
+		color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+		transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+
+	svg {
+		transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	&:hover {
+		background: rgba(15, 23, 42, 0.06);
+		color: #0f172a;
+	}
+	&:hover svg {
+		transform: translateX(-1px) rotate(-8deg);
+	}
+	&:active {
+		transform: translateY(0.5px);
+	}
+	&:focus-visible {
+		outline: none;
+		background: rgba(15, 23, 42, 0.06);
+		color: #0f172a;
+		box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+	}
+`
+
+const SharesEmpty = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	padding: 28px 16px;
+	border-radius: 10px;
+	background: rgba(15, 23, 42, 0.025);
+	color: #64748b;
+	font-size: 12.5px;
+	font-weight: 500;
+	letter-spacing: 0.1px;
 `
 
 /* ─── Direction C styled — Quiet typography ─────────────────────── */
