@@ -1613,10 +1613,9 @@ const FileManagerPage = () => {
 								</AccessDeniedDangerIcon>
 								<span className='digit'>4</span>
 							</AccessDeniedBigCode>
-							<AccessDeniedTitle>Folder was deleted</AccessDeniedTitle>
+							<AccessDeniedTitle>Folder is not available</AccessDeniedTitle>
 							<AccessDeniedSub>
-								This folder has been removed by the owner. The link no longer
-								leads anywhere.
+								The link may be wrong or the folder has been removed.
 							</AccessDeniedSub>
 							<AccessDeniedAction
 								type='button'

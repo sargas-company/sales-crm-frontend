@@ -138,10 +138,9 @@ export const FilePortalView = () => {
 						</DangerIcon>
 						<span className='digit'>4</span>
 					</BigCode>
-					<AccessTitle>File was deleted</AccessTitle>
+					<AccessTitle>File is not available</AccessTitle>
 					<AccessSub>
-						This file has been removed by the owner. The link no longer leads
-						anywhere.
+						The link may be wrong or the file has been removed.
 					</AccessSub>
 					<AccessAction
 						type='button'
