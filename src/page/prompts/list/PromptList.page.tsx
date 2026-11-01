@@ -23,6 +23,7 @@ import PermissionGate from '../../../components/auth/PermissionGate'
 import { useGetPromptListQuery } from '../../../store/prompts/promptsApi'
 import type { PromptType, PromptItem, PromptSortBy } from '../../../store/prompts/types/definition'
 import { formatDate } from '../../../utils/format'
+import { formatDateTimeSec } from '../../../utils/formatDate'
 import useDebouncedValue from '../../../hooks/useDebouncedValue'
 
 const PAGE_SIZE = 20
@@ -117,20 +118,20 @@ const PromptList = () => {
 		{
 			key: 'updated',
 			label: 'Updated',
-			minWidth: 140,
+			minWidth: 180,
 			sortable: true,
 			sortValue: (p) => new Date(p.updatedAt),
-			render: (p) => <Muted>{formatDate(p.updatedAt, 'short')}</Muted>,
-			skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
+			render: (p) => <DateTimeCell iso={p.updatedAt} />,
+			skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
 		},
 		{
 			key: 'created',
 			label: 'Created',
-			minWidth: 140,
+			minWidth: 180,
 			sortable: true,
 			sortValue: (p) => new Date(p.createdAt),
-			render: (p) => <Muted>{formatDate(p.createdAt, 'short')}</Muted>,
-			skeleton: () => <TableSkeleton $w='90px' $h='13px' />,
+			render: (p) => <DateTimeCell iso={p.createdAt} />,
+			skeleton: () => <TableSkeleton $w='140px' $h='13px' />,
 		},
 		{
 			key: 'actions',
@@ -243,6 +244,46 @@ const TitleLink = styled.button`
 const Muted = styled.span`
 	font-size: 13.5px;
 	color: ${T.textSecondary};
+`
+
+/* Date + time pair for Updated / Created columns — mirrors the Leads
+ * list "DateTimeCell" so the two surfaces read the same. Date stays
+ * strong, time runs in a muted monospace to the right. */
+const DateTimeCell = ({ iso }: { iso: string }) => {
+	const d = new Date(iso)
+	const timeStr = d.toLocaleTimeString('en-GB', {
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+	})
+	return (
+		<DateTimeWrap title={formatDateTimeSec(iso)}>
+			<DatePart>{formatDate(iso, 'short')}</DatePart>
+			<TimePart>{timeStr}</TimePart>
+		</DateTimeWrap>
+	)
+}
+
+const DateTimeWrap = styled.span`
+	display: inline-flex;
+	align-items: baseline;
+	gap: 8px;
+	white-space: nowrap;
+`
+
+const DatePart = styled.span`
+	font-size: 13.5px;
+	font-weight: 600;
+	color: #0f172a;
+	letter-spacing: -0.1px;
+`
+
+const TimePart = styled.span`
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 11.5px;
+	font-weight: 400;
+	color: ${T.textMuted};
+	font-variant-numeric: tabular-nums;
 `
 
 const Num = styled.span`
