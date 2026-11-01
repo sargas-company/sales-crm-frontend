@@ -14,6 +14,7 @@ import {
 import { FilePreview } from '../page/file-manager/FilePreview'
 import axiosInstance from '../api/axiosInstance'
 import { previewNeedsBackendProxy } from '../page/file-manager/FileManager.page'
+import Loading from '../ui/state/Loading'
 
 /* Standalone portal preview for a single file reached by a direct
  * link: files.<domain>/file-manager/file/:fileId. Decouples the file
@@ -95,7 +96,7 @@ export const FilePortalView = () => {
 	if (isLoading) {
 		return (
 			<Shell>
-				<LoadingBlock>Loading file…</LoadingBlock>
+				<Loading label='Loading file…' />
 			</Shell>
 		)
 	}
@@ -174,7 +175,7 @@ export const FilePortalView = () => {
 					<FilePreview url={preview.url} name={preview.name} mime={preview.mime} />
 				</PreviewFrame>
 			) : (
-				<LoadingBlock>Opening preview…</LoadingBlock>
+				<Loading label='Opening preview…' />
 			)}
 		</Shell>
 	)

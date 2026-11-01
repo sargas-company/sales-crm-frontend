@@ -12,6 +12,7 @@ import {
 } from 'react'
 import { createPortal, flushSync } from 'react-dom'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import Loading from '../../ui/state/Loading'
 import styled, { css, keyframes } from 'styled-components'
 import {
 	FolderOutlined,
@@ -1579,7 +1580,7 @@ const FileManagerPage = () => {
 						</DropOverlay>
 					)}
 
-					{isLoading && <LoadingBlock>Loading…</LoadingBlock>}
+					{isLoading && <Loading label='Loading folder…' />}
 
 					{isError && isForbidden && (
 						<AccessDeniedBlock>
