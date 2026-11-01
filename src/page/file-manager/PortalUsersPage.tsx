@@ -1210,15 +1210,19 @@ const BRow = styled.div<{ $removing?: boolean }>`
 	gap: 10px;
 	padding: 12px 14px;
 	border-radius: 10px;
-	max-height: 280px;
+	/* flex-shrink: 0 so SharesScroll (max-height + overflow-y:auto)
+	 * doesn't compress each row to fit — rows keep their natural
+	 * two-line height and the list scrolls. */
+	flex-shrink: 0;
+	max-height: 500px;
 	overflow: hidden;
 	transition:
 		background 160ms ease,
 		opacity 220ms ease,
 		transform 240ms cubic-bezier(0.4, 0, 1, 1),
-		max-height 280ms 40ms cubic-bezier(0.4, 0, 0.2, 1),
-		padding 280ms 40ms cubic-bezier(0.4, 0, 0.2, 1),
-		margin 280ms 40ms cubic-bezier(0.4, 0, 0.2, 1);
+		max-height 300ms cubic-bezier(0.4, 0, 0.2, 1),
+		padding 280ms 20ms cubic-bezier(0.4, 0, 0.2, 1),
+		margin 280ms 20ms cubic-bezier(0.4, 0, 0.2, 1);
 
 	&:hover {
 		background: #f8fafc;
