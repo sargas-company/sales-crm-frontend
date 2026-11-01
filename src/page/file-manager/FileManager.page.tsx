@@ -531,6 +531,7 @@ const FileManagerPage = () => {
 			? (error as { status?: number }).status
 			: undefined
 	const isForbidden = isError && errorStatus === 403
+	const isDeleted = isError && errorStatus === 404
 	/* Portal workers need their own user id to decide which rows get
 	 *  a Delete affordance. Ownership only — no time window; the UI
 	 *  check mirrors the backend check 1-to-1 so a visible Delete
@@ -1603,7 +1604,30 @@ const FileManagerPage = () => {
 						</AccessDeniedBlock>
 					)}
 
-					{isError && !isForbidden && (
+					{isError && isDeleted && (
+						<AccessDeniedBlock>
+							<AccessDeniedBigCode $tone='danger'>
+								<span className='digit'>4</span>
+								<AccessDeniedDangerIcon aria-hidden='true'>
+									<DeleteOutlineRounded />
+								</AccessDeniedDangerIcon>
+								<span className='digit'>4</span>
+							</AccessDeniedBigCode>
+							<AccessDeniedTitle>Folder was deleted</AccessDeniedTitle>
+							<AccessDeniedSub>
+								This folder has been removed by the owner. The link no longer
+								leads anywhere.
+							</AccessDeniedSub>
+							<AccessDeniedAction
+								type='button'
+								onClick={() => navigate('/file-manager')}
+							>
+								Open your folders
+							</AccessDeniedAction>
+						</AccessDeniedBlock>
+					)}
+
+					{isError && !isForbidden && !isDeleted && (
 						<ErrorBlock>
 							Failed to load folder.{' '}
 							<button type='button' onClick={() => refetch()}>Retry</button>
@@ -2796,7 +2820,7 @@ const digitDropFM = keyframes`
 	to   { opacity: 1; transform: translateY(0); }
 `
 
-const AccessDeniedBigCode = styled.div`
+const AccessDeniedBigCode = styled.div<{ $tone?: 'ink' | 'danger' }>`
 	display: inline-flex;
 	align-items: center;
 	gap: 10px;
@@ -2808,8 +2832,8 @@ const AccessDeniedBigCode = styled.div`
 		font-size: 128px;
 		font-weight: 800;
 		letter-spacing: -6px;
-		color: #0f172a;
-		opacity: 0.9;
+		color: ${(p) => (p.$tone === 'danger' ? '#9a3412' : '#0f172a')};
+		opacity: ${(p) => (p.$tone === 'danger' ? 1 : 0.9)};
 		animation: ${digitDropFM} 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 	}
 	.digit:nth-child(3) {
@@ -2832,6 +2856,20 @@ const AccessDeniedIcon = styled.span`
 	border-radius: 50%;
 	background: #f1f5f9;
 	color: #94a3b8;
+	svg {
+		font-size: 50px;
+	}
+`
+
+const AccessDeniedDangerIcon = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 96px;
+	height: 96px;
+	border-radius: 50%;
+	background: rgba(154, 52, 18, 0.1);
+	color: #9a3412;
 	svg {
 		font-size: 50px;
 	}

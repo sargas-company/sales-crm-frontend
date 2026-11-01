@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import {
 	ArrowBackRounded,
+	DeleteOutlineRounded,
 	FolderOpenOutlined,
 	LockOutlined,
 } from '@mui/icons-material'
@@ -130,16 +131,17 @@ export const FilePortalView = () => {
 		return (
 			<Shell>
 				<AccessDenied>
-					<BigCode>
+					<BigCode $tone='danger'>
 						<span className='digit'>4</span>
-						<AccessIcon aria-hidden='true'>
-							<LockOutlined />
-						</AccessIcon>
+						<DangerIcon aria-hidden='true'>
+							<DeleteOutlineRounded />
+						</DangerIcon>
 						<span className='digit'>4</span>
 					</BigCode>
-					<AccessTitle>File not found</AccessTitle>
+					<AccessTitle>File was deleted</AccessTitle>
 					<AccessSub>
-						The file may have been deleted or the link is wrong.
+						This file has been removed by the owner. The link no longer leads
+						anywhere.
 					</AccessSub>
 					<AccessAction
 						type='button'
@@ -271,7 +273,7 @@ const digitDrop = keyframes`
 	to   { opacity: 1; transform: translateY(0); }
 `
 
-const BigCode = styled.div`
+const BigCode = styled.div<{ $tone?: 'ink' | 'danger' }>`
 	display: inline-flex;
 	align-items: center;
 	gap: 10px;
@@ -283,8 +285,8 @@ const BigCode = styled.div`
 		font-size: 128px;
 		font-weight: 800;
 		letter-spacing: -6px;
-		color: #0f172a;
-		opacity: 0.9;
+		color: ${(p) => (p.$tone === 'danger' ? '#9a3412' : '#0f172a')};
+		opacity: ${(p) => (p.$tone === 'danger' ? 1 : 0.9)};
 		animation: ${digitDrop} 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 	}
 	.digit:nth-child(3) {
@@ -295,6 +297,21 @@ const BigCode = styled.div`
 		.digit {
 			animation: none;
 		}
+	}
+`
+
+const DangerIcon = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 96px;
+	height: 96px;
+	border-radius: 50%;
+	background: rgba(154, 52, 18, 0.1);
+	color: #9a3412;
+	animation: ${floatY} 3.4s ease-in-out infinite;
+	svg {
+		font-size: 50px;
 	}
 `
 
