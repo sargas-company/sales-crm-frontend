@@ -1064,6 +1064,7 @@ type PnlRow = {
 	label: string
 	sequenceInYear: number
 	revenueReceived: number
+	revenuePipeline: number
 	salaryCost: number
 	margin: number
 	marginPercent: number | null
@@ -1333,25 +1334,41 @@ const MonthlyMarginRows = ({ data }: { data: PnlRow[] }) => {
 				const negative = m.margin < 0
 				const revPct = (m.revenueReceived / max) * 100
 				const salPct = (m.salaryCost / max) * 100
-				/* Salary = 0 with any revenue is an impossible state — the
-				 * admin just hasn't entered payroll yet. Hide the margin
-				 * cells behind the pending placeholder so the number isn't
-				 * misleading until salary lands. */
-				const marginAvailable = m.salaryCost > 0
+				/* Margin only makes sense when BOTH sides are present. If
+				 * revenue is 0 (no money came in) OR salary is 0 (payroll
+				 * not entered yet), the number is misleading — surface
+				 * the pending placeholder in both cells instead. */
+				const marginAvailable =
+					m.salaryCost > 0 && m.revenueReceived > 0
 				return (
 					<RowItem key={m.monthId} $dim={empty}>
 						<span className='mo'>{m.label}</span>
 						<RowBarCell>
-							<RowBarTrack>
-								<AnimatedBar tone='rev' targetPct={revPct} />
-							</RowBarTrack>
-							<Money value={m.revenueReceived} dim={empty} />
+							{m.revenuePipeline > 0 && (
+								<PendingBadge
+									title='Still-expected revenue — in transit, invoiced or planned for this month'
+								>
+									<span className='plus'>+</span>
+									<span className='amt'>
+										{formatMoney(m.revenuePipeline).replace(/^\$/, '$')}
+									</span>
+									<span className='lbl'>incoming</span>
+								</PendingBadge>
+							)}
+							<RowBarRow>
+								<RowBarTrack>
+									<AnimatedBar tone='rev' targetPct={revPct} />
+								</RowBarTrack>
+								<Money value={m.revenueReceived} dim={empty} />
+							</RowBarRow>
 						</RowBarCell>
 						<RowBarCell>
-							<RowBarTrack>
-								<AnimatedBar tone='sal' targetPct={salPct} />
-							</RowBarTrack>
-							<Money value={m.salaryCost} dim={empty} />
+							<RowBarRow>
+								<RowBarTrack>
+									<AnimatedBar tone='sal' targetPct={salPct} />
+								</RowBarTrack>
+								<Money value={m.salaryCost} dim={empty} />
+							</RowBarRow>
 						</RowBarCell>
 						<span className='num'>
 							{!marginAvailable ? (
@@ -3160,9 +3177,12 @@ const RowItem = styled.div<{ $dim: boolean }>`
 `
 
 const RowBarCell = styled.div`
+	align-self: stretch;
 	display: flex;
-	align-items: center;
-	gap: 14px;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: flex-end;
+	gap: 4px;
 	min-width: 0;
 
 	.val {
@@ -3170,6 +3190,46 @@ const RowBarCell = styled.div`
 		display: inline-flex;
 		align-items: baseline;
 		gap: 1px;
+	}
+`
+
+const RowBarRow = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	min-width: 0;
+`
+
+const PendingBadge = styled.span`
+	align-self: flex-end;
+	display: inline-flex;
+	align-items: baseline;
+	gap: 3px;
+	padding: 2px 7px;
+	border-radius: 6px;
+	background: rgba(15, 23, 42, 0.05);
+	font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+	font-variant-numeric: tabular-nums;
+
+	.plus {
+		font-size: 10.5px;
+		font-weight: 600;
+		color: #475569;
+	}
+	.amt {
+		font-size: 11.5px;
+		font-weight: 700;
+		color: #0f172a;
+		letter-spacing: -0.1px;
+	}
+	.lbl {
+		font-size: 10px;
+		font-weight: 500;
+		color: #64748b;
+		opacity: 0.85;
+		text-transform: uppercase;
+		letter-spacing: 0.4px;
+		margin-left: 2px;
 	}
 `
 

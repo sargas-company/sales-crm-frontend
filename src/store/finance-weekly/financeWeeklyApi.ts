@@ -269,6 +269,7 @@ export interface AnalyticsMonthlyPnlRow {
 	label: string
 	sequenceInYear: number
 	revenueReceived: number
+	revenuePipeline: number
 	salaryCost: number
 	margin: number
 	marginPercent: number | null
