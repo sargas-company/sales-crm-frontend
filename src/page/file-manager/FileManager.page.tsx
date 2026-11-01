@@ -453,7 +453,7 @@ const PROXY_CODE_EXTS = new Set([
 	'less', 'html', 'py', 'rb', 'go', 'rs', 'java', 'kt', 'sh', 'bash',
 	'sql', 'php', 'swift', 'c', 'cpp', 'cs',
 ])
-const previewNeedsBackendProxy = (mime: string, name: string): boolean => {
+export const previewNeedsBackendProxy = (mime: string, name: string): boolean => {
 	const dot = name.lastIndexOf('.')
 	const ext = dot >= 0 ? name.slice(dot + 1).toLowerCase() : ''
 	if (
@@ -1055,10 +1055,10 @@ const FileManagerPage = () => {
 			origin = `${window.location.protocol}//${parts.join('.')}`
 		}
 		if (kind === 'folder') return `${origin}/file-manager/folder/${id}`
-		const base = folderId
-			? `${origin}/file-manager/folder/${folderId}`
-			: `${origin}/file-manager`
-		return `${base}?preview=${id}`
+		/* Files use the dedicated standalone portal route — opens the
+		 * preview without requiring parent-folder access. Works for
+		 * users who only have a file-level share. */
+		return `${origin}/file-manager/file/${id}`
 	}
 
 	const copyPortalLink = async (

@@ -87,17 +87,7 @@ export const ShareModal = ({ initial, onClose }: Props) => {
 		patch: Partial<ShareBlueprint & { resourceName: string }>,
 	) => {
 		setResources((rs) =>
-			rs.map((r, i) => {
-				if (i !== idx) return r
-				const merged = { ...r, ...patch }
-				/* Create-subfolders only makes sense WITH recursive — a
-				 * subfolder created in a non-recursive share is invisible
-				 * to the worker (they can see this folder's immediate
-				 * children, not deeper). So turning recursive off also
-				 * forces canCreateSubfolders off. */
-				if (patch.recursive === false) merged.canCreateSubfolders = false
-				return merged
-			}),
+			rs.map((r, i) => (i === idx ? { ...r, ...patch } : r)),
 		)
 	}
 	const removeRes = (idx: number) =>
@@ -710,23 +700,13 @@ const ResourceCardV4 = ({ r, idx, canRemove, onUpdate, onRemove }: ResCardProps)
 				<Toggle on={r.canUpload} disabled={r.resourceType === 'FILE'} onChange={(v) => onUpdate(idx, { canUpload: v })} />
 			</ToggleRow>
 			{r.resourceType === 'FOLDER' && (
-				<>
-					<ToggleRow>
-						<ToggleLabel>
-							<PermGlyph $on={r.recursive}><IconRec /></PermGlyph>
-							Recursive
-						</ToggleLabel>
-						<Toggle on={r.recursive} onChange={(v) => onUpdate(idx, { recursive: v })} />
-					</ToggleRow>
-					<ToggleRow>
-						<ToggleLabel $muted={!r.recursive}>
-							<PermGlyph $on={r.canCreateSubfolders}><IconMkdir /></PermGlyph>
-							Create subfolders
-							{!r.recursive && <DepHint>— needs Recursive</DepHint>}
-						</ToggleLabel>
-						<Toggle on={r.canCreateSubfolders} disabled={!r.recursive} onChange={(v) => onUpdate(idx, { canCreateSubfolders: v })} />
-					</ToggleRow>
-				</>
+				<ToggleRow>
+					<ToggleLabel>
+						<PermGlyph $on={r.canCreateSubfolders}><IconMkdir /></PermGlyph>
+						Create subfolders
+					</ToggleLabel>
+					<Toggle on={r.canCreateSubfolders} onChange={(v) => onUpdate(idx, { canCreateSubfolders: v })} />
+				</ToggleRow>
 			)}
 		</ToggleStack>
 	</ResourceCard>

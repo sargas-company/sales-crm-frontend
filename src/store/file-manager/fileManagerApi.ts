@@ -235,6 +235,11 @@ export const fileManagerApi = baseApi.injectEndpoints({
 			query: (id) => ({ url: `/file-manager/files/${id}/preview-url` }),
 		}),
 
+		getFileMeta: builder.query<FileManagerFileMeta, string>({
+			query: (id) => ({ url: `/file-manager/files/${id}/meta` }),
+			providesTags: (_r, _e, id) => [{ type: 'FileManager', id: `file:${id}` }],
+		}),
+
 		bulkDelete: builder.mutation<
 			{
 				deletedFolders: number
@@ -309,6 +314,14 @@ export interface FileManagerSearchResult {
 	files: FileManagerSearchFileHit[]
 }
 
+export interface FileManagerFileMeta {
+	id: string
+	folderId: string | null
+	originalName: string
+	mimeType: string
+	size: number
+}
+
 export const {
 	useListFolderQuery,
 	useGetTreeQuery,
@@ -326,4 +339,5 @@ export const {
 	useBulkDeleteMutation,
 	useBulkMoveMutation,
 	useSearchFileManagerQuery,
+	useGetFileMetaQuery,
 } = fileManagerApi

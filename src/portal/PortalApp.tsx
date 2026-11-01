@@ -14,6 +14,7 @@ import { DiscordCallbackPage } from './DiscordCallbackPage'
 import { PortalRequireAuth } from './PortalRequireAuth'
 
 import FileManagerPage from '../page/file-manager/FileManager.page'
+import { FilePortalView } from './FilePortalView'
 
 /* Root of the File Manager Portal — a dedicated React tree served
  * on files.sargas.io (local: files.localhost). Reuses the main CRM's
@@ -73,6 +74,16 @@ export const PortalApp = () => {
 							<PortalRequireAuth>
 								<PortalShell>
 									<FileManagerPage />
+								</PortalShell>
+							</PortalRequireAuth>
+						}
+					/>
+					<Route
+						path='/file-manager/file/:fileId'
+						element={
+							<PortalRequireAuth>
+								<PortalShell>
+									<FilePortalView />
 								</PortalShell>
 							</PortalRequireAuth>
 						}
