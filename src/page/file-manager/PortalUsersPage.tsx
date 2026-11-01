@@ -811,37 +811,39 @@ const PortalUserDetailModal = ({
 								return (
 									<BRow key={s.id}>
 										<BRowTop>
-											{s.resourceType === 'FOLDER' ? (
-												<FileBadgeFolder>
-													<FileBadgeFold />
-													<FileBadgeExt>DIR</FileBadgeExt>
-												</FileBadgeFolder>
-											) : (
-												<FileBadgeFile $kind={fileKind(resName(s))}>
-													<FileBadgeFold />
-													<FileBadgeExt>{fileExt(resName(s))}</FileBadgeExt>
-												</FileBadgeFile>
-											)}
-											<BResourceText>
-												<BResourceName>{resName(s)}</BResourceName>
-												{crumbs.length > 0 && (
-													<BPath title={crumbs.map((c) => c.name).join(' / ')}>
-														{crumbs.map((c, i) => (
-															<span key={c.id}>
-																{i > 0 && <PathSep>›</PathSep>}
-																<PathSeg>{c.name}</PathSeg>
-															</span>
-														))}
-													</BPath>
+											<BRowLeft>
+												{s.resourceType === 'FOLDER' ? (
+													<FileBadgeFolder>
+														<FileBadgeFold />
+														<FileBadgeExt>DIR</FileBadgeExt>
+													</FileBadgeFolder>
+												) : (
+													<FileBadgeFile $kind={fileKind(resName(s))}>
+														<FileBadgeFold />
+														<FileBadgeExt>{fileExt(resName(s))}</FileBadgeExt>
+													</FileBadgeFile>
 												)}
-											</BResourceText>
-										</BRowTop>
-										<BRowBottom>
+												<BResourceText>
+													<BResourceName>{resName(s)}</BResourceName>
+													{crumbs.length > 0 && (
+														<BPath title={crumbs.map((c) => c.name).join(' / ')}>
+															{crumbs.map((c, i) => (
+																<span key={c.id}>
+																	{i > 0 && <PathSep>›</PathSep>}
+																	<PathSeg>{c.name}</PathSeg>
+																</span>
+															))}
+														</BPath>
+													)}
+												</BResourceText>
+											</BRowLeft>
 											<BMatrix>
 												<BBit $on={s.canDownload}><BIconDl /></BBit>
 												<BBit $on={s.canUpload}><BIconUp /></BBit>
 												<BBit $on={s.canCreateSubfolders}><BIconMkdir /></BBit>
 											</BMatrix>
+										</BRowTop>
+										<BRowBottom>
 											<ShareActions>
 												<IconGhost
 													type='button'
@@ -1115,22 +1117,24 @@ const FileBadgeFolder = styled.div`
 	display: flex;
 	align-items: flex-end;
 	justify-content: center;
-	padding-bottom: 4px;
-	width: 32px;
-	height: 36px;
-	border-radius: 6px;
+	padding-bottom: 5px;
+	flex-shrink: 0;
+	width: 42px;
+	height: 50px;
+	border-radius: 8px;
 	background: linear-gradient(135deg, #0f172a, #334155);
-	box-shadow: 0 2px 6px -2px rgba(15, 23, 42, 0.3);
+	box-shadow: 0 3px 10px -4px rgba(15, 23, 42, 0.3);
 `
 const FileBadgeFile = styled.div<{ $kind: 'pdf' | 'img' | 'doc' | 'other' }>`
 	position: relative;
 	display: flex;
 	align-items: flex-end;
 	justify-content: center;
-	padding-bottom: 4px;
-	width: 32px;
-	height: 36px;
-	border-radius: 6px;
+	padding-bottom: 5px;
+	flex-shrink: 0;
+	width: 42px;
+	height: 50px;
+	border-radius: 8px;
 	background: ${({ $kind }) =>
 		$kind === 'pdf'
 			? 'linear-gradient(135deg, #f87171, #dc2626)'
@@ -1145,8 +1149,8 @@ const FileBadgeFold = styled.span`
 	position: absolute;
 	top: 0;
 	right: 0;
-	width: 10px;
-	height: 10px;
+	width: 13px;
+	height: 13px;
 	background: linear-gradient(
 		225deg,
 		rgba(255, 255, 255, 0.5) 0%,
@@ -1158,7 +1162,7 @@ const FileBadgeFold = styled.span`
 `
 const FileBadgeExt = styled.span`
 	font-family: 'Inter', system-ui, sans-serif;
-	font-size: 8px;
+	font-size: 10px;
 	font-weight: 800;
 	letter-spacing: 0.6px;
 	color: #ffffff;
@@ -1195,15 +1199,22 @@ const BRow = styled.div`
 const BRowTop = styled.div`
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	justify-content: space-between;
+	gap: 14px;
 	min-width: 0;
+`
+const BRowLeft = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	min-width: 0;
+	flex: 1;
 `
 const BRowBottom = styled.div`
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	padding-left: 54px;
+	justify-content: flex-end;
+	gap: 2px;
 `
 const BResource = styled.div`
 	display: inline-flex;
@@ -1218,10 +1229,11 @@ const BResourceText = styled.div`
 	min-width: 0;
 `
 const BResourceName = styled.span`
-	font-size: 13px;
+	font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+	font-size: 15px;
 	color: #0f172a;
-	font-weight: 600;
-	letter-spacing: -0.1px;
+	font-weight: 700;
+	letter-spacing: -0.2px;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -1232,7 +1244,7 @@ const BPath = styled.span`
 	flex-wrap: wrap;
 	gap: 2px;
 	max-width: 100%;
-	font-size: 11px;
+	font-size: 12px;
 	line-height: 1.3;
 	color: #94a3b8;
 	overflow: hidden;
