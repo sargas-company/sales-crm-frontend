@@ -240,12 +240,50 @@ export interface AnalyticsYear {
 	paymentsCount: number
 	activeProjects: number
 	activeClients: number
+	totalSalaryPaid: number
+	marginYtd: number
+	marginPercentYtd: number | null
+	avgMonthlyMargin: number
+	avgMonthlyMarginPercent: number | null
+	bestMarginMonth: {
+		label: string
+		margin: number
+		marginPercent: number | null
+	} | null
+	worstMarginMonth: {
+		label: string
+		margin: number
+		marginPercent: number | null
+	} | null
+	distinctEmployeesPaid: number
 }
 
 export interface AnalyticsConcentration {
 	topClientPercent: number
 	topThreePercent: number
 	atRisk: boolean
+}
+
+export interface AnalyticsMonthlyPnlRow {
+	monthId: string
+	label: string
+	sequenceInYear: number
+	revenueReceived: number
+	salaryCost: number
+	margin: number
+	marginPercent: number | null
+	headcount: number
+}
+
+export interface AnalyticsMonthlyPnl {
+	year: number
+	months: AnalyticsMonthlyPnlRow[]
+	totals: {
+		revenueReceived: number
+		salaryCost: number
+		margin: number
+		marginPercent: number | null
+	}
 }
 
 export interface FinanceAnalyticsResponse {
@@ -259,6 +297,7 @@ export interface FinanceAnalyticsResponse {
 	}
 	snapshot: AnalyticsSnapshot
 	monthly: AnalyticsMonthly
+	monthlyPnl: AnalyticsMonthlyPnl
 	byProject: AnalyticsBreakdown[]
 	byClient: AnalyticsBreakdown[]
 	concentration: AnalyticsConcentration

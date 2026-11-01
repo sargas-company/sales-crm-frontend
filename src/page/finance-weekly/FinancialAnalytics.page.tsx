@@ -2153,11 +2153,6 @@ const EmptyState = styled.div`
 	gap: 6px;
 	padding: 40px 28px;
 	text-align: center;
-	background:
-		radial-gradient(circle at 50% 0%, rgba(3, 105, 161, 0.06), transparent 60%),
-		#fafafd;
-	border: 1px dashed rgba(15, 23, 42, 0.10);
-	border-radius: 16px;
 
 	.ico {
 		display: inline-flex;
