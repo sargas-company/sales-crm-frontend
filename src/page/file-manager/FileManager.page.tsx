@@ -1054,8 +1054,10 @@ const FileManagerPage = () => {
 			else parts.unshift('files')
 			origin = `${window.location.protocol}//${parts.join('.')}`
 		}
-		if (kind === 'folder') return `${origin}/folder/${id}`
-		const base = folderId ? `${origin}/folder/${folderId}` : `${origin}/`
+		if (kind === 'folder') return `${origin}/file-manager/folder/${id}`
+		const base = folderId
+			? `${origin}/file-manager/folder/${folderId}`
+			: `${origin}/file-manager`
 		return `${base}?preview=${id}`
 	}
 
