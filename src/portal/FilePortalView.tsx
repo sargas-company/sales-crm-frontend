@@ -156,14 +156,18 @@ export const FilePortalView = () => {
 
 	return (
 		<Shell>
-			<FloatingBack
-				type='button'
-				onClick={() => navigate('/file-manager')}
-				aria-label='Back to folders'
-				title='Back to folders'
-			>
-				<ArrowBackRounded style={{ fontSize: 20 }} />
-			</FloatingBack>
+			<HeaderStrip>
+				<BackChip
+					type='button'
+					onClick={() => navigate('/file-manager')}
+					aria-label='Back to folders'
+					title='Back to folders'
+				>
+					<ArrowBackRounded style={{ fontSize: 16 }} />
+				</BackChip>
+				<HeaderSep>/</HeaderSep>
+				<HeaderName title={meta.originalName}>{meta.originalName}</HeaderName>
+			</HeaderStrip>
 
 			{previewError ? (
 				<ErrorBlock>{previewError}</ErrorBlock>
@@ -179,45 +183,44 @@ export const FilePortalView = () => {
 }
 
 const Shell = styled.div`
-	position: relative;
 	display: flex;
 	flex-direction: column;
-	padding: 16px;
-	min-height: 100%;
+	gap: 10px;
+	padding: 14px 16px 0;
+	height: 100%;
+	min-height: 0;
 `
 
-const FloatingBack = styled.button`
-	position: absolute;
-	top: 22px;
-	left: 22px;
-	z-index: 2;
+const HeaderStrip = styled.div`
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	padding: 2px 2px 0;
+`
+
+const BackChip = styled.button`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 40px;
-	height: 40px;
+	width: 28px;
+	height: 28px;
 	padding: 0;
 	border: none;
 	border-radius: 50%;
-	background: #ffffff;
-	color: #0f172a;
+	background: transparent;
+	color: #64748b;
 	cursor: pointer;
-	box-shadow:
-		0 1px 2px rgba(15, 23, 42, 0.08),
-		0 8px 24px -8px rgba(15, 23, 42, 0.18);
 	transition:
-		transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
-		box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
-		background 180ms cubic-bezier(0.22, 1, 0.36, 1);
+		background 180ms cubic-bezier(0.22, 1, 0.36, 1),
+		color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+		transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 	svg {
 		transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 	}
 	&:hover {
-		background: #0f172a;
-		color: #ffffff;
-		box-shadow:
-			0 2px 4px rgba(15, 23, 42, 0.14),
-			0 14px 28px -10px rgba(15, 23, 42, 0.28);
+		background: rgba(15, 23, 42, 0.06);
+		color: #0f172a;
 	}
 	&:hover svg {
 		transform: translateX(-2px);
@@ -227,16 +230,34 @@ const FloatingBack = styled.button`
 	}
 	&:focus-visible {
 		outline: none;
-		box-shadow:
-			0 0 0 3px rgba(15, 23, 42, 0.14),
-			0 1px 2px rgba(15, 23, 42, 0.08),
-			0 8px 24px -8px rgba(15, 23, 42, 0.18);
+		background: rgba(15, 23, 42, 0.06);
+		color: #0f172a;
+		box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
 	}
+`
+
+const HeaderSep = styled.span`
+	color: #cbd5e1;
+	font-size: 13px;
+	font-weight: 500;
+	user-select: none;
+`
+
+const HeaderName = styled.span`
+	font-family: 'Inter', system-ui, sans-serif;
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: -0.1px;
+	color: #0f172a;
+	max-width: 60ch;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 `
 
 const PreviewFrame = styled.div`
 	flex: 1;
-	min-height: 85vh;
+	min-height: 0;
 	border: 1px solid rgba(15, 23, 42, 0.06);
 	border-radius: 14px;
 	overflow: hidden;
