@@ -111,8 +111,15 @@ const PromptList = () => {
 			label: 'Created by',
 			minWidth: 180,
 			sortable: true,
-			sortValue: (p) => p.createdBy,
-			render: (p) => <Muted>{p.createdBy}</Muted>,
+			sortValue: (p) => p.createdBy ?? '',
+			render: (p) =>
+				p.createdBy ? (
+					<Muted>{p.createdBy}</Muted>
+				) : (
+					<EmptyBadge title='Author not tracked for prompts created before audit was added'>
+						legacy
+					</EmptyBadge>
+				),
 			skeleton: () => <TableSkeleton $w='130px' $h='13px' />,
 		},
 		{
@@ -244,6 +251,26 @@ const TitleLink = styled.button`
 const Muted = styled.span`
 	font-size: 13.5px;
 	color: ${T.textSecondary};
+`
+
+/* Dashed muted badge for prompts whose author wasn't tracked (NULL
+ * createdBy — historical rows written before the audit was added).
+ * Mirrors the Lead / Client / Employee empty-state pill. */
+const EmptyBadge = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	border: 1.5px dashed rgba(100, 116, 139, 0.4);
+	background: rgba(100, 116, 139, 0.06);
+	color: ${T.textSecondary};
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: default;
 `
 
 /* Date + time pair for Updated / Created columns — mirrors the Leads

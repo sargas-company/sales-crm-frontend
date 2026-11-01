@@ -7,7 +7,7 @@ export interface PromptItem {
 	content: string
 	isActive: boolean
 	version: number
-	createdBy: string
+	createdBy: string | null
 	updatedBy: string | null
 	createdAt: string
 	updatedAt: string
