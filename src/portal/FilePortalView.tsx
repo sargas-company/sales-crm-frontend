@@ -171,7 +171,6 @@ export const FilePortalView = () => {
 const Shell = styled.div`
 	display: flex;
 	flex-direction: column;
-	padding: 16px;
 	height: 100%;
 	min-height: 0;
 `
@@ -179,11 +178,19 @@ const Shell = styled.div`
 const PreviewFrame = styled.div`
 	flex: 1;
 	min-height: 0;
-	border: 1px solid rgba(15, 23, 42, 0.06);
-	border-radius: 14px;
 	overflow: hidden;
 	background: #ffffff;
-	box-shadow: 0 2px 6px -2px rgba(15, 23, 42, 0.06);
+
+	/* FilePreview defaults iframe / content to 80vh for the embedded
+	 * modal use. Portal file-view is a dedicated page — stretch to
+	 * the full container so there's no white gap at the bottom. */
+	& iframe,
+	& > div,
+	& > pre,
+	& > article {
+		height: 100% !important;
+		max-height: none !important;
+	}
 `
 
 const LoadingBlock = styled.div`
