@@ -584,7 +584,7 @@ const FinancialAnalyticsPage = () => {
 								<div>
 									<PanelTitle>Monthly margin · {monthlyPnl?.year ?? year}</PanelTitle>
 									<PanelSub>
-										Revenue minus salary cost per fiscal month (cash-basis). Negative margin shown in red.
+										Revenue minus salary cost per fiscal month (cash-basis).
 									</PanelSub>
 								</div>
 								{monthlyPnl && (
@@ -604,10 +604,7 @@ const FinancialAnalyticsPage = () => {
 								)}
 							</PanelHead>
 							{monthlyPnl && (
-								<MonthlyMarginChart
-									data={monthlyPnl.months}
-									avgMargin={yr?.avgMonthlyMargin ?? 0}
-								/>
+								<MonthlyMarginRows data={monthlyPnl.months} />
 							)}
 						</Panel>
 
@@ -1020,8 +1017,13 @@ const MonthlyMarginChart = ({
 											$negative={negative}
 											style={{ bottom: `calc(${maxBarPct}% + 6px)` }}
 										>
-											{negative ? '−' : '+'}
-											{formatMoneyCompact(Math.abs(m.margin))}
+											<span className='amt'>
+												{negative ? '−' : '+'}
+												{formatMoneyCompact(Math.abs(m.margin))}
+											</span>
+											{m.marginPercent !== null && (
+												<span className='pct'>{m.marginPercent.toFixed(1)}%</span>
+											)}
 										</MarginTag>
 									)}
 									<MarginDualBar>
@@ -1054,6 +1056,413 @@ const MonthlyMarginChart = ({
 				</span>
 			</ChartLegend>
 		</ChartWrap>
+	)
+}
+
+type PnlRow = {
+	monthId: string
+	label: string
+	sequenceInYear: number
+	revenueReceived: number
+	salaryCost: number
+	margin: number
+	marginPercent: number | null
+}
+
+/* Variant B — stacked overlay: one wide bar per month, salary stacked
+ * on top (from 0 up to salaryCost), revenue shown as the full column
+ * height; the slice above the salary stack is the visible margin. */
+const MonthlyMarginStacked = ({ data }: { data: PnlRow[] }) => {
+	const [hover, setHover] = useState<number | null>(null)
+	const hasAny = data.some((m) => m.revenueReceived > 0 || m.salaryCost > 0)
+	if (!hasAny) {
+		return (
+			<EmptyState>
+				<span className='ico'>
+					<SearchOffRounded />
+				</span>
+				<span className='title'>No margin data yet</span>
+				<span className='sub'>Numbers appear once both sides show up.</span>
+			</EmptyState>
+		)
+	}
+	const rawMax = Math.max(1, ...data.map((m) => Math.max(m.revenueReceived, m.salaryCost)))
+	const max = niceCeil(rawMax)
+	const gridTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * max)
+	return (
+		<ChartWrap>
+			<ChartGrid>
+				<YAxis>
+					{[...gridTicks].reverse().map((t, i) => (
+						<span key={i}>{formatMoneyCompact(t)}</span>
+					))}
+				</YAxis>
+				<Plot>
+					{gridTicks.map((_, i) => (
+						<GridLine key={i} style={{ bottom: `${(i / (gridTicks.length - 1)) * 100}%` }} />
+					))}
+					<Bars>
+						{data.map((m, i) => {
+							const revenuePct = (m.revenueReceived / max) * 100
+							const salaryPct = (m.salaryCost / max) * 100
+							const marginSlice = Math.max(0, revenuePct - salaryPct)
+							const negative = m.margin < 0
+							const hasAnyMoney = m.revenueReceived > 0 || m.salaryCost > 0
+							const open = hasAnyMoney && hover === i
+							const align: 'left' | 'center' | 'right' =
+								i <= 1 ? 'left' : i >= data.length - 2 ? 'right' : 'center'
+							return (
+								<MonthCol key={m.monthId} $hover={hover === i}>
+									<HoverCard
+										data-open={open}
+										data-align={align}
+										aria-hidden={!open}
+										style={{ bottom: `calc(${revenuePct}% + 20px)` }}
+									>
+										<div className='hd'>{m.label}</div>
+										<div className='rw'>
+											<span className='k'>
+												<span className='dot rev' /> Revenue
+											</span>
+											<span className='v'>{formatMoney(m.revenueReceived)}</span>
+										</div>
+										<div className='rw'>
+											<span className='k'>
+												<span className='dot sal' /> Salary
+											</span>
+											<span className='v'>{formatMoney(m.salaryCost)}</span>
+										</div>
+										<div className='sep' />
+										<div className='rw total'>
+											<span className='k'>Margin</span>
+											<span className={`v ${negative ? 'neg' : 'pos'}`}>
+												{negative ? '−' : ''}
+												{formatMoney(Math.abs(m.margin))}
+												{m.marginPercent !== null && ` · ${m.marginPercent.toFixed(1)}%`}
+											</span>
+										</div>
+										<span className='arrow' aria-hidden='true' />
+									</HoverCard>
+									<StackedBarCol>
+										{negative ? (
+											<div
+												className='bar sal full'
+												style={{ height: `${salaryPct}%` }}
+											/>
+										) : (
+											<>
+												<div
+													className='bar sal'
+													style={{ height: `${salaryPct}%` }}
+												/>
+												{marginSlice > 0 && (
+													<div
+														className='bar margin'
+														style={{ height: `${marginSlice}%` }}
+													/>
+												)}
+											</>
+										)}
+									</StackedBarCol>
+									{hasAnyMoney && (
+										<HoverZone
+											style={{ height: `${revenuePct}%` }}
+											onMouseEnter={() => setHover(i)}
+											onMouseLeave={() => setHover(null)}
+										/>
+									)}
+									<MonthLbl $current={false}>{m.label.slice(0, 3)}</MonthLbl>
+								</MonthCol>
+							)
+						})}
+					</Bars>
+				</Plot>
+			</ChartGrid>
+			<ChartLegend>
+				<span className='item'>
+					<span className='dot sal' /> Salary (base)
+				</span>
+				<span className='item'>
+					<span className='dot rev' /> Margin on top
+				</span>
+			</ChartLegend>
+		</ChartWrap>
+	)
+}
+
+/* Variant C — diverging axis: zero line in the middle. Revenue goes
+ * up from zero (blue), salary goes down from zero (orange). The
+ * visible net is instantly readable. Margin pill floats near zero. */
+const MonthlyMarginDiverging = ({ data }: { data: PnlRow[] }) => {
+	const [hover, setHover] = useState<number | null>(null)
+	const hasAny = data.some((m) => m.revenueReceived > 0 || m.salaryCost > 0)
+	if (!hasAny) {
+		return (
+			<EmptyState>
+				<span className='ico'>
+					<SearchOffRounded />
+				</span>
+				<span className='title'>No margin data yet</span>
+				<span className='sub'>Numbers appear once both sides show up.</span>
+			</EmptyState>
+		)
+	}
+	const rawMax = Math.max(1, ...data.map((m) => Math.max(m.revenueReceived, m.salaryCost)))
+	const max = niceCeil(rawMax)
+	return (
+		<ChartWrap>
+			<DivergingGrid>
+				<DivergingYAxis>
+					<span>{formatMoneyCompact(max)}</span>
+					<span>0</span>
+					<span>−{formatMoneyCompact(max)}</span>
+				</DivergingYAxis>
+				<DivergingPlot>
+					<ZeroLine />
+					<Bars>
+						{data.map((m, i) => {
+							const revenuePct = (m.revenueReceived / max) * 50
+							const salaryPct = (m.salaryCost / max) * 50
+							const negative = m.margin < 0
+							const hasAnyMoney = m.revenueReceived > 0 || m.salaryCost > 0
+							const open = hasAnyMoney && hover === i
+							const align: 'left' | 'center' | 'right' =
+								i <= 1 ? 'left' : i >= data.length - 2 ? 'right' : 'center'
+							return (
+								<MonthCol key={m.monthId} $hover={hover === i}>
+									<HoverCard
+										data-open={open}
+										data-align={align}
+										aria-hidden={!open}
+										style={{ bottom: `calc(50% + ${revenuePct}% + 14px)` }}
+									>
+										<div className='hd'>{m.label}</div>
+										<div className='rw'>
+											<span className='k'>
+												<span className='dot rev' /> Revenue
+											</span>
+											<span className='v'>{formatMoney(m.revenueReceived)}</span>
+										</div>
+										<div className='rw'>
+											<span className='k'>
+												<span className='dot sal' /> Salary
+											</span>
+											<span className='v'>{formatMoney(m.salaryCost)}</span>
+										</div>
+										<div className='sep' />
+										<div className='rw total'>
+											<span className='k'>Margin</span>
+											<span className={`v ${negative ? 'neg' : 'pos'}`}>
+												{negative ? '−' : ''}
+												{formatMoney(Math.abs(m.margin))}
+												{m.marginPercent !== null && ` · ${m.marginPercent.toFixed(1)}%`}
+											</span>
+										</div>
+										<span className='arrow' aria-hidden='true' />
+									</HoverCard>
+									<DivergingBars>
+										<div
+											className='bar rev'
+											style={{ height: `${revenuePct}%` }}
+										/>
+										<div
+											className='bar sal'
+											style={{ height: `${salaryPct}%` }}
+										/>
+									</DivergingBars>
+									{hasAnyMoney && (
+										<HoverZone
+											style={{ height: '100%' }}
+											onMouseEnter={() => setHover(i)}
+											onMouseLeave={() => setHover(null)}
+										/>
+									)}
+									<DivergingMonthLbl>{m.label.slice(0, 3)}</DivergingMonthLbl>
+								</MonthCol>
+							)
+						})}
+					</Bars>
+				</DivergingPlot>
+			</DivergingGrid>
+			<ChartLegend>
+				<span className='item'>
+					<span className='dot rev' /> Revenue (up)
+				</span>
+				<span className='item'>
+					<span className='dot sal' /> Salary (down)
+				</span>
+			</ChartLegend>
+		</ChartWrap>
+	)
+}
+
+/* Monthly margin — premium horizontal row list.
+ *
+ * One row per fiscal month. Each row carries the month label plus
+ * four numeric columns: Revenue, Salary, Margin, Margin %. The two
+ * cash columns are backed by inline capsule bars scaled to the
+ * highest absolute value in the year. Numbers use a display face
+ * (Bricolage Grotesque with tabular lining figures), currency sign
+ * and % stay neutral mid-weight so the digits are the hero. */
+const MonthlyMarginRows = ({ data }: { data: PnlRow[] }) => {
+	const hasAny = data.some((m) => m.revenueReceived > 0 || m.salaryCost > 0)
+	if (!hasAny) {
+		return (
+			<EmptyState>
+				<span className='ico'>
+					<SearchOffRounded />
+				</span>
+				<span className='title'>No margin data yet</span>
+				<span className='sub'>Numbers appear once both sides show up.</span>
+			</EmptyState>
+		)
+	}
+	const rawMax = Math.max(1, ...data.map((m) => Math.max(m.revenueReceived, m.salaryCost)))
+	const max = niceCeil(rawMax)
+	return (
+		<RowList>
+			<RowHead>
+				<span className='mo'>Month</span>
+				<span className='h'>Revenue</span>
+				<span className='h'>Salary</span>
+				<span className='h num-h'>Margin</span>
+				<span className='h num-h'>Margin %</span>
+			</RowHead>
+			{data.map((m) => {
+				const empty = m.revenueReceived === 0 && m.salaryCost === 0
+				const negative = m.margin < 0
+				const revPct = (m.revenueReceived / max) * 100
+				const salPct = (m.salaryCost / max) * 100
+				return (
+					<RowItem key={m.monthId} $dim={empty}>
+						<span className='mo'>{m.label}</span>
+						<RowBarCell>
+							<RowBarTrack>
+								<AnimatedBar tone='rev' targetPct={revPct} />
+							</RowBarTrack>
+							<Money value={m.revenueReceived} dim={empty} />
+						</RowBarCell>
+						<RowBarCell>
+							<RowBarTrack>
+								<AnimatedBar tone='sal' targetPct={salPct} />
+							</RowBarTrack>
+							<Money value={m.salaryCost} dim={empty} />
+						</RowBarCell>
+						<span className='num'>
+							{empty ? (
+								<EmptyPill title='No data yet'>
+									<span />
+									<span />
+									<span />
+								</EmptyPill>
+							) : (
+								<MarginPill $negative={negative} $zero={m.margin === 0}>
+									{m.margin !== 0 && (
+										<span className='sgn'>{negative ? '−' : '+'}</span>
+									)}
+									<span className='cur'>$</span>
+									<AnimatedMoneyDigits value={m.margin} />
+								</MarginPill>
+							)}
+						</span>
+						<span className='pct'>
+							{m.marginPercent === null ? (
+								<EmptyPill title='No data yet'>
+									<span />
+									<span />
+									<span />
+								</EmptyPill>
+							) : (
+								<MarginPercent $negative={negative} $zero={m.marginPercent === 0}>
+									<AnimatedPercent value={m.marginPercent} />
+									<span className='sgn'>%</span>
+								</MarginPercent>
+							)}
+						</span>
+					</RowItem>
+				)
+			})}
+		</RowList>
+	)
+}
+
+/* Shared money renderer — splits $ sign, digits and optional +/−
+ * prefix into separate spans so the display face only lands on the
+ * digits and tabular-nums alignment stays crisp. Digits animate from
+ * zero on mount via useCountUp. */
+const Money = ({
+	value,
+	dim,
+	showSign = false,
+}: {
+	value: number
+	dim: boolean
+	showSign?: boolean
+}) => {
+	const abs = Math.abs(value)
+	const animated = useCountUp(abs)
+	const digits = formatMoneyCompact(animated).replace(/^\$/, '')
+	const sign = showSign ? (value < 0 ? '−' : value > 0 ? '+' : '') : ''
+	return (
+		<span className='val'>
+			{sign && <span className='sgn'>{sign}</span>}
+			<span className='cur'>$</span>
+			<span className='big' style={dim ? { color: '#cbd5e1' } : undefined}>
+				{digits}
+			</span>
+		</span>
+	)
+}
+
+/* Animated percent — count-up like Money. */
+const AnimatedPercent = ({ value }: { value: number }) => {
+	const animated = useCountUp(value)
+	return <span className='big'>{animated.toFixed(1)}</span>
+}
+
+/* Just the digits portion of a money value, animated. Used when the
+ * $ sign / +/− prefix are rendered separately by the parent (e.g.
+ * inside MarginPill where the pill owns the sign and currency). */
+const AnimatedMoneyDigits = ({ value }: { value: number }) => {
+	const animated = useCountUp(Math.abs(value))
+	return (
+		<span className='big'>
+			{formatMoneyCompact(animated).replace(/^\$/, '')}
+		</span>
+	)
+}
+
+/* Animated horizontal bar — mirrors the Time-off "Annual balances"
+ * progress-bar pattern (track + fill + shimmer + cursor dot), with
+ * every animation three times slower per owner request. Width grows
+ * via a CSS transition triggered after mount so the browser's own
+ * transition engine handles it smoothly. */
+const AnimatedBar = ({
+	tone,
+	targetPct,
+}: {
+	tone: 'rev' | 'sal'
+	targetPct: number
+}) => {
+	const [width, setWidth] = useState(0)
+	useEffect(() => {
+		if (
+			typeof window !== 'undefined' &&
+			window.matchMedia('(prefers-reduced-motion: reduce)').matches
+		) {
+			setWidth(targetPct)
+			return
+		}
+		const t = window.setTimeout(() => setWidth(targetPct), 60)
+		return () => window.clearTimeout(t)
+	}, [targetPct])
+	return (
+		<>
+			<BarFill $tone={tone} style={{ width: `${width}%` }}>
+				<BarShimmer />
+			</BarFill>
+			{width > 0 && <BarCursor $tone={tone} style={{ left: `${width}%` }} />}
+		</>
 	)
 }
 
@@ -2128,19 +2537,19 @@ const HoverCard = styled.div`
 		background: rgba(3, 105, 161, 0.30);
 	}
 	.dot.rev {
-		background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+		background: #0284c7;
 	}
 	.dot.sal {
-		background: linear-gradient(180deg, #f87171 0%, #dc2626 100%);
+		background: #d97706;
 	}
 	.dot.mar {
 		background: #0f172a;
 	}
 	.v.pos {
-		color: #15803d;
+		color: #0284c7;
 	}
 	.v.neg {
-		color: #b91c1c;
+		color: #d97706;
 	}
 	.arrow {
 		position: absolute;
@@ -2190,10 +2599,10 @@ const ChartLegend = styled.div`
 		background: rgba(3, 105, 161, 0.30);
 	}
 	.dot.rev {
-		background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+		background: #0284c7;
 	}
 	.dot.sal {
-		background: linear-gradient(180deg, #f87171 0%, #dc2626 100%);
+		background: #d97706;
 	}
 	.dot.mar {
 		background: #0f172a;
@@ -2392,6 +2801,456 @@ const EmptyState = styled.div`
 	}
 `
 
+const VariantPill = styled.span`
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 8px;
+	margin-left: 8px;
+	font-family: 'Inter', system-ui, sans-serif;
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.3px;
+	text-transform: uppercase;
+	color: #64748b;
+	background: #f1f5f9;
+	border-radius: 6px;
+	vertical-align: middle;
+`
+
+/* ─── Variant B — Stacked overlay ─── */
+const StackedBarCol = styled.div`
+	position: absolute;
+	left: 50%;
+	bottom: 0;
+	transform: translateX(-50%);
+	display: flex;
+	flex-direction: column-reverse;
+	width: 60%;
+	height: 100%;
+	pointer-events: none;
+
+	.bar {
+		width: 100%;
+		border-radius: 0;
+	}
+	.bar.sal {
+		background: #d97706;
+	}
+	.bar.sal.full {
+		border-radius: 4px 4px 0 0;
+	}
+	.bar.margin {
+		background: #0284c7;
+		border-radius: 4px 4px 0 0;
+	}
+`
+
+/* ─── Variant C — Diverging axis ─── */
+const DivergingGrid = styled.div`
+	position: relative;
+	display: grid;
+	grid-template-columns: 56px 1fr;
+	gap: 8px;
+	height: 320px;
+	padding: 8px 0 4px;
+`
+const DivergingYAxis = styled.div`
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	align-items: flex-end;
+	padding-right: 8px;
+	font-size: 10px;
+	font-variant-numeric: tabular-nums;
+	color: #94a3b8;
+	border-right: 1px solid rgba(15, 23, 42, 0.06);
+`
+const DivergingPlot = styled.div`
+	position: relative;
+	height: 100%;
+`
+const ZeroLine = styled.div`
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 50%;
+	height: 1px;
+	background: rgba(15, 23, 42, 0.14);
+	z-index: 1;
+`
+const DivergingBars = styled.div`
+	position: absolute;
+	left: 50%;
+	top: 0;
+	bottom: 0;
+	transform: translateX(-50%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 60%;
+	pointer-events: none;
+
+	.bar {
+		width: 100%;
+	}
+	.bar.rev {
+		background: #0284c7;
+		border-radius: 4px 4px 0 0;
+	}
+	.bar.sal {
+		background: #d97706;
+		border-radius: 0 0 4px 4px;
+	}
+`
+const DivergingMonthLbl = styled.span`
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: -22px;
+	text-align: center;
+	font-size: 11px;
+	font-weight: 600;
+	color: #64748b;
+`
+
+/* Three faint dots in a soft pill — reads as "waiting on data" rather
+ * than a loud em-dash. Dots pulse gently so the user clocks the state
+ * as pending rather than broken. */
+const emptyPulse = keyframes`
+	0%, 100% { opacity: 0.35; }
+	50%      { opacity: 0.75; }
+`
+const EmptyPill = styled.span`
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 7px 10px;
+	border-radius: 8px;
+	background: rgba(15, 23, 42, 0.035);
+
+	> span {
+		width: 4px;
+		height: 4px;
+		border-radius: 50%;
+		background: #94a3b8;
+		animation: ${emptyPulse} 1.6s ease-in-out infinite;
+	}
+	> span:nth-child(2) {
+		animation-delay: 0.2s;
+	}
+	> span:nth-child(3) {
+		animation-delay: 0.4s;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		> span {
+			animation: none;
+			opacity: 0.55;
+		}
+	}
+`
+
+/* Margin $ as a soft tinted pill — deep-blue for positive, copper for
+ * negative. Digits are the hero (24px, deep tone), sign and $ stay
+ * neutral mid-weight inside the pill. */
+const MarginPill = styled.span<{ $negative: boolean; $zero: boolean }>`
+	display: inline-flex;
+	align-items: baseline;
+	gap: 1px;
+	padding: 4px 9px;
+	border-radius: 8px;
+	background: ${(p) =>
+		p.$zero
+			? 'transparent'
+			: p.$negative
+				? 'rgba(154, 52, 18, 0.13)'
+				: 'rgba(12, 74, 110, 0.11)'};
+
+	/* Double && boosts specificity above RowItem's own .sgn/.cur/.big
+	 * rules so the colored hero styling wins. */
+	&& .sgn,
+	&& .cur {
+		font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+		font-size: 11.5px;
+		font-weight: 600;
+		color: ${(p) => (p.$negative ? '#9a3412' : '#0c4a6e')};
+		opacity: 0.75;
+	}
+	&& .big {
+		font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+		font-variant-numeric: tabular-nums lining-nums;
+		font-size: 14px;
+		font-weight: 700;
+		letter-spacing: -0.2px;
+		color: ${(p) => (p.$negative ? '#9a3412' : '#0c4a6e')};
+		margin-left: 1px;
+	}
+`
+
+/* Margin % — same colored tone as the pill but without a background,
+ * so the two hero cells read as paired without duplicating the chip. */
+const MarginPercent = styled.span<{ $negative: boolean; $zero: boolean }>`
+	display: inline-flex;
+	align-items: baseline;
+	gap: 1px;
+
+	&& .big {
+		font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+		font-variant-numeric: tabular-nums lining-nums;
+		font-size: 14px;
+		font-weight: 700;
+		letter-spacing: -0.2px;
+		color: ${(p) =>
+			p.$zero ? '#94a3b8' : p.$negative ? '#9a3412' : '#0c4a6e'};
+	}
+	&& .sgn {
+		font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+		font-size: 11.5px;
+		font-weight: 600;
+		color: ${(p) =>
+			p.$zero ? '#94a3b8' : p.$negative ? '#9a3412' : '#0c4a6e'};
+		opacity: 0.75;
+		margin-left: 1px;
+	}
+`
+
+/* ─── Monthly margin — premium rows ─── */
+const RowList = styled.div`
+	display: flex;
+	flex-direction: column;
+	background: #ffffff;
+	border: 1px solid rgba(15, 23, 42, 0.06);
+	border-radius: 18px;
+	box-shadow:
+		0 1px 2px rgba(15, 23, 42, 0.03),
+		0 24px 48px -32px rgba(15, 23, 42, 0.14);
+	overflow: hidden;
+`
+
+const RowHead = styled.div`
+	display: grid;
+	grid-template-columns: 0.9fr 2fr 2fr 1fr 0.7fr;
+	gap: 20px;
+	align-items: center;
+	padding: 14px 24px;
+	background: linear-gradient(180deg, #fafbfc 0%, #f6f8fa 100%);
+	border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+	font-family: 'Inter', system-ui, sans-serif;
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.9px;
+	text-transform: uppercase;
+	color: #94a3b8;
+
+	.mo,
+	.h {
+		display: inline-block;
+	}
+	.num-h {
+		text-align: right;
+	}
+`
+
+const RowItem = styled.div<{ $dim: boolean }>`
+	position: relative;
+	display: grid;
+	grid-template-columns: 0.9fr 2fr 2fr 1fr 0.7fr;
+	gap: 20px;
+	align-items: center;
+	padding: 18px 24px;
+	border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+	font-family:
+		'Bricolage Grotesque', 'Inter', ui-sans-serif, system-ui, sans-serif;
+	font-variant-numeric: tabular-nums lining-nums;
+	font-feature-settings: 'tnum' 1, 'lnum' 1, 'ss01' 1;
+	color: ${(p) => (p.$dim ? '#cbd5e1' : '#0f172a')};
+	transition:
+		background 180ms ease,
+		box-shadow 180ms ease;
+
+	&:last-child {
+		border-bottom: none;
+	}
+	&:hover {
+		background: #fafbfc;
+		box-shadow: inset 3px 0 0 rgba(15, 23, 42, 0.12);
+	}
+
+	/* Vertical column separators — subtle hairlines between cells. */
+	> *:not(:first-child) {
+		position: relative;
+		&::before {
+			content: '';
+			position: absolute;
+			left: -10px;
+			top: 50%;
+			transform: translateY(-50%);
+			width: 1px;
+			height: 32px;
+			background: rgba(15, 23, 42, 0.04);
+		}
+	}
+
+	.mo {
+		font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+		font-size: 13px;
+		font-weight: 600;
+		letter-spacing: -0.1px;
+		color: ${(p) => (p.$dim ? '#94a3b8' : '#334155')};
+	}
+
+	.num,
+	.pct {
+		display: inline-flex;
+		align-items: baseline;
+		justify-content: flex-end;
+		gap: 1px;
+	}
+	.num {
+		text-align: right;
+	}
+	.pct {
+		text-align: right;
+	}
+
+	/* Sign colors: deep & muted, not primary pure. */
+	.pos .sgn,
+	.pos .cur {
+		color: #0c4a6e;
+	}
+	.neg .sgn,
+	.neg .cur {
+		color: #9a3412;
+	}
+
+	.sgn {
+		font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+		font-size: 11.5px;
+		font-weight: 500;
+		color: #94a3b8;
+		margin-right: 1px;
+	}
+	.cur {
+		font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+		font-size: 11.5px;
+		font-weight: 500;
+		color: #94a3b8;
+	}
+	.big {
+		font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+		font-variant-numeric: tabular-nums lining-nums;
+		font-size: 14px;
+		font-weight: 700;
+		letter-spacing: -0.2px;
+		color: ${(p) => (p.$dim ? '#cbd5e1' : '#0f172a')};
+		margin-left: 1px;
+	}
+	.dash {
+		font-size: 14px;
+		font-weight: 400;
+		color: #e2e8f0;
+	}
+`
+
+const RowBarCell = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	min-width: 0;
+
+	.val {
+		flex-shrink: 0;
+		display: inline-flex;
+		align-items: baseline;
+		gap: 1px;
+	}
+`
+
+/* Progress-bar family — mirrors the Time-off "Annual balances" look:
+ * flat track, solid fill with an inner shimmer sweep, a small cursor
+ * dot anchored at the fill's end. All animations run 3× slower than
+ * the time-off version per owner request. */
+const barToneFill = (tone: 'rev' | 'sal') =>
+	tone === 'rev' ? '#0369a1' : '#c2410c'
+const barToneRing = (tone: 'rev' | 'sal') =>
+	tone === 'rev' ? 'rgba(3, 105, 161, 0.35)' : 'rgba(194, 65, 12, 0.35)'
+
+const RowBarTrack = styled.div`
+	position: relative;
+	flex: 1;
+	min-width: 0;
+	height: 6px;
+	border-radius: 999px;
+	background: rgba(15, 23, 42, 0.06);
+	overflow: visible;
+`
+
+const BarFill = styled.div<{ $tone: 'rev' | 'sal' }>`
+	position: relative;
+	height: 100%;
+	background: ${(p) => barToneFill(p.$tone)};
+	border-radius: 999px;
+	overflow: hidden;
+	transition: width 1440ms cubic-bezier(0.22, 1, 0.36, 1);
+	will-change: width;
+`
+
+const barShimmerKF = keyframes`
+	0%   { transform: translateX(-120%); }
+	100% { transform: translateX(220%); }
+`
+
+const BarShimmer = styled.span`
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 60%;
+	height: 100%;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgba(255, 255, 255, 0.55) 50%,
+		transparent 100%
+	);
+	animation: ${barShimmerKF} 5.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+
+	@media (prefers-reduced-motion: reduce) {
+		animation: none;
+		display: none;
+	}
+`
+
+const barCursorPulseKF = keyframes`
+	0%, 100% {
+		box-shadow: 0 0 0 0 var(--ring);
+		transform: translate(-50%, -50%) scale(1);
+	}
+	50% {
+		box-shadow: 0 0 0 5px transparent;
+		transform: translate(-50%, -50%) scale(1.2);
+	}
+`
+
+const BarCursor = styled.span<{ $tone: 'rev' | 'sal' }>`
+	position: absolute;
+	top: 50%;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: ${(p) => barToneFill(p.$tone)};
+	border: 2px solid #ffffff;
+	--ring: ${(p) => barToneRing(p.$tone)};
+	transform: translate(-50%, -50%);
+	transition: left 1440ms cubic-bezier(0.22, 1, 0.36, 1);
+	animation: ${barCursorPulseKF} 5.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+
+	@media (prefers-reduced-motion: reduce) {
+		animation: none;
+	}
+`
+
 const MarginDualBar = styled.div`
 	position: absolute;
 	left: 50%;
@@ -2413,12 +3272,12 @@ const MarginDualBar = styled.div`
 			box-shadow 160ms ease;
 	}
 	.bar.rev {
-		background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
-		box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04) inset;
+		background: #0284c7;
+		border-radius: 4px 4px 0 0;
 	}
 	.bar.sal {
-		background: linear-gradient(180deg, #f87171 0%, #dc2626 100%);
-		box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04) inset;
+		background: #d97706;
+		border-radius: 4px 4px 0 0;
 	}
 `
 
@@ -2427,8 +3286,8 @@ const MarginTag = styled.span<{ $negative: boolean }>`
 	left: 50%;
 	transform: translateX(-50%);
 	display: inline-flex;
-	align-items: center;
-	justify-content: center;
+	align-items: baseline;
+	gap: 5px;
 	padding: 3px 8px;
 	font-size: 11px;
 	font-weight: 700;
@@ -2437,11 +3296,18 @@ const MarginTag = styled.span<{ $negative: boolean }>`
 	border-radius: 6px;
 	white-space: nowrap;
 	pointer-events: none;
-	color: ${(p) => (p.$negative ? '#b91c1c' : '#15803d')};
+	color: ${(p) => (p.$negative ? '#d97706' : '#0284c7')};
 	background: ${(p) =>
-		p.$negative ? 'rgba(220, 38, 38, 0.08)' : 'rgba(21, 128, 61, 0.08)'};
-	border: 1px solid
-		${(p) => (p.$negative ? 'rgba(220, 38, 38, 0.18)' : 'rgba(21, 128, 61, 0.18)')};
+		p.$negative ? 'rgba(217, 119, 6, 0.10)' : 'rgba(3, 105, 161, 0.10)'};
+
+	.amt {
+		font-weight: 700;
+	}
+	.pct {
+		font-size: 10px;
+		font-weight: 600;
+		opacity: 0.75;
+	}
 `
 
 const RiskBadge = styled.span`
