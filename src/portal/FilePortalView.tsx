@@ -156,17 +156,14 @@ export const FilePortalView = () => {
 
 	return (
 		<Shell>
-			<TopBar>
-				<BackBtn
-					type='button'
-					onClick={() => navigate('/file-manager')}
-					aria-label='Back to folders'
-				>
-					<ArrowBackRounded style={{ fontSize: 18 }} />
-					<span>Back</span>
-				</BackBtn>
-				<FileName title={meta.originalName}>{meta.originalName}</FileName>
-			</TopBar>
+			<FloatingBack
+				type='button'
+				onClick={() => navigate('/file-manager')}
+				aria-label='Back to folders'
+				title='Back to folders'
+			>
+				<ArrowBackRounded style={{ fontSize: 20 }} />
+			</FloatingBack>
 
 			{previewError ? (
 				<ErrorBlock>{previewError}</ErrorBlock>
@@ -182,60 +179,69 @@ export const FilePortalView = () => {
 }
 
 const Shell = styled.div`
+	position: relative;
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
-	padding: 24px;
+	padding: 16px;
 	min-height: 100%;
 `
 
-const TopBar = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 14px;
-`
-
-const BackBtn = styled.button`
+const FloatingBack = styled.button`
+	position: absolute;
+	top: 22px;
+	left: 22px;
+	z-index: 2;
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
-	padding: 7px 12px;
-	border-radius: 10px;
-	border: 1px solid rgba(15, 23, 42, 0.1);
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
 	background: #ffffff;
 	color: #0f172a;
-	font: inherit;
-	font-size: 13px;
-	font-weight: 600;
 	cursor: pointer;
+	box-shadow:
+		0 1px 2px rgba(15, 23, 42, 0.08),
+		0 8px 24px -8px rgba(15, 23, 42, 0.18);
 	transition:
-		background 160ms ease,
-		border-color 160ms ease;
-	&:hover {
-		background: #f8fafc;
-		border-color: rgba(15, 23, 42, 0.18);
+		transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
+		background 180ms cubic-bezier(0.22, 1, 0.36, 1);
+	svg {
+		transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 	}
-`
-
-const FileName = styled.span`
-	font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
-	font-size: 16px;
-	font-weight: 600;
-	letter-spacing: -0.3px;
-	color: #0f172a;
-	max-width: 60ch;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	&:hover {
+		background: #0f172a;
+		color: #ffffff;
+		box-shadow:
+			0 2px 4px rgba(15, 23, 42, 0.14),
+			0 14px 28px -10px rgba(15, 23, 42, 0.28);
+	}
+	&:hover svg {
+		transform: translateX(-2px);
+	}
+	&:active {
+		transform: translateY(0.5px);
+	}
+	&:focus-visible {
+		outline: none;
+		box-shadow:
+			0 0 0 3px rgba(15, 23, 42, 0.14),
+			0 1px 2px rgba(15, 23, 42, 0.08),
+			0 8px 24px -8px rgba(15, 23, 42, 0.18);
+	}
 `
 
 const PreviewFrame = styled.div`
 	flex: 1;
-	min-height: 60vh;
-	border: 1px solid rgba(15, 23, 42, 0.08);
+	min-height: 85vh;
+	border: 1px solid rgba(15, 23, 42, 0.06);
 	border-radius: 14px;
 	overflow: hidden;
 	background: #ffffff;
+	box-shadow: 0 2px 6px -2px rgba(15, 23, 42, 0.06);
 `
 
 const LoadingBlock = styled.div`
