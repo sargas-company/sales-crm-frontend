@@ -280,8 +280,34 @@ export const fileManagerApi = baseApi.injectEndpoints({
 				{ type: 'FileManager', id: 'STATS' },
 			],
 		}),
+
+		searchFileManager: builder.query<FileManagerSearchResult, string>({
+			query: (q) => ({ url: '/file-manager/search', params: { q } }),
+			providesTags: [{ type: 'FileManager', id: 'SEARCH' }],
+		}),
 	}),
 })
+
+export interface FileManagerSearchFolderHit {
+	id: string
+	name: string
+	parentId: string | null
+	breadcrumbs: Array<{ id: string; name: string }>
+	createdAt: string
+}
+export interface FileManagerSearchFileHit {
+	id: string
+	folderId: string | null
+	originalName: string
+	mimeType: string
+	size: number
+	breadcrumbs: Array<{ id: string; name: string }>
+	createdAt: string
+}
+export interface FileManagerSearchResult {
+	folders: FileManagerSearchFolderHit[]
+	files: FileManagerSearchFileHit[]
+}
 
 export const {
 	useListFolderQuery,
@@ -299,4 +325,5 @@ export const {
 	useLazyGetFilePreviewUrlQuery,
 	useBulkDeleteMutation,
 	useBulkMoveMutation,
+	useSearchFileManagerQuery,
 } = fileManagerApi

@@ -11,7 +11,7 @@ import {
 	type ReactNode,
 } from 'react'
 import { createPortal, flushSync } from 'react-dom'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import styled, { css, keyframes } from 'styled-components'
 import {
 	FolderOutlined,
@@ -22,6 +22,8 @@ import {
 	DriveFileRenameOutlineOutlined,
 	DownloadRounded,
 	DeleteOutlineRounded,
+	InsertLinkRounded,
+	LockOutlined,
 	PeopleOutlineRounded,
 	HomeOutlined,
 	ChevronRightRounded,
@@ -36,6 +38,7 @@ import { ListPageShell } from '../../components/_shared/ListPageShell'
 import ConfirmModal from '../../components/_shared/ConfirmModal'
 import { useToast } from '../../context/toast/ToastContext'
 import { FilePreview } from './FilePreview'
+import GlobalSearch from './GlobalSearch'
 import { ShareModal } from './ShareModal'
 import { UploadModal } from './UploadModal'
 import { enqueueUploads } from './uploadQueueStore'
@@ -518,7 +521,16 @@ const FileManagerPage = () => {
 	const { folderId: paramFolderId } = useParams<{ folderId?: string }>()
 	const folderId = paramFolderId ?? null
 
-	const { data, isLoading, isError, refetch } = useListFolderQuery(folderId)
+	const [searchParams, setSearchParams] = useSearchParams()
+	const previewParam = searchParams.get('preview')
+
+	const { data, isLoading, isError, error, refetch } =
+		useListFolderQuery(folderId)
+	const errorStatus =
+		error && typeof error === 'object' && 'status' in error
+			? (error as { status?: number }).status
+			: undefined
+	const isForbidden = isError && errorStatus === 403
 	/* Portal workers need their own user id to decide which rows get
 	 *  a Delete affordance. Ownership only — no time window; the UI
 	 *  check mirrors the backend check 1-to-1 so a visible Delete
@@ -1004,6 +1016,63 @@ const FileManagerPage = () => {
 		}
 	}
 
+	/* Auto-open preview when the URL carries `?preview=<fileId>`.
+	 * Fires once per load (and once per file-id change). If the file
+	 * isn't in the current folder's listing (deleted or no access),
+	 * surface a toast and strip the param so the state is clean. */
+	useEffect(() => {
+		if (!previewParam) return
+		if (!data?.files) return
+		if (previewFile?.id === previewParam) return
+		const match = data.files.find((f) => f.id === previewParam)
+		if (match) {
+			void openPreview(match)
+		} else {
+			showToast('File not found or no access', 'error')
+		}
+		const next = new URLSearchParams(searchParams)
+		next.delete('preview')
+		setSearchParams(next, { replace: true })
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [previewParam, data?.files])
+
+	/* Build a public portal URL for a folder or a preview-opening URL
+	 * for a file (uses the parent folder route with ?preview=<id>).
+	 * Portal host comes from VITE_PORTAL_URL when set; falls back to
+	 * swapping the current hostname's first label with "files". */
+	const buildPortalUrl = (
+		kind: 'folder' | 'file',
+		id: string,
+		folderId: string | null,
+	): string => {
+		const envHost = (import.meta as { env?: Record<string, string> }).env
+			?.VITE_PORTAL_URL
+		let origin = envHost ?? ''
+		if (!origin && typeof window !== 'undefined') {
+			const parts = window.location.hostname.split('.')
+			if (parts.length > 1) parts[0] = 'files'
+			else parts.unshift('files')
+			origin = `${window.location.protocol}//${parts.join('.')}`
+		}
+		if (kind === 'folder') return `${origin}/folder/${id}`
+		const base = folderId ? `${origin}/folder/${folderId}` : `${origin}/`
+		return `${base}?preview=${id}`
+	}
+
+	const copyPortalLink = async (
+		kind: 'folder' | 'file',
+		id: string,
+		folderId: string | null,
+	) => {
+		const url = buildPortalUrl(kind, id, folderId)
+		try {
+			await navigator.clipboard.writeText(url)
+			showToast('Portal link copied', 'success')
+		} catch {
+			showToast('Could not copy — select the URL manually', 'error')
+		}
+	}
+
 	const openFolderCtx = (e: React.MouseEvent, f: FileManagerFolder) => {
 		e.preventDefault()
 		e.stopPropagation()
@@ -1024,6 +1093,11 @@ const FileManagerPage = () => {
 					]
 				: []
 			: [
+					{
+						label: 'Copy portal link',
+						icon: <InsertLinkRounded style={{ fontSize: 16 }} />,
+						onClick: () => void copyPortalLink('folder', f.id, null),
+					},
 					{
 						label: 'Share',
 						icon: <PeopleOutlineRounded style={{ fontSize: 16 }} />,
@@ -1092,6 +1166,12 @@ const FileManagerPage = () => {
 						: []),
 				]
 			: [
+					{
+						label: 'Copy portal link',
+						icon: <InsertLinkRounded style={{ fontSize: 16 }} />,
+						onClick: () =>
+							void copyPortalLink('file', f.id, f.folderId ?? null),
+					},
 					{
 						label: 'Share',
 						icon: <PeopleOutlineRounded style={{ fontSize: 16 }} />,
@@ -1478,6 +1558,7 @@ const FileManagerPage = () => {
 							<CloseRounded style={{ fontSize: 14 }} />
 						</BulkClear>
 					</BulkBar>
+					{!isPortalHost && <GlobalSearch />}
 				</Toolbar>
 
 				<DropZone
@@ -1497,7 +1578,26 @@ const FileManagerPage = () => {
 
 					{isLoading && <LoadingBlock>Loading…</LoadingBlock>}
 
-					{isError && (
+					{isError && isForbidden && (
+						<AccessDeniedBlock>
+							<AccessDeniedIcon>
+								<LockOutlined />
+							</AccessDeniedIcon>
+							<AccessDeniedTitle>No access to this folder</AccessDeniedTitle>
+							<AccessDeniedSub>
+								This folder isn't shared with your account. Ask an admin to
+								grant access.
+							</AccessDeniedSub>
+							<AccessDeniedAction
+								type='button'
+								onClick={() => navigate('/file-manager')}
+							>
+								Open your folders
+							</AccessDeniedAction>
+						</AccessDeniedBlock>
+					)}
+
+					{isError && !isForbidden && (
 						<ErrorBlock>
 							Failed to load folder.{' '}
 							<button type='button' onClick={() => refetch()}>Retry</button>
@@ -2672,6 +2772,64 @@ const ErrorBlock = styled.div`
 		color: #b91c1c;
 		font: inherit;
 		cursor: pointer;
+	}
+`
+
+const AccessDeniedBlock = styled.div`
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 14px;
+	padding: 72px 24px 80px;
+	text-align: center;
+`
+const AccessDeniedIcon = styled.span`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 88px;
+	height: 88px;
+	border-radius: 50%;
+	background: #f1f5f9;
+	color: #94a3b8;
+	svg {
+		font-size: 44px;
+	}
+`
+const AccessDeniedTitle = styled.h3`
+	margin: 4px 0 0;
+	font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+	font-size: 22px;
+	font-weight: 700;
+	letter-spacing: -0.4px;
+	color: #0f172a;
+`
+const AccessDeniedSub = styled.p`
+	margin: 0;
+	font-size: 14px;
+	line-height: 1.5;
+	color: #64748b;
+	max-width: 44ch;
+`
+const AccessDeniedAction = styled.button`
+	margin-top: 6px;
+	padding: 10px 20px;
+	border-radius: 10px;
+	border: none;
+	background: #0f172a;
+	color: #ffffff;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: -0.1px;
+	cursor: pointer;
+	transition:
+		background 160ms ease,
+		transform 160ms ease;
+	&:hover {
+		background: #1e293b;
+		transform: translateY(-1px);
 	}
 `
 
