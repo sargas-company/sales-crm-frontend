@@ -29,7 +29,7 @@ import {
 	SearchPill,
 } from '../../../components/_shared/filters/freshPaperFilters'
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
-import { Clip, DateTimeCell, SectionPill } from '../_shared/cells'
+import { Clip, DateOnlyCell, SectionPill } from '../_shared/cells'
 import { ProfileLink } from '../_shared/ProfileLink'
 import DatePickerPill from '../../finance-weekly/DatePickerPill'
 import { T } from '../../../components/sales-analytics/_shared/tokens'
@@ -117,7 +117,7 @@ const UpworkChangeLogPage = () => {
 			label: 'Date',
 			sortable: true,
 			sortValue: (r) => r.date,
-			render: (r) => <DateTimeCell iso={r.date} />,
+			render: (r) => <DateOnlyCell iso={r.date} />,
 			skeleton: () => <TableSkeleton $w='110px' $h='13px' />,
 		},
 		{

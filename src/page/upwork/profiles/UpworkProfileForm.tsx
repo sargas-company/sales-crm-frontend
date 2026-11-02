@@ -186,7 +186,9 @@ const UpworkProfileForm = ({ mode }: Props) => {
 								>
 									<Checkbox
 										checked={fields.active}
-										onChange={(v) => setField('active', !!v)}
+										onChange={() =>
+											setField('active', !fields.active)
+										}
 									/>
 									<span style={{ fontSize: 14, color: '#3a3541' }}>
 										Active

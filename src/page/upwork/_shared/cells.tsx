@@ -53,6 +53,22 @@ export const DateTimeCell = ({ iso }: { iso: string }) => {
 	)
 }
 
+/* ─── Date-only cell ─────────────────────────────────────────────
+ * For fields that carry only a calendar date (stored as UTC-midnight
+ * timestamps on the backend). Reads YYYY-MM-DD straight from the
+ * ISO string so the day never drifts across timezones, and renders
+ * dd/mm/yyyy — same visual weight as DateTimeCell's DatePart. */
+export const DateOnlyCell = ({ iso }: { iso: string }) => {
+	const ymd = typeof iso === 'string' ? iso.slice(0, 10) : ''
+	const [y, m, d] = ymd.split('-')
+	const display = y && m && d ? `${d}/${m}/${y}` : ''
+	return (
+		<DateTimeWrap title={display}>
+			<DatePart>{display}</DatePart>
+		</DateTimeWrap>
+	)
+}
+
 const DateTimeWrap = styled.span`
 	display: inline-flex;
 	align-items: baseline;
