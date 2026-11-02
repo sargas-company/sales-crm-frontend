@@ -62,42 +62,6 @@ const StatusLabel = styled.span<{ $active: boolean }>`
 	color: ${({ $active }) => ($active ? '#15803d' : '#64748b')};
 `
 
-/* Interactive variant — clickable toggle for the Status cell. Keeps
- * the same visual as StatusLabel but behaves as a button: hover
- * ring, active press, disabled state while the mutation runs. */
-const StatusToggle = styled.button<{ $active: boolean }>`
-	appearance: none;
-	border: 1px solid transparent;
-	background: transparent;
-	padding: 4px 8px;
-	border-radius: 999px;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	font-family: 'JetBrains Mono', monospace;
-	font-size: 11.5px;
-	font-weight: 700;
-	letter-spacing: 0.4px;
-	text-transform: uppercase;
-	color: ${({ $active }) => ($active ? '#15803d' : '#64748b')};
-	transition:
-		background 140ms ease,
-		border-color 140ms ease;
-
-	&:hover:not(:disabled) {
-		background: ${({ $active }) => ($active ? '#f0fdf4' : '#f1f5f9')};
-		border-color: ${({ $active }) => ($active ? '#86efac' : '#cbd5e1')};
-	}
-	&:active:not(:disabled) {
-		transform: translateY(1px);
-	}
-	&:disabled {
-		opacity: 0.55;
-		cursor: wait;
-	}
-`
-
 /* External link to the Upwork freelancer page — rendered in its own
  * column. Big typography-first "UP↗" in Upwork brand green: Inter
  * 900, uppercase, slight tracking. No frame, no border, no fill. */
@@ -162,11 +126,9 @@ import {
 	upworkProfileName,
 	useDeleteUpworkProfileMutation,
 	useListUpworkProfilesQuery,
-	useUpdateUpworkProfileMutation,
 	type UpworkProfile,
 	type UpworkProfileTier,
 } from '../../../store/upwork/upworkApi'
-import usePermissions from '../../../hooks/usePermissions'
 
 const PAGE_SIZE = 20
 
@@ -223,20 +185,6 @@ const UpworkProfilesPage = () => {
 
 	const { data: all = [], isLoading, isError, refetch } = useListUpworkProfilesQuery()
 	const [del, { isLoading: deleting }] = useDeleteUpworkProfileMutation()
-	const [updateProfile] = useUpdateUpworkProfileMutation()
-	const [togglingId, setTogglingId] = useState<string | null>(null)
-	const { has } = usePermissions()
-	const canToggle = has('upwork:update')
-
-	const handleToggleActive = async (p: UpworkProfile) => {
-		if (!canToggle || togglingId) return
-		setTogglingId(p.id)
-		try {
-			await updateProfile({ id: p.id, patch: { active: !p.active } }).unwrap()
-		} finally {
-			setTogglingId(null)
-		}
-	}
 
 	const filtered = useMemo(() => {
 		return all.filter((p) => {
@@ -307,39 +255,18 @@ const UpworkProfilesPage = () => {
 			label: 'Status',
 			sortable: true,
 			sortValue: (r) => (r.active ? 1 : 0),
-			render: (r) => {
-				const busy = togglingId === r.id
-				const content = (
-					<>
-						{r.active ? 'Active' : 'Archived'}
-						{r.active ? (
-							<LiveSensor>
-								<SensorsRounded style={{ fontSize: 24 }} />
-							</LiveSensor>
-						) : (
-							<SensorsOffRounded style={{ fontSize: 24 }} />
-						)}
-					</>
-				)
-				if (!canToggle) {
-					return <StatusLabel $active={r.active}>{content}</StatusLabel>
-				}
-				return (
-					<StatusToggle
-						type='button'
-						$active={r.active}
-						disabled={busy}
-						onClick={(e) => {
-							e.stopPropagation()
-							handleToggleActive(r)
-						}}
-						title={r.active ? 'Click to archive' : 'Click to activate'}
-						aria-label={r.active ? 'Archive profile' : 'Activate profile'}
-					>
-						{content}
-					</StatusToggle>
-				)
-			},
+			render: (r) => (
+				<StatusLabel $active={r.active}>
+					{r.active ? 'Active' : 'Archived'}
+					{r.active ? (
+						<LiveSensor>
+							<SensorsRounded style={{ fontSize: 24 }} />
+						</LiveSensor>
+					) : (
+						<SensorsOffRounded style={{ fontSize: 24 }} />
+					)}
+				</StatusLabel>
+			),
 			skeleton: () => <TableSkeleton $w='100px' $h='24px' />,
 		},
 		{
