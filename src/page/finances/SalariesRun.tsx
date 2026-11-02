@@ -41,7 +41,18 @@ const MONTHS = [
 ] as const
 
 const currentYear = () => new Date().getUTCFullYear()
-const currentMonth = () => new Date().getUTCMonth() + 1
+
+/* Default landing month for Monthly Run is the PREVIOUS calendar
+ * month — the one that just closed. On Nov 2 the page opens on
+ * October; on Jan 3 it opens on December of the prior year. The URL
+ * ?year/?month still override when the user navigates to a specific
+ * month explicitly. */
+const previousYearMonth = (): { year: number; month: number } => {
+	const d = new Date()
+	d.setUTCDate(1)
+	d.setUTCMonth(d.getUTCMonth() - 1)
+	return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 }
+}
 
 const fmtMoney = (n: number): string =>
 	n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -214,14 +225,15 @@ const SalariesRun = () => {
 	const [searchParams, setSearchParams] = useSearchParams()
 	const parsedYear = Number(searchParams.get('year'))
 	const parsedMonth = Number(searchParams.get('month'))
+	const fallback = previousYearMonth()
 	const year =
 		Number.isInteger(parsedYear) && parsedYear >= 2000 && parsedYear <= 2100
 			? parsedYear
-			: currentYear()
+			: fallback.year
 	const month =
 		Number.isInteger(parsedMonth) && parsedMonth >= 1 && parsedMonth <= 12
 			? parsedMonth
-			: currentMonth()
+			: fallback.month
 	const setYearMonth = (nextYear: number, nextMonth: number) => {
 		setSearchParams(
 			(prev) => {
