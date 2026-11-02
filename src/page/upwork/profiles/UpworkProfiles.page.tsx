@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
 	AddRounded,
+	ArrowOutwardRounded,
 	ClearRounded,
 	DeleteOutline,
 	EditOutlined,
 	FilterListOutlined,
 	LinkOffRounded,
-	OpenInNewRounded,
 	SearchOutlined,
 	SensorsOffRounded,
 	SensorsRounded,
@@ -63,19 +63,29 @@ const StatusLabel = styled.span<{ $active: boolean }>`
 `
 
 /* External link to the Upwork freelancer page — rendered in its own
- * column. Opens in a new tab; just a plain blue icon, no background. */
+ * column. Big typography-first "UP↗" in Upwork brand green: Inter
+ * 900, uppercase, slight tracking. No frame, no border, no fill. */
+const UPWORK_GREEN = '#14a800'
+
 const UpworkExternalLink = styled.a`
 	display: inline-flex;
 	align-items: center;
-	justify-content: center;
-	color: #0369a1;
+	gap: 2px;
+	color: ${UPWORK_GREEN};
 	text-decoration: none;
+	font-family: 'Inter', system-ui, sans-serif;
+	font-weight: 900;
+	font-size: 20px;
+	line-height: 1;
+	letter-spacing: 0.5px;
+	text-transform: uppercase;
 	transition: transform 160ms ease;
 	&:hover {
 		transform: translateY(-1px);
 	}
 	svg {
-		font-size: 22px;
+		font-size: 16px;
+		align-self: center;
 	}
 `
 
@@ -217,7 +227,8 @@ const UpworkProfilesPage = () => {
 						title='Open on Upwork'
 						aria-label='Open on Upwork'
 					>
-						<OpenInNewRounded />
+						UP
+						<ArrowOutwardRounded />
 					</UpworkExternalLink>
 				) : (
 					<EmptyBadge title='No profile URL on file'>
