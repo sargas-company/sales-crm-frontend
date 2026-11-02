@@ -428,10 +428,15 @@ const SalariesRun = () => {
 		const rateNum = parseFloat(row.rate)
 		const fixedNum = parseFloat(row.fixedBonus)
 		/* Allow a pure Payoneer passthrough: rate=0 + fixedBonus>0.
-		 * Reject only if there's genuinely nothing to pay. */
+		 * The nothing-to-pay guard only skips CREATING a fresh DRAFT
+		 * for a row the user never meant to add (tabbing past empty
+		 * zeros). For an existing entry the user is deliberately
+		 * zeroing out — persist it, otherwise the UI shows 0 while
+		 * the server keeps the old rate and the next refetch brings
+		 * the stale value back. */
 		const nothingToPay =
 			(!row.rate || rateNum <= 0) && (!row.fixedBonus || fixedNum <= 0)
-		if (nothingToPay) return
+		if (nothingToPay && !row.entryId) return
 		if (row.rate && rateNum < 0) return
 		if (
 			rateNum > 0 &&
