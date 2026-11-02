@@ -176,7 +176,7 @@ const UpworkProfileForm = ({ mode }: Props) => {
 								</Select>
 							</Field>
 							<Field label='Status' span='third'>
-								<label
+								<div
 									style={{
 										display: 'inline-flex',
 										alignItems: 'center',
@@ -190,10 +190,20 @@ const UpworkProfileForm = ({ mode }: Props) => {
 											setField('active', !fields.active)
 										}
 									/>
-									<span style={{ fontSize: 14, color: '#3a3541' }}>
+									<span
+										style={{
+											fontSize: 14,
+											color: '#3a3541',
+											cursor: 'pointer',
+											userSelect: 'none',
+										}}
+										onClick={() =>
+											setField('active', !fields.active)
+										}
+									>
 										Active
 									</span>
-								</label>
+								</div>
 							</Field>
 							<Field label='URL' span='full'>
 								<TextField
