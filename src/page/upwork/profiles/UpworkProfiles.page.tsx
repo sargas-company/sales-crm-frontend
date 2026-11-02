@@ -6,6 +6,7 @@ import {
 	DeleteOutline,
 	EditOutlined,
 	FilterListOutlined,
+	LinkOffRounded,
 	OpenInNewRounded,
 	SearchOutlined,
 	SensorsOffRounded,
@@ -104,6 +105,7 @@ const LiveSensor = styled.span`
 import { PrimarySolidButton } from '../../../components/_shared/formShell.styled'
 import {
 	DateTimeCell,
+	EmptyBadge,
 	StatusPill,
 } from '../_shared/cells'
 import { ProfileLink } from '../_shared/ProfileLink'
@@ -218,7 +220,10 @@ const UpworkProfilesPage = () => {
 						<OpenInNewRounded />
 					</UpworkExternalLink>
 				) : (
-					<span style={{ color: '#cbd5e1' }}>—</span>
+					<EmptyBadge title='No profile URL on file'>
+						<LinkOffRounded />
+						no url
+					</EmptyBadge>
 				),
 			skeleton: () => <TableSkeleton $w='80px' $h='15px' />,
 		},
