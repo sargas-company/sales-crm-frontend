@@ -13,6 +13,7 @@ import {
 	SensorsRounded,
 	WorkspacePremiumOutlined,
 } from '@mui/icons-material'
+import { Icon as IconifyIcon } from '@iconify/react'
 
 import { ListPageShell } from '../../../components/_shared/ListPageShell'
 import {
@@ -25,7 +26,8 @@ import {
 } from '../../../components/_shared/DataTable'
 import ConfirmModal from '../../../components/_shared/ConfirmModal'
 import PermissionGate from '../../../components/auth/PermissionGate'
-import styled, { keyframes } from 'styled-components'
+import styled from 'styled-components'
+import { T } from '../../../components/sales-analytics/_shared/tokens'
 import {
 	ClearBtn,
 	FreshFiltersWrap as BaseFreshFiltersWrap,
@@ -50,64 +52,32 @@ const SecondRow = styled.div`
 	margin-top: 10px;
 `
 
-const StatusLabel = styled.span<{ $active: boolean }>`
+const StatusIcon = styled.span`
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
-	font-family: 'JetBrains Mono', monospace;
-	font-size: 11.5px;
-	font-weight: 700;
-	letter-spacing: 0.4px;
-	text-transform: uppercase;
-	color: ${({ $active }) => ($active ? '#15803d' : '#64748b')};
+	justify-content: center;
+	color: #94a3b8;
 `
 
 /* External link to the Upwork freelancer page — rendered in its own
- * column. Big typography-first "UP↗" in Upwork brand green: Inter
- * 900, uppercase, slight tracking. No frame, no border, no fill. */
-const UPWORK_GREEN = '#14a800'
-
+ * column. Reuses the `simple-icons:upwork` glyph from JobPost's
+ * Platform marker for brand consistency. The small outward arrow is
+ * lifted and dimmed so it reads as a trailing cue, not a second icon. */
 const UpworkExternalLink = styled.a`
 	display: inline-flex;
 	align-items: center;
 	gap: 2px;
-	color: ${UPWORK_GREEN};
+	color: ${T.textStrong};
 	text-decoration: none;
-	font-family: 'Inter', system-ui, sans-serif;
-	font-weight: 900;
-	font-size: 20px;
-	line-height: 1;
-	letter-spacing: 0.5px;
-	text-transform: uppercase;
+	line-height: 0;
 	transition: transform 160ms ease;
 	&:hover {
 		transform: translateY(-1px);
 	}
-	svg {
-		font-size: 16px;
-		align-self: center;
-	}
-`
-
-/* Active-status icon wrapper — soft scale pulse. No glow, no halo. */
-const sensorsPulse = keyframes`
-	0%   { transform: scale(1); }
-	50%  { transform: scale(1.14); }
-	100% { transform: scale(1); }
-`
-
-const LiveSensor = styled.span`
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	svg {
-		animation: ${sensorsPulse} 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-		transform-origin: center;
-	}
-	@media (prefers-reduced-motion: reduce) {
-		svg {
-			animation: none;
-		}
+	.arrow {
+		font-size: 13px;
+		color: #94a3b8;
+		margin-top: -8px;
 	}
 `
 
@@ -227,8 +197,8 @@ const UpworkProfilesPage = () => {
 						title='Open on Upwork'
 						aria-label='Open on Upwork'
 					>
-						UP
-						<ArrowOutwardRounded />
+						<IconifyIcon icon='simple-icons:upwork' width='24' height='24' />
+						<ArrowOutwardRounded className='arrow' />
 					</UpworkExternalLink>
 				) : (
 					<EmptyBadge title='No profile URL on file'>
@@ -256,18 +226,15 @@ const UpworkProfilesPage = () => {
 			sortable: true,
 			sortValue: (r) => (r.active ? 1 : 0),
 			render: (r) => (
-				<StatusLabel $active={r.active}>
-					{r.active ? 'Active' : 'Archived'}
+				<StatusIcon title={r.active ? 'Active' : 'Archived'}>
 					{r.active ? (
-						<LiveSensor>
-							<SensorsRounded style={{ fontSize: 24 }} />
-						</LiveSensor>
+						<SensorsRounded style={{ fontSize: 24 }} />
 					) : (
 						<SensorsOffRounded style={{ fontSize: 24 }} />
 					)}
-				</StatusLabel>
+				</StatusIcon>
 			),
-			skeleton: () => <TableSkeleton $w='100px' $h='24px' />,
+			skeleton: () => <TableSkeleton $w='24px' $h='24px' style={{ borderRadius: 6 }} />,
 		},
 		{
 			key: 'updatedAt',
