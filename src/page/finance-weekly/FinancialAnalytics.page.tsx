@@ -176,6 +176,7 @@ const FinancialAnalyticsPage = () => {
 							<span className='current'>Finance dashboard</span>
 						</Crumbs>
 
+						<Reveal $delay={0}>
 						<PageHead>
 							<div className='title'>
 								<h1>Finances</h1>
@@ -207,7 +208,9 @@ const FinancialAnalyticsPage = () => {
 								</span>
 							</div>
 						</PageHead>
+						</Reveal>
 
+						<Reveal $delay={90}>
 						<FiltersRow data-theme='dark'>
 							<FiltersLead>
 								<FiltersLeadIcon>
@@ -326,7 +329,9 @@ const FinancialAnalyticsPage = () => {
 							</FiltersGroups>
 
 						</FiltersRow>
+						</Reveal>
 
+						<Reveal $delay={180}>
 						<Snapshot>
 							<Stat>
 								<StatLbl>Received this month</StatLbl>
@@ -372,8 +377,10 @@ const FinancialAnalyticsPage = () => {
 								<StatHint>Prev · {formatMoney(snapshot?.prevMonthReceived ?? 0)}</StatHint>
 							</Stat>
 						</Snapshot>
+						</Reveal>
 
 						{/* ── 2. Revenue by project & client (columns) ─────── */}
+						<Reveal $delay={270}>
 						<TwoCol>
 							<Panel>
 								<PanelHead>
@@ -415,8 +422,10 @@ const FinancialAnalyticsPage = () => {
 								)}
 							</Panel>
 						</TwoCol>
+						</Reveal>
 
 						{/* ── 3. Year overview (single row of cards) ──────── */}
+						<Reveal $delay={360}>
 						<YearSection>
 							<YearHead>
 								<div>
@@ -559,8 +568,10 @@ const FinancialAnalyticsPage = () => {
 							)
 						})()}
 						</YearSection>
+						</Reveal>
 
 						{/* ── 4. Monthly history ──────────────────────────── */}
+						<Reveal $delay={450}>
 						<Panel>
 							<PanelHead>
 								<div>
@@ -577,8 +588,10 @@ const FinancialAnalyticsPage = () => {
 							</PanelHead>
 							{monthly && <MonthlyChart data={monthly.months} average={monthly.average} />}
 						</Panel>
+						</Reveal>
 
 						{/* ── 4b. Monthly margin ────────────────────────── */}
+						<Reveal $delay={540}>
 						<Panel>
 							<PanelHead>
 								<div>
@@ -607,8 +620,10 @@ const FinancialAnalyticsPage = () => {
 								<MonthlyMarginRows data={monthlyPnl.months} />
 							)}
 						</Panel>
+						</Reveal>
 
 						{/* ── 5. Pipeline breakdown ───────────────────────── */}
+			<Reveal $delay={630}>
 			<Panel>
 				<PanelHead>
 					<div>
@@ -623,6 +638,7 @@ const FinancialAnalyticsPage = () => {
 				</PanelHead>
 				<PipelineFlow pipeline={pipeline} />
 			</Panel>
+			</Reveal>
 
 						{(isLoading || isFetching) && <LoadingRibbon>Loading…</LoadingRibbon>}
 					</ShellInner>
@@ -2123,6 +2139,29 @@ const NativeSelect = styled.select`
 	outline: none;
 	appearance: none;
 	background: transparent;
+`
+
+/* Cascading reveal — each analytics block fades + slides up in turn.
+ * Pass $delay in ms; `both` fill mode keeps the starting state before
+ * the animation runs so there's no flash on first paint. */
+const revealUp = keyframes`
+	from {
+		opacity: 0;
+		transform: translate3d(0, 14px, 0);
+	}
+	to {
+		opacity: 1;
+		transform: translate3d(0, 0, 0);
+	}
+`
+const Reveal = styled.div<{ $delay?: number }>`
+	animation: ${revealUp} 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	animation-delay: ${({ $delay = 0 }) => `${$delay}ms`};
+	will-change: transform, opacity;
+
+	@media (prefers-reduced-motion: reduce) {
+		animation: none;
+	}
 `
 
 const Snapshot = styled.div`
