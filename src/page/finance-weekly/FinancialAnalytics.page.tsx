@@ -1645,9 +1645,10 @@ const BreakRowMoney = ({ value }: { value: number }) => {
 	return <span className='money'>{formatMoney(v)}</span>
 }
 
-const BreakBar = ({ target, rank }: { target: number; rank: number }) => (
-	<BreakFill $rank={rank} style={{ width: `${target}%` }} />
-)
+const BreakBar = ({ target, rank }: { target: number; rank: number }) => {
+	const w = useCountUp(target, 900)
+	return <BreakFill $rank={rank} style={{ width: `${w}%` }} />
+}
 
 const Breakdown = ({
 	rows,
@@ -2141,23 +2142,15 @@ const NativeSelect = styled.select`
 	background: transparent;
 `
 
-/* Cascading reveal — each analytics block fades + slides up in turn.
- * Pass $delay in ms; `both` fill mode keeps the starting state before
- * the animation runs so there's no flash on first paint. */
+/* Cascading reveal — opacity fade on a wrapper, so each block in the
+ * analytics column shows up in sequence instead of all at once. */
 const revealUp = keyframes`
-	from {
-		opacity: 0;
-		transform: translate3d(0, 14px, 0);
-	}
-	to {
-		opacity: 1;
-		transform: translate3d(0, 0, 0);
-	}
+	from { opacity: 0; }
+	to   { opacity: 1; }
 `
 const Reveal = styled.div<{ $delay?: number }>`
 	animation: ${revealUp} 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
 	animation-delay: ${({ $delay = 0 }) => `${$delay}ms`};
-	will-change: transform, opacity;
 
 	@media (prefers-reduced-motion: reduce) {
 		animation: none;
@@ -2199,7 +2192,6 @@ const Stat = styled.div`
 	gap: 8px;
 	padding: 20px 22px;
 	background: #ffffff;
-	border: 1px solid rgba(15, 23, 42, 0.08);
 	border-radius: 18px;
 	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 `
@@ -2247,7 +2239,6 @@ const Panel = styled.section`
 	margin-top: 22px;
 	padding: 20px 22px 22px;
 	background: #ffffff;
-	border: 1px solid rgba(15, 23, 42, 0.08);
 	border-radius: 18px;
 	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 `
@@ -3564,7 +3555,6 @@ const YearStat = styled.div`
 	gap: 6px;
 	padding: 16px 14px 14px;
 	background: #ffffff;
-	border: 1px solid rgba(15, 23, 42, 0.08);
 	border-radius: 18px;
 	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 	overflow: hidden;
