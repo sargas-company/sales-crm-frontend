@@ -250,8 +250,10 @@ const FeedRow = styled.li<{ $warn: boolean; $i: number }>`
  * the `key` field the backend returns (see `upwork.constants.ts`).
  * Falls back to empty string for unknown keys. */
 const REMINDER_EXPLAIN: Record<string, string> = {
-	'daily-update':
-		'No fresh entry in portfolio, skills or title for 2+ days. Any touch in any of these sections resets the timer.',
+	'portfolio-stale':
+		'No fresh portfolio entry for 2+ days. Add a case to reset.',
+	'skills-title-stale':
+		'Neither skills nor title were touched for 2+ days. A single tweak in either resets the timer.',
 	'project-catalog-stale':
 		'Nothing changed in project_catalog for 3+ days. Prompts you to review the catalogs and rewrite the weakest.',
 	'overview-stale':
@@ -260,6 +262,8 @@ const REMINDER_EXPLAIN: Record<string, string> = {
 		'Consultation untouched for 30+ days. Refresh topics, text and skills.',
 	'employment-history-stale':
 		'Employment history untouched for 30+ days. Add or refresh a job entry.',
+	'certificate-stale':
+		'No certificate added for 60+ days. Consider adding a new badge or course.',
 	'snapshot-stale':
 		'Latest snapshot is 7+ days old. Record fresh views / invites / direct messages.',
 	'secondary-snapshot':
