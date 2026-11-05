@@ -31,6 +31,8 @@ import {
 	KeyboardArrowDownRounded,
 	CloseRounded,
 	DriveFileMoveOutlined,
+	FullscreenRounded,
+	FullscreenExitRounded,
 } from '@mui/icons-material'
 
 import { useGetMeQuery } from '../../store/auth/authApi'
@@ -957,6 +959,29 @@ const FileManagerPage = () => {
 	 * (pptx, archives, binaries). */
 	const [previewFile, setPreviewFile] = useState<FileManagerFile | null>(null)
 	const [previewClosing, setPreviewClosing] = useState(false)
+	const [previewFullscreen, setPreviewFullscreen] = useState(false)
+
+	/* Lock page scroll while the preview modal is mounted — including
+	 * through the 720 ms close animation (preview becomes null only
+	 * after the timeout, so the effect's cleanup fires then). Pad the
+	 * body with the scrollbar's width to avoid a horizontal jump when
+	 * the vertical scrollbar disappears. Pattern mirrored from
+	 * JobPostAnalyticsDrawer. */
+	useEffect(() => {
+		if (!preview) return
+		const prevOverflow = document.body.style.overflow
+		const prevPaddingRight = document.body.style.paddingRight
+		const scrollbarWidth =
+			window.innerWidth - document.documentElement.clientWidth
+		document.body.style.overflow = 'hidden'
+		if (scrollbarWidth > 0) {
+			document.body.style.paddingRight = `${scrollbarWidth}px`
+		}
+		return () => {
+			document.body.style.overflow = prevOverflow
+			document.body.style.paddingRight = prevPaddingRight
+		}
+	}, [preview])
 	const closePreview = () => {
 		if (previewClosing) return
 		setPreviewClosing(true)
@@ -968,6 +993,7 @@ const FileManagerPage = () => {
 			setPreview(null)
 			setPreviewFile(null)
 			setPreviewClosing(false)
+			setPreviewFullscreen(false)
 		}, 720)
 	}
 	const openPreview = async (file: FileManagerFile) => {
@@ -2031,6 +2057,7 @@ const FileManagerPage = () => {
 					<PreviewFrame
 						onClick={(e) => e.stopPropagation()}
 						$closing={previewClosing}
+						data-fullscreen={previewFullscreen ? 'true' : 'false'}
 					>
 						<PreviewHead>
 							<PreviewTitle>
@@ -2040,6 +2067,22 @@ const FileManagerPage = () => {
 								)}
 							</PreviewTitle>
 							<PreviewHeadActions>
+								<PreviewToggleBtn
+									type='button'
+									onClick={() => setPreviewFullscreen((v) => !v)}
+									aria-label={
+										previewFullscreen ? 'Exit fullscreen' : 'Fullscreen'
+									}
+									title={
+										previewFullscreen ? 'Exit fullscreen' : 'Fullscreen'
+									}
+								>
+									{previewFullscreen ? (
+										<FullscreenExitRounded style={{ fontSize: 20 }} />
+									) : (
+										<FullscreenRounded style={{ fontSize: 20 }} />
+									)}
+								</PreviewToggleBtn>
 								<PreviewCloseBtn
 									type='button'
 									onClick={closePreview}
@@ -3613,6 +3656,12 @@ const PreviewBackdrop = styled.div<{ $closing: boolean }>`
 		forwards;
 `
 
+/* `data-fullscreen` is a DOM attribute on purpose: toggling it does
+ *  not rebuild the styled-component className, so the entry/exit
+ *  animation declared below does not restart when the viewer
+ *  switches between embedded and fullscreen. Width / height /
+ *  border-radius are then animated via CSS transitions on the
+ *  attribute-selector branch. */
 const PreviewFrame = styled.div<{ $closing: boolean }>`
 	background: #ffffff;
 	border-radius: 16px;
@@ -3622,6 +3671,19 @@ const PreviewFrame = styled.div<{ $closing: boolean }>`
 	flex-direction: column;
 	overflow: hidden;
 	box-shadow: 0 30px 60px -20px rgba(15, 23, 42, 0.5);
+	transition:
+		width 260ms cubic-bezier(0.4, 0, 0.2, 1),
+		max-width 260ms cubic-bezier(0.4, 0, 0.2, 1),
+		max-height 260ms cubic-bezier(0.4, 0, 0.2, 1),
+		height 260ms cubic-bezier(0.4, 0, 0.2, 1),
+		border-radius 260ms cubic-bezier(0.4, 0, 0.2, 1);
+	&[data-fullscreen='true'] {
+		width: 100vw;
+		max-width: 100vw;
+		height: 100vh;
+		max-height: 100vh;
+		border-radius: 0;
+	}
 	animation: ${({ $closing }) =>
 			$closing ? previewPanelOut : previewPanelIn}
 		${({ $closing }) => ($closing ? '400ms' : '240ms')}
@@ -3706,12 +3768,10 @@ const PreviewBody = styled.div`
 	flex-direction: column;
 `
 
-/* Preview close affordance — the ONLY header action now.
- *  - Keeps its 1 px border at all times.
- *  - No background change on hover (owner hates the translucent
- *    wash). The hover effect is purely on the glyph: it rotates
- *    90° and darkens from slate to ink. */
-const PreviewCloseBtn = styled.button`
+/* Shared base for header affordances: 38 × 38 square with a 1 px
+ *  border at all times, slate glyph that darkens to ink on hover.
+ *  No background wash on hover (owner preference). */
+const PreviewHeaderBtn = styled.button`
 	appearance: none;
 	display: inline-flex;
 	align-items: center;
@@ -3727,14 +3787,21 @@ const PreviewCloseBtn = styled.button`
 	transition:
 		color 220ms ease,
 		border-color 220ms ease;
-
-	& > svg {
-		transition: transform 320ms cubic-bezier(0.65, 0, 0.35, 1);
-	}
-
 	&:hover {
 		color: #0f172a;
 		border-color: rgba(15, 23, 42, 0.28);
+	}
+	&:focus-visible {
+		outline: 2px solid #0f172a;
+		outline-offset: 2px;
+	}
+`
+
+/* Preview close affordance. The hover effect is purely on the glyph:
+ *  it rotates 90° and darkens from slate to ink. */
+const PreviewCloseBtn = styled(PreviewHeaderBtn)`
+	& > svg {
+		transition: transform 320ms cubic-bezier(0.65, 0, 0.35, 1);
 	}
 	&:hover > svg {
 		transform: rotate(90deg);
@@ -3742,9 +3809,16 @@ const PreviewCloseBtn = styled.button`
 	&:active > svg {
 		transform: rotate(90deg) scale(0.9);
 	}
-	&:focus-visible {
-		outline: 2px solid #0f172a;
-		outline-offset: 2px;
+`
+
+/* Fullscreen toggle — sits left of the close affordance. No glyph
+ *  rotation; the icon itself switches between enter / exit glyphs. */
+const PreviewToggleBtn = styled(PreviewHeaderBtn)`
+	& > svg {
+		transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+	}
+	&:active > svg {
+		transform: scale(0.9);
 	}
 `
 
