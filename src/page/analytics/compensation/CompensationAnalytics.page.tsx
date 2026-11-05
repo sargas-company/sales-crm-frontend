@@ -31,6 +31,17 @@ const MONTHS = [
 const currentYear = () => new Date().getUTCFullYear()
 const currentMonth = () => new Date().getUTCMonth() + 1
 
+/* Default landing month is the PREVIOUS calendar month — the one
+ * that just closed, whose compensation data is actually settled.
+ * The "Jump to today" picker button still jumps to the real
+ * current month on explicit click. */
+const previousYearMonth = (): { year: number; month: number } => {
+	const d = new Date()
+	d.setUTCDate(1)
+	d.setUTCMonth(d.getUTCMonth() - 1)
+	return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 }
+}
+
 const fmt = (v: string | number | null | undefined): string => {
 	if (v == null) return '—'
 	const n = typeof v === 'string' ? parseFloat(v) : v
@@ -138,8 +149,9 @@ const fmtDay = (iso: string): string => {
 
 const CompensationAnalytics = () => {
 	const navigate = useNavigate()
-	const [year, setYear] = useState<number>(currentYear())
-	const [month, setMonth] = useState<number>(currentMonth())
+	const initial = previousYearMonth()
+	const [year, setYear] = useState<number>(initial.year)
+	const [month, setMonth] = useState<number>(initial.month)
 	const [pickerOpen, setPickerOpen] = useState(false)
 	const [pickerYear, setPickerYear] = useState<number>(currentYear())
 	const monthBtnRef = useRef<HTMLButtonElement>(null)
