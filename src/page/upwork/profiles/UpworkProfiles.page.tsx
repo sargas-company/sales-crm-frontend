@@ -52,11 +52,11 @@ const SecondRow = styled.div`
 	margin-top: 10px;
 `
 
-const StatusIcon = styled.span`
+const StatusIcon = styled.span<{ $active: boolean }>`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	color: #94a3b8;
+	color: ${({ $active }) => ($active ? T.textStrong : '#94a3b8')};
 `
 
 /* External link to the Upwork freelancer page — rendered in its own
@@ -226,7 +226,7 @@ const UpworkProfilesPage = () => {
 			sortable: true,
 			sortValue: (r) => (r.active ? 1 : 0),
 			render: (r) => (
-				<StatusIcon title={r.active ? 'Active' : 'Archived'}>
+				<StatusIcon $active={r.active} title={r.active ? 'Active' : 'Archived'}>
 					{r.active ? (
 						<SensorsRounded style={{ fontSize: 24 }} />
 					) : (
