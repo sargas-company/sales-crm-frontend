@@ -137,9 +137,11 @@ const compute = (input: {
 	const owed = Math.max(0, total - input.advance)
 	/* Payoneer charges on gross, not on net. To deliver `owed` to the
 	 * recipient at rate r, the gross = owed / (1 - r), so fee is
-	 * owed * r / (1 - r). Mirrors backend computeAll(). */
+	 * owed * r / (1 - r). Plus a hard $4 minimum per outgoing payment
+	 * (owner-verified against both Payoneer-to-Payoneer and SWIFT/IBAN
+	 * payouts, 2026-11-06). Mirrors backend computeAll(). */
 	const r = input.payoneerFeePct / 100
-	const fee = owed === 0 ? 0 : (owed * r) / (1 - r)
+	const fee = owed === 0 ? 0 : Math.max(4, (owed * r) / (1 - r))
 	const remain = owed + fee
 	const cost = total + fee
 	return { base, tax, swt, bonusAmt, total, remain, fee, cost }
