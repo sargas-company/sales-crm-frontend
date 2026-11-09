@@ -57,6 +57,7 @@ import {
 	useBulkMoveMutation,
 	useGetStatsQuery,
 	useGetTreeQuery,
+	useGetFileThumbnailUrlQuery,
 	useLazyGetFileDownloadUrlQuery,
 	useLazyGetFilePreviewUrlQuery,
 	useListFolderQuery,
@@ -512,6 +513,34 @@ const FILTERS: Array<{ v: Filter; label: string }> = [
 	{ v: 'archives', label: 'Archives' },
 	{ v: 'other', label: 'Other' },
 ]
+
+/* Renders the generated 256-px WebP preview over the standard
+ * file-type icon. The hook resolves to `url: null` when the backend
+ * has no thumb (non-image, generation failed, pre-backfill legacy
+ * row) and `onError` catches a dead presigned URL at render time —
+ * both paths fall back to the icon the caller passes in. `loading=
+ * "lazy"` keeps off-screen rows off the network. */
+const ThumbTile = ({
+	fileId,
+	fallback,
+}: {
+	fileId: string
+	fallback: ReactNode
+}) => {
+	const { data } = useGetFileThumbnailUrlQuery(fileId)
+	const [failed, setFailed] = useState(false)
+	if (!data?.url || failed) return <>{fallback}</>
+	return (
+		<AttachThumbTile>
+			<img
+				src={data.url}
+				alt=''
+				loading='lazy'
+				onError={() => setFailed(true)}
+			/>
+		</AttachThumbTile>
+	)
+}
 
 const FileManagerPage = () => {
 	const navigate = useNavigate()
@@ -1778,10 +1807,24 @@ const FileManagerPage = () => {
 												}}
 												data-fm-file={f.id}
 											>
-												<AttachTypeIcon $kind={kind}>
-													<AttachFold />
-													<AttachExt>{getExt(f.originalName)}</AttachExt>
-												</AttachTypeIcon>
+												{kind === 'image' ? (
+													<ThumbTile
+														fileId={f.id}
+														fallback={
+															<AttachTypeIcon $kind={kind}>
+																<AttachFold />
+																<AttachExt>
+																	{getExt(f.originalName)}
+																</AttachExt>
+															</AttachTypeIcon>
+														}
+													/>
+												) : (
+													<AttachTypeIcon $kind={kind}>
+														<AttachFold />
+														<AttachExt>{getExt(f.originalName)}</AttachExt>
+													</AttachTypeIcon>
+												)}
 												<AttachBody>
 													<AttachName>{f.originalName}</AttachName>
 													<AttachStatus>
@@ -3300,6 +3343,29 @@ const AttachTypeIcon = styled.div<{ $kind: MimeKind }>`
 	);
 	flex: 0 0 auto;
 	box-shadow: 0 2px 6px -2px rgba(15, 23, 42, 0.15);
+`
+
+/* Same footprint as AttachTypeIcon so swapping between them in the
+ * list row never shifts layout. `object-fit: cover` crops the 256-
+ * px square thumb into the 44×54 portrait tile — the slight top/
+ * bottom trim is the trade-off for recognisable detail at this
+ * scale. Soft slate fill shows through while the img is loading. */
+const AttachThumbTile = styled.div`
+	position: relative;
+	width: 44px;
+	height: 54px;
+	border-radius: 6px;
+	overflow: hidden;
+	flex: 0 0 auto;
+	background: #e2e8f0;
+	box-shadow: 0 2px 6px -2px rgba(15, 23, 42, 0.15);
+
+	img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
 `
 
 const AttachFold = styled.span`

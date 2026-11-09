@@ -235,6 +235,13 @@ export const fileManagerApi = baseApi.injectEndpoints({
 			query: (id) => ({ url: `/file-manager/files/${id}/preview-url` }),
 		}),
 
+		/* 256-px WebP preview URL. `url: null` means the file has no
+		 * thumbnail (non-image, generation failed, or pre-backfill) —
+		 * the UI falls back to the standard file-type icon. */
+		getFileThumbnailUrl: builder.query<{ url: string | null }, string>({
+			query: (id) => ({ url: `/file-manager/files/${id}/thumbnail-url` }),
+		}),
+
 		getFileMeta: builder.query<FileManagerFileMeta, string>({
 			query: (id) => ({ url: `/file-manager/files/${id}/meta` }),
 			providesTags: (_r, _e, id) => [{ type: 'FileManager', id: `file:${id}` }],
@@ -336,6 +343,7 @@ export const {
 	useDeleteFileMutation,
 	useLazyGetFileDownloadUrlQuery,
 	useLazyGetFilePreviewUrlQuery,
+	useGetFileThumbnailUrlQuery,
 	useBulkDeleteMutation,
 	useBulkMoveMutation,
 	useSearchFileManagerQuery,
