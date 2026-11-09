@@ -3345,14 +3345,15 @@ const AttachTypeIcon = styled.div<{ $kind: MimeKind }>`
 	box-shadow: 0 2px 6px -2px rgba(15, 23, 42, 0.15);
 `
 
-/* Same footprint as AttachTypeIcon so swapping between them in the
- * list row never shifts layout. `object-fit: cover` crops the 256-
- * px square thumb into the 44×54 portrait tile — the slight top/
- * bottom trim is the trade-off for recognisable detail at this
- * scale. Soft slate fill shows through while the img is loading. */
+/* Landscape 4:3 tile (72×54) — same height as the portrait icon so
+ * the row is not jolted, but wider so screenshots and landscape
+ * photos are cropped less aggressively than the earlier portrait
+ * footprint. `object-fit: cover` still fills the full tile; the
+ * slight wider ratio is the trade-off for recognisable detail at
+ * this scale. Soft slate fill shows through while the img decodes. */
 const AttachThumbTile = styled.div`
 	position: relative;
-	width: 44px;
+	width: 72px;
 	height: 54px;
 	border-radius: 6px;
 	overflow: hidden;
