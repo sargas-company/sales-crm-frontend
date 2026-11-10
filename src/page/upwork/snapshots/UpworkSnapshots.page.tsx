@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
 	AddRounded,
 	ArrowDownwardRounded,
@@ -10,6 +10,7 @@ import {
 	EditOutlined,
 	FilterListOutlined,
 	TrendingFlatRounded,
+	VisibilityOutlined,
 } from '@mui/icons-material'
 
 import { ListPageShell } from '../../../components/_shared/ListPageShell'
@@ -188,6 +189,7 @@ const UpworkSnapshotsPage = () => {
 		return map
 	}, [snapshots])
 
+
 	const profilesById = useMemo(
 		() => new Map(profiles.map((p) => [p.id, p])),
 		[profiles],
@@ -199,7 +201,14 @@ const UpworkSnapshotsPage = () => {
 			label: 'Date',
 			sortable: true,
 			sortValue: (r) => r.date,
-			render: (r) => <DateTimeCell iso={r.date} />,
+			render: (r) => (
+				<Link
+					to={`/upwork/snapshots/${r.id}`}
+					style={{ color: 'inherit', textDecoration: 'none' }}
+				>
+					<DateTimeCell iso={r.date} />
+				</Link>
+			),
 			skeleton: () => <TableSkeleton $w='110px' $h='13px' />,
 		},
 		{
@@ -253,24 +262,27 @@ const UpworkSnapshotsPage = () => {
 			skeleton: () => <TableSkeleton $w='130px' $h='24px' />,
 		},
 		{
-			key: 'positions',
-			label: 'Positions',
+			key: 'phrases',
+			label: 'Phrases',
 			className: 'cell--metric',
-			sortable: true,
-			sortValue: (r) => r.positions.length,
 			render: (r) => (
-				<TrendCell
-					value={r.positions.length}
-					previous={prevById.get(r.id)?.positions.length}
-				/>
+				<span style={{ color: '#64748b', fontSize: 13 }}>
+					{r.positions.length} phrase{r.positions.length === 1 ? '' : 's'}
+				</span>
 			),
-			skeleton: () => <TableSkeleton $w='130px' $h='24px' />,
+			skeleton: () => <TableSkeleton $w='80px' $h='13px' />,
 		},
 		{
 			key: 'actions',
 			label: '',
 			render: (r) => (
 				<Actions>
+					<IconAction
+						onClick={() => nav(`/upwork/snapshots/${r.id}`)}
+						title='View'
+					>
+						<VisibilityOutlined fontSize='small' />
+					</IconAction>
 					<PermissionGate permission='upwork:update'>
 						<IconAction
 							onClick={() => nav(`/upwork/snapshots/${r.id}/edit`)}

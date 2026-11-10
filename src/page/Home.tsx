@@ -108,6 +108,9 @@ const UpworkSnapshots = lazy(
 const UpworkSnapshotForm = lazy(
 	() => import('./upwork/snapshots/UpworkSnapshotForm'),
 )
+const UpworkSnapshotView = lazy(
+	() => import('./upwork/snapshots/UpworkSnapshotView.page'),
+)
 const UpworkAnalytics = lazy(
 	() => import('./analytics/upwork/UpworkAnalytics.page'),
 )
@@ -807,6 +810,14 @@ const Home = () => {
 								element={
 									<ProtectedRoute permission='upwork:update'>
 										<UpworkSnapshotForm mode='edit' />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/upwork/snapshots/:id'
+								element={
+									<ProtectedRoute permission='upwork_analytics:view'>
+										<UpworkSnapshotView />
 									</ProtectedRoute>
 								}
 							/>

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import {
 	Area,
@@ -64,6 +65,20 @@ const InnerStack = styled.div`
 	flex-direction: column;
 	gap: 20px;
 	margin-top: 20px;
+`
+
+const PhraseSelectorRow = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 4px 0 14px;
+	label {
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: #64748b;
+	}
 `
 
 const SmallMultiples = styled.div`
@@ -627,11 +642,24 @@ const UpworkAnalyticsPage = () => {
 	const { data: profiles = [] } = useListUpworkProfilesQuery()
 	const activeProfiles = profiles.filter((p) => p.active)
 
-	const [profileId, setProfileId] = useState<string>('')
+	/* Deep-link params from snapshot view: ?profile=<id>&phrase=<text>
+	 * + #positions-chart hash. Profile preselects the profile; phrase
+	 * preselects the keyword in the Position-chart selector; the hash
+	 * triggers an auto-scroll to the chart on mount. */
+	const [searchParams] = useSearchParams()
+	const profileFromUrl = searchParams.get('profile') ?? ''
+	const phraseFromUrl = searchParams.get('phrase') ?? ''
+
+	const [profileId, setProfileId] = useState<string>(profileFromUrl)
 	type RangeKey = '7d' | '30d' | '90d' | '180d' | '1y' | 'custom'
 	const [range, setRange] = useState<RangeKey>('90d')
 	const [customFrom, setCustomFrom] = useState<string>('')
 	const [customTo, setCustomTo] = useState<string>('')
+
+	/* Phrase filter for the Position chart. Seeded from ?phrase= on
+	 * mount if present, otherwise auto-fills with the first title
+	 * phrase as soon as analytics data arrives (see effect below). */
+	const [positionsPhrase, setPositionsPhrase] = useState<string>(phraseFromUrl)
 
 	/* Auto-select the first active profile the moment it arrives so the
 	 * dashboard isn't a blank screen on first open. User can still pick
@@ -718,22 +746,56 @@ const UpworkAnalyticsPage = () => {
 		)
 	}, [snapshots])
 
-	/* Weekly-average position series + latest value, used by the
-	 * Position card's big number + sparkline. Lower is better; a
-	 * value of zero is impossible as a real Upwork rank, so treat
-	 * anything ≤ 0 as missing (filter it out). */
+	/* Weekly position series for the Position chart — always scoped
+	 * to a single phrase (the selector no longer has an "average"
+	 * option). Zero is impossible as a real rank, so ≤ 0 rows drop
+	 * out. Empty series = the phrase has no records in the current
+	 * range. */
 	const positionSeries = useMemo(() => {
-		if (!analytics) return [] as Array<{ weekStart: string; position: number }>
+		if (!analytics || !positionsPhrase)
+			return [] as Array<{ weekStart: string; position: number }>
 		return analytics.positionsWeekly
 			.map((w) => {
-				const nums = Object.values(w.byPhrase).filter((n) => n > 0)
-				if (!nums.length) return null
-				const avg = nums.reduce((a, b) => a + b, 0) / nums.length
-				return { weekStart: w.weekStart, position: avg }
+				const v = w.byPhrase[positionsPhrase]
+				if (!v || v <= 0) return null
+				return { weekStart: w.weekStart, position: v }
 			})
 			.filter((x): x is { weekStart: string; position: number } => x != null)
-	}, [analytics])
+	}, [analytics, positionsPhrase])
 	const currentPosition = positionSeries.at(-1)?.position ?? null
+
+	/* Auto-pick the first title phrase as soon as analytics shows up,
+	 * so the chart isn't empty on first render when the URL didn't
+	 * carry ?phrase=. Switching profile wipes the previous selection
+	 * (that phrase likely doesn't exist on the new profile). */
+	useEffect(() => {
+		if (!analytics) return
+		if (positionsPhrase && analytics.titlePhrases.includes(positionsPhrase)) return
+		if (analytics.titlePhrases.length > 0) {
+			setPositionsPhrase(analytics.titlePhrases[0])
+		} else {
+			setPositionsPhrase('')
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [analytics?.profile.id, analytics?.titlePhrases.join('|')])
+
+	/* Smooth-scroll to the Position chart when the URL carries the
+	 * #positions-chart hash. Runs once per mount after the analytics
+	 * data is in (so the chart section is actually rendered). */
+	const positionsChartRef = useRef<HTMLDivElement>(null)
+	useEffect(() => {
+		if (typeof window === 'undefined') return
+		if (window.location.hash !== '#positions-chart') return
+		if (!analytics) return
+		const el = positionsChartRef.current
+		if (!el) return
+		const t = setTimeout(
+			() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+			120,
+		)
+		return () => clearTimeout(t)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [analytics])
 
 	/* Keyed on all filter inputs. Passing this as a React `key` to
 	 * each AnimatedNumber / MiniChart forces a remount on any
@@ -980,20 +1042,61 @@ const UpworkAnalyticsPage = () => {
 										showX
 										showTooltip={false}
 									/>
-									<MiniChart
-										key={`position-${resetKey}`}
-										label='Position · avg rank'
-										color='#2563eb'
-										data={positionSeries}
-										dataKey='position'
-										markers={analytics.changeLogMarkers}
-										showX
-										kind='area'
-									/>
 								</SmallMultiples>
 							)}
 						</ChartWrap>
 					</SectionCard>
+				)}
+
+				{profileId && analytics && (
+					<div ref={positionsChartRef} id='positions-chart'>
+						<SectionCard
+							title='Position per phrase'
+							hint='Pick a phrase to see its weekly rank. Deep-links from snapshots arrive with the phrase already selected.'
+						>
+							<ChartWrap>
+								<PhraseSelectorRow>
+									<label>Phrase:</label>
+									<InlineSelect
+										value={positionsPhrase}
+										onChange={(e) => setPositionsPhrase(e.target.value)}
+									>
+										{positionsPhrase &&
+											!analytics.titlePhrases.includes(positionsPhrase) && (
+												<option value={positionsPhrase}>
+													{positionsPhrase} (no data in range)
+												</option>
+											)}
+										{analytics.titlePhrases.map((p) => (
+											<option key={p} value={p}>
+												{p}
+											</option>
+										))}
+									</InlineSelect>
+								</PhraseSelectorRow>
+								{positionSeries.length === 0 ? (
+									<EmptyChart>
+										{analytics.titlePhrases.length === 0
+											? 'This profile has no tracked phrases in the selected range.'
+											: 'No snapshots in this range recorded this phrase.'}
+									</EmptyChart>
+								) : (
+									<SmallMultiples>
+										<MiniChart
+											key={`position-phrase-${resetKey}-${positionsPhrase}`}
+											label={`Position · ${positionsPhrase}`}
+											color='#2563eb'
+											data={positionSeries}
+											dataKey='position'
+											markers={analytics.changeLogMarkers}
+											showX
+											kind='area'
+										/>
+									</SmallMultiples>
+								)}
+							</ChartWrap>
+						</SectionCard>
+					</div>
 				)}
 
 					</InnerStack>

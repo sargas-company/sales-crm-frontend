@@ -71,6 +71,7 @@ export const baseApi = createApi({
 		'UpworkProfile',
 		'UpworkChangeLog',
 		'UpworkSnapshot',
+		'UpworkKeyword',
 		'UpworkReminders',
 		'UpworkAnalytics',
 	],

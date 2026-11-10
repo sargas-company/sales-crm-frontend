@@ -77,10 +77,25 @@ export interface UpworkChangeLog {
 	}
 }
 
+export interface UpworkKeyword {
+	id: string
+	profileId: string
+	text: string
+	isPrimary: boolean
+	isActive: boolean
+	createdAt: string
+	updatedAt: string
+}
+
 export interface UpworkSnapshotPosition {
 	id: string
-	phrase: string
 	position: number
+	keyword: {
+		id: string
+		text: string
+		isPrimary: boolean
+		isActive: boolean
+	}
 }
 
 export interface UpworkSnapshot {
@@ -229,6 +244,10 @@ export const upworkApi = baseApi.injectEndpoints({
 			}),
 			providesTags: ['UpworkSnapshot'],
 		}),
+		getUpworkSnapshot: builder.query<UpworkSnapshot, string>({
+			query: (id) => ({ url: `/upwork/snapshots/${id}`, method: 'GET' }),
+			providesTags: (_r, _e, id) => [{ type: 'UpworkSnapshot', id }],
+		}),
 		createUpworkSnapshot: builder.mutation<
 			UpworkSnapshot,
 			{
@@ -237,7 +256,7 @@ export const upworkApi = baseApi.injectEndpoints({
 				views: number
 				invites: number
 				directMessages: number
-				positions?: Array<{ phrase: string; position: number }>
+				positions?: Array<{ keywordId: string; position: number }>
 			}
 		>({
 			query: (body) => ({
@@ -256,7 +275,7 @@ export const upworkApi = baseApi.injectEndpoints({
 					views: number
 					invites: number
 					directMessages: number
-					positions: Array<{ phrase: string; position: number }>
+					positions: Array<{ keywordId: string; position: number }>
 				}>
 			}
 		>({
@@ -270,6 +289,64 @@ export const upworkApi = baseApi.injectEndpoints({
 		deleteUpworkSnapshot: builder.mutation<void, string>({
 			query: (id) => ({ url: `/upwork/snapshots/${id}`, method: 'DELETE' }),
 			invalidatesTags: ['UpworkSnapshot', 'UpworkAnalytics'],
+		}),
+
+		/* Keywords (per-profile tracked-phrase catalogue). Primary flag
+		 * is at-most-one per profile; archiving (isActive=false) keeps
+		 * the keyword joinable from historical snapshots but hides it
+		 * from the picker. */
+		listUpworkKeywords: builder.query<UpworkKeyword[], string>({
+			query: (profileId) => ({
+				url: `/upwork/profiles/${profileId}/keywords`,
+				method: 'GET',
+			}),
+			providesTags: (_r, _e, profileId) => [
+				{ type: 'UpworkKeyword', id: profileId },
+			],
+		}),
+		createUpworkKeyword: builder.mutation<
+			UpworkKeyword,
+			{ profileId: string; text: string; isPrimary?: boolean }
+		>({
+			query: ({ profileId, text, isPrimary }) => ({
+				url: `/upwork/profiles/${profileId}/keywords`,
+				method: 'POST',
+				body: { text, isPrimary },
+			}),
+			invalidatesTags: (_r, _e, { profileId }) => [
+				{ type: 'UpworkKeyword', id: profileId },
+			],
+		}),
+		updateUpworkKeyword: builder.mutation<
+			UpworkKeyword,
+			{
+				id: string
+				profileId: string
+				patch: Partial<{ text: string; isPrimary: boolean; isActive: boolean }>
+			}
+		>({
+			query: ({ id, patch }) => ({
+				url: `/upwork/keywords/${id}`,
+				method: 'PATCH',
+				body: patch,
+			}),
+			invalidatesTags: (_r, _e, { profileId }) => [
+				{ type: 'UpworkKeyword', id: profileId },
+				'UpworkSnapshot',
+			],
+		}),
+		deleteUpworkKeyword: builder.mutation<
+			{ id: string; archived: boolean },
+			{ id: string; profileId: string }
+		>({
+			query: ({ id }) => ({
+				url: `/upwork/keywords/${id}`,
+				method: 'DELETE',
+			}),
+			invalidatesTags: (_r, _e, { profileId }) => [
+				{ type: 'UpworkKeyword', id: profileId },
+				'UpworkSnapshot',
+			],
 		}),
 
 		/* Reminders */
@@ -309,9 +386,14 @@ export const {
 	useUpdateUpworkChangeLogMutation,
 	useDeleteUpworkChangeLogMutation,
 	useListUpworkSnapshotsQuery,
+	useGetUpworkSnapshotQuery,
 	useCreateUpworkSnapshotMutation,
 	useUpdateUpworkSnapshotMutation,
 	useDeleteUpworkSnapshotMutation,
+	useListUpworkKeywordsQuery,
+	useCreateUpworkKeywordMutation,
+	useUpdateUpworkKeywordMutation,
+	useDeleteUpworkKeywordMutation,
 	useGetUpworkRemindersQuery,
 	useGetUpworkAnalyticsQuery,
 } = upworkApi
