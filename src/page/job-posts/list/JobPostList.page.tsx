@@ -15,6 +15,7 @@ import {
 	StarRounded,
 	VerifiedRounded,
 	LocationOnOutlined,
+	OpenInNewRounded,
 } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
 import {
@@ -802,24 +803,41 @@ const JobPostList = () => {
 			// Platform marker — reuses the same `@iconify/react`
 			// `simple-icons:upwork` glyph already used in
 			// `ProfileDropdown.tsx` for the "Upwork profile" link, so
-			// the icon is visually consistent across the app. Painted
-			// in the theme's muted purple on a transparent background;
-			// no fill, no border. Content-sized column; header + icon
-			// centred; no sort, no filter; tooltip 'Upwork' kept.
+			// the icon is visually consistent across the app. When the
+			// row carries a `jobUrl`, the cell is a link that opens the
+			// original post in a new tab; a small OpenInNew arrow fades
+			// in on hover, mirroring the "Open source" affordance on
+			// the detail page.
 			key: 'platform',
 			label: 'Platform',
 			sortable: false,
 			className: 'col-center',
-			render: () => (
+			render: (r) => (
 				<PlatformCell>
 					<Tooltip title='Upwork' placement='top'>
-						<PlatformMark role='img' aria-label='Upwork'>
-							<IconifyIcon
-								icon='simple-icons:upwork'
-								width='24'
-								height='24'
-							/>
-						</PlatformMark>
+						{r.jobUrl ? (
+							<PlatformLink
+								href={r.jobUrl}
+								target='_blank'
+								rel='noopener noreferrer'
+								aria-label='Open on Upwork'
+							>
+								<IconifyIcon
+									icon='simple-icons:upwork'
+									width='24'
+									height='24'
+								/>
+								<OpenInNewRounded className='arrow' sx={{ fontSize: 14 }} />
+							</PlatformLink>
+						) : (
+							<PlatformMark role='img' aria-label='Upwork'>
+								<IconifyIcon
+									icon='simple-icons:upwork'
+									width='24'
+									height='24'
+								/>
+							</PlatformMark>
+						)}
 					</Tooltip>
 				</PlatformCell>
 			),
@@ -1901,6 +1919,48 @@ const PlatformMark = styled.span`
 	height: 28px;
 	color: ${T.textStrong};
 	line-height: 0;
+`
+/* Clickable variant of PlatformMark: Upwork glyph + an OpenInNew arrow
+ * that fades in on hover. Mirrors the "Open source" affordance on the
+ * detail page while staying compact enough for a table cell. */
+const PlatformLink = styled.a`
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	height: 28px;
+	padding: 0 4px;
+	border-radius: 6px;
+	color: ${T.textStrong};
+	line-height: 0;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background 150ms ease;
+
+	.arrow {
+		opacity: 0;
+		transform: translateX(-4px);
+		transition: opacity 150ms ease, transform 150ms ease;
+	}
+
+	&:hover {
+		background: rgba(0, 0, 0, 0.04);
+	}
+	&:hover .arrow,
+	&:focus-visible .arrow {
+		opacity: 1;
+		transform: translateX(0);
+	}
+
+	&:focus-visible {
+		outline: 2px solid ${T.primary};
+		outline-offset: 2px;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		transition: none;
+		.arrow { transition: none; }
+	}
 `
 
 const TitleLink = styled.button`
