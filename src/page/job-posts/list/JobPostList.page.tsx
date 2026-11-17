@@ -814,31 +814,29 @@ const JobPostList = () => {
 			className: 'col-center',
 			render: (r) => (
 				<PlatformCell>
-					<Tooltip title='Upwork' placement='top'>
-						{r.jobUrl ? (
-							<PlatformLink
-								href={r.jobUrl}
-								target='_blank'
-								rel='noopener noreferrer'
-								aria-label='Open on Upwork'
-							>
-								<IconifyIcon
-									icon='simple-icons:upwork'
-									width='24'
-									height='24'
-								/>
-								<OpenInNewRounded className='arrow' sx={{ fontSize: 14 }} />
-							</PlatformLink>
-						) : (
-							<PlatformMark role='img' aria-label='Upwork'>
-								<IconifyIcon
-									icon='simple-icons:upwork'
-									width='24'
-									height='24'
-								/>
-							</PlatformMark>
-						)}
-					</Tooltip>
+					{r.jobUrl ? (
+						<PlatformLink
+							href={r.jobUrl}
+							target='_blank'
+							rel='noopener noreferrer'
+							aria-label='Open on Upwork'
+						>
+							<IconifyIcon
+								icon='simple-icons:upwork'
+								width='24'
+								height='24'
+							/>
+							<OpenInNewRounded className='arrow' sx={{ fontSize: 14 }} />
+						</PlatformLink>
+					) : (
+						<PlatformMark role='img' aria-label='Upwork'>
+							<IconifyIcon
+								icon='simple-icons:upwork'
+								width='24'
+								height='24'
+							/>
+						</PlatformMark>
+					)}
 				</PlatformCell>
 			),
 			skeleton: () => (
