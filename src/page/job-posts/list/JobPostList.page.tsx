@@ -1925,10 +1925,9 @@ const PlatformLink = styled.a`
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 4px;
-	height: 28px;
-	padding: 0 4px;
-	border-radius: 6px;
+	gap: 6px;
+	padding: 6px 10px;
+	border-radius: 8px;
 	color: ${T.textStrong};
 	line-height: 0;
 	text-decoration: none;
