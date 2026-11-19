@@ -31,6 +31,7 @@ export interface DiscordProfileView {
 	birthdaysEnabled: boolean
 	absencesEnabled: boolean
 	weeklyEnabled: boolean
+	hoursReminderEnabled: boolean
 	cutoffHour: number
 	reminderAt: string
 	dailyDigestAt: string
@@ -38,6 +39,8 @@ export interface DiscordProfileView {
 	weeklyDigestAt: string
 	birthdayAt: string
 	absencesAt: string
+	hoursReminderDow: number
+	hoursReminderAt: string
 	timezone: string
 	lastVerifiedAt: string | null
 	lastVerificationError: string | null
@@ -61,6 +64,7 @@ export interface UpdateDiscordProfileBody {
 	birthdaysEnabled?: boolean
 	absencesEnabled?: boolean
 	weeklyEnabled?: boolean
+	hoursReminderEnabled?: boolean
 	cutoffHour?: number
 	reminderAt?: string
 	dailyDigestAt?: string
@@ -68,6 +72,8 @@ export interface UpdateDiscordProfileBody {
 	weeklyDigestAt?: string
 	birthdayAt?: string
 	absencesAt?: string
+	hoursReminderDow?: number
+	hoursReminderAt?: string
 	timezone?: string
 }
 

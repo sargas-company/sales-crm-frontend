@@ -496,10 +496,47 @@ const ProfileCard = ({
 						/>
 					</ScheduleField>
 				</ScheduleBlock>
+
+				<ScheduleBlock
+					num='05'
+					title='Hours reminder'
+					hint='Weekly ping to log Upwork hours before the tracker window closes'
+					enabled={merged.hoursReminderEnabled}
+					onToggle={(v) => setField('hoursReminderEnabled', v)}
+					toggleDirty={isFieldDirty('hoursReminderEnabled')}
+					isDark={isDark}
+					primary={themePrimary}
+				>
+					<ScheduleField
+						label='Weekday'
+						hint='0=Sun … 6=Sat'
+						span='quarter'
+						dirty={isFieldDirty('hoursReminderDow')}
+					>
+						<ScheduleInput
+							type='number'
+							value={merged.hoursReminderDow != null ? String(merged.hoursReminderDow) : ''}
+							onChange={(e) =>
+								setField(
+									'hoursReminderDow',
+									Math.max(0, Math.min(6, Number(e.target.value) || 0))
+								)
+							}
+							placeholder='6'
+						/>
+					</ScheduleField>
+					<ScheduleField label='At' span='quarter' dirty={isFieldDirty('hoursReminderAt')}>
+						<ScheduleInput
+							value={merged.hoursReminderAt ?? ''}
+							onChange={(e) => setField('hoursReminderAt', e.target.value)}
+							placeholder='HH:MM'
+						/>
+					</ScheduleField>
+				</ScheduleBlock>
 			</ScheduleStack>
 
 			<NumberedSection
-				num='05'
+				num='06'
 				title='Diagnostics & tests'
 				hint='Validate access and preview messages without affecting live traffic.'
 				isDark={isDark}
@@ -578,7 +615,7 @@ const ProfileCard = ({
 			</NumberedSection>
 
 			<NumberedSection
-				num='06'
+				num='07'
 				title='Activate for live traffic'
 				hint='Only one profile at a time can receive real Discord notifications.'
 				isDark={isDark}
